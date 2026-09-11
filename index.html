@@ -13289,11 +13289,20 @@ function installProgressInfo(){
         return kind===&#x27;music&#x27;?activeMusicTrackId():normalizeCaseCosmetic(kind,state[MY_STYLE_KINDS[kind].key]);
       }
       function myStyleOwned(kind){return new Set(kind===&#x27;music&#x27;?normalizeOwnedMusicTracks(state.ownedMusicTracks):normalizeCaseOwned(kind,state[MY_STYLE_KINDS[kind].owned]));}
+      const REWARD_OWNED_SEASON2_IDS = new Set([&quot;season3_avatar_elite&quot;, &quot;season3_avatar_epic&quot;, &quot;season3_avatar_epic_2&quot;, &quot;season3_avatar_mythic&quot;, &quot;season3_avatar_elite_plus&quot;, &quot;season3_frame_elite_plus&quot;, &quot;season3_frame_elite_1&quot;, &quot;season3_frame_elite_4&quot;, &quot;season3_frame_epic&quot;, &quot;season3_frame_mythic&quot;, &quot;season3_trail_epic&quot;, &quot;season3_trail_epic_2&quot;, &quot;season3_trail_legendary_plus&quot;, &quot;season3_trail_legendary&quot;, &quot;season3_trail_mythic&quot;, &quot;season3_music_moon_cafe_epic&quot;, &quot;season3_music_moon_cafe_epic_2&quot;, &quot;season3_music_lunar_run_legendary&quot;, &quot;season3_music_lunar_run_mythic&quot;]);
+      function cosmeticNeedsOwnership(kind,id,item){
+        return Boolean(item?.ownershipRequired || item?.seasonKey===&#x27;season2&#x27; || REWARD_OWNED_SEASON2_IDS.has(String(id||&#x27;&#x27;)));
+      }
+      function cosmeticNativeFree(kind,id,item){
+        if(cosmeticNeedsOwnership(kind,id,item))return false;
+        const rule=CASE_LIVEOPS?.content?.[kind]?.[id]||{};
+        return Boolean(item?.future&amp;&amp;item?.released&amp;&amp;(rule.routes?.native?.enabled===true||(!rule.routes&amp;&amp;item.destinationType===&#x27;native&#x27;)));
+      }
       function myStyleItems(kind=myStyle.kind){
         const base=myStyleBase(kind),owned=myStyleOwned(kind);
         const entries=Object.entries(caseLiveOpsCatalog(kind,base,true)).map(([id,item])=&gt;{
           const rule=CASE_LIVEOPS?.content?.[kind]?.[id]||{};
-          const native=Boolean(item.future&amp;&amp;item.released&amp;&amp;(rule.routes?.native?.enabled===true||(!rule.routes&amp;&amp;item.destinationType===&#x27;native&#x27;)));
+          const native=cosmeticNativeFree(kind,id,item);
           const sandbox=Boolean(window.__TEST_PROJECT_SANDBOX__?.active&amp;&amp;item.sandboxHidden);
           return {id,kind,item,owned:owned.has(id),allowed:owned.has(id)||native||sandbox,native,sandbox};
         });
@@ -13339,6 +13348,7 @@ function installProgressInfo(){
         if(!id)return kind===&#x27;avatar&#x27;?&#x27;Фото берётся из Telegram. Когда фото недоступно, показывается Зеффи.&#x27;:&#x27;Стандартный вариант, доступный всем.&#x27;;
         if(kind===&#x27;music&#x27;&amp;&amp;id===DEFAULT_MUSIC_TRACK_ID)return &#x27;Базовая мелодия доступна каждому игроку.&#x27;;
         if(native)return &#x27;Доступно бесплатно. Нажми «Использовать», чтобы добавить к своему оформлению.&#x27;;
+        if(cosmeticNeedsOwnership(kind,id,item))return &#x27;Предмет из кейса 2-го сезона. Применение доступно после получения на аккаунт.&#x27;;
         const rule=CASE_LIVEOPS?.content?.[kind]?.[id]||{};
         if(item.achievementOnly)return &#x27;Награда за достижение. Условие и выдача указаны в разделе «Достижения».&#x27;;
         if(item.future){
@@ -15240,7 +15250,7 @@ function installProgressInfo(){
         }
 
         for (const [id, item] of entries) {
-          const nativeFree = Boolean(item?.future &amp;&amp; item?.released &amp;&amp; item?.destinationType === &quot;native&quot;);
+          const nativeFree = cosmeticNativeFree(typeof kind === &quot;string&quot; ? kind : &quot;music&quot;, id, item);
           const sandboxHidden = Boolean(window.__TEST_PROJECT_SANDBOX__?.active &amp;&amp; item?.sandboxHidden);
           const unlocked = owned.has(id) || nativeFree || sandboxHidden;
           const active = activeId === id;
@@ -15426,7 +15436,7 @@ function installProgressInfo(){
         const id = normalizeMusicTrackId(trackId);
         const owned = normalizeOwnedMusicTracks(state.ownedMusicTracks);
         const liveTrack = caseLiveOpsCatalog(&quot;music&quot;, MUSIC_TRACK_CATALOG, true)[id] || caseLiveOpsItem(&quot;music&quot;, id, MUSIC_TRACK_CATALOG[id]);
-        const nativeFree = Boolean(liveTrack?.future &amp;&amp; liveTrack?.released &amp;&amp; liveTrack?.destinationType === &quot;native&quot;);
+        const nativeFree = cosmeticNativeFree(&quot;music&quot;, id, liveTrack);
         const sandboxHidden = Boolean(window.__TEST_PROJECT_SANDBOX__?.active &amp;&amp; liveTrack?.sandboxHidden);
         if (!owned.includes(id) &amp;&amp; !nativeFree &amp;&amp; !sandboxHidden) {
           showProfileToast(&quot;Эта мелодия ещё не получена.&quot;, &quot;warning&quot;);
@@ -20868,6 +20878,8 @@ function createTutorialDeck(layer, mount, options, words) {
           imageUrl: String(override.imageUrl || item?.imageUrl || &quot;&quot;),
           audioUrl: String(override.audioUrl || item?.audioUrl || item?.src || &quot;&quot;),
           future: Boolean(override.future),
+          ownershipRequired: Boolean(override.ownershipRequired),
+          seasonKey: String(override.seasonKey || &quot;&quot;),
           released: Boolean(override.released),
           everReleased: Boolean(override.everReleased),
           destinationType: String(override.destinationType || &quot;native&quot;),
@@ -23037,7 +23049,7 @@ function createTutorialDeck(layer, mount, options, words) {
           return String(firstItem.title || first[0]).localeCompare(String(secondItem.title || second[0]), &quot;ru&quot;);
         });
         const cosmeticsMarkup = noneMarkup + sortedCatalogEntries.map(([id,item]) =&gt; {
-          const nativeFree = Boolean(item?.future &amp;&amp; item?.released &amp;&amp; item?.destinationType === &quot;native&quot;);
+          const nativeFree = cosmeticNativeFree(typeof kind === &quot;string&quot; ? kind : &quot;music&quot;, id, item);
           const sandboxHidden = Boolean(window.__TEST_PROJECT_SANDBOX__?.active &amp;&amp; item?.sandboxHidden);
           const unlocked = owned.has(id) || nativeFree || sandboxHidden; const active = normalizedActive === id;
           let visual = &quot;&quot;;
@@ -29568,6 +29580,9 @@ html &gt; body.zefirok-game-expanded{height:var(--zefirok-visible-height,100dvh)
 @media(prefers-reduced-motion:reduce){#zefirok-maltipoo-runner .zms-layer *{animation:none!important;transition:none!important}}
 
 #zefirok-maltipoo-runner .zms-grid[data-ms-grid-kind=&quot;avatar&quot;] .zms-item-image{border-radius:14px}
+/* Night Shift has a wide 3:2 source; fill the square collection thumbnail instead of shrinking the frame. */
+#zefirok-maltipoo-runner .zms-item[data-ms-item=&quot;season3_frame_epic&quot;] .zms-item-art{overflow:hidden}
+#zefirok-maltipoo-runner .zms-item[data-ms-item=&quot;season3_frame_epic&quot;] .zms-item-image{width:100%;height:100%;max-width:none;object-fit:cover;object-position:center center}
 #zefirok-maltipoo-runner .zms-panel .zms-selection h3:focus{outline:none}
 #zefirok-maltipoo-runner .zms-panel .zs-close{font-weight:400!important}
 &lt;/style&gt;
@@ -29705,6 +29720,9 @@ html &gt; body.zefirok-game-expanded{height:var(--zefirok-visible-height,100dvh)
 #zefirok-maltipoo-runner .zpi-panel .zpi-combine{font-size:12px;color:#72907b;text-align:center;margin:14px 0}
 @media(max-height:700px){#zefirok-maltipoo-runner .zpi-booster-art{height:64px;margin-bottom:7px}#zefirok-maltipoo-runner .zpi-booster-art img{height:64px;width:84px}#zefirok-maltipoo-runner .zpi-booster-hero{padding:12px 14px}#zefirok-maltipoo-runner .zpi-booster-hero h3{font-size:22px;margin:4px 0 7px}#zefirok-maltipoo-runner .zpi-booster-hero p{font-size:13px}#zefirok-maltipoo-runner .zpi-booster-hero&gt;.zpi-tag{margin-top:9px}#zefirok-maltipoo-runner .zpi-facts&gt;div{min-height:74px;padding:10px 12px}#zefirok-maltipoo-runner .zpi-facts strong{font-size:23px}}
 
+
+/* Night Shift artwork is 3:2 with a square center opening. Crop its padded sides so the opening matches the avatar. */
+#zefirok-maltipoo-runner .profile-avatar-wrap.case-frame-season3_frame_epic::after{inset:-8%!important;background-image:url(&quot;/assets/rating/frames/profile/epickramka_season2_2.webp&quot;);background-size:200% auto!important;background-position:center center!important}
 &lt;/style&gt;
 " title="Сладкий Забег"></iframe>
 <script id="zefirok-v07934-season-pass-overlay-audit" type="application/json">{"version":"0.79.34","scope":"outer-app-return-recovery","samePageOverlay":true,"mainGamePreserved":true,"restores":["telegram_profile","rating","balances","cases","notifications","feature_flags"]}</script>

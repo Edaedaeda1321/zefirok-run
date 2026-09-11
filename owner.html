@@ -189,6 +189,8 @@
 </style>
 <style id="zefirok-album-owner-v1">
 .album-admin-list,.album-current-items,.album-catalog-list,.album-milestone-list{display:grid;gap:8px}.album-admin-row{display:grid;grid-template-columns:58px minmax(0,1fr) auto;gap:10px;align-items:center;padding:10px;border:1px solid var(--line);border-radius:18px;background:#fff}.album-admin-cover{width:58px;height:58px;border-radius:16px;object-fit:cover;background:linear-gradient(145deg,#ffeaf1,#fff2c9);border:1px solid #efd4dc}.album-admin-copy{min-width:0}.album-admin-copy b{display:block;font-size:12px}.album-admin-copy span{display:block;margin-top:3px;color:var(--muted);font-size:9px;line-height:1.35}.album-admin-preview{min-height:96px;margin-top:10px;padding:14px;border:1px solid #efd1dc;border-radius:20px;background:linear-gradient(145deg,#ffeaf1,#fff7da);background-size:cover;background-position:center}.album-admin-preview b{display:block;font-size:18px}.album-admin-preview span{display:block;margin-top:4px;font-size:10px;color:#855f6e}.album-current-row,.album-catalog-row{display:grid;grid-template-columns:46px minmax(0,1fr) auto;gap:9px;align-items:center;padding:9px;border:1px solid var(--line);border-radius:16px;background:#fff}.album-current-row img,.album-catalog-row img{width:46px;height:46px;object-fit:contain;border-radius:13px;background:#fff8f4}.album-current-copy,.album-catalog-copy{min-width:0}.album-current-copy b,.album-catalog-copy b{display:block;font-size:10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.album-current-copy span,.album-catalog-copy span{display:block;margin-top:3px;color:var(--muted);font-size:8px;line-height:1.35}.album-item-controls{display:flex;gap:5px;align-items:center;flex-wrap:wrap;justify-content:flex-end}.album-item-controls select,.album-item-controls input{width:auto;min-width:74px;padding:7px;border-radius:10px;font-size:9px}.album-catalog-row.is-hidden-content{border-color:#e8c76b;background:#fffaf0}.album-catalog-row input[type=checkbox]{width:19px;height:19px}.album-milestone-row{display:grid;grid-template-columns:52px minmax(0,1fr) auto;gap:9px;align-items:center;padding:10px;border:1px solid var(--line);border-radius:17px;background:#fff}.album-milestone-percent{display:grid;place-items:center;width:52px;height:52px;border-radius:16px;background:#fff3cf;color:#9c6c1a;font-size:14px;font-weight:950}.album-milestone-row b{display:block;font-size:11px}.album-milestone-row span{display:block;margin-top:3px;color:var(--muted);font-size:8px;line-height:1.35}.album-milestone-editor{margin-top:11px;padding:12px;border:1px dashed #dfb9c7;border-radius:18px;background:#fffafb}@media(max-width:560px){.album-admin-row{grid-template-columns:50px minmax(0,1fr)}.album-admin-row>.actions{grid-column:1/-1}.album-current-row,.album-catalog-row{grid-template-columns:42px minmax(0,1fr)}.album-current-row>.album-item-controls,.album-catalog-row>input[type=checkbox]{grid-column:1/-1;justify-self:start}.album-milestone-row{grid-template-columns:46px minmax(0,1fr)}.album-milestone-row>.actions{grid-column:1/-1}}
+
+.album-milestone-rewards{display:grid;gap:9px;margin-top:9px}.album-milestone-reward-row{display:grid;grid-template-columns:minmax(130px,1fr) minmax(150px,1.2fr) minmax(100px,.7fr) auto;gap:8px;align-items:end;padding:10px;border:1px solid var(--line);border-radius:14px;background:#fffaf9}.album-milestone-reward-row .field{margin:0}.album-milestone-reward-row .btn{min-height:42px}.album-milestone-reward-empty{padding:12px;border:1px dashed var(--line);border-radius:14px;color:var(--muted)}@media(max-width:720px){.album-milestone-reward-row{grid-template-columns:1fr 1fr}.album-milestone-reward-row .album-reward-remove{grid-column:1/-1}}
 </style>
 
 <style id="cc2-sweet-operations">
@@ -697,7 +699,7 @@ button.cc29-routed-save{display:inline-flex;align-items:center;justify-content:c
   <div class="card hidden" id="albumItemsCard"><div class="section-head"><div><h3>Предметы альбома</h3><p><b>Обязательные</b> входят в процент. <b>Бонусные</b> видны в альбоме, но не влияют на 100%.</p></div></div><div class="album-current-items" id="albumCurrentItems"></div>
     <div class="section-head" style="margin-top:15px"><div><h3>Добавить из каталога</h3><p>Выберите рамки, аватарки, следы, скины или музыку. Можно отметить сразу несколько.</p></div></div><div class="form-grid two"><div class="field"><label>Тип</label><select id="albumCatalogKind"><option value="all">Все</option><option value="avatar">Аватарки</option><option value="frame">Рамки</option><option value="trail">Следы</option><option value="skin">Скины</option><option value="music">Музыка</option></select></div><div class="field"><label>Поиск</label><input id="albumCatalogSearch" placeholder="Название или ID"></div><div class="field"><label>Добавлять как</label><select id="albumAddMode"><option value="required">Обязательные</option><option value="bonus">Бонусные</option></select></div><div class="field"><label>Видимость</label><select id="albumAddSecret"><option value="0">Показывать до получения</option><option value="1">Секретные · ??? до получения</option></select></div></div><div class="album-catalog-list" id="albumCatalogList"></div><div class="actions" style="margin-top:10px"><button class="btn gold" id="albumAddSelected">Добавить выбранные</button></div>
   </div>
-  <div class="card hidden" id="albumMilestonesCard"><div class="section-head"><div><h3>Награды за прогресс</h3><p>Этапы рассчитываются только по обязательным предметам и выдаются сервером один раз через общую очередь наград.</p></div><button class="btn secondary small" id="albumMilestoneNew">+ Этап</button></div><div class="album-milestone-list" id="albumMilestoneList"></div><div class="album-milestone-editor" id="albumMilestoneEditor"><div class="form-grid two"><div class="field"><label>Процент</label><input id="albumMilestonePercent" type="number" min="1" max="100" value="50"></div><div class="field"><label>Название</label><input id="albumMilestoneTitle" maxlength="140" placeholder="Половина коллекции"></div><div class="field"><label>Тип награды</label><select id="albumMilestoneRewardKind"><option value="points">Очки</option><option value="zefir">Зефир</option><option value="coffee">Кофе</option><option value="case">Кейс</option><option value="seasonal_case">Сезонный кейс</option><option value="avatar">Аватарка</option><option value="frame">Рамка</option><option value="trail">След</option><option value="skin">Скин</option><option value="music">Музыка</option></select></div><div class="field" id="albumMilestoneRewardItemField"><label>Предмет</label><select id="albumMilestoneRewardItem"></select></div><div class="field"><label>Количество</label><input id="albumMilestoneAmount" type="number" min="1" max="999999999" value="1"></div><div class="field"><label>Статус</label><select id="albumMilestoneEnabled"><option value="1">Включён</option><option value="0">Выключен</option></select></div></div><div class="actions" style="margin-top:10px"><button class="btn gold" id="albumMilestoneSave">Сохранить этап</button><button class="btn secondary" id="albumMilestoneCancel">Очистить</button></div></div>
+  <div class="card hidden" id="albumMilestonesCard"><div class="section-head"><div><h3>Награды за прогресс</h3><p>Этапы рассчитываются только по обязательным предметам и выдаются сервером один раз через общую очередь наград.</p></div><button class="btn secondary small" id="albumMilestoneNew">+ Этап</button></div><div class="album-milestone-list" id="albumMilestoneList"></div><div class="album-milestone-editor" id="albumMilestoneEditor" data-cc-form><div class="form-grid two"><div class="field"><label>Процент</label><input id="albumMilestonePercent" type="number" min="1" max="100" step="1" value="50"></div><div class="field"><label>Название</label><input id="albumMilestoneTitle" maxlength="140" placeholder="Половина коллекции"></div><div class="field"><label>Статус</label><select id="albumMilestoneEnabled"><option value="1">Включён</option><option value="0">Выключен</option></select></div></div><div class="section-head" style="margin-top:12px"><div><h4 style="margin:0">Награды этапа</h4><p>От 1 до 3 наград. Изменяются только явно выбранные строки.</p></div><button class="btn secondary small" type="button" id="albumMilestoneRewardAdd">+ Награда</button></div><div id="albumMilestoneRewardsList" class="album-milestone-rewards"></div><div class="actions" style="margin-top:10px"><button class="btn gold" id="albumMilestoneSave">Сохранить этап</button><button class="btn secondary" id="albumMilestoneCancel">Очистить</button></div></div>
   </div>
 </div></section>
 
@@ -968,10 +970,232 @@ try{if('PerformanceObserver'in window){const po=new PerformanceObserver(list=>{f
 function readOwnerSession(){try{return String(localStorage.getItem(OWNER_SESSION_KEY)||'');}catch{return '';}}
 function saveOwnerSession(token){state.ownerSession=String(token||'');try{state.ownerSession?localStorage.setItem(OWNER_SESSION_KEY,state.ownerSession):localStorage.removeItem(OWNER_SESSION_KEY);}catch{}}
 async function ccFetchJson(url,init={},options={}){const timeoutMs=Math.max(1000,Number(options.timeoutMs)||15000),linked=ccLinkedAbortController(options.signal||null,timeoutMs);try{const response=await fetch(url,{...init,signal:linked.controller.signal});if(!response.ok)throw new Error(`Ошибка ${response.status}`);return await response.json();}catch(error){if(linked.isTimedOut()){const e=new Error('Каталог не ответил вовремя. Нажмите «Обновить» и попробуйте ещё раз.');e.code='CC_TIMEOUT';throw e;}if(ccIsAbortError(error))throw ccAbortError();throw error;}finally{linked.cleanup();}}
-async function rawApi(path,payload={},retry=true,options={}){const initData=String(tg?.initData||'');if(!initData)throw new Error('Нет подтверждённой Telegram-сессии.');if(!state.ownerSession)state.ownerSession=readOwnerSession();const started=performance.now(),mutation=ccApiIsMutation(path,options),externalSignal=options.signal||(!mutation?ccActiveViewSignal:null),linked=ccLinkedAbortController(externalSignal,ccApiTimeoutMs(path,options));let outcome='ok';try{const r=await fetch(path,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({initData,ownerSession:state.ownerSession,...payload}),cache:'no-store',credentials:'same-origin',signal:linked.controller.signal});const d=await r.json().catch(()=>({}));if((r.status===401||r.status===403)&&state.ownerSession&&retry&&path!=='/api/owner/auth'){saveOwnerSession('');return rawApi(path,payload,false,{...options,signal:externalSignal});}if(!r.ok||d?.ok===false){const e=new Error(d?.error||`Ошибка ${r.status}`);e.status=r.status;throw e;}if(d?.sessionToken)saveOwnerSession(d.sessionToken);if(cc21PendingSaveView){const savedView=cc21PendingSaveView;cc21PendingSaveView='';clearTimeout(cc21PendingSaveTimer);cc21ClearDirty(savedView);}return d;}catch(error){if(linked.isTimedOut()){outcome='timeout';const e=new Error(mutation?'Операция не ответила вовремя. Не повторяйте её сразу — сначала обновите данные и проверьте результат.':'Запрос занял слишком много времени. Повторите.');e.code='CC_TIMEOUT';throw e;}if(ccIsAbortError(error)){outcome='abort';throw ccAbortError();}outcome='error';throw error;}finally{linked.cleanup();ccTrackApi(path,Math.max(0,performance.now()-started),outcome);}}
+async function rawApi(path,payload={},retry=true,options={}){const initData=String(tg?.initData||'');if(!initData)throw new Error('Нет подтверждённой Telegram-сессии.');if(!state.ownerSession)state.ownerSession=readOwnerSession();const started=performance.now(),mutation=ccApiIsMutation(path,options),externalSignal=options.signal||(!mutation?ccActiveViewSignal:null),linked=ccLinkedAbortController(externalSignal,ccApiTimeoutMs(path,options));const saveToken=cc21TakeSaveToken(path,options);let outcome='ok';try{const r=await fetch(path,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({initData,ownerSession:state.ownerSession,...payload}),cache:'no-store',credentials:'same-origin',signal:linked.controller.signal});const d=await r.json().catch(()=>({}));if((r.status===401||r.status===403)&&state.ownerSession&&retry&&path!=='/api/owner/auth'){saveOwnerSession('');return rawApi(path,payload,false,{...options,signal:externalSignal,ccSaveToken:saveToken});}if(!r.ok||d?.ok===false){const e=new Error(d?.error||`Ошибка ${r.status}`);e.status=r.status;e.code=d?.code||'';throw e;}if(d?.sessionToken)saveOwnerSession(d.sessionToken);cc21FinishSave(saveToken);return d;}catch(error){if(linked.isTimedOut()){outcome='timeout';const e=new Error(mutation?'Операция не ответила вовремя. Не повторяйте её сразу — сначала обновите данные и проверьте результат.':'Запрос занял слишком много времени. Повторите.');e.code='CC_TIMEOUT';throw e;}if(ccIsAbortError(error)){outcome='abort';throw ccAbortError();}outcome='error';throw error;}finally{cc21ScheduleRestore();linked.cleanup();ccTrackApi(path,Math.max(0,performance.now()-started),outcome);}}
 function stagingActive(){return Boolean(state.staging?.enabled&&state.staging?.activeChangeSetId)}
 const STAGING_BLOCKED_SEASON_MUTATIONS=new Set(['/api/owner/season-pass/delete','/api/owner/season-pass/start','/api/owner/season-pass/end','/api/owner/season-pass/force-close','/api/owner/season-pass/story/save','/api/owner/season-pass/story/toggle','/api/owner/season-pass/story/delete','/api/owner/season-pass/story/transfer','/api/owner/season-pass/story/duplicate','/api/owner/season-pass/story/launch','/api/owner/season-pass/letter/save','/api/owner/season-pass/task/delete','/api/owner/live-content/batch','/api/owner/live-content/rollback']);
-async function api(path,payload={},retry=true,options={}){if(stagingActive()&&STAGING_BLOCKED_SEASON_MUTATIONS.has(path))throw new Error('🟣 STAGING защищает Production: это действие пока не имеет безопасной Sandbox-версии. Выключи Staging Mode только если действительно хочешь выполнить его сразу в Production.');if(stagingActive()&&STAGING_ENDPOINTS.has(path)){const d=await rawApi('/api/owner/staging/item/stage',{changeSetId:state.staging.activeChangeSetId,endpoint:path,payload},retry,options);state.staging=d;renderStagingBar();return{...d,__staged:true};}return rawApi(path,payload,retry,options)}
+const CC_SAFE_ENDPOINT_TARGET = Object.freeze({
+  "/api/owner/staging/bootstrap": "staging",
+  "/api/owner/staging/create": "staging",
+  "/api/owner/staging/select": "staging",
+  "/api/owner/staging/toggle": "staging",
+  "/api/owner/staging/item/stage": "staging",
+  "/api/owner/staging/item/status": "staging",
+  "/api/owner/staging/item/delete": "staging",
+  "/api/owner/staging/apply-test": "staging",
+  "/api/owner/staging/dry-run": "staging",
+  "/api/owner/staging/promote": "staging",
+  "/api/owner/staging/rollback": "staging",
+  "/api/owner/player-lab/bootstrap": "test",
+  "/api/owner/player-lab/action": "test",
+  "/api/owner/player-lab/clone": "test",
+  "/api/owner/player-lab/reset": "test",
+  "/api/owner/player-lab/snapshot/refresh": "test",
+  "/api/owner/release-gate": "read",
+  "/api/owner/test-project/bootstrap": "test",
+  "/api/owner/test-project/state/save": "test",
+  "/api/owner/test-project/reset": "test",
+  "/api/owner/test-project/snapshot/refresh": "test",
+  "/api/owner/test-project/draft/stage": "test",
+  "/api/owner/test-project/case/open": "test",
+  "/api/owner/test-project/action": "test",
+  "/api/owner/test-project/game": "test",
+  "/api/owner/test-project/clone-player": "test",
+  "/api/owner/test-project/diff": "test",
+  "/api/owner/test-project/fault": "test",
+  "/api/owner/test-project/trace/clear": "test",
+  "/api/owner/test-project/season-qa": "test",
+  "/api/owner/test-project/content-validate": "test",
+  "/api/owner/test-project/release-gate": "test",
+  "/api/owner/test-project/qa": "test",
+  "/api/owner/bootstrap": "read",
+  "/api/owner/v9/game-config": "read",
+  "/api/owner/v9/game-config/draft": "staged_content",
+  "/api/owner/v9/game-config/publish": "live",
+  "/api/owner/v9/game-config/restore": "live",
+  "/api/owner/v9/media": "read",
+  "/api/owner/v9/media/upload": "live",
+  "/api/owner/v9/media/delete": "live",
+  "/api/owner/referrals": "read",
+  "/api/owner/referrals/coop/save": "live",
+  "/api/owner/referrals/config/save": "live",
+  "/api/owner/referrals/boost/save": "live",
+  "/api/owner/referrals/return/save": "live",
+  "/api/owner/referrals/friend-gift/save": "live",
+  "/api/owner/referrals/weekly/save": "live",
+  "/api/owner/referrals/notifications/save": "live",
+  "/api/owner/referrals/milestone/save": "live",
+  "/api/owner/referrals/network/save": "live",
+  "/api/owner/newcomer": "read",
+  "/api/owner/newcomer/save": "live",
+  "/api/owner/daily-loyalty": "read",
+  "/api/owner/daily-loyalty/save": "live",
+  "/api/owner/achievements/config": "read",
+  "/api/owner/achievements/config/save": "live",
+  "/api/owner/player/daily-return-test/prepare": "live_player",
+  "/api/owner/player/daily-return-test/cancel": "live_player",
+  "/api/owner/player/daily-streak/restore": "live_player",
+  "/api/owner/players": "read",
+  "/api/owner/player": "read",
+  "/api/owner/player/grant": "live_player",
+  "/api/owner/resets": "read",
+  "/api/owner/resets/apply": "live",
+  "/api/owner/polls": "read",
+  "/api/owner/polls/details": "read",
+  "/api/owner/polls/create": "live",
+  "/api/owner/polls/publish": "live",
+  "/api/owner/polls/end": "live",
+  "/api/owner/polls/cancel": "live",
+  "/api/owner/polls/delete": "live",
+  "/api/owner/control": "read",
+  "/api/owner/control/reward-queue/update": "live_player",
+  "/api/owner/control/issue/update": "live_player",
+  "/api/owner/control/moderation/block": "live_player",
+  "/api/owner/control/moderation/unblock": "live_player",
+  "/api/owner/control/ticket/detail": "read",
+  "/api/owner/control/ticket/attachment": "read",
+  "/api/owner/control/ticket/reply": "live_player",
+  "/api/owner/control/ticket/update": "live_player",
+  "/api/owner/control/ticket/operations": "live_player",
+  "/api/owner/control/ticket/note": "live_player",
+  "/api/owner/control/support-issue/save": "live",
+  "/api/owner/control/support-template/save": "live",
+  "/api/owner/control/support-template/delete": "live",
+  "/api/owner/rating": "read",
+  "/api/owner/rating/create": "live",
+  "/api/owner/rating/start": "live",
+  "/api/owner/rating/timing": "live",
+  "/api/owner/rating/end": "live",
+  "/api/owner/rating/cancel": "live",
+  "/api/owner/rating/visuals": "live",
+  "/api/owner/season-pass": "read",
+  "/api/owner/live-content": "read",
+  "/api/owner/live-content/save": "staged_content",
+  "/api/owner/live-content/rollback": "live",
+  "/api/owner/live-content/batch": "live",
+  "/api/owner/season-pass/readiness": "read",
+  "/api/owner/season-pass/asset-key": "live",
+  "/api/owner/season-pass/visuals": "live",
+  "/api/owner/season-pass/reward": "staged_content",
+  "/api/owner/season-pass/story/save": "live",
+  "/api/owner/season-pass/story/delete": "live",
+  "/api/owner/season-pass/story/toggle": "live",
+  "/api/owner/season-pass/story/duplicate": "live",
+  "/api/owner/season-pass/story/transfer": "live",
+  "/api/owner/season-pass/story/test": "test",
+  "/api/owner/season-pass/story/launch": "live",
+  "/api/owner/season-pass/letter/save": "live",
+  "/api/owner/season-pass/seasonal-case/save": "staged_content",
+  "/api/owner/season-pass/tariffs": "staged_content",
+  "/api/owner/season-pass/task/save": "staged_content",
+  "/api/owner/season-pass/task/delete": "live",
+  "/api/owner/season-pass/create": "staged_content",
+  "/api/owner/season-pass/start": "live",
+  "/api/owner/season-pass/timing": "staged_content",
+  "/api/owner/season-pass/end": "live",
+  "/api/owner/season-pass/force-close": "live",
+  "/api/owner/season-pass/delete": "live",
+  "/api/owner/news": "read",
+  "/api/owner/news/publish": "live",
+  "/api/owner/news/broadcast": "live",
+  "/api/owner/albums": "read",
+  "/api/owner/albums/save": "live",
+  "/api/owner/albums/items/save": "live",
+  "/api/owner/albums/item/delete": "live",
+  "/api/owner/albums/milestone/save": "live",
+  "/api/owner/albums/milestone/delete": "live",
+  "/api/owner/albums/status": "live",
+  "/api/owner/albums/delete": "live",
+  "/api/owner/cases": "read",
+  "/api/owner/cases/save": "staged_content",
+  "/api/owner/cases/content/save": "staged_content",
+  "/api/owner/promocodes": "read",
+  "/api/owner/promocodes/create": "live",
+  "/api/owner/promocodes/toggle": "live",
+  "/api/owner/shop": "read",
+  "/api/owner/shop/save": "staged_content",
+  "/api/owner/shop/featured/save": "staged_content",
+  "/api/owner/offers": "read",
+  "/api/owner/offers/save": "staged_content",
+  "/api/owner/offers/action": "live",
+  "/api/owner/staff": "read",
+  "/api/owner/staff/create": "live",
+  "/api/owner/staff/update": "live",
+  "/api/owner/staff/delete": "live",
+  "/api/owner/system": "read",
+  "/api/owner/legal": "read",
+  "/api/owner/legal/players": "read",
+  "/api/owner/legal/version": "read",
+  "/api/owner/legal/consent/revoke": "live_player",
+  "/api/owner/legal/draft": "draft",
+  "/api/owner/legal/publish": "live",
+  "/api/owner/maintenance/update": "live",
+  "/api/owner/v8/analytics": "read",
+  "/api/owner/v8/automations": "read",
+  "/api/owner/v8/automations/save": "live",
+  "/api/owner/v8/automations/toggle": "live",
+  "/api/owner/v8/segments": "read",
+  "/api/owner/v8/campaigns": "read",
+  "/api/owner/v8/campaigns/create": "live",
+  "/api/owner/v8/campaigns/cancel": "live",
+  "/api/owner/v8/fraud": "read",
+  "/api/owner/v8/fraud/update": "live",
+  "/api/owner/v8/fraud/tester": "live_player",
+  "/api/owner/v8/events": "read",
+  "/api/owner/v8/events/save": "live",
+  "/api/owner/v8/events/publish": "live",
+  "/api/owner/v8/events/cancel": "live",
+  "/api/owner/v8/events/template/save": "draft",
+  "/api/owner/v8/events/template/delete": "draft",
+  "/api/owner/v8/releases": "read",
+  "/api/owner/v8/releases/create": "draft",
+  "/api/owner/v8/releases/state": "live",
+  "/api/owner/v8/testing": "read",
+  "/api/owner/v8/feature-flag/save": "live",
+  "/api/owner/v8/tester/save": "live",
+  "/api/owner/v8/tester/delete": "live",
+  "/api/owner/v8/stock": "read",
+  "/api/owner/v8/stock/undo": "live_player",
+  "/api/owner/v8/case-simulate": "read",
+  "/api/owner/v8/safety": "read",
+  "/api/owner/v8/snapshot/create": "draft",
+  "/api/owner/v8/snapshot/restore": "live",
+  "/api/owner/v8/draft/action": "live",
+  "/api/owner/v85/player/360": "read",
+  "/api/owner/v85/player/note/save": "draft",
+  "/api/owner/v85/player/note/delete": "draft",
+  "/api/owner/v85/segments/save": "live",
+  "/api/owner/v85/segments/delete": "live",
+  "/api/owner/v85/segments/preview": "read",
+  "/api/owner/v85/compensations": "read",
+  "/api/owner/v85/compensations/preview": "read",
+  "/api/owner/v85/compensations/confirmation-word": "read",
+  "/api/owner/v85/compensations/send": "live_player",
+  "/api/owner/v85/monitoring": "read",
+  "/api/owner/v85/monitoring/config": "live",
+  "/api/owner/v85/experiments": "read",
+  "/api/owner/v85/experiments/save": "live",
+  "/api/owner/v85/experiments/action": "live",
+  "/api/owner/v85/staff/detail": "read",
+  "/api/owner/v85/staff/permissions": "live",
+  "/api/owner/v85/staff/limits": "live",
+  "/api/owner/v8/search": "read",
+  "/api/owner/player/grant/status": "read"
+});
+function ccWriteTarget(path){return state.staging?.endpointTargets?.[path]||CC_SAFE_ENDPOINT_TARGET[path]||'live';}
+async function api(path,payload={},retry=true,options={}){
+  const staging=Boolean(state.staging?.enabled),target=ccWriteTarget(path);
+  if(staging&&STAGING_ENDPOINTS.has(path)){
+    if(!state.staging?.activeChangeSetId)throw new Error('\u041d\u0435 \u0432\u044b\u0431\u0440\u0430\u043d Change Set. Production \u043d\u0435 \u0438\u0437\u043c\u0435\u043d\u0451\u043d.');
+    const d=await rawApi('/api/owner/staging/item/stage',{changeSetId:state.staging.activeChangeSetId,endpoint:path,payload},retry,{...options,ccSavePath:path});state.staging=d;renderStagingBar();return {...d,__staged:true};
+  }
+  if(staging&&target==='live_player'){
+    if(payload.confirmLive!==true&&!confirm('\u0420\u0415\u0410\u041b\u042c\u041d\u042b\u0419 \u0418\u0413\u0420\u041e\u041a \u00b7 Production\n\n\u042d\u0442\u043e \u0434\u0435\u0439\u0441\u0442\u0432\u0438\u0435 \u043d\u0435 \u0442\u0435\u0441\u0442\u043e\u0432\u043e\u0435 \u0438 \u043f\u0440\u0438\u043c\u0435\u043d\u0438\u0442\u0441\u044f \u043a \u0436\u0438\u0432\u044b\u043c \u0434\u0430\u043d\u043d\u044b\u043c. \u041f\u0440\u043e\u0434\u043e\u043b\u0436\u0438\u0442\u044c?'))throw ccAbortError('\u0414\u0435\u0439\u0441\u0442\u0432\u0438\u0435 \u043e\u0442\u043c\u0435\u043d\u0435\u043d\u043e');
+    payload={...payload,writeTarget:'live_player',confirmLive:true};
+  }else if(staging&&!['read','draft','test','staging'].includes(target)){
+    throw new Error('STAGING: \u0443 \u043e\u043f\u0435\u0440\u0430\u0446\u0438\u0438 \u043d\u0435\u0442 Sandbox-\u0432\u0435\u0440\u0441\u0438\u0438. Production \u043d\u0435 \u0438\u0437\u043c\u0435\u043d\u0451\u043d. \u0414\u043b\u044f \u043f\u0440\u044f\u043c\u043e\u0439 \u0437\u0430\u043f\u0438\u0441\u0438 \u0432\u044b\u043a\u043b\u044e\u0447\u0438\u0442\u0435 Staging.');
+  }
+  return rawApi(path,payload,retry,options);
+}
 function mutationToast(result,normal){if(result?.__staged&&result?.readyReset)return toast(`🟠 STAGING · ${result.itemTitle||normal} · READY сброшен → SANDBOX · требуется повторная проверка`);toast(result?.__staged?`🟣 STAGING · ${result.itemTitle||normal} · Production не изменён`:normal)}
 const AUDIT_LABELS={redeem_reward:'Выдача физической награды',add_zefir:'Начисление зефира',add_coffee:'Начисление кофе',add_points:'Начисление очков',add_keys:'Выдача кейсов',shop_stock_limit_set:'Изменение остатка магазина',shop_stock_limit_remove:'Снятие лимита остатка',add_frame:'Выдача рамки',grant_avatar:'Выдача аватарки',grant_frame:'Выдача рамки',grant_trail:'Выдача следа',grant_skin:'Выдача скина',undo_redeem:'Отмена выдачи награды',season_extend:'Продление рейтингового сезона',season_shorten:'Сокращение рейтингового сезона',season_reward_change:'Изменение награды рейтинга',season_finish_early:'Досрочное завершение рейтинга',ticket_create:'Создание обращения',ticket_status:'Изменение статуса обращения',player_name_change:'Изменение имени игрока',player_block:'Блокировка игрока',player_unblock:'Разблокировка игрока',staff_add:'Добавление сотрудника',staff_reactivate:'Возврат сотрудника',staff_role:'Изменение роли сотрудника',staff_disable:'Отключение сотрудника',staff_enable:'Включение сотрудника',staff_delete:'Удаление сотрудника',staff_permission:'Изменение прав сотрудника',staff_limit_change:'Изменение лимита сотрудника',staff_limit_preset:'Изменение профиля лимитов',points_legacy:'Изменение очков',publish_news:'Публикация новости',promo_create:'Создание промокода',owner_panel_grant:'Выдача награды игроку',owner_panel_rating_record_grant:'Восстановление рекорда рейтинга',owner_panel_daily_loyalty_save:'Изменение ежедневной активности',owner_panel_daily_streak_restore:'Восстановление ежедневной серии',owner_panel_rating_create:'Создание рейтингового сезона',owner_panel_rating_start:'Досрочный запуск рейтингового сезона',owner_panel_rating_timing:'Изменение срока рейтингового сезона',owner_panel_rating_end:'Завершение рейтингового сезона',owner_panel_rating_cancel:'Отмена рейтингового сезона',owner_panel_season_pass_start:'Досрочный запуск сезонного пропуска',owner_panel_season_pass_timing:'Изменение срока сезонного пропуска',owner_panel_season_pass_end:'Завершение сезонного пропуска',owner_panel_season_pass_force_close:'Принудительное закрытие пропуска без окна',owner_panel_season_pass_reward:'Изменение награды пропуска',owner_panel_season_pass_create:'Создание сезона пропуска',owner_panel_season_pass_delete:'Удаление сезона пропуска',owner_panel_season_pass_task_create:'Создание задания пропуска',owner_panel_season_pass_task_update:'Изменение задания пропуска',owner_panel_season_pass_task_delete:'Удаление задания пропуска',owner_panel_season_pass_story_save:'Сохранение сюжета',owner_panel_season_pass_story_delete:'Удаление сюжета',owner_panel_season_pass_story_duplicate:'Дублирование сюжета',owner_panel_season_pass_story_test:'Тест сюжета',owner_panel_season_pass_story_launch:'Ручной запуск сюжета',owner_panel_publish_news:'Публикация новости бота',owner_panel_news_broadcast:'Отправка новости игрокам',owner_panel_staff_create:'Добавление сотрудника',owner_panel_staff_reactivate:'Возврат сотрудника',owner_panel_staff_update:'Изменение сотрудника',owner_panel_staff_delete:'Удаление сотрудника',owner_panel_maintenance:'Изменение технического режима',owner_panel_case_update:'Изменение кейса',owner_panel_case_content_update:'Изменение награды кейса',owner_panel_promo_enable:'Включение промокода',owner_panel_promo_disable:'Отключение промокода',owner_panel_shop_product_update:'Изменение товара магазина',owner_panel_shop_skin_update:'Изменение скина магазина',player_reset:'Сброс прогресса игрока',players_reset_all:'Сброс прогресса всех игроков',poll_create:'Создание опроса',poll_publish:'Публикация опроса',poll_end:'Завершение опроса',owner_panel_player_reset:'Сброс прогресса игрока',owner_panel_players_reset_all:'Сброс прогресса всех игроков',owner_panel_poll_create:'Создание опроса',owner_panel_poll_publish:'Публикация опроса',owner_panel_poll_end:'Завершение опроса',owner_panel_poll_cancel:'Отмена опроса',owner_panel_poll_delete:'Удаление опроса',owner_panel_reward_queue_retry:'Повторная доставка награды',owner_panel_reward_queue_cancel:'Отмена доставки награды',owner_panel_issue_ack:'Проблема принята в работу',owner_panel_issue_assign:'Назначен ответственный',owner_panel_issue_snooze:'Проблема отложена',owner_panel_issue_resolve:'Проблема отмечена решённой',owner_panel_moderation_block:'Блокировка игрока',owner_panel_moderation_unblock:'Разблокировка игрока',owner_panel_ticket_update:'Изменение обращения',owner_panel_ticket_reply:'Ответ игроку в обращении',owner_legal_draft_save:'Сохранение черновика документа',owner_legal_publish:'Публикация юридического документа',owner_test_project_draft_stage:'Черновик → Test Project',owner_test_project_clone_player:'Клонирование игрока → Test Project'};
 function auditReward(kind,itemId,amount){const n=fmt(amount||1);if(kind==='points')return `${n} очков`;if(kind==='zefir'||kind==='treats')return `${n} зефира`;if(kind==='coffee')return `${n} кофе`;if(kind==='case'||kind==='keys')return `${n} × ${CASES[itemId]?.title||itemId||'кейс'}`;return `${n} ${kind||'награды'}`;}
@@ -1023,8 +1247,8 @@ function cc21SyncEnvironment(){
   const enabled=stagingActive(),set=state.staging?.activeChangeSet||null,maintenance=state.bootstrap?.maintenance||{},closed=Boolean(maintenance.fullClosed),mode=enabled?'staging':closed?'closed':set?'draft':'prod';
   const bar=$('cc21EnvBar');if(bar)bar.dataset.mode=mode;
   const title=$('cc21EnvTitle'),meta=$('cc21EnvMeta'),setNode=$('cc21EnvSet');
-  if(title)title.textContent=enabled?'STAGING · Production защищён':closed?'PRODUCTION · техническое закрытие':set?'PRODUCTION · STAGING выключен':'PRODUCTION · прямое управление';
-  if(meta)meta.textContent=enabled?`Поддерживаемые сохранения идут в Change Set «${set?.title||'без названия'}» и Test Project.`:closed?'Production закрыт maintenance-режимом. Критические статусы остаются приоритетными.':set?`Change Set «${set.title}» выбран, но Staging OFF — поддерживаемые сохранения снова идут напрямую в Production.`:'Изменения применяются к Production только через существующие проверки, подтверждения и Release Gate.';
+  if(title)title.textContent=enabled?'STAGING · контент защищён':closed?'PRODUCTION · техническое закрытие':set?'PRODUCTION · STAGING выключен':'PRODUCTION · прямое управление';
+  if(meta)meta.textContent=enabled?`Изменения идут в Change Set «${set?.title||'без названия'}». Неподдерживаемые записи блокируются. Действия над реальными игроками требуют отдельного подтверждения.`:closed?'Production закрыт maintenance-режимом. Критические статусы остаются приоритетными.':set?`Change Set «${set.title}» выбран, но Staging OFF — поддерживаемые сохранения снова идут напрямую в Production.`:'Изменения применяются к Production только через существующие проверки, подтверждения и Release Gate.';
   if(setNode)setNode.textContent=set?`Change Set: ${set.title}`:'Change Set: —';
   const modeBadge=$('cc21WorkspaceMode');if(modeBadge){modeBadge.className=`cc2-status ${enabled?'is-staging':closed?'is-error':'is-prod'}`;modeBadge.textContent=enabled?'STAGING':closed?'PROD CLOSED':'PROD';}
   const sideEnv=$('cc21SidebarEnv');if(sideEnv)sideEnv.textContent=enabled?'STAGING':closed?'PROD CLOSED':'PROD';
@@ -1059,14 +1283,81 @@ document.querySelectorAll('[data-cc24-player-view]').forEach(button=>button.oncl
 $('cc21SidebarNav').addEventListener('click',e=>{const b=e.target.closest('[data-cc21-side-view]');if(b)switchView(b.dataset.cc21SideView);});
 $('cc21WorkspaceHead').addEventListener('click',e=>{const b=e.target.closest('[data-cc21-head-action]');if(!b)return;if(b.dataset.cc21HeadAction==='home')switchView('dashboard');if(b.dataset.cc21HeadAction==='tp')openProjectSurface('/test-project.html');});
 $('cc21EnvManage').addEventListener('click',()=>{setStagingCollapsed(!state.stagingCollapsed);haptic('selection');});
-const cc21DirtyViews=new Map();let cc21DirtyDismissed=false,cc21PendingSaveView='',cc21PendingSaveTimer=0;
-function cc21SaveButtonIn(scope){if(!scope)return null;return [...scope.querySelectorAll('button')].find(btn=>{const text=String(btn.textContent||'').trim(),id=String(btn.id||'');return /(?:Save|Publish|Apply)$/i.test(id)||/(?:^|\s)(?:Сохранить|Опубликовать|Применить)(?:\s|$)/i.test(text);})||null;}
-function cc21DirtyCandidate(field){if(!(field instanceof HTMLElement)||field.matches('[readonly],[disabled],[type="search"]'))return null;const view=field.closest('.view');if(!view||!view.classList.contains('active'))return null;const scope=field.closest('.card')||view,save=cc21SaveButtonIn(scope);if(!save)return null;return {view:view.id.replace(/^view-/,''),field,save};}
-function cc21MarkDirty(field){const item=cc21DirtyCandidate(field);if(!item)return;cc21DirtyViews.set(item.view,{fieldId:item.field.id||'',saveId:item.save.id||'',saveLabel:String(item.save.textContent||'Сохранить').trim().replace(/\s+/g,' ').slice(0,60)});cc21DirtyDismissed=false;cc21RenderDirtyBar();}
-function cc21ClearDirty(view){cc21DirtyViews.delete(String(view||''));cc21DirtyDismissed=false;cc21RenderDirtyBar();}
-function cc21RenderDirtyBar(){const bar=$('cc21DirtyBar');if(!bar)return;const active=state.view,entry=cc21DirtyViews.get(active)||[...cc21DirtyViews.entries()].map(([view,data])=>({view,...data}))[0];if(!entry||cc21DirtyDismissed){bar.classList.remove('visible');return;}const view=entry.view||active,data=entry.view?entry:cc21DirtyViews.get(active),current=view===active,title=(NAV_GROUPS[VIEW_GROUP[view]]||[]).find(([v])=>v===view)?.[1]||view;$('cc21DirtyTitle').textContent=current?'Есть несохранённые изменения':`Несохранённые изменения · ${title}`;$('cc21DirtyMeta').textContent=current?`Блок готов к сохранению · ${data?.saveLabel||'найдите кнопку сохранения'}`:`Вернитесь в «${title}», чтобы завершить изменение.`;$('cc21DirtyLocate').textContent=current?'К сохранению':'Вернуться';bar.classList.add('visible');}
-async function cc21LocateDirty(){const active=state.view,first=cc21DirtyViews.get(active)?{view:active,...cc21DirtyViews.get(active)}:[...cc21DirtyViews.entries()].map(([view,data])=>({view,...data}))[0];if(!first)return;if(first.view!==state.view)await switchView(first.view);requestAnimationFrame(()=>{const save=first.saveId?$(first.saveId):null,target=save||(first.fieldId?$(first.fieldId):null);if(target){target.scrollIntoView({behavior:'smooth',block:'center'});target.classList.remove('cc21-save-flash');void target.offsetWidth;target.classList.add('cc21-save-flash');}});}
-$('main').addEventListener('input',e=>cc21MarkDirty(e.target),true);$('main').addEventListener('change',e=>cc21MarkDirty(e.target),true);$('main').addEventListener('click',e=>{const btn=e.target.closest('button');if(!btn)return;const view=btn.closest('.view')?.id?.replace(/^view-/,'');if(!view||!cc21DirtyViews.has(view))return;const entry=cc21DirtyViews.get(view),save=entry?.saveId?$(entry.saveId):null;if(save&&btn===save){cc21PendingSaveView=view;clearTimeout(cc21PendingSaveTimer);cc21PendingSaveTimer=setTimeout(()=>{cc21PendingSaveView='';},9000);}},true);$('cc21DirtyDismiss').onclick=()=>{cc21DirtyDismissed=true;cc21RenderDirtyBar();};$('cc21DirtyLocate').onclick=()=>cc21LocateDirty();
+// Dirty state belongs to a form revision, not to whichever request finishes next.
+const cc21DirtyViews=new Map();let cc21DirtyDismissed=false,ccSafeDirtyVersion=0,ccSafePendingSaves=[],ccSafeRestoreTimer=0;
+const CC_SAFE_SAVE_ROUTES=Object.freeze({
+ albumSave:['/api/owner/albums/save'],albumMilestoneSave:['/api/owner/albums/milestone/save'],albumPublish:['/api/owner/albums/status'],
+ caseSave:['/api/owner/cases/save'],shopSave:['/api/owner/shop/save'],shopFeaturedSave:['/api/owner/shop/featured/save'],liveContentSave:['/api/owner/live-content/save'],
+ taskSave:['/api/owner/season-pass/task/save'],passTariffSave:['/api/owner/season-pass/tariffs'],passSeasonalCaseSave:['/api/owner/season-pass/seasonal-case/save'],
+ passStorySave:['/api/owner/season-pass/story/save'],passLetterSave:['/api/owner/season-pass/letter/save'],passStoryAssetKeySave:['/api/owner/season-pass/asset-key'],passVisualSave:['/api/owner/season-pass/visuals'],ratingVisualSave:['/api/owner/rating/visuals'],
+ dailySave:['/api/owner/daily-loyalty/save'],gameConfigSave:['/api/owner/v9/game-config/draft'],gameConfigPublish:['/api/owner/v9/game-config/publish'],
+ referralConfigSave:['/api/owner/referrals/config/save'],referralCoopSave:['/api/owner/referrals/coop/save'],referralBoostSave:['/api/owner/referrals/boost/save'],referralReturnSave:['/api/owner/referrals/return/save'],referralFriendGiftSave:['/api/owner/referrals/friend-gift/save'],referralWeeklySave:['/api/owner/referrals/weekly/save'],
+ legalDraftSave:['/api/owner/legal/draft'],legalPublish:['/api/owner/legal/publish'],offerSave:['/api/owner/offers/save'],automationSave:['/api/owner/v8/automations/save'],eventSave:['/api/owner/v8/events/save'],eventTemplateSave:['/api/owner/v8/events/template/save'],
+ maintenanceSave:['/api/owner/maintenance/update'],monitorConfigSave:['/api/owner/v85/monitoring/config'],staffCreateSave:['/api/owner/staff/create'],staffLimitsSave:['/api/owner/v85/staff/limits'],staffPermissionsSave:['/api/owner/v85/staff/permissions'],testerSave:['/api/owner/v8/tester/save'],playerNoteSave:['/api/owner/v85/player/note/save'],supportKnownIssueSave:['/api/owner/control/support-issue/save'],supportTicketOpsSave:['/api/owner/control/ticket/operations'],newsPublish:['/api/owner/news/publish']
+});
+function cc21SaveButtonIn(scope){if(!scope)return null;return [...scope.querySelectorAll('button')].find(btn=>CC_SAFE_SAVE_ROUTES[btn.id]||/(?:Save|Publish|Apply)$/i.test(btn.id)||/(?:^|\s)(?:\u0421\u043e\u0445\u0440\u0430\u043d\u0438\u0442\u044c|\u041e\u043f\u0443\u0431\u043b\u0438\u043a\u043e\u0432\u0430\u0442\u044c|\u041f\u0440\u0438\u043c\u0435\u043d\u0438\u0442\u044c)(?:\s|$)/i.test(btn.textContent||''))||null;}
+function cc21DirtyCandidate(field){
+ if(!(field instanceof HTMLElement)||field.matches('[readonly],[disabled],[type="search"],[type="file"]'))return null;
+ const view=field.closest('.view'),overlay=field.closest('.overlay');if(!view&&!overlay)return null;
+ if(view&&!view.classList.contains('active'))return null;
+ const scope=field.closest('[data-cc-form],.card,.sheet')||view||overlay,save=cc21SaveButtonIn(scope);if(!save)return null;
+ return {view:view?view.id.replace(/^view-/,''):state.view,field,save,scope};
+}
+function ccSafeFieldSnapshot(scope){return [...scope.querySelectorAll('input[id],select[id],textarea[id]')].filter(el=>!el.matches('[type="file"],[type="search"]')).map(el=>({id:el.id,value:el.value,checked:el.checked}));}
+function cc21RefreshDirtySummary(view){const entry=cc21DirtyViews.get(view);if(!entry)return;const first=entry.forms.values().next().value;if(!first){cc21DirtyViews.delete(view);return;}Object.assign(entry,{fieldId:first.fieldId,saveId:first.saveId,saveLabel:first.saveLabel});}
+function cc21MarkDirty(field){
+ const item=cc21DirtyCandidate(field);if(!item)return;
+ const entry=cc21DirtyViews.get(item.view)||{forms:new Map()},key=item.save.id||item.scope.id||item.view;
+ const form={key,view:item.view,saveId:item.save.id||'',fieldId:item.field.id||'',saveLabel:String(item.save.textContent||'').trim().slice(0,60),revision:++ccSafeDirtyVersion,fields:ccSafeFieldSnapshot(item.scope),context:item.view==='albums'?String(state.albumEditId||''):null,scopeId:item.scope.id||'',overlayId:item.field.closest('.overlay')?.id||'',milestoneId:item.save.id==='albumMilestoneSave'?state.albumMilestoneEditId:null,rewards:item.save.id==='albumMilestoneSave'?albumMilestoneRewardsFromUi():null};
+ entry.forms.set(key,form);cc21DirtyViews.set(item.view,entry);cc21RefreshDirtySummary(item.view);cc21DirtyDismissed=false;cc21RenderDirtyBar();
+}
+function cc21ClearDirty(view,key=null){const name=String(view||''),entry=cc21DirtyViews.get(name);if(key&&entry){entry.forms.delete(key);cc21RefreshDirtySummary(name);}else cc21DirtyViews.delete(name);cc21DirtyDismissed=false;cc21RenderDirtyBar();}
+function cc21QueueSave(button){
+ const view=button.closest('.view')?.id?.replace(/^view-/,'')||state.view,entry=cc21DirtyViews.get(view);
+ if(!entry)return;
+ const form=[...entry.forms.values()].find(x=>x.saveId===button.id);if(!form)return;
+ const paths=CC_SAFE_SAVE_ROUTES[button.id]||String(button.dataset.ccSavePath||'').split(' ').filter(Boolean);
+ if(!paths.length)return; // Unknown forms stay dirty rather than falsely claiming success.
+ ccSafePendingSaves=ccSafePendingSaves.filter(x=>x.form.key!==form.key||x.form.view!==form.view);
+ const ticket={form:{...form},paths,at:Date.now()};ccSafePendingSaves.push(ticket);setTimeout(()=>{ccSafePendingSaves=ccSafePendingSaves.filter(x=>x!==ticket);},0);
+}
+function cc21TakeSaveToken(path,options={}){
+ if(Object.prototype.hasOwnProperty.call(options,'ccSaveToken'))return options.ccSaveToken;
+ const actual=String(options.ccSavePath||path),now=Date.now();ccSafePendingSaves=ccSafePendingSaves.filter(x=>now-x.at<60000);
+ const index=ccSafePendingSaves.findIndex(x=>x.paths.includes(actual));if(index<0)return null;
+ return ccSafePendingSaves.splice(index,1)[0].form;
+}
+function cc21FinishSave(token){
+ if(!token)return;const current=cc21DirtyViews.get(token.view)?.forms.get(token.key);
+ if(current&&current.revision===token.revision)cc21ClearDirty(token.view,token.key);
+}
+function cc21HasDirtyForm(view,saveId){return Boolean([...cc21DirtyViews.get(view)?.forms.values()||[]].some(x=>x.saveId===saveId));}
+function cc21RestoreDirtyFields(){
+ for(const [view,entry] of cc21DirtyViews){
+  if(view!==state.view)continue;
+  for(const form of entry.forms.values()){
+   if(form.context!==null&&form.context!==String(state.albumEditId||''))continue;
+   if(form.overlayId&&$(form.overlayId)?.classList.contains('hidden'))continue;
+   if(form.rewards){if(form.milestoneId!==state.albumMilestoneEditId)continue;state.albumMilestoneRewards=form.rewards.map(x=>({...x}));renderAlbumMilestoneRewards();}
+   for(const value of form.fields){const el=$(value.id);if(!el)continue;if(el.value!==value.value)el.value=value.value;if(typeof value.checked==='boolean'&&el.checked!==value.checked)el.checked=value.checked;}
+  }
+ }
+ cc21RenderDirtyBar();
+}
+function cc21ScheduleRestore(){clearTimeout(ccSafeRestoreTimer);ccSafeRestoreTimer=setTimeout(cc21RestoreDirtyFields,0);}
+function cc21RenderDirtyBar(){
+ const bar=$('cc21DirtyBar');if(!bar)return;const active=state.view,entry=cc21DirtyViews.get(active)||[...cc21DirtyViews.entries()].map(([view,data])=>({view,...data}))[0];
+ if(!entry||cc21DirtyDismissed){bar.classList.remove('visible');return;}
+ const view=entry.view||active,data=entry.view?entry:cc21DirtyViews.get(active),current=view===active,title=(NAV_GROUPS[VIEW_GROUP[view]]||[]).find(([v])=>v===view)?.[1]||view;
+ $('cc21DirtyTitle').textContent=current?'\u0415\u0441\u0442\u044c \u043d\u0435\u0441\u043e\u0445\u0440\u0430\u043d\u0451\u043d\u043d\u044b\u0435 \u0438\u0437\u043c\u0435\u043d\u0435\u043d\u0438\u044f':`\u041d\u0435\u0441\u043e\u0445\u0440\u0430\u043d\u0451\u043d\u043d\u044b\u0435 \u0438\u0437\u043c\u0435\u043d\u0435\u043d\u0438\u044f \u00b7 ${title}`;
+ $('cc21DirtyMeta').textContent=current?`${data?.saveLabel||'\u0421\u043e\u0445\u0440\u0430\u043d\u0438\u0442\u0435 \u0444\u043e\u0440\u043c\u0443'} \u00b7 ${data?.forms?.size||1} \u0431\u043b\u043e\u043a(\u0430)`:`\u0412\u0435\u0440\u043d\u0438\u0442\u0435\u0441\u044c \u0432 \u00ab${title}\u00bb.`;
+ $('cc21DirtyLocate').textContent=current?'\u041a \u0441\u043e\u0445\u0440\u0430\u043d\u0435\u043d\u0438\u044e':'\u0412\u0435\u0440\u043d\u0443\u0442\u044c\u0441\u044f';bar.classList.add('visible');
+}
+async function cc21LocateDirty(){const active=state.view,first=cc21DirtyViews.get(active)?{view:active,...cc21DirtyViews.get(active)}:[...cc21DirtyViews.entries()].map(([view,data])=>({view,...data}))[0];if(!first)return;if(first.view!==state.view)await switchView(first.view);requestAnimationFrame(()=>{cc21RestoreDirtyFields();const form=first.forms.values().next().value;if(form?.overlayId)openOverlay(form.overlayId);const target=$(first.saveId)||$(first.fieldId);if(target){target.scrollIntoView({behavior:'smooth',block:'center'});target.classList.remove('cc21-save-flash');void target.offsetWidth;target.classList.add('cc21-save-flash');}});}
+document.addEventListener('input',e=>cc21MarkDirty(e.target),true);document.addEventListener('change',e=>cc21MarkDirty(e.target),true);document.addEventListener('click',e=>{const btn=e.target.closest('button');if(btn)cc21QueueSave(btn);},true);
+$('cc21DirtyDismiss').onclick=()=>{cc21DirtyDismissed=true;cc21RenderDirtyBar();};$('cc21DirtyLocate').onclick=()=>cc21LocateDirty();
+window.addEventListener('beforeunload',e=>{if(cc21DirtyViews.size){e.preventDefault();e.returnValue='';}});
+
 
 function openProjectSurface(path){
   haptic('selection');
@@ -1100,18 +1391,32 @@ function selectedAlbum(){return state.albums?.collections?.find(x=>x.collectionI
 function albumStatusCopy(status){return ({draft:'Черновик',published:'Опубликован',archived:'Архив'})[String(status||'')]||String(status||'—');}
 function albumRewardCopy(reward){const kind=String(reward?.kind||''),amount=Math.max(1,Number(reward?.amount||1)),id=String(reward?.id||'');if(kind==='points')return `${fmt(amount)} очков`;if(kind==='zefir')return `${fmt(amount)} зефира`;if(kind==='coffee')return `${fmt(amount)} кофе`;if(kind==='case')return `${CASES[id]?.title||'Кейс'}${amount>1?` ×${amount}`:''}`;if(kind==='seasonal_case')return `${state.albums?.seasonalCases?.find(x=>x.id===id)?.title||'Сезонный кейс'}${amount>1?` ×${amount}`:''}`;const item=state.albums?.catalog?.find(x=>x.kind===kind&&x.itemId===id);return item?.title||id||'Награда';}
 function albumThumb(item){return esc(item?.imageUrl||FALLBACK);}
-function albumClearMilestoneEditor(){state.albumMilestoneEditId='';$('albumMilestonePercent').value='50';$('albumMilestoneTitle').value='';$('albumMilestoneRewardKind').value='points';$('albumMilestoneAmount').value='1000';$('albumMilestoneEnabled').value='1';renderAlbumMilestoneRewardItems();}
+function albumMilestoneRewardOptions(kind){
+  if(kind==='case')return Object.entries(CASES).map(([id,x])=>({id,title:x.title}));
+  if(kind==='seasonal_case')return (state.albums?.seasonalCases||[]).filter(x=>x.enabled).map(x=>({id:x.id,title:x.title}));
+  if(ALBUM_KIND_LABELS_UI[kind])return (state.albums?.catalog||[]).filter(x=>x.kind===kind&&x.released&&x.deliverable!==false).map(x=>({id:x.itemId,title:x.title}));
+  return [];
+}
+function albumMilestoneRewardNormalize(raw={}){const kind=String(raw.kind||'points'),cosmetic=Boolean(ALBUM_KIND_LABELS_UI[kind]),amount=cosmetic?1:Number(raw.amount??1);return{...raw,kind,id:String(raw.id||raw.itemId||''),amount};}
+function albumMilestoneRewardKinds(){return [['points','Очки'],['zefir','Зефир'],['coffee','Кофе'],['case','Кейс'],['seasonal_case','Сезонный кейс'],['avatar','Аватарка'],['frame','Рамка'],['trail','След'],['skin','Скин'],['music','Музыка']];}
+function renderAlbumMilestoneRewards(){
+  const root=$('albumMilestoneRewardsList');if(!root)return;
+  const rewards=Array.isArray(state.albumMilestoneRewards)?state.albumMilestoneRewards:[];
+  root.innerHTML=rewards.length?rewards.map((reward,index)=>{const r=albumMilestoneRewardNormalize(reward),itemless=['points','zefir','coffee'].includes(r.kind),options=albumMilestoneRewardOptions(r.kind),cosmetic=Boolean(ALBUM_KIND_LABELS_UI[r.kind]);if(!itemless&&r.id&&!options.some(x=>String(x.id)===r.id))options.unshift({id:r.id,title:(state.albums?.catalog||[]).find(x=>x.kind===r.kind&&x.itemId===r.id)?.title||r.id});return `<div class="album-milestone-reward-row" data-album-reward-index="${index}"><div class="field"><label>Тип награды</label><select id="albumRewardKind${index}" data-album-reward-kind>${albumMilestoneRewardKinds().map(([id,title])=>`<option value="${esc(id)}"${id===r.kind?' selected':''}>${esc(title)}</option>`).join('')}</select></div><div class="field"${itemless?' style="visibility:hidden"':''}><label>Предмет</label><select id="albumRewardItem${index}" data-album-reward-item${itemless?' disabled':''}>${options.map(x=>`<option value="${esc(x.id)}"${String(x.id)===r.id?' selected':''}>${esc(x.title)} · ${esc(x.id)}</option>`).join('')}</select></div><div class="field"><label>Количество</label><input type="number" min="1" max="999999999" value="${cosmetic?1:r.amount}" id="albumRewardAmount${index}" data-album-reward-amount${cosmetic?' disabled':''}></div><button type="button" class="btn secondary small album-reward-remove" data-album-reward-remove="${index}"${rewards.length<=1?' disabled':''}>Убрать</button></div>`;}).join(''):'<div class="album-milestone-reward-empty">Добавьте хотя бы одну награду.</div>';
+  const add=$('albumMilestoneRewardAdd');if(add)add.disabled=rewards.length>=3;
+}
+function albumMilestoneRewardsFromUi(){return [...document.querySelectorAll('#albumMilestoneRewardsList [data-album-reward-index]')].map(row=>{const kind=row.querySelector('[data-album-reward-kind]')?.value||'points',itemless=['points','zefir','coffee'].includes(kind),cosmetic=Boolean(ALBUM_KIND_LABELS_UI[kind]);return{kind,id:itemless?'':String(row.querySelector('[data-album-reward-item]')?.value||''),amount:cosmetic?1:Number(row.querySelector('[data-album-reward-amount]')?.value)};});}
+function albumClearMilestoneEditor(){cc21ClearDirty('albums','albumMilestoneSave');state.albumMilestoneEditId='';state.albumMilestoneRewards=[{kind:'points',id:'',amount:1000}];$('albumMilestonePercent').value='50';$('albumMilestoneTitle').value='';$('albumMilestoneEnabled').value='1';renderAlbumMilestoneRewards();}
 function renderAlbumStats(){const list=state.albums?.collections||[],published=list.filter(x=>x.status==='published').length,drafts=list.filter(x=>x.status==='draft').length,items=list.reduce((n,x)=>n+(x.items?.length||0),0);$('albumStats').innerHTML=[[list.length,'Всего альбомов'],[published,'Опубликовано'],[drafts,'Черновиков'],[items,'Связей с косметикой']].map(([v,t])=>`<div class="mini-stat"><b>${fmt(v)}</b><span>${esc(t)}</span></div>`).join('');}
 function renderAlbumList(){const list=state.albums?.collections||[];$('albumList').innerHTML=list.length?list.map(a=>`<div class="album-admin-row"><img class="album-admin-cover" src="${esc(a.coverUrl||FALLBACK)}" onerror="this.src='${FALLBACK}'"><div class="album-admin-copy"><b>${esc(a.title)}</b><span>${esc(albumStatusCopy(a.status))} · обязательных ${fmt(a.requiredCount)} · бонусных ${fmt(a.bonusCount)} · этапов ${fmt(a.milestones?.length||0)} · rev ${fmt(a.revision)}</span></div><div class="actions"><button class="btn secondary small" type="button" data-album-select="${esc(a.collectionId)}">Открыть</button></div></div>`).join(''):'<div class="empty">Альбомов пока нет. Создайте первый — игроки не увидят его до публикации.</div>';}
 function syncAlbumImageChoice(targetId){if(targetId==='albumCover')syncProjectImageChoice('albumCover','albumCoverPreview','albumCoverLabel','albumCoverPath');else if(targetId==='albumBackground')syncProjectImageChoice('albumBackground','albumBackgroundPreview','albumBackgroundLabel','albumBackgroundPath');}function renderAlbumPreview(a){const cover=String($('albumCover').value||'').trim(),bg=String($('albumBackground').value||'').trim(),accent=String($('albumAccent').value||a?.accentColor||'#d96f9b');const el=$('albumPreview');el.style.borderColor=accent;el.style.backgroundImage=bg?`linear-gradient(90deg,rgba(255,255,255,.92),rgba(255,255,255,.68)),url("${bg.replace(/"/g,'%22')}")`:'linear-gradient(145deg,#ffeaf1,#fff7da)';el.innerHTML=`${cover?`<img src="${esc(cover)}" onerror="this.remove()" style="float:right;width:78px;height:78px;object-fit:cover;border-radius:18px;margin-left:10px">`:''}<b>${esc($('albumTitle').value||a?.title||'Новый альбом')}</b><span>${esc($('albumSubtitle').value||a?.subtitle||'Тематическая коллекция Зеффи')}</span><span style="margin-top:9px;color:${esc(accent)};font-weight:900">● Акцент альбома</span>`;}
-function renderAlbumEditor(){const a=selectedAlbum(),editing=Boolean(a);$('albumEditor').classList.remove('hidden');$('albumItemsCard').classList.toggle('hidden',!editing);$('albumMilestonesCard').classList.toggle('hidden',!editing);$('albumEditorTitle').textContent=editing?a.title:'Новый альбом';$('albumEditorMeta').textContent=editing?`ID ${a.collectionId} · revision ${a.revision}`:'Сначала сохраните черновик, затем добавьте предметы.';$('albumEditorStatus').className=`pill ${a?.status==='published'?'green':a?.status==='archived'?'red':''}`;$('albumEditorStatus').textContent=albumStatusCopy(a?.status||'draft');$('albumTitle').value=a?.title||'';$('albumSubtitle').value=a?.subtitle||'';$('albumCover').value=a?.coverUrl||'';$('albumBackground').value=a?.backgroundUrl||'';syncAlbumImageChoice('albumCover');syncAlbumImageChoice('albumBackground');$('albumAccent').value=a?.accentColor||'#d96f9b';$('albumSort').value=Number(a?.sortOrder||0);$('albumPublish').textContent=a?.status==='archived'?'Вернуть в игру':'Опубликовать';$('albumPublish').classList.toggle('hidden',a?.status==='published');$('albumArchive').classList.toggle('hidden',a?.status!=='published');$('albumDelete').classList.toggle('hidden',!a||a.status!=='draft');if(a?.status==='published')$('albumAddMode').value='bonus';renderAlbumPreview(a);if(editing){renderAlbumCurrentItems();renderAlbumCatalog();renderAlbumMilestones();renderAlbumMilestoneRewardItems();}}
+function renderAlbumEditor(){const a=selectedAlbum(),editing=Boolean(a);$('albumEditor').classList.remove('hidden');$('albumItemsCard').classList.toggle('hidden',!editing);$('albumMilestonesCard').classList.toggle('hidden',!editing);$('albumEditorTitle').textContent=editing?a.title:'Новый альбом';$('albumEditorMeta').textContent=editing?`ID ${a.collectionId} · revision ${a.revision}`:'Сначала сохраните черновик, затем добавьте предметы.';$('albumEditorStatus').className=`pill ${a?.status==='published'?'green':a?.status==='archived'?'red':''}`;$('albumEditorStatus').textContent=albumStatusCopy(a?.status||'draft');$('albumTitle').value=a?.title||'';$('albumSubtitle').value=a?.subtitle||'';$('albumCover').value=a?.coverUrl||'';$('albumBackground').value=a?.backgroundUrl||'';syncAlbumImageChoice('albumCover');syncAlbumImageChoice('albumBackground');$('albumAccent').value=a?.accentColor||'#d96f9b';$('albumSort').value=Number(a?.sortOrder||0);$('albumPublish').textContent=a?.status==='archived'?'Вернуть в игру':'Опубликовать';$('albumPublish').classList.toggle('hidden',a?.status==='published');$('albumArchive').classList.toggle('hidden',a?.status!=='published');$('albumDelete').classList.toggle('hidden',!a||a.status!=='draft');if(a?.status==='published')$('albumAddMode').value='bonus';renderAlbumPreview(a);if(editing){renderAlbumCurrentItems();renderAlbumCatalog();renderAlbumMilestones();renderAlbumMilestoneRewards();}}
 function renderAlbumCurrentItems(){const a=selectedAlbum(),items=a?.items||[];$('albumCurrentItems').innerHTML=items.length?items.map(item=>`<div class="album-current-row" data-album-current="1" data-kind="${esc(item.kind)}" data-item-id="${esc(item.itemId)}"><img src="${albumThumb(item)}" onerror="this.src='${FALLBACK}'"><div class="album-current-copy"><b>${esc(item.title||item.itemId)}</b><span>${esc(ALBUM_KIND_LABELS_UI[item.kind]||item.kind)} · ${esc(item.rarity||'common')}${item.future&&!item.released?' · ещё скрыт в Live Content':''}</span></div><div class="album-item-controls"><select data-album-role><option value="required" ${item.required?'selected':''}>Обязательный</option><option value="bonus" ${!item.required?'selected':''}>Бонусный</option></select><select data-album-secret><option value="0" ${!item.secret?'selected':''}>Показывать</option><option value="1" ${item.secret?'selected':''}>Секретный</option></select><input data-album-sort type="number" value="${Number(item.sortOrder||0)}" title="Порядок"><button class="btn secondary small" data-album-item-save="1">Сохранить</button><button class="btn danger small" data-album-item-delete="1">×</button></div></div>`).join(''):'<div class="empty">В альбоме ещё нет предметов.</div>';}
 function renderAlbumCatalog(){const a=selectedAlbum();if(!a)return;const kind=$('albumCatalogKind').value||'all',q=String($('albumCatalogSearch').value||'').trim().toLowerCase(),ownedKeys=new Set((a.items||[]).map(x=>`${x.kind}:${x.itemId}`));const rows=(state.albums?.catalog||[]).filter(x=>(kind==='all'||x.kind===kind)&&!ownedKeys.has(`${x.kind}:${x.itemId}`)&&(!q||`${x.title} ${x.itemId}`.toLowerCase().includes(q))).slice(0,160);$('albumCatalogList').innerHTML=rows.length?rows.map(item=>`<label class="album-catalog-row ${item.future&&!item.released?'is-hidden-content':''}"><img src="${albumThumb(item)}" onerror="this.src='${FALLBACK}'"><span class="album-catalog-copy"><b>${esc(item.title)}</b><span>${esc(ALBUM_KIND_LABELS_UI[item.kind]||item.kind)} · ${esc(item.itemId)} · ${esc(item.rarity||'common')}${item.future&&!item.released?' · скрыт до релиза':''}${item.enabled===false?' · выключен':''}</span></span><input type="checkbox" data-album-catalog-check data-kind="${esc(item.kind)}" data-item-id="${esc(item.itemId)}"></label>`).join(''):'<div class="empty">По фильтру нет доступных предметов.</div>';}
 function renderAlbumMilestones(){const a=selectedAlbum(),rows=a?.milestones||[];$('albumMilestoneList').innerHTML=rows.length?rows.map(m=>{const stats=m.claimStats||{};return `<div class="album-milestone-row"><div class="album-milestone-percent">${fmt(m.thresholdPercent)}%</div><div><b>${esc(m.title||`${m.thresholdPercent}% коллекции`)}</b><span>${esc((m.rewards||[]).map(albumRewardCopy).join(' + '))} · выдано ${fmt(stats.delivered||0)}${m.enabled?'':' · выключен'}</span></div><div class="actions"><button class="btn secondary small" data-album-milestone-edit="${esc(m.milestoneId)}">Изменить</button><button class="btn danger small" data-album-milestone-delete="${esc(m.milestoneId)}">×</button></div></div>`;}).join(''):'<div class="empty">Этапов наград пока нет. Альбом может работать и без них.</div>';}
-function renderAlbumMilestoneRewardItems(){const kind=$('albumMilestoneRewardKind')?.value||'points',field=$('albumMilestoneRewardItemField'),select=$('albumMilestoneRewardItem');if(!select||!field)return;const current=select.value;let options=[];if(kind==='case')options=Object.entries(CASES).map(([id,x])=>({id,title:x.title}));else if(kind==='seasonal_case')options=(state.albums?.seasonalCases||[]).filter(x=>x.enabled).map(x=>({id:x.id,title:x.title}));else if(ALBUM_KIND_LABELS_UI[kind])options=(state.albums?.catalog||[]).filter(x=>x.kind===kind&&x.released&&x.deliverable!==false).map(x=>({id:x.itemId,title:x.title}));field.classList.toggle('hidden',['points','zefir','coffee'].includes(kind));select.innerHTML=options.map(x=>`<option value="${esc(x.id)}">${esc(x.title)} · ${esc(x.id)}</option>`).join('');if(options.some(x=>x.id===current))select.value=current;const cosmetic=ALBUM_KIND_LABELS_UI[kind];if(cosmetic)$('albumMilestoneAmount').value='1';}
 async function loadAlbums(selectId=state.albumEditId){const d=await api('/api/owner/albums');state.albums=d;renderAlbumStats();renderAlbumList();if(selectId&&d.collections?.some(x=>x.collectionId===selectId))state.albumEditId=selectId;else if(state.albumEditId&&!d.collections?.some(x=>x.collectionId===state.albumEditId))state.albumEditId='';if(state.albumEditId)renderAlbumEditor();return d;}
 async function saveAlbumMetadata(){const b=$('albumSave');setBusy(b,true,'Сохраняю…');try{const result=await api('/api/owner/albums/save',{collectionId:state.albumEditId||'',title:$('albumTitle').value,subtitle:$('albumSubtitle').value,coverUrl:$('albumCover').value,backgroundUrl:$('albumBackground').value,accentColor:$('albumAccent').value,sortOrder:Number($('albumSort').value||0)});state.albumEditId=result.collectionId;await loadAlbums(result.collectionId);toast('Альбом сохранён');return result.collectionId;}finally{setBusy(b,false);}}
-function editAlbumMilestone(id){const a=selectedAlbum(),m=a?.milestones?.find(x=>x.milestoneId===id);if(!m)return;state.albumMilestoneEditId=m.milestoneId;$('albumMilestonePercent').value=m.thresholdPercent;$('albumMilestoneTitle').value=m.title||'';$('albumMilestoneEnabled').value=m.enabled?'1':'0';const r=m.rewards?.[0]||{kind:'points',amount:1000};$('albumMilestoneRewardKind').value=r.kind||'points';renderAlbumMilestoneRewardItems();window.setTimeout(()=>{$('albumMilestoneRewardItem').value=r.id||'';$('albumMilestoneAmount').value=r.amount||1;},0);}
+function editAlbumMilestone(id){if(cc21HasDirtyForm('albums','albumMilestoneSave')&&!confirm('Сбросить несохранённые правки этапа?'))return;cc21ClearDirty('albums','albumMilestoneSave');const a=selectedAlbum(),m=a?.milestones?.find(x=>x.milestoneId===id);if(!m)return;state.albumMilestoneEditId=m.milestoneId;state.albumMilestoneRewards=(Array.isArray(m.rewards)&&m.rewards.length?m.rewards:[{kind:'points',amount:1000}]).map(albumMilestoneRewardNormalize);$('albumMilestonePercent').value=m.thresholdPercent;$('albumMilestoneTitle').value=m.title||'';$('albumMilestoneEnabled').value=m.enabled?'1':'0';renderAlbumMilestoneRewards();}
 function bindAlbumUi(){
   document.querySelectorAll('[data-album-image-clear]').forEach(button=>button.onclick=()=>{const target=$(button.dataset.albumImageClear);if(!target)return;target.value='';target.dispatchEvent(new Event('input',{bubbles:true}));target.dispatchEvent(new Event('change',{bubbles:true}));syncAlbumImageChoice(button.dataset.albumImageClear);renderAlbumPreview(selectedAlbum());haptic('selection');});
   $('albumsReload').onclick=()=>loadAlbums().catch(e=>toast(e.message,true));$('albumNew').onclick=()=>{state.albumEditId='';albumClearMilestoneEditor();renderAlbumEditor();};
@@ -1123,9 +1428,12 @@ function bindAlbumUi(){
   $('albumCurrentItems').addEventListener('click',async e=>{const save=e.target.closest('[data-album-item-save]'),del=e.target.closest('[data-album-item-delete]'),btn=save||del;if(!btn)return;const row=btn.closest('[data-album-current]'),kind=String(row?.dataset.kind||''),itemId=String(row?.dataset.itemId||''),a=selectedAlbum();if(!a||!kind||!itemId)return;if(del){const current=a.items?.find(x=>x.kind===kind&&x.itemId===itemId),confirmProgressChange=a.status==='published'&&Boolean(current?.required);if(!confirm(confirmProgressChange?'Убрать ОБЯЗАТЕЛЬНЫЙ предмет? Процент опубликованного Альбома вырастет и у части игроков могут открыться награды.':'Убрать предмет из этого Альбома? Сам предмет у игроков останется.'))return;try{await api('/api/owner/albums/item/delete',{collectionId:a.collectionId,kind,itemId,confirmProgressChange});await loadAlbums(a.collectionId);toast('Предмет убран из Альбома');}catch(err){toast(err.message,true);}return;}const required=row.querySelector('[data-album-role]').value==='required',secret=row.querySelector('[data-album-secret]').value==='1',sortOrder=Number(row.querySelector('[data-album-sort]').value||0),current=a.items?.find(x=>x.kind===kind&&x.itemId===itemId);let confirmProgressChange=false;if(a.status==='published'&&Boolean(current?.required)!==required){confirmProgressChange=confirm(required?'Перевести бонусный предмет в ОБЯЗАТЕЛЬНЫЕ? Это уменьшит процент опубликованного Альбома.':'Перевести ОБЯЗАТЕЛЬНЫЙ предмет в бонусные? Это повысит процент и может открыть награды.');if(!confirmProgressChange)return;}setBusy(btn,true,'Сохраняю…');try{await api('/api/owner/albums/items/save',{collectionId:a.collectionId,items:[{kind,itemId,required,secret,sortOrder}],confirmProgressChange});await loadAlbums(a.collectionId);toast('Предмет обновлён');}catch(err){toast(err.message,true);}finally{setBusy(btn,false);}});
   $('albumCatalogKind').onchange=renderAlbumCatalog;$('albumCatalogSearch').oninput=renderAlbumCatalog;
   $('albumAddSelected').onclick=async()=>{const a=selectedAlbum();if(!a)return;const checked=[...document.querySelectorAll('#albumCatalogList [data-album-catalog-check]:checked')];if(!checked.length)return toast('Выберите предметы',true);const required=$('albumAddMode').value==='required',secret=$('albumAddSecret').value==='1';let confirmProgressChange=false;if(a.status==='published'&&required){confirmProgressChange=confirm('Добавить новые ОБЯЗАТЕЛЬНЫЕ предметы в опубликованный Альбом? Это уменьшит текущий процент игроков.');if(!confirmProgressChange)return;}const items=checked.map((x,i)=>({kind:x.dataset.kind,itemId:x.dataset.itemId,required,secret,sortOrder:(a.items?.length||0)+i+1}));const b=$('albumAddSelected');setBusy(b,true,'Добавляю…');try{await api('/api/owner/albums/items/save',{collectionId:a.collectionId,items,confirmProgressChange});await loadAlbums(a.collectionId);toast(`Добавлено: ${items.length}`);}catch(e){toast(e.message,true);}finally{setBusy(b,false);}};
-  $('albumMilestoneRewardKind').onchange=renderAlbumMilestoneRewardItems;$('albumMilestoneNew').onclick=albumClearMilestoneEditor;$('albumMilestoneCancel').onclick=albumClearMilestoneEditor;
+  $('albumMilestoneNew').onclick=albumClearMilestoneEditor;$('albumMilestoneCancel').onclick=albumClearMilestoneEditor;$('albumMilestoneRewardAdd').onclick=()=>{state.albumMilestoneRewards=albumMilestoneRewardsFromUi();if(state.albumMilestoneRewards.length>=3)return toast('У этапа может быть не больше трёх наград.',true);state.albumMilestoneRewards.push({kind:'points',id:'',amount:1000});renderAlbumMilestoneRewards();cc21MarkDirty($('albumMilestoneTitle'));};$('albumMilestoneRewardsList').addEventListener('change',e=>{const row=e.target.closest('[data-album-reward-index]');if(!row)return;state.albumMilestoneRewards=albumMilestoneRewardsFromUi();if(e.target.matches('[data-album-reward-kind]')){const index=Number(row.dataset.albumRewardIndex);state.albumMilestoneRewards[index]=albumMilestoneRewardNormalize({kind:e.target.value,id:'',amount:1});renderAlbumMilestoneRewards();}cc21MarkDirty($('albumMilestoneTitle'));});$('albumMilestoneRewardsList').addEventListener('input',()=>{state.albumMilestoneRewards=albumMilestoneRewardsFromUi();});$('albumMilestoneRewardsList').addEventListener('click',e=>{const b=e.target.closest('[data-album-reward-remove]');if(!b)return;state.albumMilestoneRewards=albumMilestoneRewardsFromUi();if(state.albumMilestoneRewards.length<=1)return;state.albumMilestoneRewards.splice(Number(b.dataset.albumRewardRemove),1);renderAlbumMilestoneRewards();cc21MarkDirty($('albumMilestoneTitle'));});
   $('albumMilestoneList').addEventListener('click',async e=>{const edit=e.target.closest('[data-album-milestone-edit]'),del=e.target.closest('[data-album-milestone-delete]');if(edit){editAlbumMilestone(edit.dataset.albumMilestoneEdit);return;}if(del){const a=selectedAlbum();if(!a||!confirm('Удалить этот этап награды? Если его уже кто-то получал, сервер не позволит удалить историю.'))return;try{await api('/api/owner/albums/milestone/delete',{collectionId:a.collectionId,milestoneId:del.dataset.albumMilestoneDelete,confirmProgressChange:a.status==='published'});await loadAlbums(a.collectionId);albumClearMilestoneEditor();toast('Этап удалён');}catch(err){toast(err.message,true);}}});
-  $('albumMilestoneSave').onclick=async()=>{const a=selectedAlbum();if(!a)return;const kind=$('albumMilestoneRewardKind').value,id=['points','zefir','coffee'].includes(kind)?'':$('albumMilestoneRewardItem').value,amount=Number($('albumMilestoneAmount').value||1),payload={collectionId:a.collectionId,milestoneId:state.albumMilestoneEditId||'',thresholdPercent:Number($('albumMilestonePercent').value||0),title:$('albumMilestoneTitle').value,enabled:$('albumMilestoneEnabled').value==='1',rewards:[{kind,id,amount}]};if(a.status==='published'){payload.confirmProgressChange=confirm('Изменить этап опубликованного Альбома? Это сразу изменит доступность награды для игроков.');if(!payload.confirmProgressChange)return;}const b=$('albumMilestoneSave');setBusy(b,true,'Сохраняю…');try{await api('/api/owner/albums/milestone/save',payload);await loadAlbums(a.collectionId);albumClearMilestoneEditor();toast('Этап сохранён');}catch(e){toast(e.message,true);}finally{setBusy(b,false);}};
+  $('albumMilestoneSave').onclick=async()=>{const a=selectedAlbum();if(!a)return;const threshold=Number($('albumMilestonePercent').value),rewards=albumMilestoneRewardsFromUi().map(albumMilestoneRewardNormalize);if(!Number.isInteger(threshold)||threshold<1||threshold>100)return toast('Укажите целый процент этапа от 1 до 100.',true);if(!rewards.length||rewards.length>3)return toast('Укажите от одной до трёх наград.',true);for(const reward of rewards){if(!Number.isInteger(Number(reward.amount))||Number(reward.amount)<1)return toast('Количество каждой награды должно быть не меньше 1.',true);if(!['points','zefir','coffee'].includes(reward.kind)&&!reward.id)return toast('Выберите предмет для каждой награды.',true);}const payload={collectionId:a.collectionId,milestoneId:state.albumMilestoneEditId||'',thresholdPercent:threshold,title:$('albumMilestoneTitle').value,enabled:$('albumMilestoneEnabled').value==='1',sortOrder:(a.milestones||[]).find(x=>x.milestoneId===state.albumMilestoneEditId)?.sortOrder??threshold,rewards};if(a.status==='published'){const before=state.albumMilestoneEditId?(a.milestones||[]).find(x=>x.milestoneId===state.albumMilestoneEditId):null;const beforeText=before?(before.rewards||[]).map(albumRewardCopy).join(' + ')||'без наград':'новый этап';const afterText=rewards.map(albumRewardCopy).join(' + ');payload.confirmProgressChange=confirm(`Изменить этап опубликованного Альбома? Это сразу изменит доступность награды для игроков.
+
+Было: ${beforeText}
+Станет: ${afterText}`);if(!payload.confirmProgressChange)return;}const b=$('albumMilestoneSave');setBusy(b,true,'Сохраняю…');try{await api('/api/owner/albums/milestone/save',payload);if(state.albumEditId===a.collectionId){await loadAlbums(a.collectionId);if(!cc21HasDirtyForm('albums','albumMilestoneSave')&&state.albumMilestoneEditId===payload.milestoneId)albumClearMilestoneEditor();cc21RestoreDirtyFields();}toast('Этап сохранён');}catch(e){toast(e.message,true);}finally{setBusy(b,false);}};
 }
 bindAlbumUi();
 // ===== /Альбом Зеффи =====
@@ -1489,7 +1797,7 @@ function cc321RenderPlayerOperations(p){
   const body=$('cc321PlayerTabBody');if(!body)return;
   const pending=p?.pendingCases||{};const showcaseGrantGroup=cc24ShowcaseGrantMarkup(p);const pass=p?.seasonPass||{};
   body.innerHTML=`${pass?.title?`<div class="card flat"><div class="section-head"><div><h3>Сезонный пропуск</h3><p>${esc(pass.title||'')}</p></div><span class="pill gold">${esc(pass.displayLevel||pass.level||'—')}</span></div><div class="mini-stats"><div class="mini-stat"><b>${esc(pass.tier==='elite_plus'?'Элитный+':pass.tier==='elite'?'Элитный':'Обычный')}</b><span>Тариф</span></div><div class="mini-stat"><b>${fmt(pass.xp||0)}</b><span>XP пропуска</span></div></div></div>`:''}<div class="card flat" style="margin-top:10px"><div class="section-head"><div><h3>Неоткрытые кейсы</h3><p>Серверный остаток выданных кейсов.</p></div></div><div class="case-picker">${Object.entries(CASES).map(([k,c])=>`<div class="case-option"><img src="${c.image}"><span>${c.title} · ${fmt(pending[k]||0)}</span></div>`).join('')}</div></div><div class="card flat" style="margin-top:10px"><div class="section-head"><div><h3>Восстановить рекорд рейтинга</h3><p>Только более высокий рекорд текущего рейтингового сезона.</p></div><span class="pill gold">Текущий сезон</span></div><div class="mini-stats"><div class="mini-stat"><b>${fmt(p.currentSeasonScore||0)}</b><span>${esc(p.currentSeasonTitle||'Текущий рейтинг')}</span></div><div class="mini-stat"><b>${fmt(p.allTimeScore||0)}</b><span>Лучший результат за всё время</span></div></div><div class="form-grid two" style="margin-top:9px"><div class="field"><label>Новый рекорд</label><input type="number" id="playerRatingRecord" min="${Math.max(1,Number(p.currentSeasonScore||0)+1)}" max="999999999" step="1" placeholder="Например: ${Math.max(1,Number(p.currentSeasonScore||0)+100)}"></div><div class="field"><label>Причина · обязательно</label><input id="playerRatingReason" maxlength="300" placeholder="Например: восстановление после сбоя"></div></div><div class="actions" style="margin-top:9px"><button class="btn gold" id="playerRatingRestoreButton">Восстановить рекорд</button></div></div><div class="card flat" style="margin-top:10px"><div class="section-head"><div><h3>Выдать награду</h3><p>Начисляется напрямую на аккаунт и фиксируется в аудите.</p></div></div><div class="form-grid two"><div class="field"><label>Награда</label><select id="playerGrantKind"><option value="points">Очки</option><option value="treats">Зефир</option><option value="coffee">Кофе</option><option value="streak_protection">🛡 Защита серии</option><option value="case:small">Обычный кейс</option><option value="case:sweet">Серебряный кейс</option><option value="case:gold">Золотой кейс</option><option value="case:mythic">Мифический кейс</option><option value="case:legendary">Легендарный кейс</option><option value="case:alex">Кейс Алекса</option>${showcaseGrantGroup}<optgroup label="Усилители"><option value="booster:points">×2 очки · 2 забега</option><option value="booster:treats">×2 зефир · 2 забега</option><option value="booster:coffee">×2 кофе · 2 забега</option><option value="booster:shield">Щит Зеффи · 1 забег</option><option value="booster:second_chance">Второй шанс · 1 забег</option><option value="booster:pause">Пауза Зеффи · 1 забег</option></optgroup><optgroup label="Сезонный пропуск"><option value="season_pass_xp">XP пропуска (+ к текущему)</option><option value="season_pass:elite">Элитный</option><option value="season_pass:elite_plus">Элитный+</option></optgroup></select></div><div class="field"><label>Количество</label><input type="number" id="playerGrantAmount" min="1" value="1"></div></div><div class="field" style="margin-top:8px"><label>Причина</label><input id="playerGrantReason" value="Выдача из панели владельца"></div><div class="actions" style="margin-top:9px"><button class="btn gold" id="playerGrantButton">Выдать</button></div></div><div class="danger-box" style="margin-top:10px"><b>Опасные действия</b><p>Сброс и модерация открываются в штатных разделах Control Center.</p><div class="actions" style="margin-top:9px"><button class="btn danger small" id="playerResetQuick">Сбросить прогресс</button><button class="btn secondary small" id="playerModerationQuick">Модерация</button></div></div>`;
-  $('playerGrantButton').onclick=grantPlayer;$('playerGrantKind').onchange=syncPlayerGrantAmount;syncPlayerGrantAmount();$('playerRatingRestoreButton').onclick=restorePlayerRatingRecord;
+  $('playerGrantButton').onclick=grantPlayer;$('playerGrantKind').onchange=syncPlayerGrantAmount;syncPlayerGrantAmount();ccGrantRender();$('playerRatingRestoreButton').onclick=restorePlayerRatingRecord;
   $('playerResetQuick').onclick=()=>{const id=state.player.telegramId;closeOverlay('playerOverlay');state.resets=null;switchView('resets').then(()=>{resetSetScope('one');$('resetTarget').value=id;});};
   $('playerModerationQuick').onclick=()=>{const id=state.player.telegramId;closeOverlay('playerOverlay');state.control=null;switchView('control').then(()=>{activateControlPane('moderation');setModerationPlayer({telegramId:id,name:state.player?.name||`Telegram ${id}`,username:state.player?.username||''});});};
 }
@@ -1568,9 +1876,72 @@ async function restorePlayerDailyStreak(){
     await openPlayer(p.telegramId);
   }catch(e){toast(e.message,true);}finally{setBusy(btn,false);}
 }
-async function restorePlayerRatingRecord(){const p=state.player;if(!p)return;const input=$('playerRatingRecord'),reasonInput=$('playerRatingReason'),btn=$('playerRatingRestoreButton');const score=Math.floor(Number(input?.value||0)),current=Math.max(0,Number(p.currentSeasonScore||0)),reason=String(reasonInput?.value||'').trim();if(!Number.isInteger(score)||score<1||score>999999999){toast('Укажите корректный новый рекорд.',true);input?.focus();return;}if(score<=current){toast(`Новый рекорд должен быть выше текущего: ${fmt(current)}.`,true);input?.focus();return;}if(reason.length<3){toast('Укажите причину восстановления рекорда.',true);reasonInput?.focus();return;}if(!confirm(`Восстановить рекорд игрока ${p.name||p.telegramId}?\n\nСезон: ${p.currentSeasonTitle||'текущий'}\nБыло: ${fmt(current)}\nСтанет: ${fmt(score)}\n\nПричина: ${reason}\n\nДействие попадёт в аудит.`))return;setBusy(btn,true,'Сохраняю…');try{const result=await api('/api/owner/player/grant',{telegramId:p.telegramId,kind:'rating_record',amount:score,reason});toast(result?.message||'Рекорд рейтинга восстановлен');state.player360=null;state.rating=null;await openPlayer(p.telegramId);}catch(e){toast(e.message,true);}finally{setBusy(btn,false);}}
+async function restorePlayerRatingRecord(){const p=state.player;if(!p)return;const input=$('playerRatingRecord'),reasonInput=$('playerRatingReason'),btn=$('playerRatingRestoreButton');const score=Math.floor(Number(input?.value||0)),current=Math.max(0,Number(p.currentSeasonScore||0)),reason=String(reasonInput?.value||'').trim();if(!Number.isInteger(score)||score<1||score>999999999){toast('Укажите корректный новый рекорд.',true);input?.focus();return;}if(score<=current){toast(`Новый рекорд должен быть выше текущего: ${fmt(current)}.`,true);input?.focus();return;}if(reason.length<3){toast('Укажите причину восстановления рекорда.',true);reasonInput?.focus();return;}if(!confirm(`Восстановить рекорд игрока ${p.name||p.telegramId}?\n\nСезон: ${p.currentSeasonTitle||'текущий'}\nБыло: ${fmt(current)}\nСтанет: ${fmt(score)}\n\nПричина: ${reason}\n\nДействие попадёт в аудит.`))return;await ccGrantBegin({telegramId:p.telegramId,kind:'rating_record',amount:score,reason,seasonId:String(p.currentSeasonId||'')});}
 function syncPlayerGrantAmount(){const kind=String($('playerGrantKind')?.value||'').split(':')[0],amount=$('playerGrantAmount');if(!amount)return;const fixed=kind==='season_pass'||kind==='showcase_style';if(fixed)amount.value='1';amount.disabled=fixed;if(kind==='booster')amount.max='999';else if(kind==='streak_protection')amount.max='30';else amount.removeAttribute('max');}
-async function grantPlayer(){const raw=$('playerGrantKind').value;const [kind,itemId='']=raw.split(':');const btn=$('playerGrantButton');setBusy(btn,true);try{const result=await api('/api/owner/player/grant',{telegramId:state.player.telegramId,kind,itemId,amount:(kind==='season_pass'||kind==='showcase_style')?1:Number($('playerGrantAmount').value),reason:$('playerGrantReason').value});toast(result?.message||'Награда начислена');await openPlayer(state.player.telegramId);}catch(e){toast(e.message,true);}finally{setBusy(btn,false);}}
+// Persistent logical grant ID; never create a fresh operation to retry an unknown result.
+let ccGrantBusy=false;
+function ccGrantStorageKey(){return `cc-safe-grant-v1:${String(tg?.initDataUnsafe?.user?.id||'owner')}`;}
+function ccGrantRead(){try{const value=JSON.parse(localStorage.getItem(ccGrantStorageKey())||'null');return value?.payload?.requestId?value:null;}catch{return null;}}
+function ccGrantWrite(value){
+  try{if(value)localStorage.setItem(ccGrantStorageKey(),JSON.stringify(value));else localStorage.removeItem(ccGrantStorageKey());}
+  catch{throw new Error('\u041d\u0435 \u0443\u0434\u0430\u043b\u043e\u0441\u044c \u0441\u043e\u0445\u0440\u0430\u043d\u0438\u0442\u044c \u043d\u043e\u043c\u0435\u0440 \u0432\u044b\u0434\u0430\u0447\u0438. \u0420\u0430\u0437\u0440\u0435\u0448\u0438\u0442\u0435 \u0445\u0440\u0430\u043d\u0438\u043b\u0438\u0449\u0435 \u0438 \u043f\u043e\u0432\u0442\u043e\u0440\u0438\u0442\u0435.');}
+}
+function ccGrantRender(){
+  const button=$('playerGrantButton');if(!button)return;
+  let box=$('ccGrantReceipt');if(!box){box=document.createElement('div');box.id='ccGrantReceipt';box.className='info';box.style.marginTop='12px';button.closest('.card')?.appendChild(box);}
+  const record=ccGrantRead();
+  for(const id of ['playerGrantButton','playerRatingRestoreButton']){const b=$(id);if(b)b.disabled=ccGrantBusy;}
+  if(!record){box.textContent='\u0420\u0435\u0430\u043b\u044c\u043d\u044b\u0439 \u0430\u043a\u043a\u0430\u0443\u043d\u0442. \u0412\u044b\u0434\u0430\u0447\u0430 \u043f\u043e\u043b\u0443\u0447\u0438\u0442 \u0441\u0432\u043e\u044e \u043a\u0432\u0438\u0442\u0430\u043d\u0446\u0438\u044e.';return;}
+  const confirmed=record.status==='confirmed',denied=record.status==='denied';
+  button.textContent=ccGrantBusy?'\u041f\u0440\u043e\u0432\u0435\u0440\u044f\u044e\u2026':confirmed||denied?'\u041d\u043e\u0432\u0430\u044f \u0432\u044b\u0434\u0430\u0447\u0430':'\u041f\u0440\u043e\u0432\u0435\u0440\u0438\u0442\u044c \u0432\u044b\u0434\u0430\u0447\u0443';
+  box.innerHTML=`<b>${confirmed?'\u0412\u044b\u0434\u0430\u0447\u0430 \u043f\u043e\u0434\u0442\u0432\u0435\u0440\u0436\u0434\u0435\u043d\u0430':denied?'\u0412\u044b\u0434\u0430\u0447\u0430 \u043e\u0442\u043a\u043b\u043e\u043d\u0435\u043d\u0430':'\u0420\u0435\u0437\u0443\u043b\u044c\u0442\u0430\u0442 \u043f\u0440\u043e\u0432\u0435\u0440\u044f\u0435\u0442\u0441\u044f'}</b><p>${esc(record.result?.message||record.error||'\u041d\u0435 \u0441\u043e\u0437\u0434\u0430\u0432\u0430\u0439\u0442\u0435 \u043d\u043e\u0432\u0443\u044e \u0432\u044b\u0434\u0430\u0447\u0443 \u0434\u043e \u043f\u0440\u043e\u0432\u0435\u0440\u043a\u0438 \u044d\u0442\u043e\u0439.')}</p><p>Telegram ID: ${esc(record.payload.telegramId)}<br><small style="overflow-wrap:anywhere">${esc(record.payload.requestId)}</small></p>${!confirmed&&!denied?`<div class="actions"><button type="button" class="btn secondary small" id="ccGrantCheck" ${ccGrantBusy?'disabled':''}>\u041f\u0440\u043e\u0432\u0435\u0440\u0438\u0442\u044c \u0440\u0435\u0437\u0443\u043b\u044c\u0442\u0430\u0442</button>${record.retryAllowed?`<button type="button" class="btn secondary small" id="ccGrantRetry" ${ccGrantBusy?'disabled':''}>\u041f\u043e\u0432\u0442\u043e\u0440\u0438\u0442\u044c \u044d\u0442\u0443 \u0436\u0435 \u0432\u044b\u0434\u0430\u0447\u0443</button>`:''}</div>`:''}`;
+  if($('ccGrantCheck'))$('ccGrantCheck').onclick=()=>ccGrantCheck();
+  if($('ccGrantRetry'))$('ccGrantRetry').onclick=()=>ccGrantSend(record,true);
+}
+async function ccGrantCheck(){
+  if(ccGrantBusy)return;const record=ccGrantRead();if(!record||record.status==='confirmed')return;
+  ccGrantBusy=true;ccGrantRender();
+  try{const r=await api('/api/owner/player/grant/status',{telegramId:record.payload.telegramId,requestId:record.payload.requestId},true,{mutation:false});
+    if(r.found){record.status='confirmed';record.result=r;record.error='';record.retryAllowed=false;}
+    else{record.status='unknown';record.retryAllowed=true;record.error=r.message;}
+    ccGrantWrite(record);toast(r.message||'\u041a\u0432\u0438\u0442\u0430\u043d\u0446\u0438\u044f \u043f\u0440\u043e\u0432\u0435\u0440\u0435\u043d\u0430');
+  }catch(error){toast(error.message,true);}finally{ccGrantBusy=false;ccGrantRender();}
+}
+async function ccGrantSend(record,retry=false){
+  if(ccGrantBusy)return;
+  if(retry&&!confirm(`\u041f\u043e\u0432\u0442\u043e\u0440\u0438\u0442\u044c \u0442\u0443 \u0436\u0435 \u0432\u044b\u0434\u0430\u0447\u0443 \u0438\u0433\u0440\u043e\u043a\u0443 ${record.payload.telegramId}?\n\n\u041d\u043e\u043c\u0435\u0440 \u043e\u043f\u0435\u0440\u0430\u0446\u0438\u0438 \u043d\u0435 \u043c\u0435\u043d\u044f\u0435\u0442\u0441\u044f. \u0421\u0435\u0440\u0432\u0435\u0440 \u043d\u0435 \u043d\u0430\u0447\u0438\u0441\u043b\u0438\u0442 \u0435\u0451 \u0434\u0432\u0430\u0436\u0434\u044b.`))return;
+  ccGrantBusy=true;record.status='unknown';record.retryAllowed=false;
+  try{
+    // Durable before the first network request; never persist Telegram credentials.
+    ccGrantWrite(record);ccGrantRender();
+    const result=await api('/api/owner/player/grant',record.payload);
+    if(!result?.confirmed)throw new Error('\u0421\u0435\u0440\u0432\u0435\u0440 \u043d\u0435 \u0432\u0435\u0440\u043d\u0443\u043b \u043a\u0432\u0438\u0442\u0430\u043d\u0446\u0438\u044e. \u041f\u0440\u043e\u0432\u0435\u0440\u044c\u0442\u0435 \u0440\u0435\u0437\u0443\u043b\u044c\u0442\u0430\u0442.');
+    record.status='confirmed';record.result=result;record.error='';ccGrantWrite(record);toast(result.message||'\u0412\u044b\u0434\u0430\u0447\u0430 \u043f\u043e\u0434\u0442\u0432\u0435\u0440\u0436\u0434\u0435\u043d\u0430');
+    // Invalidate read caches, but do not reopen a closed or switched player overlay.
+    state.player360=null;state.rating=null;
+    const session=cc321PlayerSession;if(session&&session.telegramId===record.payload.telegramId){session.details=null;if(state.player)state.player.detailsLoaded=false;cc321RefreshPlayerSummary(session,true).catch(()=>{});}
+  }catch(error){
+    record.error=String(error.message||error);
+    // A definitive pre-write validation/auth refusal can be corrected as a new action.
+    // Conflicts and server failures remain unknown until a receipt check.
+    if([400,401,403,404].includes(Number(error.status))||error.code==='CC_ABORTED')record.status='denied';
+    try{ccGrantWrite(record);}catch{}toast(record.error,true);
+  }finally{ccGrantBusy=false;ccGrantRender();}
+}
+async function ccGrantBegin(payload){
+  if(ccGrantBusy)return;
+  const previous=ccGrantRead();if(previous&&!['confirmed','denied'].includes(previous.status)){await ccGrantCheck();return;}
+  const title=payload.kind==='rating_record'?'\u0412\u043e\u0441\u0441\u0442\u0430\u043d\u043e\u0432\u0438\u0442\u044c \u0440\u0435\u043a\u043e\u0440\u0434':'\u041d\u0430\u0447\u0438\u0441\u043b\u0438\u0442\u044c \u043d\u0430\u0433\u0440\u0430\u0434\u0443';
+  if(!confirm(`${title} \u0440\u0435\u0430\u043b\u044c\u043d\u043e\u043c\u0443 \u0438\u0433\u0440\u043e\u043a\u0443 ${payload.telegramId}?\n\n${payload.kind}${payload.itemId?' / '+payload.itemId:''} \u00d7 ${payload.amount}\n${payload.reason||''}${previous?.status==='confirmed'?'\n\n\u041f\u0440\u0435\u0434\u044b\u0434\u0443\u0449\u0430\u044f \u0432\u044b\u0434\u0430\u0447\u0430 \u0443\u0436\u0435 \u043f\u043e\u0434\u0442\u0432\u0435\u0440\u0436\u0434\u0435\u043d\u0430. \u042d\u0442\u043e \u043d\u043e\u0432\u043e\u0435 \u043d\u0430\u0447\u0438\u0441\u043b\u0435\u043d\u0438\u0435.':''}`))return;
+  const requestId=crypto.randomUUID();
+  await ccGrantSend({payload:{...payload,requestId,writeTarget:'live_player',confirmLive:true},status:'unknown',createdAt:Date.now()});
+}
+async function grantPlayer(){
+  if(!state.player||ccGrantBusy)return;
+  const [kind,itemId='']=String($('playerGrantKind')?.value||'').split(':');
+  const seasonId=(kind==='season_pass'||kind==='season_pass_xp')?String(state.player?.seasonPass?.seasonId||''):'';await ccGrantBegin({telegramId:state.player.telegramId,kind,itemId,amount:(kind==='season_pass'||kind==='showcase_style')?1:Number($('playerGrantAmount')?.value),reason:String($('playerGrantReason')?.value||''),seasonId});
+}
+
 
 function cc22TimeMs(value){if(value===null||value===undefined||value==='')return 0;const n=Number(value);if(Number.isFinite(n)&&n>0)return n>1e12?n:n*1000;const parsed=Date.parse(value);return Number.isFinite(parsed)?parsed:0;}
 function cc22SeasonProgress(season){const start=cc22TimeMs(season?.startsAt),end=cc22TimeMs(season?.endsAt),now=Date.now();if(!start||!end||end<=start)return 0;if(now<=start)return 0;if(now>=end)return 100;return Math.max(0,Math.min(100,Math.round(((now-start)/(end-start))*100)));}
@@ -2768,7 +3139,7 @@ let cc32SwipeGesture=null;
 function cc32IsMobile(){return window.matchMedia?.('(max-width: 620px)')?.matches??window.innerWidth<=620;}
 function cc32VisibleOverlay(){for(let i=ccOverlayStack.length-1;i>=0;i--){const el=$(ccOverlayStack[i]);if(el&&!el.classList.contains('hidden'))return el;}const rows=[...document.querySelectorAll('.overlay:not(.hidden)')];return rows.sort((a,b)=>(Number(getComputedStyle(a).zIndex)||0)-(Number(getComputedStyle(b).zIndex)||0)).at(-1)||null;}
 function cc32HasHorizontalScroll(target){let node=target instanceof Element?target:null,main=$('main');while(node&&node!==main){const style=getComputedStyle(node);if(/auto|scroll/.test(style.overflowX)&&node.scrollWidth>node.clientWidth+4)return true;node=node.parentElement;}return false;}function cc32SwipeBlockedTarget(target){return Boolean(target?.closest?.(`input,textarea,select,button,a,label,[contenteditable="true"],[role="button"],${CC32_HORIZONTAL_GESTURE_SELECTOR}`))||cc32HasHorizontalScroll(target);}
-function cc32Dirty(){return Boolean($('cc21DirtyBar')?.classList.contains('visible'));}
+function cc32Dirty(){return cc21DirtyViews.size>0;}
 function cc32ResetSwipeVisual(){const main=$('main');if(!main)return;main.classList.remove('cc32-swipe-tracking');main.classList.add('cc32-swipe-release');main.style.removeProperty('--cc32-swipe-x');main.style.removeProperty('--cc32-swipe-opacity');setTimeout(()=>main.classList.remove('cc32-swipe-release'),180);}
 function cc32Haptic(kind='selection'){try{kind==='warning'?tg?.HapticFeedback?.notificationOccurred?.('warning'):tg?.HapticFeedback?.selectionChanged?.();}catch{}}
 function cc32ScrollToTop(){if(!cc32IsMobile())return;const overlay=cc32VisibleOverlay(),scroller=overlay?.querySelector('.sheet')||$('main');if(!scroller)return;try{scroller.scrollTo({top:0,left:0,behavior:'smooth'});}catch{scroller.scrollTop=0;}cc32Haptic();}
