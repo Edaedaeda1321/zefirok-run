@@ -19712,7 +19712,9 @@ function createTutorialDeck(layer, mount, options, words) {
             status: response.status,
             payload: data,
             maintenance: Boolean(data?.maintenance),
-            maintenanceMode: String(data?.mode || &quot;&quot;)
+            maintenanceMode: String(data?.mode || &quot;&quot;),
+            code: String(data?.code || data?.details?.code || &quot;&quot;),
+            details: data?.details &amp;&amp; typeof data.details === &quot;object&quot; ? data.details : null
           });
           throw apiError;
         }
@@ -20252,6 +20254,8 @@ function createTutorialDeck(layer, mount, options, words) {
         const payload = error?.payload &amp;&amp; typeof error.payload === &quot;object&quot; ? error.payload : {};
         const mode = String(error?.maintenanceMode || payload?.mode || &quot;&quot;).toLowerCase();
         if (Boolean(error?.maintenance || payload?.maintenance) &amp;&amp; mode === &quot;cases&quot;) return true;
+        const code=String(error?.code || payload?.code || payload?.details?.code || &quot;&quot;);
+        if(code === &quot;CASE_SCHEMA_UNAVAILABLE&quot; || code === &quot;CASE_TEMPORARY_UNAVAILABLE&quot;) return true;
         const message = String(error?.message || payload?.error || &quot;&quot;);
         return /\u0424\u0443\u043d\u043a\u0446\u0438\u044f \u00ab\u041a\u0435\u0439\u0441\u044b\u00bb \u0432\u0440\u0435\u043c\u0435\u043d\u043d\u043e \u043d\u0435\u0434\u043e\u0441\u0442\u0443\u043f\u043d\u0430|\u041a\u0435\u0439\u0441\u044b \u0432\u0440\u0435\u043c\u0435\u043d\u043d\u043e \u043e\u0442\u043a\u043b\u044e\u0447\u0435\u043d\u044b|\u042d\u0442\u043e\u0442 \u043a\u0435\u0439\u0441 \u0432\u0440\u0435\u043c\u0435\u043d\u043d\u043e \u043e\u0442\u043a\u043b\u044e\u0447\u0451\u043d \u0430\u0434\u043c\u0438\u043d\u0438\u0441\u0442\u0440\u0430\u0442\u043e\u0440\u043e\u043c/i.test(message);
       }
@@ -20328,12 +20332,18 @@ function createTutorialDeck(layer, mount, options, words) {
         caseLayer.classList.remove(&quot;is-info-view&quot;, &quot;is-opening-busy&quot;);
         caseLayer.classList.add(&quot;case-xp-active&quot;);
         const offline = navigator.onLine === false;
+        const stateConflict = String(error?.code || error?.details?.code || &quot;&quot;) === &quot;CASE_STATE_CONFLICT&quot;;
+        const statusPill = stateConflict ? &quot;Состояние обновилось&quot; : (offline ? &quot;Нет соединения&quot; : &quot;Связь прервалась&quot;);
+        const statusTitle = stateConflict ? &quot;Кейс изменился на сервере&quot; : &quot;Не удалось проверить открытие&quot;;
+        const statusCopy = stateConflict
+          ? &quot;Защитная проверка остановила устаревшую операцию. Сначала обновим состояние, затем продолжим только после сверки.&quot;
+          : (offline ? &quot;Подключись к интернету — после этого мы проверим эту же попытку.&quot; : &quot;Сначала проверим, успел ли сервер завершить именно это открытие.&quot;);
         caseContentEl.innerHTML = `&lt;div class=&quot;case-xp-shell case-xp-status is-network&quot; data-case-theme=&quot;${escapePurchaseText(type)}&quot;&gt;
           &lt;div class=&quot;case-xp-network-mark&quot; aria-hidden=&quot;true&quot;&gt;&lt;i&gt;&lt;/i&gt;&lt;i&gt;&lt;/i&gt;&lt;i&gt;&lt;/i&gt;&lt;/div&gt;
           &lt;div class=&quot;case-xp-status-case&quot;&gt;${caseImageMarkup(type, false, &quot;case-xp-status-case-img&quot;)}&lt;/div&gt;
-          &lt;span class=&quot;case-xp-status-pill&quot;&gt;${offline ? &quot;Нет соединения&quot; : &quot;Связь прервалась&quot;}&lt;/span&gt;
-          &lt;h2 id=&quot;case-dialog-title&quot;&gt;Не удалось проверить открытие&lt;/h2&gt;
-          &lt;p&gt;${offline ? &quot;Подключись к интернету — после этого мы проверим эту же попытку.&quot; : &quot;Сначала проверим, успел ли сервер завершить именно это открытие.&quot;}&lt;/p&gt;
+          &lt;span class=&quot;case-xp-status-pill&quot;&gt;${statusPill}&lt;/span&gt;
+          &lt;h2 id=&quot;case-dialog-title&quot;&gt;${statusTitle}&lt;/h2&gt;
+          &lt;p&gt;${statusCopy}&lt;/p&gt;
           &lt;div class=&quot;case-xp-status-note&quot;&gt;&lt;strong&gt;Не открываем второй кейс&lt;/strong&gt;&lt;small&gt;${retryable ? &quot;Повторная проверка продолжит эту же операцию.&quot; : &quot;Если сервер уже выдал награду, мы покажем её после синхронизации.&quot;}&lt;/small&gt;&lt;/div&gt;
           &lt;div class=&quot;case-xp-status-actions&quot;&gt;
             ${retryable &amp;&amp; caseOpeningRetryContext ? `&lt;button class=&quot;case-xp-primary&quot; data-case-retry-opening type=&quot;button&quot;&gt;${caseOpeningRetryContext.kind === &quot;gifted&quot; ? &quot;Продолжить проверку&quot; : &quot;Проверить результат&quot;}&lt;/button&gt;` : &quot;&quot;}
@@ -20380,7 +20390,7 @@ function createTutorialDeck(layer, mount, options, words) {
 
       function isGrantedCaseRetryableError(error) {
         const status = Number(error?.status || 0);
-        if (error?.pending || error?.timeout || error?.code === &quot;REQUEST_TIMEOUT&quot; || !status || status &gt;= 500) return true;
+        if (error?.pending || error?.timeout || error?.code === &quot;REQUEST_TIMEOUT&quot; || error?.code === &quot;CASE_STATE_CONFLICT&quot; || !status || status &gt;= 500) return true;
         if (status !== 409) return false;
         return /уже открывается|попытка открытия устарела|состояние кейса изменилось|повторите открытие/i.test(String(error?.message || &quot;&quot;));
       }
@@ -25778,7 +25788,7 @@ function createTutorialDeck(layer, mount, options, words) {
         `, &quot;[data-purchase-close]&quot;);
       }
 
-      function showPurchaseConfirmation(purchase, missing = []) {
+      function showPurchaseConfirmation(purchase, missing = [], notice = &quot;&quot;) {
         const productImage = assetSources[purchase.product.image] || &quot;&quot;;
         const isCasePurchase = purchase.product.kind === &quot;case&quot;;
         const isFreePurchase = Number(purchase.cost || 0) &lt;= 0 &amp;&amp; Number(purchase.treatCost || 0) &lt;= 0 &amp;&amp; Number(purchase.coffeeCost || 0) &lt;= 0;
@@ -25809,6 +25819,7 @@ function createTutorialDeck(layer, mount, options, words) {
           &lt;span class=&quot;purchase-sheet-section-label&quot;&gt;${isFreePurchase ? &quot;Стоимость&quot; : &quot;К оплате&quot;}&lt;/span&gt;
           ${purchaseSheetPriceMarkup(purchase)}
           ${purchaseSheetAfterMarkup(purchase)}
+          ${notice ? `&lt;div class=&quot;purchase-balance-warning&quot;&gt;&lt;strong&gt;Цена изменилась&lt;/strong&gt;&lt;br&gt;${escapePurchaseText(notice)}&lt;/div&gt;` : &quot;&quot;}
           ${missingMarkup}
           &lt;div class=&quot;purchase-sheet-note&quot;&gt;${escapePurchaseText(note)}&lt;/div&gt;
           &lt;div class=&quot;purchase-actions&quot;&gt;
@@ -25913,7 +25924,8 @@ function createTutorialDeck(layer, mount, options, words) {
         try {
           const casePurchasePayload = {
             caseType: purchase.product.caseType,
-            requestId: purchase.requestId
+            requestId: purchase.requestId,
+            expectedPrice: { points:Number(purchase.cost||0), treats:Number(purchase.treatCost||0), coffee:Number(purchase.coffeeCost||0) }
           };
           let data;
           try {
@@ -25933,6 +25945,19 @@ function createTutorialDeck(layer, mount, options, words) {
           playGameSound(&quot;purchaseReward&quot;);
           hapticNotify(&quot;success&quot;);
         } catch (error) {
+          if (String(error?.code || error?.details?.code || &quot;&quot;) === &quot;CASE_PRICE_CHANGED&quot;) {
+            const current=error?.details?.currentPrice &amp;&amp; typeof error.details.currentPrice === &quot;object&quot; ? error.details.currentPrice : null;
+            if(current){
+              purchase.cost=Math.max(0,Number(current.points||0));purchase.treatCost=Math.max(0,Number(current.treats||0));purchase.coffeeCost=Math.max(0,Number(current.coffee||0));
+              if(purchase.product){purchase.product.points=purchase.cost;purchase.product.treats=purchase.treatCost;purchase.product.coffee=purchase.coffeeCost;}
+              if(shopProducts[purchase.id]){shopProducts[purchase.id].points=purchase.cost;shopProducts[purchase.id].treats=purchase.treatCost;shopProducts[purchase.id].coffee=purchase.coffeeCost;}
+              pendingPurchase=purchase;
+              const freshMissing=purchaseMissingItems(purchase);
+              showPurchaseConfirmation(purchase,freshMissing,&quot;Мы обновили стоимость. Покупка не выполнена — проверь новую цену и нажми «Купить» ещё раз.&quot;);
+              shopMessageEl.textContent=&quot;Цена кейса изменилась. Требуется новое подтверждение.&quot;;
+              return;
+            }
+          }
           showPurchaseNotice(&quot;Кейс не куплен&quot;, error?.message || &quot;Не удалось добавить кейс на склад.&quot;);
           void loadCaseState(true);
         } finally {

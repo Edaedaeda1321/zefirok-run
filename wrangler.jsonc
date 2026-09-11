@@ -20,7 +20,7 @@
 			"database_name": "zefirok-rewards",
 			"database_id": "5b92319d-9868-4e20-8677-4a140390255d",
 			"migrations_dir": "migrations",
-			"remote": true
+			"remote": false
 		},
 		{
 			"binding": "zefirok_candidate_v4_daily",

@@ -2235,11 +2235,8 @@ export default {
         }
       }
 
+      // Core service first: historical repair/preflight work must not block this pass.
       try {
-        await ensureRuntimeCompatibilitySchema(env);
-        await ensureDailyLoyaltySchema(env);
-        await ensureRelease106PlayerFix(env);
-        await ensureRelease121News(env);
         await processServerCron(env, controller);
       } catch (error) {
         console.error("Server Cron dispatcher failed", error);
@@ -2248,6 +2245,20 @@ export default {
 
 ${escapeHtml(String(error?.message || error).slice(0, 500))}`);
         } catch {}
+      }
+
+      const preflight = await runScheduledMaintenancePreflight(env);
+      if (!preflight.ok) {
+        console.warn("Server Cron maintenance preflight completed with errors", preflight.errors);
+        try {
+          await notifyOperationalIssue(env, "server-cron-maintenance", `🟠 <b>Ошибка ремонтной проверки Cron</b>
+
+Обычные фоновые задачи запускаются отдельно от ремонтных операций.
+
+${escapeHtml(preflight.errors.join(" | ").slice(0, 700))}`);
+        } catch {}
+      } else {
+        try { await clearOperationalIssue(env, "server-cron-maintenance"); } catch {}
       }
     })());
   }
@@ -3826,6 +3837,51 @@ const GIFT_INBOX_STALE_SECONDS = 12;
 const GIFT_INBOX_REWARD_LEASE_SECONDS = 12;
 const REFERRAL_REWARD_PROCESSING_STALE_SECONDS = 12;
 const SERVER_NOTIFICATION_RETRY_BASE_SECONDS = 60;
+async function runScheduledMaintenancePreflight(env) {
+  const startedAt = Math.floor(Date.now() / 1000);
+  const steps = [
+    ["runtime-compatibility", () => ensureRuntimeCompatibilitySchema(env)],
+    ["daily-loyalty-schema", () => ensureDailyLoyaltySchema(env)],
+    ["release-106-player-fix", () => ensureRelease106PlayerFix(env)],
+    ["release-121-news", () => ensureRelease121News(env)]
+  ];
+  const errors = [];
+  const results = [];
+  for (const [key, handler] of steps) {
+    const stepStarted = Date.now();
+    try {
+      await handler();
+      results.push({ key, ok:true, durationMs:Date.now()-stepStarted });
+    } catch (error) {
+      const message = String(error?.message || error).slice(0, 300);
+      console.error(`Scheduled maintenance preflight ${key} failed`, error);
+      errors.push(`${key}: ${message}`);
+      results.push({ key, ok:false, durationMs:Date.now()-stepStarted, error:message });
+    }
+  }
+  const payload = { ok:errors.length===0, checkedAt:Math.floor(Date.now()/1000), startedAt, errors, steps:results };
+  try { await setSystemState(env, "cron:maintenance-preflight", JSON.stringify(payload)); } catch (error) { console.error("Failed to persist Cron maintenance preflight", error); }
+  return payload;
+}
+
+async function recordCronServiceStatus(env, key, handler) {
+  const startedAt = Math.floor(Date.now()/1000);
+  try {
+    const result = await handler();
+    const finishedAt=Math.floor(Date.now()/1000);
+    const payload = { key, status:"success", lastSuccessAt:finishedAt, lastFinishedAt:finishedAt, startedAt, error:"" };
+    try { await setSystemState(env, `cron:service:${key}`, JSON.stringify(payload)); } catch (error) { console.error(`Failed to persist Cron service status ${key}`, error); }
+    return result;
+  } catch (error) {
+    const finishedAt=Math.floor(Date.now()/1000), message=String(error?.message||error).slice(0,500);
+    let previous={};
+    try { const state=await getSystemState(env,`cron:service:${key}`); previous=state?.value?safeJson(state.value,{}):{}; } catch {}
+    const payload={ key,status:"failed",lastSuccessAt:Number(previous.lastSuccessAt||0),lastFinishedAt:finishedAt,startedAt,error:message };
+    try { await setSystemState(env, `cron:service:${key}`, JSON.stringify(payload)); } catch (persistError) { console.error(`Failed to persist Cron service failure ${key}`, persistError); }
+    throw error;
+  }
+}
+
 const SERVER_CRON_JOB_DEFAULTS = Object.freeze([
   Object.freeze({ key: "critical-queues", interval: 60, priority: 10 }),
   Object.freeze({ key: "liveops-minute", interval: 60, priority: 20 }),
@@ -4013,13 +4069,13 @@ async function processSeasonEndReminders(env){
 
 async function processCriticalServerQueues(env) {
   return runServerCronSteps("critical-queues", [
-    ["leaderboard", async () => {
+    ["leaderboard", () => recordCronServiceStatus(env, "season-processing", async () => {
       const season = await ensureSeason(env);
       await expireLeaderboardRewardsAndNotify(env);
       try { await clearOperationalIssue(env, "leaderboard"); } catch {}
       return { seasonId: String(season?.id || "") };
-    }],
-    ["rewardQueue", () => processRewardDeliveryQueue(env, 25)],
+    })],
+    ["rewardQueue", () => recordCronServiceStatus(env, "reward-delivery", () => processRewardDeliveryQueue(env, 25))],
     ["staffNotifications", () => processPendingLeaderboardStaffNotifications(env, 30)],
     ["seasonEndReminders", () => processSeasonEndReminders(env)],
     ["seasonPassLetters", () => processSeasonPassTeaserNotifications(env)],
@@ -10937,6 +10993,26 @@ async function releaseCasePhysicalStock(env, consumptionIds) {
   }
 }
 
+function classifyCaseOperationFailure(error, fallbackMessage = "Не удалось выполнить операцию с кейсом.") {
+  const text=String(error?.message||error||"");
+  const lower=text.toLowerCase();
+  if ((lower.includes("check constraint") || lower.includes("constraint failed")) && lower.includes("active_booster_runs")) {
+    return { status:409, code:"CASE_STATE_CONFLICT", error:"Состояние кейса изменилось. Обновите данные и повторите действие.", details:{ action:"refresh_and_retry", retryable:true } };
+  }
+  if (/no such table|no such column|has no column named|migration \d+ is required|database schema|schema.*required/i.test(text)) {
+    return { status:503, code:"CASE_SCHEMA_UNAVAILABLE", error:"Кейсы временно недоступны из-за обновления сервиса. Попробуйте позже.", details:{ action:"wait_for_service", retryable:false } };
+  }
+  if (/database is locked|database is busy|d1.*timeout|timed out|temporar(?:y|ily)|internal error|network|connection/i.test(text)) {
+    return { status:503, code:"CASE_TEMPORARY_UNAVAILABLE", error:"Сервис кейсов временно недоступен. Попробуйте ещё раз через несколько секунд.", details:{ action:"retry_same_operation", retryable:true } };
+  }
+  return { status:500, code:"CASE_OPERATION_FAILED", error:fallbackMessage, details:{ action:"check_state_before_retry", retryable:true } };
+}
+
+function caseFailureResponse(error, fallbackMessage) {
+  const failure=classifyCaseOperationFailure(error,fallbackMessage);
+  return jsonResponse({ ok:false,error:failure.error,code:failure.code,details:failure.details },failure.status);
+}
+
 async function getLevelCaseState(request, env, internal = null, ctx = null) {
   try {
     requireDatabase(env);
@@ -10964,7 +11040,7 @@ async function getLevelCaseState(request, env, internal = null, ctx = null) {
     if (internal?.raw) throw error;
     if (error instanceof ApiError) return jsonResponse({ ok: false, error: error.message }, error.status);
     console.error("getLevelCaseState failed", error);
-    return jsonResponse({ ok: false, error: "Не удалось загрузить кейсы. Проверьте миграцию 0010." }, 500);
+    return caseFailureResponse(error, "Не удалось загрузить кейсы. Попробуйте ещё раз.");
   }
 }
 
@@ -11091,7 +11167,7 @@ async function openLevelCase(request, env, ctx = null) {
   } catch (error) {
     if (error instanceof ApiError) return jsonResponse({ ok: false, error: error.message }, error.status);
     console.error("openLevelCase failed", error);
-    return jsonResponse({ ok: false, error: "Не удалось открыть кейс. Проверьте миграцию 0010." }, 500);
+    return caseFailureResponse(error, "Не удалось подтвердить результат открытия кейса. Сначала обновите состояние.");
   }
 }
 
@@ -11119,10 +11195,21 @@ async function purchaseCaseFromShop(request, env, ctx = null) {
     ]);
     ensured=ensuredResult;
     const product={...baseProduct,points:safeAdminNumber(assortmentProduct?.points??baseProduct.points),treats:safeAdminNumber(assortmentProduct?.treats??baseProduct.treats),coffee:safeAdminNumber(assortmentProduct?.coffee??baseProduct.coffee)};
+    // Idempotent recovery wins over quote validation: if this request already succeeded,
+    // a retry after a lost response must return that result even if LiveOps price changed later.
     if (existing) {
       return jsonResponse(await buildFastCasePurchasePayload(env, telegramId, ensured, liveops, {
         repeated:true,purchase:{productId:product.id,caseType,title:product.title}
       }));
+    }
+    const currentPrice={points:product.points,treats:product.treats,coffee:product.coffee};
+    const expectedPrice=body.expectedPrice&&typeof body.expectedPrice==="object"?body.expectedPrice:null;
+    if(!expectedPrice){
+      throw new ApiError(409,"Цена кейса требует повторного подтверждения. Проверьте текущую стоимость и подтвердите покупку ещё раз.",{code:"CASE_PRICE_CHANGED",action:"reconfirm",currentPrice,productId:product.id,caseType});
+    }
+    const expected={points:safeAdminNumber(expectedPrice.points),treats:safeAdminNumber(expectedPrice.treats),coffee:safeAdminNumber(expectedPrice.coffee)};
+    if(expected.points!==currentPrice.points||expected.treats!==currentPrice.treats||expected.coffee!==currentPrice.coffee){
+      throw new ApiError(409,"Цена кейса изменилась. Проверьте новую стоимость и подтвердите покупку ещё раз.",{code:"CASE_PRICE_CHANGED",action:"reconfirm",currentPrice,productId:product.id,caseType});
     }
     if (liveOpsCaseConfig(liveops, caseType)?.enabled === false) throw new ApiError(409, "Этот кейс временно отключён администратором.");
     if (!assortmentProduct?.enabled) throw new ApiError(409, "Этот кейс временно убран из ассортимента.");
@@ -11185,7 +11272,7 @@ async function purchaseCaseFromShop(request, env, ctx = null) {
   } catch(error) {
     if(error instanceof ApiError)return jsonResponse({ok:false,error:error.message,details:error.details},error.status);
     console.error("purchaseCaseFromShop failed",error);
-    return jsonResponse({ok:false,error:"Не удалось купить кейс."},500);
+    return caseFailureResponse(error,"Не удалось купить кейс. Баланс не должен измениться — обновите магазин и повторите действие.");
   }
 }
 
@@ -11388,7 +11475,7 @@ async function openGrantedCase(request, env, ctx = null) {
     if (error instanceof ApiError) return jsonResponse({ ok: false, error: error.message }, error.status);
     if (String(error?.message || error).includes('granted_case_opening_guard_ok')) return jsonResponse({ ok:false, error:'Попытка открытия устарела. Повторите открытие кейса.' },409);
     console.error("openGrantedCase failed", error);
-    return jsonResponse({ ok: false, error: "Не удалось открыть подарочный кейс. Проверьте миграцию 0011." }, 500);
+    return caseFailureResponse(error, "Не удалось подтвердить результат открытия подарочного кейса. Сначала обновите состояние.");
   }
 }
 
@@ -38278,7 +38365,7 @@ async function ownerV85MonitorConfig(env){const state=await getSystemState(env,V
 async function ownerPanelV85Monitoring(env,ctx){
   return ownerV85Cached("monitoring",10000,async()=>{
     const now=Math.floor(Date.now()/1000),since=now-24*3600,config=await ownerV85MonitorConfig(env);
-    const [rewards,playerNotifications,staffNotifications,cron,perf,playerApiFailures,alerts,hourly]=await Promise.all([
+    const [rewards,playerNotifications,staffNotifications,cron,perf,playerApiFailures,alerts,hourly,rewardServiceState,seasonServiceState,maintenancePreflightState]=await Promise.all([
       env.DB.prepare(`SELECT
         SUM(CASE WHEN status='pending' THEN 1 ELSE 0 END) AS pending,
         SUM(CASE WHEN status='delivering' THEN 1 ELSE 0 END) AS active,
@@ -38307,7 +38394,10 @@ async function ownerPanelV85Monitoring(env,ctx){
       env.DB.prepare(`SELECT area,COUNT(*) AS samples,ROUND(AVG(duration_ms),1) AS avg_ms,MAX(duration_ms) AS max_ms,SUM(CASE WHEN success=0 THEN 1 ELSE 0 END) AS errors FROM admin_performance_samples WHERE created_at>=? GROUP BY area ORDER BY avg_ms DESC LIMIT 30`).bind(since).all(),
       env.DB.prepare(`SELECT id,area,duration_ms,error_text,created_at,COUNT(*) OVER() AS total FROM admin_performance_samples WHERE created_at>=? AND success=0 AND area LIKE 'player:%' ORDER BY created_at DESC,id DESC LIMIT 20`).bind(since).all(),
       env.DB.prepare(`SELECT * FROM smart_alert_events WHERE status='open' ORDER BY CASE severity WHEN 'critical' THEN 0 ELSE 1 END,last_seen_at DESC LIMIT 40`).all(),
-      env.DB.prepare(`SELECT * FROM server_analytics_hourly WHERE bucket_at>=? ORDER BY bucket_at ASC LIMIT 48`).bind(now-48*3600).all()
+      env.DB.prepare(`SELECT * FROM server_analytics_hourly WHERE bucket_at>=? ORDER BY bucket_at ASC LIMIT 48`).bind(now-48*3600).all(),
+      getSystemState(env,"cron:service:reward-delivery").catch(()=>null),
+      getSystemState(env,"cron:service:season-processing").catch(()=>null),
+      getSystemState(env,"cron:maintenance-preflight").catch(()=>null)
     ]);
     const queueStats=(row)=>({
       pending:{count:Number(row?.pending||0),maxAge:Number(row?.pending_max_age||0)},
@@ -38321,6 +38411,10 @@ async function ownerPanelV85Monitoring(env,ctx){
     const notificationSummary={pending:{count:pQ.pending.count+sQ.pending.count},retrying:{count:pQ.retrying.count+sQ.retrying.count},terminal:{count:pQ.terminal.count+sQ.terminal.count},unreachable:{count:pQ.unreachable.count+sQ.unreachable.count}};
     const cronRows=(cron.results||[]).map(r=>({key:String(r.job_key),enabled:Boolean(r.enabled),interval:Number(r.interval_seconds||0),lastSuccessAt:Number(r.last_success_at||0),lastFinishedAt:Number(r.last_finished_at||0),nextRunAt:Number(r.next_run_at||0),status:String(r.last_status||"never"),duration:Number(r.last_duration_ms||0),error:String(r.last_error||""),failures:Number(r.failures_total||0)}));
     const cronFailures24=(hourly.results||[]).reduce((sum,r)=>sum+Number(r.cron_failures||0),0);
+    const parseServiceState=(row,key)=>{const value=row?.value?safeJson(row.value,{}):{},status=String(value.status||"never"),lastFinishedAt=Number(value.lastFinishedAt||0);return {key,status,ok:status==="success",lastSuccessAt:Number(value.lastSuccessAt||0),lastRunAt:lastFinishedAt,error:String(value.error||"")};};
+    const services=[parseServiceState(rewardServiceState,"reward-delivery"),parseServiceState(seasonServiceState,"season-processing")];
+    const maintenanceRaw=maintenancePreflightState?.value?safeJson(maintenancePreflightState.value,{}):{ok:true,checkedAt:0,errors:[],steps:[]};
+    const maintenancePreflight={...maintenanceRaw,lastRunAt:Number(maintenanceRaw.checkedAt||0)};
     const slowAreaRows=(perf.results||[]).filter(r=>Number(r.avg_ms||0)>=Number(config.slowMs||1200));const slowAreas=slowAreaRows.length;
     const failedCron=cronRows.filter(r=>r.enabled&&r.status==='failed');
     const staleCron=cronRows.filter(r=>r.enabled&&r.lastSuccessAt&&now-r.lastSuccessAt>Math.max(r.interval*3,Number(config.cronStaleMinutes||20)*60));
@@ -38328,6 +38422,7 @@ async function ownerPanelV85Monitoring(env,ctx){
     const reasons=[];
     if(rQ.terminal.count>=Number(config.rewardFailed||1))reasons.push({level:'critical',text:`не доставлено наград: ${rQ.terminal.count}`});
     if(failedCron.length)reasons.push({level:'critical',text:`Cron с ошибкой: ${failedCron.map(r=>r.key).join(', ')}`});
+    if(maintenancePreflight?.ok===false)reasons.push({level:'warning',text:`ремонтная проверка: ${(maintenancePreflight.errors||[]).slice(0,2).join(' | ')}`});
     if(notificationSummary.terminal.count>=Number(config.notificationFailed||3))reasons.push({level:'warning',text:`не доставлено уведомлений за 24ч: ${notificationSummary.terminal.count}`});
     if(staleReward)reasons.push({level:'warning',text:`награды ждут дольше ${Number(config.rewardStaleMinutes||15)} мин.`});
     if(staleCron.length)reasons.push({level:'warning',text:`Cron давно без успеха: ${staleCron.map(r=>r.key).join(', ')}`});
@@ -38339,7 +38434,7 @@ async function ownerPanelV85Monitoring(env,ctx){
       return {id:Number(row.id||0),area:String(row.area||'').replace(/^player:/,''),durationMs:Number(row.duration_ms||0),status:Number(meta.s||0),telegramId:String(meta.p||''),username:String(meta.u||''),endpoint:String(meta.e||''),code:String(meta.c||''),reason:String(meta.r||raw||''),traceId:String(meta.x||''),online:meta.o!==0,effectiveType:String(meta.n||''),count:Math.max(1,Number(meta.q||1)),rtt:Number(meta.rt||0),downlink:Number(meta.dl||0),serverMs:Number(meta.sm||0),networkMs:Number(meta.nm||0),timeoutMs:Number(meta.tm||0),createdAt:Number(row.created_at||0)};
     });
     const playerApiFailureCount=Number(playerApiFailures.results?.[0]?.total||0);
-    return {ok:true,generatedAt:now,status:critical?'critical':warning?'warning':'healthy',healthReasons:reasons,config,queues:{rewards:rQ,playerNotifications:pQ,staffNotifications:sQ,notifications:notificationSummary},cron:cronRows,cronFailures24,performance:(perf.results||[]).map(r=>({area:String(r.area),samples:Number(r.samples||0),avgMs:Number(r.avg_ms||0),maxMs:Number(r.max_ms||0),errors:Number(r.errors||0)})),playerApiFailureCount,playerApiFailures:playerApiFailureRows,alerts:(alerts.results||[]).map(r=>({key:String(r.alert_key),type:String(r.alert_type||""),severity:String(r.severity||""),title:String(r.title||""),details:String(r.details||""),firstSeenAt:Number(r.first_seen_at||0),lastSeenAt:Number(r.last_seen_at||0)})),hourly:(hourly.results||[]).map(r=>({at:Number(r.bucket_at||0),active:Number(r.active_players||0),runs:Number(r.runs_total||0),rewardErrors:Number(r.rewards_failed||0),staffErrors:Number(r.staff_notifications_failed||0),playerErrors:Number(r.player_notifications_failed||0),cronFailures:Number(r.cron_failures||0),cronMs:Number(r.cron_duration_ms||0)}))};
+    return {ok:true,generatedAt:now,status:critical?'critical':warning?'warning':'healthy',healthReasons:reasons,config,queues:{rewards:rQ,playerNotifications:pQ,staffNotifications:sQ,notifications:notificationSummary},services,maintenancePreflight,cron:cronRows,cronFailures24,performance:(perf.results||[]).map(r=>({area:String(r.area),samples:Number(r.samples||0),avgMs:Number(r.avg_ms||0),maxMs:Number(r.max_ms||0),errors:Number(r.errors||0)})),playerApiFailureCount,playerApiFailures:playerApiFailureRows,alerts:(alerts.results||[]).map(r=>({key:String(r.alert_key),type:String(r.alert_type||""),severity:String(r.severity||""),title:String(r.title||""),details:String(r.details||""),firstSeenAt:Number(r.first_seen_at||0),lastSeenAt:Number(r.last_seen_at||0)})),hourly:(hourly.results||[]).map(r=>({at:Number(r.bucket_at||0),active:Number(r.active_players||0),runs:Number(r.runs_total||0),rewardErrors:Number(r.rewards_failed||0),staffErrors:Number(r.staff_notifications_failed||0),playerErrors:Number(r.player_notifications_failed||0),cronFailures:Number(r.cron_failures||0),cronMs:Number(r.cron_duration_ms||0)}))};
   });
 }
 async function ownerPanelV85MonitoringConfig(env,ctx){await ensureControlCenterV85Schema(env);const c={rewardFailed:ownerPanelInteger(ctx.body?.rewardFailed,1,1000)||1,rewardStaleMinutes:ownerPanelInteger(ctx.body?.rewardStaleMinutes,5,1440)||15,notificationFailed:ownerPanelInteger(ctx.body?.notificationFailed,1,1000)||3,cronFailures:ownerPanelInteger(ctx.body?.cronFailures,1,100)||1,cronStaleMinutes:ownerPanelInteger(ctx.body?.cronStaleMinutes,5,1440)||20,slowMs:ownerPanelInteger(ctx.body?.slowMs,100,60000)||1200};await setSystemState(env,V85_MONITOR_STATE_KEY,JSON.stringify(c));ownerV85CacheInvalidate("monitoring");await logStaffAction(env,ctx.user,ctx.access,"owner_panel_monitor_config",null,"system",null,null,c);return {ok:true,config:c};}
