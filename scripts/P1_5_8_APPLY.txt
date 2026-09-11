@@ -1,0 +1,23 @@
+P1 5-8 apply order
+
+1. Extract this patch into the repository root.
+2. Run: node scripts/apply-p1-5-8.mjs
+   This removes only the obsolete root worker.js after verifying wrangler.main=src/worker.js.
+3. Run static checks:
+   node scripts/check-migrations.mjs
+   node scripts/check-database-schema.mjs --contract-only
+   node scripts/check-deploy-assets.mjs
+4. Apply the new migration to Production D1:
+   npx wrangler d1 migrations list zefirok-rewards --remote
+   npx wrangler d1 migrations apply zefirok-rewards --remote
+5. Run the read-only doctor manually if desired:
+   node scripts/db-doctor.mjs --remote
+6. Deploy only through:
+   ./update.sh
+
+Do not use direct npx wrangler deploy. The P0 release gate intentionally blocks it.
+
+Future migrations:
+- create the next migration with a unique increasing number;
+- then run: node scripts/update-migration-lock.mjs
+- never edit an already locked historical migration.

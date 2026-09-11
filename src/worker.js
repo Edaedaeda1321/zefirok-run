@@ -22877,6 +22877,7 @@ function liveContentRoutesFromStorage(raw,legacyType,legacyId,legacyConfig){
   return out;
 }
 function liveContentRoutesForStorage(routes){const clean={};for(const type of LIVE_CONTENT_DESTINATIONS){const route=liveContentSafeObject(routes?.[type]);if(route.enabled===true)clean[type]={...route,enabled:true};}return JSON.stringify({version:1,routes:clean});}
+function liveContentRoutesFromRegistryStorage(raw){const parsed=liveContentParseObject(raw),out={};if(Number(parsed.version||0)!==1||!parsed.routes||typeof parsed.routes!=="object"||Array.isArray(parsed.routes))return out;for(const type of LIVE_CONTENT_DESTINATIONS){const route=liveContentSafeObject(parsed.routes[type]);if(route.enabled===true)out[type]={...route,enabled:true};}return out;}
 function liveContentRoute(rule,type,destinationId=""){
   const route=liveContentSafeObject(rule?.routes?.[String(type||"")]);if(route.enabled!==true)return null;
   if(destinationId&&String(route.destinationId||"")!==String(destinationId))return null;
@@ -22928,15 +22929,14 @@ function liveContentLegacyRouteConfig(type,route){
   return {};
 }
 function liveContentRuleFromRow(row){
-  const legacyConfig=liveContentParseObject(row?.destination_config_json);
-  const hasRegistry=String(row?.registry_status||"").trim()!=="";let status=hasRegistry?liveContentStatus(row.registry_status,"hidden"):"hidden";
-  const releaseAt=Math.max(0,Math.floor(Number(row?.registry_release_at)||0));
-  const routes=liveContentRoutesFromStorage(row?.registry_routes_json,row?.destination_type,row?.destination_id,legacyConfig);if(status==="open"&&liveContentRouteCount(routes)<=0)status="hidden";const released=status==="open",primary=liveContentPrimaryRoute(routes,row?.destination_type);
+  let status=liveContentStatus(row?.status,"hidden");
+  const releaseAt=Math.max(0,Math.floor(Number(row?.release_at)||0));
+  const routes=liveContentRoutesFromRegistryStorage(row?.routes_json);if(status==="open"&&liveContentRouteCount(routes)<=0)status="hidden";const released=status==="open",primary=liveContentPrimaryRoute(routes);
   const destinationType=primary.type,destinationId=String(primary.route?.destinationId||""),destinationConfig=liveContentLegacyRouteConfig(destinationType,primary.route);
   return {
     kind:String(row?.item_kind||""),itemId:String(row?.item_id||""),seasonId:String(row?.content_season_id||""),status,releaseAt,released,everReleased:Number(row?.ever_released||0)===1||released,
     routes,destinationType,destinationId,destinationConfig,
-    updatedAt:Math.max(Number(row?.updated_at||0),Number(row?.registry_updated_at||0)),updatedBy:String(row?.registry_updated_by||row?.updated_by||"")
+    updatedAt:Math.max(0,Number(row?.updated_at||0)),updatedBy:String(row?.updated_by||"")
   };
 }
 
@@ -22952,12 +22952,12 @@ async function ensureLiveContentReleaseSchema(env){
         )`),
         env.DB.prepare(`CREATE TABLE IF NOT EXISTS live_content_registry_state (
           item_kind TEXT NOT NULL,item_id TEXT NOT NULL,status TEXT NOT NULL DEFAULT 'hidden',release_at INTEGER NOT NULL DEFAULT 0,routes_json TEXT NOT NULL DEFAULT '{}',
+          content_season_id TEXT NOT NULL DEFAULT '',ever_released INTEGER NOT NULL DEFAULT 0,
           updated_at INTEGER NOT NULL DEFAULT 0,updated_by TEXT NOT NULL DEFAULT '',PRIMARY KEY(item_kind,item_id)
         )`),
-        env.DB.prepare(`CREATE INDEX IF NOT EXISTS idx_live_content_registry_schedule ON live_content_registry_state(status,release_at)`)
+        env.DB.prepare(`CREATE INDEX IF NOT EXISTS idx_live_content_registry_schedule ON live_content_registry_state(status,release_at)`),
+        env.DB.prepare(`CREATE INDEX IF NOT EXISTS idx_live_content_registry_season ON live_content_registry_state(content_season_id,status,release_at)`)
       ]);
-      const columns=(await env.DB.prepare(`PRAGMA table_info(live_content_release_rules)`).all()).results||[];
-      if(!columns.some(row=>String(row.name)==='content_season_id'))await env.DB.prepare(`ALTER TABLE live_content_release_rules ADD COLUMN content_season_id TEXT NOT NULL DEFAULT ''`).run();
       let boundSeason3Id='',boundSeason2Id='';
       try{boundSeason3Id=String((await env.DB.prepare(`SELECT season_id FROM season_pass_case_presets WHERE preset_id='season3_belkino_case_v1' LIMIT 1`).first())?.season_id||'');}catch{}
       try{boundSeason2Id=String((await env.DB.prepare(`SELECT season_id FROM season_pass_story_presets WHERE preset_id='season2-night-cafe-story-v1' LIMIT 1`).first())?.season_id||'');}catch{}
@@ -22965,16 +22965,22 @@ async function ensureLiveContentReleaseSchema(env){
       for(const [kind,catalog] of Object.entries(FUTURE_SEASON_CONTENT)){
         for(const [itemId,item] of Object.entries(catalog||{})){
           const seasonKey=String(item?.seasonKey||'season3'),initialSeasonId=seasonKey==='season2'?boundSeason2Id:boundSeason3Id;
+          statements.push(env.DB.prepare(`INSERT OR IGNORE INTO live_content_registry_state(item_kind,item_id,content_season_id,status,release_at,routes_json,ever_released,updated_at,updated_by) VALUES(?,?,?,'hidden',0,'{}',0,?,'system')`).bind(kind,itemId,initialSeasonId,now));
           statements.push(env.DB.prepare(`INSERT OR IGNORE INTO live_content_release_rules(item_kind,item_id,content_season_id,released,ever_released,destination_type,destination_id,destination_config_json,updated_at,updated_by) VALUES(?,?,?,0,0,'native','','{}',?,'system')`).bind(kind,itemId,initialSeasonId,now));
           if(initialSeasonId){
-            if(seasonKey==='season2')statements.push(env.DB.prepare(`UPDATE live_content_release_rules SET content_season_id=? WHERE item_kind=? AND item_id=? AND content_season_id<>?`).bind(initialSeasonId,kind,itemId,initialSeasonId));
-            else statements.push(env.DB.prepare(`UPDATE live_content_release_rules SET content_season_id=? WHERE item_kind=? AND item_id=? AND content_season_id=''`).bind(initialSeasonId,kind,itemId));
+            if(seasonKey==='season2'){
+              statements.push(env.DB.prepare(`UPDATE live_content_registry_state SET content_season_id=? WHERE item_kind=? AND item_id=? AND content_season_id<>?`).bind(initialSeasonId,kind,itemId,initialSeasonId));
+              statements.push(env.DB.prepare(`UPDATE live_content_release_rules SET content_season_id=? WHERE item_kind=? AND item_id=? AND content_season_id<>?`).bind(initialSeasonId,kind,itemId,initialSeasonId));
+            }else{
+              statements.push(env.DB.prepare(`UPDATE live_content_registry_state SET content_season_id=? WHERE item_kind=? AND item_id=? AND content_season_id=''`).bind(initialSeasonId,kind,itemId));
+              statements.push(env.DB.prepare(`UPDATE live_content_release_rules SET content_season_id=? WHERE item_kind=? AND item_id=? AND content_season_id=''`).bind(initialSeasonId,kind,itemId));
+            }
           }
         }
       }
       for(let i=0;i<statements.length;i+=40)await env.DB.batch(statements.slice(i,i+40));
-      await env.DB.prepare(`INSERT OR IGNORE INTO live_content_registry_state(item_kind,item_id,status,release_at,routes_json,updated_at,updated_by)
-        SELECT item_kind,item_id,CASE WHEN released=1 THEN 'open' ELSE 'hidden' END,0,'{}',updated_at,updated_by FROM live_content_release_rules`).run();
+      await env.DB.prepare(`INSERT OR IGNORE INTO live_content_registry_state(item_kind,item_id,status,release_at,routes_json,updated_at,updated_by,content_season_id,ever_released)
+        SELECT item_kind,item_id,CASE WHEN released=1 THEN 'open' ELSE 'hidden' END,0,'{}',updated_at,updated_by,content_season_id,CASE WHEN released=1 OR ever_released=1 THEN 1 ELSE 0 END FROM live_content_release_rules`).run();
     })().catch(error=>{liveContentReleaseSchemaPromise=null;throw error;});
   }
   await liveContentReleaseSchemaPromise;
@@ -22983,8 +22989,8 @@ async function ensureLiveContentReleaseSchema(env){
 async function readLiveContentReleaseRules(env,force=false){
   const now=Date.now();
   if(!force&&liveContentReleaseCache.expiresAt>now&&liveContentReleaseCache.rows.size)return liveContentReleaseCache.rows;
-  const readRows=()=>env.DB.prepare(`SELECT r.*,s.status AS registry_status,s.release_at AS registry_release_at,s.routes_json AS registry_routes_json,s.updated_at AS registry_updated_at,s.updated_by AS registry_updated_by
-    FROM live_content_release_rules r LEFT JOIN live_content_registry_state s ON s.item_kind=r.item_kind AND s.item_id=r.item_id ORDER BY r.item_kind,r.item_id`).all();
+  const readRows=()=>env.DB.prepare(`SELECT item_kind,item_id,content_season_id,ever_released,status,release_at,routes_json,updated_at,updated_by
+    FROM live_content_registry_state ORDER BY item_kind,item_id`).all();
   let result;try{result=await readRows();}catch(error){if(!isMissingRuntimeDatabaseSchemaError(error))throw error;await ensureLiveContentReleaseSchema(env);result=await readRows();}
   const rows=new Map();for(const row of result.results||[]){const rule=liveContentRuleFromRow(row);rows.set(liveContentReleaseKey(rule.kind,rule.itemId),rule);}
   liveContentReleaseCache={expiresAt:Date.now()+LIVE_CONTENT_RELEASE_CACHE_TTL_MS,rows};
@@ -22996,23 +23002,25 @@ function isFutureContentReleasedCached(kind,itemId){ return Boolean(liveContentR
 function invalidateLiveContentReleaseCache(){ liveContentReleaseCache={expiresAt:0,rows:new Map()}; invalidateLiveOpsConfigCache(); }
 async function bindFutureContentCatalogToSeason(env,seasonId){
   const id=String(seasonId||'').trim();if(!id)return {ok:false,bound:0};
-  await ensureLiveContentReleaseSchema(env);const statements=[];
+  await ensureLiveContentReleaseSchema(env);const statements=[];let bound=0;
   for(const [kind,catalog] of Object.entries(FUTURE_SEASON_CONTENT))for(const itemId of Object.keys(catalog||{})){
-    if(!futureSeasonContentMatchesSeasonKey(kind,itemId,'season3'))continue;
+    if(!futureSeasonContentMatchesSeasonKey(kind,itemId,'season3'))continue;bound++;
+    statements.push(env.DB.prepare(`UPDATE live_content_registry_state SET content_season_id=? WHERE item_kind=? AND item_id=? AND (content_season_id='' OR content_season_id=?)`).bind(id,kind,itemId,id));
     statements.push(env.DB.prepare(`UPDATE live_content_release_rules SET content_season_id=? WHERE item_kind=? AND item_id=? AND (content_season_id='' OR content_season_id=?)`).bind(id,kind,itemId,id));
   }
   for(let i=0;i<statements.length;i+=40)await env.DB.batch(statements.slice(i,i+40));
-  invalidateLiveContentReleaseCache();return {ok:true,bound:statements.length,seasonId:id,scope:'season3_only'};
+  invalidateLiveContentReleaseCache();return {ok:true,bound,seasonId:id,scope:'season3_only'};
 }
 async function bindSeason2ContentCatalogToSeason(env,seasonId){
   const id=String(seasonId||'').trim();if(!id)return {ok:false,bound:0};
-  await ensureLiveContentReleaseSchema(env);const statements=[];
+  await ensureLiveContentReleaseSchema(env);const statements=[];let bound=0;
   for(const [kind,catalog] of Object.entries(FUTURE_SEASON_CONTENT))for(const itemId of Object.keys(catalog||{})){
-    if(!futureSeasonContentMatchesSeasonKey(kind,itemId,'season2'))continue;
+    if(!futureSeasonContentMatchesSeasonKey(kind,itemId,'season2'))continue;bound++;
+    statements.push(env.DB.prepare(`UPDATE live_content_registry_state SET content_season_id=? WHERE item_kind=? AND item_id=? AND content_season_id<>?`).bind(id,kind,itemId,id));
     statements.push(env.DB.prepare(`UPDATE live_content_release_rules SET content_season_id=? WHERE item_kind=? AND item_id=? AND content_season_id<>?`).bind(id,kind,itemId,id));
   }
   for(let i=0;i<statements.length;i+=40)await env.DB.batch(statements.slice(i,i+40));
-  invalidateLiveContentReleaseCache();return {ok:true,bound:statements.length,seasonId:id,scope:'season2_only'};
+  invalidateLiveContentReleaseCache();return {ok:true,bound,seasonId:id,scope:'season2_only'};
 }
 
 async function readLiveContentShopCatalog(env){
@@ -45747,7 +45755,7 @@ async function prepareLiveContentMutation(env,normalized,actor,options={}){
   }else if(liveContentRoute({routes},"season_pass")&&oldPass?.previousReward&&liveContentSamePassRoute(liveContentRoute({routes},"season_pass"),oldPass))routes.season_pass={...routes.season_pass,previousReward:oldPass.previousReward};
   const primary=liveContentPrimaryRoute(routes,normalized.destinationType||before?.destinationType),destinationType=primary.type,destinationId=String(primary.route?.destinationId||""),destinationConfig=liveContentLegacyRouteConfig(destinationType,primary.route),everReleased=released?1:(before?.everReleased?1:0);
   statements.push(env.DB.prepare(`INSERT INTO live_content_release_rules(item_kind,item_id,content_season_id,released,ever_released,destination_type,destination_id,destination_config_json,updated_at,updated_by) VALUES(?,?,?,?,?,?,?,?,?,?) ON CONFLICT(item_kind,item_id) DO UPDATE SET content_season_id=excluded.content_season_id,released=excluded.released,ever_released=MAX(live_content_release_rules.ever_released,excluded.ever_released),destination_type=excluded.destination_type,destination_id=excluded.destination_id,destination_config_json=excluded.destination_config_json,updated_at=excluded.updated_at,updated_by=excluded.updated_by`).bind(kind,itemId,seasonId,released?1:0,everReleased,destinationType,destinationId,JSON.stringify(destinationConfig),now,String(actor||"live-content")));
-  statements.push(env.DB.prepare(`INSERT INTO live_content_registry_state(item_kind,item_id,status,release_at,routes_json,updated_at,updated_by) VALUES(?,?,?,?,?,?,?) ON CONFLICT(item_kind,item_id) DO UPDATE SET status=excluded.status,release_at=excluded.release_at,routes_json=excluded.routes_json,updated_at=excluded.updated_at,updated_by=excluded.updated_by`).bind(kind,itemId,status,status==="scheduled"?releaseAt:0,liveContentRoutesForStorage(routes),now,String(actor||"live-content")));
+  statements.push(env.DB.prepare(`INSERT INTO live_content_registry_state(item_kind,item_id,content_season_id,status,release_at,routes_json,ever_released,updated_at,updated_by) VALUES(?,?,?,?,?,?,?,?,?) ON CONFLICT(item_kind,item_id) DO UPDATE SET content_season_id=excluded.content_season_id,status=excluded.status,release_at=excluded.release_at,routes_json=excluded.routes_json,ever_released=MAX(live_content_registry_state.ever_released,excluded.ever_released),updated_at=excluded.updated_at,updated_by=excluded.updated_by`).bind(kind,itemId,seasonId,status,status==="scheduled"?releaseAt:0,liveContentRoutesForStorage(routes),everReleased,now,String(actor||"live-content")));
   const after={kind,itemId,seasonId,status,releaseAt:status==="scheduled"?releaseAt:0,released,everReleased:Boolean(everReleased),routes,destinationType,destinationId,destinationConfig,updatedAt:now,updatedBy:String(actor||"")};
   return {statements,after,routes};
 }

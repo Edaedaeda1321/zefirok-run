@@ -40,6 +40,10 @@ if (missingRules.length) {
 
 const rootEntries = await readdir(root, { withFileTypes: true });
 const names = new Set(rootEntries.map(entry => entry.name));
+if (names.has('worker.js')) {
+  console.error('DEPLOY ASSET CHECK FAILED: obsolete root worker.js exists. Runtime entrypoint must only be src/worker.js.');
+  process.exit(1);
+}
 const missingPublic = REQUIRED_PUBLIC_ROOT_FILES.filter(name => !names.has(name));
 if (missingPublic.length) {
   console.error('DEPLOY ASSET CHECK FAILED: expected production/staging page missing:');
@@ -74,6 +78,10 @@ for (const name of forbiddenPresent) {
 }
 
 const wrangler = await readFile(path.join(root, 'wrangler.jsonc'), 'utf8');
+if (!/"main"\s*:\s*"src\/worker\.js"/.test(wrangler)) {
+  console.error('DEPLOY ASSET CHECK FAILED: wrangler.main must remain src/worker.js.');
+  process.exit(1);
+}
 if (!/"assets"\s*:\s*\{[\s\S]*?"directory"\s*:\s*"\."/.test(wrangler)) {
   console.error('DEPLOY ASSET CHECK FAILED: wrangler assets.directory changed; review .assetsignore contract.');
   process.exit(1);

@@ -128,7 +128,9 @@ export const REQUIRED_COLUMN_SPECS = Object.freeze([
   { table: 'game_run_settlement_guards', column: 'ok', definition: 'INTEGER NOT NULL' },
   { table: 'granted_case_opening_guards', column: 'ok', definition: 'INTEGER NOT NULL' },
   { table: 'zefirok_schema_contract', column: 'contract_version', definition: 'INTEGER NOT NULL' },
-  { table: 'zefirok_schema_contract', column: 'migration_name', definition: 'TEXT NOT NULL' }
+  { table: 'zefirok_schema_contract', column: 'migration_name', definition: 'TEXT NOT NULL' },
+  { table: 'live_content_registry_state', column: 'content_season_id', definition: "TEXT NOT NULL DEFAULT ''" },
+  { table: 'live_content_registry_state', column: 'ever_released', definition: 'INTEGER NOT NULL DEFAULT 0' }
 ]);
 
 export const REQUIRED_INDEXES = Object.freeze([
@@ -165,7 +167,8 @@ export const REQUIRED_INDEXES = Object.freeze([
   'idx_owner_staging_releases_set',
   'idx_owner_staging_release_requests_set',
   'idx_owner_staging_change_set_locks_owner',
-  'idx_shop_stock_player_created_v76'
+  'idx_shop_stock_player_created_v76',
+  'idx_live_content_registry_season'
 ]);
 
 export const REQUIRED_TRIGGERS = Object.freeze([

@@ -7,7 +7,7 @@
 		"enabled": true
 	},
 	"build": {
-		"command": "node scripts/check-predeploy-stamp.mjs && node scripts/check-database-schema.mjs --contract-only && node scripts/check-deploy-assets.mjs && node scripts/check-assets.mjs --news-manifest && node scripts/check-assets.mjs --new-only && node scripts/check-live-content-assets.mjs && node scripts/check-operation-system.mjs"
+		"command": "node scripts/check-predeploy-stamp.mjs && node scripts/check-database-schema.mjs --contract-only && node scripts/check-deploy-assets.mjs && node scripts/check-assets.mjs --news-manifest && node scripts/check-assets.mjs --new-only && node scripts/check-live-content-assets.mjs && node scripts/check-live-content-authority.mjs && node scripts/check-operation-system.mjs"
 	},
 	"assets": {
 		"directory": ".",

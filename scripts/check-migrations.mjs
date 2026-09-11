@@ -12,6 +12,7 @@ import {
 } from './schema-contract.mjs';
 
 const MIGRATION_RE = /^(\d{4})_[A-Za-z0-9][A-Za-z0-9_.-]*\.sql$/;
+const MIGRATION_LOCK_PATH = 'scripts/migration-history.lock.json';
 
 function isMainModule() {
   if (!process.argv[1]) return false;
@@ -30,6 +31,46 @@ export async function listMigrationFiles(root = process.cwd()) {
 
 function migrationNumber(name) {
   return MIGRATION_RE.exec(name)?.[1] || '';
+}
+
+
+async function migrationFileSha256(root, name) {
+  return createHash('sha256').update(await readFile(path.join(root, 'migrations', name))).digest('hex');
+}
+
+async function validateMigrationHistoryLock(root, names) {
+  let lock;
+  try {
+    lock = JSON.parse(await readFile(path.join(root, MIGRATION_LOCK_PATH), 'utf8'));
+  } catch (error) {
+    throw new Error(`Не удалось прочитать ${MIGRATION_LOCK_PATH}: ${error?.message || error}`);
+  }
+  if (Number(lock?.version || 0) !== 1 || String(lock?.algorithm || '') !== 'sha256' || !lock?.files || typeof lock.files !== 'object' || Array.isArray(lock.files)) {
+    throw new Error(`${MIGRATION_LOCK_PATH}: некорректный формат lock-файла.`);
+  }
+  const lockedNames = Object.keys(lock.files).sort();
+  const missingInLock = names.filter(name => !Object.prototype.hasOwnProperty.call(lock.files, name));
+  const missingOnDisk = lockedNames.filter(name => !names.includes(name));
+  if (missingInLock.length || missingOnDisk.length) {
+    const parts = [];
+    if (missingInLock.length) parts.push(`не зафиксированы в lock: ${missingInLock.join(', ')}`);
+    if (missingOnDisk.length) parts.push(`есть в lock, но отсутствуют на диске: ${missingOnDisk.join(', ')}`);
+    throw new Error(`Migration history lock не совпадает с каталогом migrations:
+  - ${parts.join('\n  - ')}
+Запустите node scripts/update-migration-lock.mjs только после добавления новой migration.`);
+  }
+  const changed = [];
+  for (const name of names) {
+    const expected = String(lock.files[name] || '').toLowerCase();
+    const actual = await migrationFileSha256(root, name);
+    if (!/^[a-f0-9]{64}$/.test(expected) || expected !== actual) changed.push(`${name}: ${expected || '(empty)'} != ${actual}`);
+  }
+  if (changed.length) {
+    throw new Error(`Исторические migration изменены после фиксации:
+  - ${changed.join('\n  - ')}
+Не перезаписывайте примененные migration; создайте новую migration.`);
+  }
+  return { count: lockedNames.length };
 }
 
 export async function migrationFingerprint(root = process.cwd(), names = null) {
@@ -82,10 +123,13 @@ export async function checkLocalMigrationHistory(root = process.cwd()) {
     throw new Error(`Новые migration не могут повторять номер: ${duplicateNewNumbers.join(', ')}`);
   }
 
+  const lockState = await validateMigrationHistoryLock(root, names);
+
   return {
     names,
     count: names.length,
     highestNumber: Math.max(...names.map(name => Number(migrationNumber(name)))),
+    lockedCount: lockState.count,
     fingerprint: await migrationFingerprint(root, names)
   };
 }
@@ -128,7 +172,7 @@ export async function assertNoPendingRemoteMigrations(options = {}) {
 async function main() {
   const root = process.cwd();
   const local = await checkLocalMigrationHistory(root);
-  console.log(`Migration history OK: ${local.count} file(s), fingerprint ${local.fingerprint.slice(0, 12)}.`);
+  console.log(`Migration history OK: ${local.count} file(s), ${local.lockedCount} checksum(s) locked, fingerprint ${local.fingerprint.slice(0, 12)}.`);
   if (process.argv.includes('--remote')) {
     await assertNoPendingRemoteMigrations({ root });
     console.log('Remote D1 migration gate OK: pending migrations not found.');
