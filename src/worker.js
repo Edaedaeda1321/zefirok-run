@@ -7999,6 +7999,10 @@ async function ensureAuthoritativeEconomySchema(env) {
         env.DB.prepare(`CREATE TABLE IF NOT EXISTS granted_case_opening_guards (
           guard_id TEXT PRIMARY KEY,
           ok INTEGER NOT NULL CONSTRAINT granted_case_opening_guard_ok CHECK(ok=1)
+        )`),
+        env.DB.prepare(`CREATE TABLE IF NOT EXISTS case_state_revision_guards (
+          guard_id TEXT PRIMARY KEY,
+          ok INTEGER NOT NULL CONSTRAINT case_state_revision_guard_ok CHECK(ok=1)
         )`)
       ]);
       const schemaNowMs = Date.now();
@@ -10401,18 +10405,23 @@ function caseStateFromRow(row) {
   };
 }
 
-function caseStateUpdateStatement(env, telegramId, caseState, now) {
+function caseStateUpdateStatement(env, telegramId, caseState, now, options = {}) {
   const boosters=caseState?.boosters && typeof caseState.boosters === "object" ? caseState.boosters : {};
   const activeBoosters=caseNormalizeActiveBoosters(caseState?.activeBoosters, caseState?.activeBooster?.type, caseState?.activeBooster?.runsLeft);
   const legacyActive=caseLegacyActiveBooster(activeBoosters);
+  const explicitRevisionGuard = options?.explicitRevisionGuard === true;
   caseState.activeBoosters=activeBoosters;
   caseState.activeBooster=legacyActive;
-  return env.DB.prepare(
+  const revisionSql = explicitRevisionGuard
+    ? "active_booster_runs = ?,"
+    : "active_booster_runs = CASE WHEN revision = ? THEN ? ELSE -1 END,";
+  const whereSql = explicitRevisionGuard ? "WHERE telegram_id = ? AND revision = ?" : "WHERE telegram_id = ?";
+  const statement = env.DB.prepare(
     `UPDATE case_player_state SET
       boosters_points = ?, boosters_treats = ?, boosters_coffee = ?,
       boosters_extra_json = ?, active_boosters_json = ?,
       active_booster_type = ?,
-      active_booster_runs = CASE WHEN revision = ? THEN ? ELSE -1 END,
+      ${revisionSql}
       owned_avatars_json = ?, active_avatar_id = ?,
       owned_frames_json = ?, active_frame_id = ?,
       owned_trails_json = ?, active_trail_id = ?,
@@ -10429,15 +10438,18 @@ function caseStateUpdateStatement(env, telegramId, caseState, now) {
       ), '[]'), active_skin_id = ?,
       mythic_pity_counter = ?, legendary_pity_counter = ?,
       revision = revision + 1, updated_at = ?
-     WHERE telegram_id = ?`
-  ).bind(
+     ${whereSql}`
+  );
+  const common = [
     safeAdminNumber(boosters.points),
     safeAdminNumber(boosters.treats),
     safeAdminNumber(boosters.coffee),
     JSON.stringify({ shield:safeAdminNumber(boosters.shield), second_chance:safeAdminNumber(boosters.second_chance), pause:safeAdminNumber(boosters.pause) }),
     JSON.stringify(activeBoosters),
-    String(legacyActive.type || ""),
-    safeAdminNumber(caseState.revision),
+    String(legacyActive.type || "")
+  ];
+  if (!explicitRevisionGuard) common.push(safeAdminNumber(caseState.revision));
+  common.push(
     safeAdminNumber(legacyActive.runsLeft),
     JSON.stringify(caseState.ownedAvatars),
     String(caseState.activeAvatarId || ""),
@@ -10457,7 +10469,26 @@ function caseStateUpdateStatement(env, telegramId, caseState, now) {
     now,
     telegramId
   );
+  if (explicitRevisionGuard) common.push(safeAdminNumber(caseState.revision));
+  return statement.bind(...common);
 }
+
+function caseStateRevisionGuardStatement(env, guardId, telegramId, expectedRevision) {
+  return env.DB.prepare(
+    `INSERT INTO case_state_revision_guards(guard_id,ok)
+     VALUES(?,COALESCE((SELECT CASE WHEN revision=? THEN 1 ELSE 0 END FROM case_player_state WHERE telegram_id=? LIMIT 1),0))`
+  ).bind(String(guardId),safeAdminNumber(expectedRevision),String(telegramId));
+}
+
+function caseStateRevisionGuardCleanupStatement(env, guardId) {
+  return env.DB.prepare(`DELETE FROM case_state_revision_guards WHERE guard_id=?`).bind(String(guardId));
+}
+
+function isCaseStateRevisionConflict(error) {
+  return String(error?.message || error || "").includes("case_state_revision_guard_ok");
+}
+
+const CASE_STATE_COMMIT_MAX_ATTEMPTS = 3;
 
 async function ensureCasePlayerState(env, telegramId, currentProfile = {}, options = {}) {
   const now = Math.floor(Date.now() / 1000);
@@ -11143,6 +11174,9 @@ async function releaseCasePhysicalStock(env, consumptionIds) {
 function classifyCaseOperationFailure(error, fallbackMessage = "Не удалось выполнить операцию с кейсом.") {
   const text=String(error?.message||error||"");
   const lower=text.toLowerCase();
+  if (lower.includes("case_state_revision_guard_ok")) {
+    return { status:409, code:"CASE_STATE_CONFLICT", error:"Состояние наград обновилось. Повторите проверку этой же операции.", details:{ action:"retry_same_operation", retryable:true } };
+  }
   if ((lower.includes("check constraint") || lower.includes("constraint failed")) && lower.includes("active_booster_runs")) {
     return { status:409, code:"CASE_STATE_CONFLICT", error:"Состояние кейса изменилось. Обновите данные и повторите действие.", details:{ action:"refresh_and_retry", retryable:true } };
   }
@@ -11168,10 +11202,9 @@ async function getLevelCaseState(request, env, internal = null, ctx = null) {
     const body = internal?.body || await readJson(request);
     const auth = internal?.auth || await validateTelegramInitData(String(body.initData || ""), env);
     const telegramId = String(auth.user.id);
-    scheduleRunSettlementBackground(ctx,
-      processPlayerRewardDeliveryQueue(env, telegramId, 10),
-      "case state reward queue refresh failed"
-    );
+    // Recovery/state refresh must stay read-only for case_player_state.
+    // Delivery queues can bump the same revision and previously caused a retry loop
+    // while an opening was being committed.
     if (body.fast === true) {
       // Warehouse/case tabs only need the authoritative case snapshot here.
       // Gift inbox is fetched by its own tab; waiting for it made a supposedly
@@ -11179,7 +11212,7 @@ async function getLevelCaseState(request, env, internal = null, ctx = null) {
       const fastPayload = await buildFastCaseRefreshPayload(env,telegramId);
       return internal?.raw ? fastPayload : jsonResponse(fastPayload);
     }
-    const payload = await buildCasePayload(env, telegramId, body.current || {}, {}, {
+    const payload = await buildCasePayload(env, telegramId, body.recovery === true ? {} : (body.current || {}), {}, {
       ensured: internal?.shared?.caseEnsured || null,
       skipRewardQueue: true
     });
@@ -11228,59 +11261,81 @@ async function openLevelCase(request, env, ctx = null) {
     const caseType = LEVEL_CASE_SCHEDULE[requestedLevel];
     if (!caseType) throw new ApiError(400, "На этом уровне кейс не выдаётся.");
     const now = Math.floor(Date.now() / 1000);
-    const [ensured, liveops, existing] = await Promise.all([
-      ensureCasePlayerState(env, telegramId, {}), readLiveOpsConfig(env),
+    const [liveops, existing] = await Promise.all([
+      readLiveOpsConfig(env),
       readLevelCaseOpening(env,telegramId,requestedLevel)
     ]);
     if(existing)return await replayLevelCaseOpening(env,telegramId,existing,liveops);
     await requirePlayerOperationAvailable(env,telegramId,{capabilities:["cases"],featureFlags:["cases"]});
     if (liveOpsCaseConfig(liveops, caseType)?.enabled === false) throw featureUnavailableError("cases", "Этот кейс временно отключён администратором.", "case_item");
-    const playerLevel = caseProfileLevel(safeAdminNumber(ensured.profile?.profile_xp));
-    if (playerLevel < requestedLevel) throw new ApiError(403, `Кейс откроется на ${requestedLevel} уровне.`);
-    const taskEvent = await prepareSeasonPassTaskProgressEvent(env, telegramId, {cases_opened:1}, now)
-      .catch(error => {console.error("level case task progress prepare failed",error);return null;});
 
-    const rolled = rollLevelCase(caseType, ensured.state, ensured.state.ownedSkins, liveops);
-    await assertRolledLiveContentCaseRoutes(env,rolled,"case",caseType);
-    const physicalRewards = await prepareCasePhysicalRewards(env, {
-      rolled,
-      telegramId,
-      ownerName: telegramDisplayName(auth.user),
-      sourceId: `level_${telegramId}_${requestedLevel}`,
-      now
-    });
-    try {
-      await env.DB.batch([
-        env.DB.prepare(
-          `INSERT INTO level_case_openings (telegram_id, level, case_type, rewards_json, opened_at)
-           VALUES (?, ?, ?, ?, ?)`
-        ).bind(telegramId, requestedLevel, caseType, JSON.stringify(rolled.rewards), now),
-        env.DB.prepare(
-          `UPDATE admin_profile_state SET
-            wallet = MIN(999999999,wallet + ?), treats = MIN(999999999,treats + ?), coffee = MIN(999999999,coffee + ?),
-            revision = revision + 1, updated_at = ?, updated_by = ?
-           WHERE telegram_id = ?`
-        ).bind(
-          safeAdminNumber(rolled.points),
-          safeAdminNumber(rolled.treats),
-          safeAdminNumber(rolled.coffee),
-          now,
-          `case:${requestedLevel}`,
-          telegramId
-        ),
-        caseStateUpdateStatement(env, telegramId, rolled.state, now),
-        ...(taskEvent?.progressStatements || []),
-        ...(taskEvent?.notificationStatements || []),
-        ...physicalRewards.statements
-      ]);
-    } catch (error) {
-      await releaseCasePhysicalStock(env, physicalRewards.stockConsumptionIds);
-      if (String(error?.message || error).toLowerCase().includes("unique")) {
-        const persisted=await readLevelCaseOpening(env,telegramId,requestedLevel);
-        if(persisted)return await replayLevelCaseOpening(env,telegramId,persisted,liveops);
+    let committed = null;
+    let lastRevisionConflict = null;
+    for (let attempt = 1; attempt <= CASE_STATE_COMMIT_MAX_ATTEMPTS; attempt += 1) {
+      const racedOpening = await readLevelCaseOpening(env,telegramId,requestedLevel);
+      if (racedOpening) return await replayLevelCaseOpening(env,telegramId,racedOpening,liveops);
+
+      const ensured = await ensureCasePlayerState(env, telegramId, {});
+      const playerLevel = caseProfileLevel(safeAdminNumber(ensured.profile?.profile_xp));
+      if (playerLevel < requestedLevel) throw new ApiError(403, `Кейс откроется на ${requestedLevel} уровне.`);
+      const taskEvent = await prepareSeasonPassTaskProgressEvent(env, telegramId, {cases_opened:1}, now)
+        .catch(error => {console.error("level case task progress prepare failed",error);return null;});
+      const rolled = rollLevelCase(caseType, ensured.state, ensured.state.ownedSkins, liveops);
+      await assertRolledLiveContentCaseRoutes(env,rolled,"case",caseType);
+      const physicalRewards = await prepareCasePhysicalRewards(env, {
+        rolled,
+        telegramId,
+        ownerName: telegramDisplayName(auth.user),
+        sourceId: `level_${telegramId}_${requestedLevel}_a${attempt}`,
+        now
+      });
+      const revisionGuardId = `case-state:level:${telegramId}:${requestedLevel}:${attempt}:${crypto.randomUUID()}`.slice(0,180);
+      try {
+        await env.DB.batch([
+          caseStateRevisionGuardStatement(env,revisionGuardId,telegramId,ensured.state.revision),
+          env.DB.prepare(
+            `INSERT INTO level_case_openings (telegram_id, level, case_type, rewards_json, opened_at)
+             VALUES (?, ?, ?, ?, ?)`
+          ).bind(telegramId, requestedLevel, caseType, JSON.stringify(rolled.rewards), now),
+          env.DB.prepare(
+            `UPDATE admin_profile_state SET
+              wallet = MIN(999999999,wallet + ?), treats = MIN(999999999,treats + ?), coffee = MIN(999999999,coffee + ?),
+              revision = revision + 1, updated_at = ?, updated_by = ?
+             WHERE telegram_id = ?`
+          ).bind(
+            safeAdminNumber(rolled.points),
+            safeAdminNumber(rolled.treats),
+            safeAdminNumber(rolled.coffee),
+            now,
+            `case:${requestedLevel}`,
+            telegramId
+          ),
+          caseStateUpdateStatement(env, telegramId, rolled.state, now, { explicitRevisionGuard:true }),
+          ...(taskEvent?.progressStatements || []),
+          ...(taskEvent?.notificationStatements || []),
+          ...physicalRewards.statements,
+          caseStateRevisionGuardCleanupStatement(env,revisionGuardId)
+        ]);
+        committed = { rolled, taskEvent };
+        break;
+      } catch (error) {
+        await releaseCasePhysicalStock(env, physicalRewards.stockConsumptionIds);
+        if (String(error?.message || error).toLowerCase().includes("unique")) {
+          const persisted=await readLevelCaseOpening(env,telegramId,requestedLevel);
+          if(persisted)return await replayLevelCaseOpening(env,telegramId,persisted,liveops);
+        }
+        if (isCaseStateRevisionConflict(error)) {
+          lastRevisionConflict = error;
+          if (attempt < CASE_STATE_COMMIT_MAX_ATTEMPTS) continue;
+          throw playerOperationError(409,"Состояние наград обновилось во время открытия. Повторите проверку этой же операции.",{
+            code:"STATE_CONFLICT",operationCode:"STATE_CONFLICT",retryable:true,operationId:`level:${requestedLevel}`,operationKind:"level_case_open"
+          });
+        }
+        throw error;
       }
-      throw error;
     }
+    if (!committed) throw lastRevisionConflict || new Error("Case state commit did not finish");
+    const { rolled, taskEvent } = committed;
     const opened = {
       level: requestedLevel,
       caseType,
@@ -11291,9 +11346,6 @@ async function openLevelCase(request, env, ctx = null) {
     const finalProfile = await ensureAuthoritativeProfileRow(env, telegramId, `case:${requestedLevel}:response`);
     const nextProfile = authoritativeProfileView(finalProfile);
     const inventory = await readFastCaseInventory(env, telegramId);
-    // Telegram delivery and full task reconciliation are not part of the
-    // case-opening critical path. Fresh completions have a 15-second lease, so
-    // a read-only refresh cannot suppress the realtime notification meanwhile.
     scheduleRunSettlementBackground(
       ctx,
       deliverSeasonPassTaskNotificationsForRows(env, telegramId, taskEvent?.season, taskEvent?.taskRows || []),
@@ -11494,11 +11546,7 @@ async function openGrantedCase(request, env, ctx = null) {
     }
     await requirePlayerOperationAvailable(env,telegramId,{capabilities:["cases"],featureFlags:["cases"]});
     const now = Math.floor(Date.now() / 1000);
-    const [ensured, taskEvent, liveops] = await Promise.all([
-      ensureCasePlayerState(env, telegramId, {}),
-      prepareSeasonPassTaskProgressEvent(env, telegramId, { cases_opened:1 }, now).catch((error) => { console.error("granted case task progress prepare failed", error); return null; }),
-      readLiveOpsConfig(env)
-    ]);
+    const liveops = await readLiveOpsConfig(env);
     openingClaimAt = now;
     openingClaimToken = requestId || crypto.randomUUID().replace(/-/g, '');
     await recoverStaleGrantedCaseOpenings(env, telegramId, now);
@@ -11527,48 +11575,71 @@ async function openGrantedCase(request, env, ctx = null) {
     const priorAlexCollectionGrant = caseType === "alex"
       ? await env.DB.prepare(`SELECT id FROM granted_cases WHERE id=? AND telegram_id=? LIMIT 1`).bind(alexCaseCollectionGrantId(telegramId),telegramId).first().catch(()=>null)
       : null;
-    const rolled = caseType === "alex"
-      ? rollAlexCase(ensured.state, ensured.state.ownedSkins)
-      : rollLevelCase(caseType, ensured.state, ensured.state.ownedSkins, liveops);
-    if(caseType!=="alex")await assertRolledLiveContentCaseRoutes(env,rolled,"case",caseType);
-    const alexCollection = caseType === "alex" ? alexCaseCollectionStatus(rolled.state) : null;
-    const alexCollectionRewardGranted = Boolean(caseType === "alex" && alexCollection?.complete && !priorAlexCollectionGrant?.id);
-    const physicalRewards = await prepareCasePhysicalRewards(env, {
-      rolled,
-      telegramId,
-      ownerName: telegramDisplayName(auth.user),
-      sourceId: `grant_${claimedId}_${openingClaimToken}_${openingClaimAt}`,
-      now
-    });
-    physicalStockConsumptionIds = physicalRewards.stockConsumptionIds;
-    const openingGuardId = `case-open:${claimedId}:${openingClaimToken}`.slice(0,180);
-    await env.DB.batch([
-      env.DB.prepare(`INSERT INTO granted_case_opening_guards(guard_id,ok) VALUES(?,COALESCE((SELECT CASE WHEN status='opening' AND opening_started_at=? AND opening_token=? THEN 1 ELSE 0 END FROM granted_cases WHERE id=? AND telegram_id=? LIMIT 1),0))`).bind(openingGuardId,openingClaimAt,openingClaimToken,claimedId,telegramId),
-      env.DB.prepare(
-        `UPDATE admin_profile_state SET
-          wallet = MIN(999999999,wallet + ?), treats = MIN(999999999,treats + ?), coffee = MIN(999999999,coffee + ?),
-          revision = revision + 1, updated_at = ?, updated_by = ?
-         WHERE telegram_id = ?`
-      ).bind(
-        safeAdminNumber(rolled.points), safeAdminNumber(rolled.treats), safeAdminNumber(rolled.coffee),
-        now, `gift-case:${caseType}`, telegramId
-      ),
-      caseStateUpdateStatement(env, telegramId, rolled.state, now),
-      env.DB.prepare(
-        `UPDATE granted_cases SET status = 'opened', rewards_json = ?, opened_at = ?, opening_started_at=0
-         WHERE id = ? AND telegram_id = ? AND status = 'opening'`
-      ).bind(JSON.stringify(rolled.rewards), now, claimedId, telegramId),
-      ...(alexCollectionRewardGranted ? [env.DB.prepare(
-        `INSERT OR IGNORE INTO granted_cases(id,telegram_id,case_type,status,granted_by,reason,created_at) VALUES(?,?,?,'pending','alex_collection',?,?)`
-      ).bind(alexCaseCollectionGrantId(telegramId),telegramId,"gold","Собрана полная коллекция Алекса",now)] : []),
-      ...physicalRewards.statements,
-      ...(taskEvent?.progressStatements || []),
-      ...(taskEvent?.notificationStatements || []),
-      env.DB.prepare(`DELETE FROM granted_case_opening_guards WHERE guard_id=?`).bind(openingGuardId)
-    ]);
-    // Stock reservations are committed by the batch above; do not release them
-    // if only the response-building phase fails afterwards.
-    physicalStockConsumptionIds = [];
+    let committed = null;
+    for (let attempt = 1; attempt <= CASE_STATE_COMMIT_MAX_ATTEMPTS; attempt += 1) {
+      const ensured = await ensureCasePlayerState(env, telegramId, {});
+      const taskEvent = await prepareSeasonPassTaskProgressEvent(env, telegramId, { cases_opened:1 }, now)
+        .catch((error) => { console.error("granted case task progress prepare failed", error); return null; });
+      const rolled = caseType === "alex"
+        ? rollAlexCase(ensured.state, ensured.state.ownedSkins)
+        : rollLevelCase(caseType, ensured.state, ensured.state.ownedSkins, liveops);
+      if(caseType!=="alex")await assertRolledLiveContentCaseRoutes(env,rolled,"case",caseType);
+      const alexCollection = caseType === "alex" ? alexCaseCollectionStatus(rolled.state) : null;
+      const alexCollectionRewardGranted = Boolean(caseType === "alex" && alexCollection?.complete && !priorAlexCollectionGrant?.id);
+      const physicalRewards = await prepareCasePhysicalRewards(env, {
+        rolled,
+        telegramId,
+        ownerName: telegramDisplayName(auth.user),
+        sourceId: `grant_${claimedId}_${openingClaimToken}_${openingClaimAt}_a${attempt}`,
+        now
+      });
+      physicalStockConsumptionIds = physicalRewards.stockConsumptionIds;
+      const openingGuardId = `case-open:${claimedId}:${openingClaimToken}:${attempt}`.slice(0,180);
+      const revisionGuardId = `case-state:grant:${claimedId}:${openingClaimToken}:${attempt}`.slice(0,180);
+      try {
+        await env.DB.batch([
+          env.DB.prepare(`INSERT INTO granted_case_opening_guards(guard_id,ok) VALUES(?,COALESCE((SELECT CASE WHEN status='opening' AND opening_started_at=? AND opening_token=? THEN 1 ELSE 0 END FROM granted_cases WHERE id=? AND telegram_id=? LIMIT 1),0))`).bind(openingGuardId,openingClaimAt,openingClaimToken,claimedId,telegramId),
+          caseStateRevisionGuardStatement(env,revisionGuardId,telegramId,ensured.state.revision),
+          env.DB.prepare(
+            `UPDATE admin_profile_state SET
+              wallet = MIN(999999999,wallet + ?), treats = MIN(999999999,treats + ?), coffee = MIN(999999999,coffee + ?),
+              revision = revision + 1, updated_at = ?, updated_by = ?
+             WHERE telegram_id = ?`
+          ).bind(
+            safeAdminNumber(rolled.points), safeAdminNumber(rolled.treats), safeAdminNumber(rolled.coffee),
+            now, `gift-case:${caseType}`, telegramId
+          ),
+          caseStateUpdateStatement(env, telegramId, rolled.state, now, { explicitRevisionGuard:true }),
+          env.DB.prepare(
+            `UPDATE granted_cases SET status = 'opened', rewards_json = ?, opened_at = ?, opening_started_at=0
+             WHERE id = ? AND telegram_id = ? AND status = 'opening' AND opening_started_at=? AND opening_token=?`
+          ).bind(JSON.stringify(rolled.rewards), now, claimedId, telegramId,openingClaimAt,openingClaimToken),
+          ...(alexCollectionRewardGranted ? [env.DB.prepare(
+            `INSERT OR IGNORE INTO granted_cases(id,telegram_id,case_type,status,granted_by,reason,created_at) VALUES(?,?,?,'pending','alex_collection',?,?)`
+          ).bind(alexCaseCollectionGrantId(telegramId),telegramId,"gold","Собрана полная коллекция Алекса",now)] : []),
+          ...physicalRewards.statements,
+          ...(taskEvent?.progressStatements || []),
+          ...(taskEvent?.notificationStatements || []),
+          caseStateRevisionGuardCleanupStatement(env,revisionGuardId),
+          env.DB.prepare(`DELETE FROM granted_case_opening_guards WHERE guard_id=?`).bind(openingGuardId)
+        ]);
+        physicalStockConsumptionIds = [];
+        committed = { rolled, taskEvent, alexCollection, alexCollectionRewardGranted };
+        break;
+      } catch (error) {
+        await releaseCasePhysicalStock(env, physicalRewards.stockConsumptionIds);
+        physicalStockConsumptionIds = [];
+        if (isCaseStateRevisionConflict(error) && attempt < CASE_STATE_COMMIT_MAX_ATTEMPTS) continue;
+        if (isCaseStateRevisionConflict(error)) {
+          throw playerOperationError(409,"Состояние наград обновилось во время открытия. Повторите проверку этой же операции.",{
+            code:"STATE_CONFLICT",operationCode:"STATE_CONFLICT",retryable:true,operationId:openingClaimToken,operationKind:"granted_case_open"
+          });
+        }
+        throw error;
+      }
+    }
+    if (!committed) throw new Error("Granted case state commit did not finish");
+    const { rolled, taskEvent, alexCollection, alexCollectionRewardGranted } = committed;
     const opened = {
       grantId: claimedId,
       source: "gift",

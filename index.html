@@ -19935,7 +19935,7 @@ function createTutorialDeck(layer, mount, options, words) {
         });
       }
 
-      async function loadCaseState(force = false, fast = false) {
+      async function loadCaseState(force = false, fast = false, recovery = false) {
         if (!telegramProfile?.initData) return false;
         // Join an in-flight read. A full recovery cannot be satisfied by the
         // lighter warehouse response, so upgrade it once after that read ends.
@@ -19952,7 +19952,7 @@ function createTutorialDeck(layer, mount, options, words) {
         if (caseRefreshButton) caseRefreshButton.disabled = true;
         const pending = (async () =&gt; {
           try {
-            const data = await caseApiRequest(CASE_API_STATE_PATH, { force:Boolean(force), fast:Boolean(fast) }, 6500);
+            const data = await caseApiRequest(CASE_API_STATE_PATH, { force:Boolean(force), fast:Boolean(fast), recovery:Boolean(recovery) }, 6500);
             if (!data?.caseState || (!fast &amp;&amp; !Array.isArray(data.openedCases))) throw new Error(&quot;Сервер вернул неполное состояние кейсов.&quot;);
             applyServerCasePayload(data);
             if (data?.gifts) applyPlayerGiftPayload(data.gifts);
@@ -19975,7 +19975,10 @@ function createTutorialDeck(layer, mount, options, words) {
       }
 
       async function loadCaseStateForOpeningRecovery() {
-        return loadCaseState(true, false);
+        // Recovery is an observation only: it must not apply client-side profile
+        // preferences or advance any server delivery queue while we are resolving
+        // the exact result of an already-started opening.
+        return loadCaseState(true, false, true);
       }
 
       function presentConfirmedLevelCase(data, level, recovered = false) {
@@ -20417,7 +20420,7 @@ function createTutorialDeck(layer, mount, options, words) {
         caseLayer.classList.remove(&quot;is-info-view&quot;, &quot;is-opening-busy&quot;);
         caseLayer.classList.add(&quot;case-xp-active&quot;);
         const offline = navigator.onLine === false;
-        const stateConflict = String(error?.code || error?.details?.code || &quot;&quot;) === &quot;CASE_STATE_CONFLICT&quot;;
+        const stateConflict = String(error?.operationCode || error?.code || error?.details?.operationCode || error?.details?.code || &quot;&quot;) === &quot;STATE_CONFLICT&quot;;
         const statusPill = stateConflict ? &quot;Состояние обновилось&quot; : (offline ? &quot;Нет соединения&quot; : &quot;Связь прервалась&quot;);
         const statusTitle = stateConflict ? &quot;Кейс изменился на сервере&quot; : &quot;Не удалось проверить открытие&quot;;
         const statusCopy = stateConflict
@@ -20475,7 +20478,7 @@ function createTutorialDeck(layer, mount, options, words) {
 
       function isGrantedCaseRetryableError(error) {
         const status = Number(error?.status || 0);
-        if (error?.pending || error?.timeout || error?.code === &quot;REQUEST_TIMEOUT&quot; || error?.code === &quot;CASE_STATE_CONFLICT&quot; || !status || status &gt;= 500) return true;
+        if (error?.pending || error?.timeout || error?.code === &quot;REQUEST_TIMEOUT&quot; || error?.operationCode === &quot;STATE_CONFLICT&quot; || error?.code === &quot;STATE_CONFLICT&quot; || error?.code === &quot;CASE_STATE_CONFLICT&quot; || !status || status &gt;= 500) return true;
         if (status !== 409) return false;
         return /уже открывается|попытка открытия устарела|состояние кейса изменилось|повторите открытие/i.test(String(error?.message || &quot;&quot;));
       }

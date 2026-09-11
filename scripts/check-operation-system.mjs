@@ -121,6 +121,10 @@ assert(physical.includes('operationSuccessMeta(requestId,"physical_purchase"'), 
 const levelCase = section(worker, 'async function openLevelCase', '\nasync function purchaseCaseFromShop');
 assertOrder(levelCase, 'if(existing)', 'requirePlayerOperationAvailable', 'level case opening');
 assert(levelCase.includes('operationSuccessMeta(`level:${requestedLevel}`,"level_case_open",false)'), 'fresh level case has no completion metadata');
+assert(levelCase.includes('CASE_STATE_COMMIT_MAX_ATTEMPTS'), 'level case opening has no bounded revision retry');
+assert(levelCase.includes('caseStateRevisionGuardStatement'), 'level case opening has no explicit revision guard');
+assert(levelCase.includes('{ explicitRevisionGuard:true }'), 'level case opening still uses the legacy booster CHECK as a revision guard');
+assert(levelCase.includes('if (attempt < CASE_STATE_COMMIT_MAX_ATTEMPTS) continue;'), 'level case state conflict is not retried server-side');
 
 const casePurchase = section(worker, 'async function purchaseCaseFromShop', '\nconst GRANTED_CASE_OPENING_STALE_SECONDS');
 assertOrder(casePurchase, 'if (existing)', 'requirePlayerOperationAvailable', 'case purchase');
@@ -131,6 +135,9 @@ const grantedCase = section(worker, 'async function openGrantedCase', '\nasync f
 assertOrder(grantedCase, 'grantedCaseExistingRequestPayload', 'requirePlayerOperationAvailable', 'granted case opening');
 assert(grantedCase.includes('kind:"granted_case_open",state:"processing"'), 'granted case pending operation state is missing');
 assert(grantedCase.includes('operationSuccessMeta(requestId || openingClaimToken,"granted_case_open",false)'), 'fresh granted case has no completion metadata');
+assert(grantedCase.includes('CASE_STATE_COMMIT_MAX_ATTEMPTS'), 'granted case opening has no bounded revision retry');
+assert(grantedCase.includes('caseStateRevisionGuardStatement'), 'granted case opening has no explicit revision guard');
+assert(grantedCase.includes('{ explicitRevisionGuard:true }'), 'granted case opening still uses the legacy booster CHECK as a revision guard');
 
 const flash = section(worker, 'async function purchaseFlashOffer', '\nasync function ownerPanelFlashOffers');
 assertOrder(flash, 'existing?.status==="completed"', 'requirePlayerOperationAvailable', 'flash-offer purchase');
@@ -163,7 +170,18 @@ for (const route of ['/api/shop/offers/purchase', '/api/live-content/shop/buy', 
   assert(!routeBlock.includes('enforceFeatureFlagForRequest'), `route ${route} still blocks recovery before handler`);
 }
 
+const caseStateRefresh = section(worker, 'async function getLevelCaseState', '\n// A level is the natural idempotency key');
+assert(!caseStateRefresh.includes('processPlayerRewardDeliveryQueue'), 'case recovery/state refresh still mutates reward delivery state');
+assert(caseStateRefresh.includes('body.recovery === true ? {} : (body.current || {})'), 'case recovery still applies client profile state while checking an opening');
+const caseStateWriter = section(worker, 'function caseStateUpdateStatement', '\nasync function ensureCasePlayerState');
+assert(caseStateWriter.includes('explicitRevisionGuard'), 'case state writer has no explicit revision-guard mode');
+assert(caseStateWriter.includes('active_booster_runs = ?,'), 'explicit case-state update still has no normal legacy-booster write');
+assert(worker.includes('CONSTRAINT case_state_revision_guard_ok CHECK(ok=1)'), 'runtime case-state revision guard schema is missing');
+
 assert(index.includes('async function operationApiRequest'), 'client shared operation request helper is missing');
+assert(index.includes('error?.operationCode || error?.code || error?.details?.operationCode'), 'case UI does not recognize normalized STATE_CONFLICT');
+assert(index.includes('error?.operationCode === &quot;STATE_CONFLICT&quot;'), 'granted-case retry logic ignores normalized STATE_CONFLICT');
+assert(index.includes('return loadCaseState(true, false, true);'), 'case opening recovery does not request a read-only state check');
 assert(index.includes('operationContractVersion: 1'), 'client does not send operation contract version');
 assert(index.includes('function operationIssuePresentation'), 'client shared friendly operation state presenter is missing');
 assert(index.includes('Покупки временно недоступны'), 'client friendly purchases-disabled message is missing');
