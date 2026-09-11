@@ -10157,10 +10157,10 @@ body { min-height: var(--zefirok-app-height, 100dvh); }
 
   function seasonLabel(season, allTime = false) {
     if (allTime) return "Зал славы";
-    const number = String(season?.number ?? season?.seasonNumber ?? "").trim();
+    const number = Math.max(0, Math.floor(Number(season?.number ?? season?.seasonNumber ?? 0) || 0));
     if (number) return `Сезон ${number}`;
-    const id = String(season?.id || "").trim();
-    const match = id.match(/(\d+)(?!.*\d)/);
+    const title = String(season?.title || season?.name || season?.label || "").trim();
+    const match = title.match(/(?:сезон|season)\s*[№#:]?\s*(\d{1,3})/i);
     return match ? `Сезон ${match[1]}` : "Текущий сезон";
   }
 

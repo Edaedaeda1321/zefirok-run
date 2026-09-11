@@ -12689,6 +12689,7 @@ async function buildLeaderboardPayload(env, season, telegramId, mode = "season")
     serverTime,
     season: {
       id: String(season.id),
+      number: leaderboardSeasonOrdinal(season.title) || null,
       title: String(season.title),
       status: String(season.status),
       startsAt: Number(season.starts_at || 0) * 1000,
