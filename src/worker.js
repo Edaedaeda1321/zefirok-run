@@ -4204,6 +4204,7 @@ async function processHourlyServerMaintenance(env) {
     ["fraud", () => scanFraudAlerts(env)],
     ["stockForecast", () => processV67StockForecastAlerts(env)],
     ["smartAlerts", () => scanV77SmartAlerts(env)],
+    ["legacyPlayerBackfill", () => backfillLegacyPlayerMigrations(env, 40)],
     ["analytics", () => collectServerAnalyticsHourly(env)]
   ]);
 }
@@ -4805,8 +4806,7 @@ async function createPlayerMailV3(env, telegramId, spec = {}) {
     throw new Error("Конфликт идентификатора письма V3: под этим ID уже хранится другое письмо");
   }
   if (created || attachmentChanges > 0) {
-    await ensurePlayerAccountRevisionAvailable(env);
-    await bumpPlayerAccountRevisionStatement(env,id,now).run();
+    await bumpPlayerAccountRevision(env,id,now);
   }
   return { mailId, created, rewards, rewardState:String(stored.reward_state || rewardState), title, preview, imageUrl, ctaLabel, ctaUrl };
 }
@@ -4818,7 +4818,7 @@ async function maintainPlayerMailV3State(env, telegramId) {
   const repaired=await repairPlayerMailV3CampaignAttachments(env,id).catch((error)=>{console.error("player mail v3 attachment maintenance failed",error);return 0;});
   const reset=await env.DB.prepare(`UPDATE player_mail_v3 SET reward_state='available',updated_at=? WHERE telegram_id=? AND reward_state='claiming' AND updated_at<?`).bind(now,id,now-PLAYER_MAIL_V3_CLAIM_STALE_SECONDS).run();
   const changed=Math.max(0,Number(repaired||0))+Number(reset?.meta?.changes||0);
-  if(changed>0){await ensurePlayerAccountRevisionAvailable(env);await bumpPlayerAccountRevisionStatement(env,id,now).run();}
+  if(changed>0){await bumpPlayerAccountRevision(env,id,now);}
   return changed;
 }
 
@@ -4858,7 +4858,7 @@ async function playerMailV3LetterPayload(env, telegramId, mailId) {
   const id=String(telegramId||"").trim(),mid=playerMailV3SanitizeId(mailId,"mail");
   const now=Math.floor(Date.now()/1000);
   const repaired=await repairPlayerMailV3CampaignAttachments(env,id,mid).catch((error)=>{console.error("player mail v3 open attachment repair failed",error);return 0;});
-  if(repaired>0){await ensurePlayerAccountRevisionAvailable(env);await bumpPlayerAccountRevisionStatement(env,id,now).run();}
+  if(repaired>0){await bumpPlayerAccountRevision(env,id,now);}
   const row=await env.DB.prepare(`SELECT * FROM player_mail_v3 WHERE telegram_id=? AND mail_id=? AND source_type<>'season_pass_task' AND mail_kind<>'season_pass_task' AND (expires_at=0 OR expires_at>?) LIMIT 1`).bind(id,mid,now).first();
   if(!row) return null;
   const rewardRows=await env.DB.prepare(`SELECT reward_kind,reward_id,amount,reward_json FROM player_mail_rewards_v3 WHERE telegram_id=? AND mail_id=? ORDER BY reward_index`).bind(id,mid).all();
@@ -5105,8 +5105,7 @@ async function createPlayerGiftInbox(env, telegramId, spec = {}) {
   // bump a slower startup/profile response can overwrite a freshly loaded inbox
   // in the open Mini App, producing the false state “Telegram arrived, mail did not”.
   if (created || mailMetadataCreated) {
-    await ensurePlayerAccountRevisionAvailable(env);
-    await bumpPlayerAccountRevisionStatement(env,id,now).run();
+    await bumpPlayerAccountRevision(env,id,now);
   }
   return { giftId, created, rewards, status:String(stored.status || status) };
 }
@@ -5837,6 +5836,14 @@ async function ensurePlayerAccountRevisionSchema(env) {
 function bumpPlayerAccountRevisionStatement(env, telegramId, now = Math.floor(Date.now()/1000)) {
   return env.DB.prepare(`INSERT INTO player_account_revision(telegram_id,revision,updated_at) VALUES(?,1,?)
     ON CONFLICT(telegram_id) DO UPDATE SET revision=player_account_revision.revision+1,updated_at=excluded.updated_at`).bind(String(telegramId), now);
+}
+
+async function bumpPlayerAccountRevision(env, telegramId, now = Math.floor(Date.now()/1000)) {
+  const id = String(telegramId || "").trim();
+  if (!id) return 0;
+  await ensurePlayerAccountRevisionAvailable(env);
+  const result = await bumpPlayerAccountRevisionStatement(env,id,now).run();
+  return Number(result?.meta?.changes || 0);
 }
 
 async function ensurePlayerAccountRevisionAvailable(env) {
@@ -8041,6 +8048,71 @@ async function authoritativeEconomyCutoverAt(env) {
   return Math.max(0, Math.floor(Number(row?.value_int || AUTHORITATIVE_LEGACY_RUN_CUTOFF_FALLBACK)));
 }
 
+let legacyMigrationAuditSchemaPromise = null;
+let legacyMigrationPhaseCache = { expiresAt:0, values:new Map() };
+
+async function ensureLegacyMigrationAuditSchema(env) {
+  if (!legacyMigrationAuditSchemaPromise) {
+    legacyMigrationAuditSchemaPromise = (async () => {
+      await env.DB.batch([
+        env.DB.prepare(`CREATE TABLE IF NOT EXISTS player_legacy_migration_audit (
+          migration_key TEXT PRIMARY KEY,phase TEXT NOT NULL DEFAULT 'backfill',cutoff_at INTEGER NOT NULL DEFAULT 0,total_rows INTEGER NOT NULL DEFAULT 0,
+          migrated_rows INTEGER NOT NULL DEFAULT 0,remaining_rows INTEGER NOT NULL DEFAULT 0,last_error TEXT NOT NULL DEFAULT '',
+          checked_at INTEGER NOT NULL DEFAULT 0,completed_at INTEGER NOT NULL DEFAULT 0,updated_at INTEGER NOT NULL DEFAULT 0)`),
+        env.DB.prepare(`INSERT OR IGNORE INTO player_legacy_migration_audit(migration_key,phase,cutoff_at,updated_at) VALUES('authoritative_economy_cutover','backfill',0,unixepoch())`),
+        env.DB.prepare(`INSERT OR IGNORE INTO player_legacy_migration_audit(migration_key,phase,cutoff_at,updated_at) VALUES('season_pass_balance_v2','backfill',unixepoch(),unixepoch())`)
+      ]);
+    })().catch((error) => { legacyMigrationAuditSchemaPromise=null; throw error; });
+  }
+  await legacyMigrationAuditSchemaPromise;
+}
+
+async function legacyPlayerMigrationPhase(env, migrationKey) {
+  const key=String(migrationKey||'');
+  if (!key) return 'backfill';
+  const nowMs=Date.now();
+  if (legacyMigrationPhaseCache.expiresAt>nowMs && legacyMigrationPhaseCache.values.has(key)) return legacyMigrationPhaseCache.values.get(key);
+  await ensureLegacyMigrationAuditSchema(env);
+  const rows=(await env.DB.prepare(`SELECT migration_key,phase FROM player_legacy_migration_audit`).all()).results||[];
+  legacyMigrationPhaseCache={expiresAt:nowMs+60000,values:new Map(rows.map((row)=>[String(row.migration_key),String(row.phase||'backfill')]))};
+  return legacyMigrationPhaseCache.values.get(key)||'backfill';
+}
+
+async function legacyPlayerMigrationReadFallback(env, migrationKey) {
+  return ['read_fallback','retired'].includes(await legacyPlayerMigrationPhase(env,migrationKey));
+}
+
+async function writeLegacyMigrationAudit(env,migrationKey,{cutoffAt=0,total=0,remaining=0,lastError=''}) {
+  await ensureLegacyMigrationAuditSchema(env);
+  const now=Math.floor(Date.now()/1000),phase=remaining===0?'read_fallback':'backfill',migrated=Math.max(0,total-remaining),cutoff=Math.max(0,Math.floor(Number(cutoffAt)||0));
+  await env.DB.prepare(`INSERT INTO player_legacy_migration_audit(migration_key,phase,cutoff_at,total_rows,migrated_rows,remaining_rows,last_error,checked_at,completed_at,updated_at)
+    VALUES(?,?,?,?,?,?,?,?,?,?) ON CONFLICT(migration_key) DO UPDATE SET phase=CASE WHEN player_legacy_migration_audit.phase='retired' THEN 'retired' ELSE excluded.phase END,cutoff_at=CASE WHEN player_legacy_migration_audit.cutoff_at>0 THEN player_legacy_migration_audit.cutoff_at ELSE excluded.cutoff_at END,total_rows=excluded.total_rows,migrated_rows=excluded.migrated_rows,remaining_rows=excluded.remaining_rows,last_error=excluded.last_error,checked_at=excluded.checked_at,completed_at=CASE WHEN excluded.remaining_rows=0 THEN CASE WHEN player_legacy_migration_audit.completed_at>0 THEN player_legacy_migration_audit.completed_at ELSE excluded.completed_at END ELSE 0 END,updated_at=excluded.updated_at`)
+    .bind(String(migrationKey),phase,cutoff,total,migrated,remaining,String(lastError||'').slice(0,500),now,remaining===0?now:0,now).run();
+  legacyMigrationPhaseCache.expiresAt=0;
+  return {migrationKey:String(migrationKey),phase,total,migrated,remaining,lastError:String(lastError||'')};
+}
+
+async function backfillLegacyPlayerMigrations(env, batchLimit=40) {
+  await ensureLegacyMigrationAuditSchema(env);
+  const limit=Math.max(1,Math.min(100,Math.floor(Number(batchLimit)||40))),results=[];
+  const cutoverAt=await authoritativeEconomyCutoverAt(env);
+  const economyRows=(await env.DB.prepare(`SELECT p.telegram_id,p.updated_at FROM admin_profile_state p WHERE p.created_at<=? AND NOT EXISTS(SELECT 1 FROM player_economy_cutovers c WHERE c.telegram_id=p.telegram_id) ORDER BY p.updated_at,p.telegram_id LIMIT ?`).bind(cutoverAt,limit).all()).results||[];
+  let economyError='';
+  for(const row of economyRows){try{await recoverLegacyUnsyncedRunProgress(env,String(row.telegram_id),Number(row.updated_at||0));}catch(error){economyError=String(error?.message||error).slice(0,500);console.error('legacy economy backfill failed',row.telegram_id,error);break;}}
+  const economyStats=await env.DB.prepare(`SELECT COUNT(*) AS total,SUM(CASE WHEN NOT EXISTS(SELECT 1 FROM player_economy_cutovers c WHERE c.telegram_id=p.telegram_id) THEN 1 ELSE 0 END) AS remaining FROM admin_profile_state p WHERE p.created_at<=?`).bind(cutoverAt).first();
+  results.push(await writeLegacyMigrationAudit(env,'authoritative_economy_cutover',{cutoffAt,total:Number(economyStats?.total||0),remaining:Number(economyStats?.remaining||0),lastError:economyError}));
+
+  await ensureSeasonPassSchema(env);
+  const passAudit=await env.DB.prepare(`SELECT cutoff_at FROM player_legacy_migration_audit WHERE migration_key='season_pass_balance_v2' LIMIT 1`).first();
+  const passCutoff=Math.max(1,Number(passAudit?.cutoff_at||Math.floor(Date.now()/1000)));
+  const passRows=(await env.DB.prepare(`SELECT p.season_id,p.telegram_id,p.premium_tier FROM season_pass_players p WHERE p.created_at<=? AND (NOT EXISTS(SELECT 1 FROM season_pass_entitlements e WHERE e.season_id=p.season_id AND e.telegram_id=p.telegram_id AND e.item_id=?) OR (p.premium_tier='elite_plus' AND NOT EXISTS(SELECT 1 FROM season_pass_entitlements e2 WHERE e2.season_id=p.season_id AND e2.telegram_id=p.telegram_id AND e2.item_id=?))) ORDER BY p.updated_at,p.season_id,p.telegram_id LIMIT ?`).bind(passCutoff,SEASON_PASS_BALANCE_V2_MARKER,SEASON_PASS_ELITE_PLUS_TASK_X2_MARKER,limit).all()).results||[];
+  const seasonCache=new Map();let passError='';
+  for(const row of passRows){try{let season=seasonCache.get(String(row.season_id));if(!season){season=await loadSeasonPassSeasonById(env,String(row.season_id));if(!season)throw new Error(`Season ${String(row.season_id)} not found`);seasonCache.set(String(row.season_id),season);}let player=await env.DB.prepare(`SELECT * FROM season_pass_players WHERE season_id=? AND telegram_id=? LIMIT 1`).bind(String(row.season_id),String(row.telegram_id)).first();player=await migrateSeasonPassBalanceV2IfNeeded(env,season,String(row.telegram_id),player);await reconcileElitePlusTaskXpBoost(env,season,String(row.telegram_id),player);}catch(error){passError=String(error?.message||error).slice(0,500);console.error('legacy season pass backfill failed',row.season_id,row.telegram_id,error);break;}}
+  const passStats=await env.DB.prepare(`SELECT COUNT(*) AS total,SUM(CASE WHEN NOT EXISTS(SELECT 1 FROM season_pass_entitlements e WHERE e.season_id=p.season_id AND e.telegram_id=p.telegram_id AND e.item_id=?) OR (p.premium_tier='elite_plus' AND NOT EXISTS(SELECT 1 FROM season_pass_entitlements e2 WHERE e2.season_id=p.season_id AND e2.telegram_id=p.telegram_id AND e2.item_id=?)) THEN 1 ELSE 0 END) AS remaining FROM season_pass_players p WHERE p.created_at<=?`).bind(SEASON_PASS_BALANCE_V2_MARKER,SEASON_PASS_ELITE_PLUS_TASK_X2_MARKER,passCutoff).first();
+  results.push(await writeLegacyMigrationAudit(env,'season_pass_balance_v2',{cutoffAt:passCutoff,total:Number(passStats?.total||0),remaining:Number(passStats?.remaining||0),lastError:passError}));
+  return {ok:results.every((row)=>!row.lastError),results};
+}
+
 function authoritativeProfileView(row) {
   return {
     wallet: safeAdminNumber(row?.wallet),
@@ -8121,7 +8193,12 @@ async function readReadyAuthoritativeProfileRow(env, telegramId) {
       env.DB.prepare(`SELECT telegram_id FROM player_economy_cutovers WHERE telegram_id=? LIMIT 1`).bind(id)
     ]);
     const row=results?.[0]?.results?.[0]||null, cutover=results?.[1]?.results?.[0]||null;
-    if(!row||!cutover||authoritativeProfileHasQueuedMutation(row))return null; return row;
+    if(!row||authoritativeProfileHasQueuedMutation(row))return null;
+    if(cutover)return row;
+    const cutoverAt=await authoritativeEconomyCutoverAt(env);
+    if(Number(row.created_at||0)>cutoverAt)return row;
+    if(await legacyPlayerMigrationReadFallback(env,'authoritative_economy_cutover'))return row;
+    return null;
   } catch(error) { if(isMissingRuntimeDatabaseSchemaError(error))return null; throw error; }
 }
 
@@ -8144,11 +8221,11 @@ async function ensureAuthoritativeProfileRow(env, telegramId, actor = 'server') 
   // that happened after the last legacy profile synchronization. No numbers
   // supplied by the client participate in this cutover.
   const cutoverAt = await authoritativeEconomyCutoverAt(env);
-  if (before && Number(before.created_at || 0) <= cutoverAt) {
+  if (before && Number(before.created_at || 0) <= cutoverAt && !(await legacyPlayerMigrationReadFallback(env,'authoritative_economy_cutover'))) {
     await recoverLegacyUnsyncedRunProgress(env, id, Number(before.updated_at || 0));
-  } else {
-    await recoverLegacyUnsyncedRunProgress(env, id, now);
   }
+  // New post-cutover players never need a legacy marker. Once the audit reaches
+  // read_fallback, old rows also stop mutating on ordinary reads.
   // Fold admin overrides and queued grants into the durable base values. From
   // this point forward clients receive exact values instead of participating
   // in conflict resolution.
@@ -20063,6 +20140,14 @@ function supportWorkflowFromCanonical(status) {
   return ({ working:"working", resolved:"resolved", rejected:"rejected" })[String(status || "")] || "new";
 }
 
+function supportLegacyStatusFromWorkflow(workflowState) {
+  const state = String(workflowState || "new");
+  if (state === "resolved") return "resolved";
+  if (state === "rejected") return "rejected";
+  if (state === "new") return "new";
+  return "working";
+}
+
 async function setSupportTicketWorkflow(env, ticketId, workflowState, options = {}) {
   const id = Number(ticketId || 0);
   if (!id) return;
@@ -20075,10 +20160,18 @@ async function setSupportTicketWorkflow(env, ticketId, workflowState, options = 
     knownIssueId = Math.max(0, Math.floor(Number(current?.known_issue_id || 0)));
   }
   const actor = String(options.actor || "system").slice(0,96);
-  await env.DB.prepare(`INSERT INTO support_ticket_workflow(ticket_id,workflow_state,known_issue_id,last_transition_at,updated_at,updated_by)
-    VALUES(?,?,?,?,?,?)
-    ON CONFLICT(ticket_id) DO UPDATE SET workflow_state=excluded.workflow_state,known_issue_id=excluded.known_issue_id,last_transition_at=excluded.last_transition_at,updated_at=excluded.updated_at,updated_by=excluded.updated_by`)
-    .bind(id,state,knownIssueId,now,now,actor).run();
+  const legacyStatus = supportLegacyStatusFromWorkflow(state);
+  const closedAt = ["resolved","rejected"].includes(legacyStatus) ? now : 0;
+  await env.DB.batch([
+    env.DB.prepare(`INSERT INTO support_ticket_workflow(ticket_id,workflow_state,known_issue_id,last_transition_at,updated_at,updated_by)
+      VALUES(?,?,?,?,?,?)
+      ON CONFLICT(ticket_id) DO UPDATE SET workflow_state=excluded.workflow_state,known_issue_id=excluded.known_issue_id,last_transition_at=CASE WHEN support_ticket_workflow.workflow_state<>excluded.workflow_state OR support_ticket_workflow.known_issue_id<>excluded.known_issue_id THEN excluded.last_transition_at ELSE support_ticket_workflow.last_transition_at END,updated_at=excluded.updated_at,updated_by=excluded.updated_by`)
+      .bind(id,state,knownIssueId,now,now,actor),
+    // Compatibility shadow only. Migration 0087 also enforces this in D1 so
+    // legacy writers/readers cannot form an independent second state machine.
+    env.DB.prepare(`UPDATE support_tickets SET status=?,closed_at=CASE WHEN ? IN ('resolved','rejected') THEN CASE WHEN closed_at>0 THEN closed_at ELSE ? END ELSE 0 END,updated_at=MAX(updated_at,?) WHERE id=?`)
+      .bind(legacyStatus,legacyStatus,closedAt,now,id)
+  ]);
 }
 
 function supportNormalizeTags(values) {
@@ -20699,7 +20792,7 @@ async function resolveBotPlayerSupportTicket(env, user, ticketId, runtime = {}) 
   if (["resolved","rejected"].includes(String(row.status))) return { ticketId:id,repeated:true };
   const now = Math.floor(Date.now()/1000), req = `player_resolve_${id}`;
   await env.DB.batch([
-    env.DB.prepare(`UPDATE support_tickets SET status='resolved',resolution=CASE WHEN TRIM(resolution)='' THEN ? ELSE resolution END,updated_at=?,closed_at=? WHERE id=?`).bind("\u0418\u0433\u0440\u043e\u043a \u043e\u0442\u043c\u0435\u0442\u0438\u043b \u0432\u043e\u043f\u0440\u043e\u0441 \u0440\u0435\u0448\u0451\u043d\u043d\u044b\u043c.",now,now,id),
+    env.DB.prepare(`UPDATE support_tickets SET resolution=CASE WHEN TRIM(resolution)='' THEN ? ELSE resolution END,updated_at=? WHERE id=?`).bind("\u0418\u0433\u0440\u043e\u043a \u043e\u0442\u043c\u0435\u0442\u0438\u043b \u0432\u043e\u043f\u0440\u043e\u0441 \u0440\u0435\u0448\u0451\u043d\u043d\u044b\u043c.",now,id),
     env.DB.prepare(`INSERT OR IGNORE INTO support_messages(ticket_id,author_kind,author_telegram_id,author_name,message_text,request_id,client_json,created_at,telegram_delivered_at,telegram_error) VALUES(?,'system','','',?,?,'{}',?,0,'')`).bind(id,"\u0418\u0433\u0440\u043e\u043a \u043e\u0442\u043c\u0435\u0442\u0438\u043b \u0432\u043e\u043f\u0440\u043e\u0441 \u0440\u0435\u0448\u0451\u043d\u043d\u044b\u043c.",req,now),
     env.DB.prepare(`UPDATE support_ticket_meta SET player_last_read_at=?,updated_at=? WHERE ticket_id=?`).bind(now,now,id)
   ]);
@@ -20725,7 +20818,7 @@ async function recordPlayerSupportFeedback(env, user, ticketId, closeToken, rati
     const results=await env.DB.batch([
       feedbackInsert,
       messageInsert,
-      env.DB.prepare(`UPDATE support_tickets SET status='working',resolution='',updated_at=?,closed_at=0 WHERE id=? AND status='resolved' AND closed_at=?`).bind(now,id,Number(token)),
+      env.DB.prepare(`UPDATE support_tickets SET resolution='',updated_at=? WHERE id=? AND status='resolved' AND closed_at=?`).bind(now,id,Number(token)),
       env.DB.prepare(`UPDATE support_ticket_meta SET last_player_message_at=?,player_last_read_at=?,updated_at=? WHERE ticket_id=?`).bind(now,now,now,id)
     ]);
     const inserted=Number(results?.[0]?.meta?.changes||0)>0;
@@ -21037,10 +21130,9 @@ async function updateTicketStatus(query, ticketId, status, env) {
   }
   const now = Math.floor(Date.now() / 1000);
   await env.DB.prepare(
-    `UPDATE support_tickets SET status = ?, assigned_to = ?, assigned_to_name = ?,
-     updated_at = ?, closed_at = CASE WHEN ? IN ('resolved','rejected') THEN ? ELSE 0 END
-     WHERE id = ?`
-  ).bind(status, String(query.from.id), telegramDisplayName(query.from), now, status, now, Number(ticketId)).run();
+    `UPDATE support_tickets SET assigned_to = ?, assigned_to_name = ?, updated_at = ? WHERE id = ?`
+  ).bind(String(query.from.id), telegramDisplayName(query.from), now, Number(ticketId)).run();
+  await setSupportTicketWorkflow(env,Number(ticketId),supportWorkflowFromCanonical(status),{now,actor:String(query.from.id)});
   await logStaffAction(env, query.from, access, "ticket_status", String(row.player_telegram_id || ""), "ticket", null, Number(ticketId), {
     ticketId: Number(ticketId), oldStatus: row.status, newStatus: status
   });
@@ -25082,6 +25174,12 @@ async function ensureSafeControlCenterSchema(env) {
         env.DB.prepare(`CREATE INDEX IF NOT EXISTS idx_reward_delivery_queue_pending ON reward_delivery_queue(status, available_at, lease_until, created_at)`),
         env.DB.prepare(`CREATE INDEX IF NOT EXISTS idx_reward_delivery_queue_player ON reward_delivery_queue(telegram_id, status, created_at DESC)`)
       ]);
+      await addRuntimeColumnIfMissing(env, "reward_delivery_queue", "operation_id", "TEXT NOT NULL DEFAULT ''");
+      await env.DB.prepare(`UPDATE reward_delivery_queue SET operation_id='rq:v1:'||json_array(source_type,source_id,telegram_id,reward_kind,reward_id) WHERE TRIM(operation_id)=''`).run();
+      await env.DB.batch([
+        env.DB.prepare(`CREATE UNIQUE INDEX IF NOT EXISTS idx_reward_delivery_operation_id ON reward_delivery_queue(operation_id) WHERE operation_id<>''`),
+        env.DB.prepare(`CREATE TRIGGER IF NOT EXISTS trg_reward_delivery_operation_id_legacy AFTER INSERT ON reward_delivery_queue WHEN TRIM(NEW.operation_id)='' BEGIN UPDATE reward_delivery_queue SET operation_id='rq:v1:'||json_array(NEW.source_type,NEW.source_id,NEW.telegram_id,NEW.reward_kind,NEW.reward_id) WHERE id=NEW.id; END`)
+      ]);
       const now = Math.floor(Date.now() / 1000);
       const defaults = [
         ["small", "Маленькая компенсация", "500 очков", [{ kind: "points", amount: 500 }]],
@@ -25723,12 +25821,20 @@ async function startSafeEvent(row, env) {
   await env.DB.prepare(`UPDATE liveops_events SET start_notified=1,updated_at=? WHERE event_id=?`).bind(now,row.event_id).run();
 }
 
+function rewardQueueOperationId(telegramId, sourceType, sourceId, reward) {
+  const playerId=String(telegramId||"").trim(),type=String(sourceType||"").trim(),source=String(sourceId||"").trim(),kind=String(reward?.kind||"").trim(),rewardId=String(reward?.id||"").trim();
+  if(!playerId||!type||!source||!kind)throw new Error("Reward queue requires telegram_id, source_type, source_id and reward_kind for idempotency");
+  return `rq:v1:${JSON.stringify([type,source,playerId,kind,rewardId])}`;
+}
+
 async function enqueueRewardDelivery(env, telegramId, sourceType, sourceId, reward, reason, reportChatId = "") {
   await ensureSafeControlCenterSchema(env);
   if (!reward || reward.kind === "none") return 0;
+  const playerId=String(telegramId||"").trim(),type=String(sourceType||"").trim(),source=String(sourceId||"").trim();
+  const operationId=rewardQueueOperationId(playerId,type,source,reward);
   const now = Math.floor(Date.now() / 1000);
-  const result = await env.DB.prepare(`INSERT OR IGNORE INTO reward_delivery_queue (telegram_id,source_type,source_id,reward_kind,reward_id,amount,reason,payload_json,status,attempts,last_error,available_at,created_at,updated_at,notify_after,report_chat_id,lease_token,lease_until) VALUES (?,?,?,?,?,?,?,'{}','pending',0,'',?,?,?, ?,?,'',0)`)
-    .bind(String(telegramId), String(sourceType), String(sourceId), String(reward.kind), String(reward.id || ""), Math.max(1, Number(reward.amount || 1)), String(reason || "").slice(0, 300), now, now, now, now + 900, String(reportChatId || "")).run();
+  const result = await env.DB.prepare(`INSERT OR IGNORE INTO reward_delivery_queue (operation_id,telegram_id,source_type,source_id,reward_kind,reward_id,amount,reason,payload_json,status,attempts,last_error,available_at,created_at,updated_at,notify_after,report_chat_id,lease_token,lease_until) VALUES (?,?,?,?,?,?,?,?, '{}','pending',0,'',?,?,?, ?,?,'',0)`)
+    .bind(operationId,playerId,type,source,String(reward.kind),String(reward.id || ""),Math.max(1, Number(reward.amount || 1)),String(reason || "").slice(0, 300),now,now,now,now + 900,String(reportChatId || "")).run();
   return Number(result.meta?.last_row_id || 0);
 }
 
@@ -31061,11 +31167,14 @@ async function reconcileElitePlusTaskXpBoost(env,season,telegramId,player){
 
 async function ensureSeasonPassPlayer(env,season,telegramId){
   await ensureSeasonPassSchema(env);
-  const now=Math.floor(Date.now()/1000);
-  await env.DB.prepare(`INSERT OR IGNORE INTO season_pass_players(season_id,telegram_id,xp,premium_tier,elite_plus_bonus_granted,revision,created_at,updated_at) VALUES(?,?,0,'none',0,1,?,?)`).bind(season.id,String(telegramId),now,now).run();
-  let player=await env.DB.prepare(`SELECT * FROM season_pass_players WHERE season_id=? AND telegram_id=? LIMIT 1`).bind(season.id,String(telegramId)).first();
-  player=await migrateSeasonPassBalanceV2IfNeeded(env,season,telegramId,player);
-  player=await reconcileElitePlusTaskXpBoost(env,season,telegramId,player);
+  const now=Math.floor(Date.now()/1000),id=String(telegramId);
+  const inserted=await env.DB.prepare(`INSERT OR IGNORE INTO season_pass_players(season_id,telegram_id,xp,premium_tier,elite_plus_bonus_granted,revision,created_at,updated_at) VALUES(?,?,0,'none',0,1,?,?)`).bind(season.id,id,now,now).run();
+  let player=await env.DB.prepare(`SELECT * FROM season_pass_players WHERE season_id=? AND telegram_id=? LIMIT 1`).bind(season.id,id).first();
+  const isNewPlayer=Number(inserted?.meta?.changes||0)>0;
+  if(!isNewPlayer && !(await legacyPlayerMigrationReadFallback(env,'season_pass_balance_v2'))){
+    player=await migrateSeasonPassBalanceV2IfNeeded(env,season,id,player);
+    player=await reconcileElitePlusTaskXpBoost(env,season,id,player);
+  }
   return player;
 }
 
@@ -46493,16 +46602,18 @@ async function ownerPanelDeleteStaff(env, ctx) {
 
 async function ownerPanelSystem(env, ctx) {
   const maintenance=await getMaintenanceSettings(env);const audit=await ownerPanelRecentAudit(env,40);
-  const [queue,profiles,ratings,passes,newsCount,pollsActive,resetsCount]=await Promise.all([
+  await ensureLegacyMigrationAuditSchema(env);
+  const [queue,profiles,ratings,passes,newsCount,pollsActive,resetsCount,legacyMigrations]=await Promise.all([
     env.DB.prepare(`SELECT SUM(CASE WHEN status='pending' THEN 1 ELSE 0 END) AS pending,SUM(CASE WHEN status='failed' THEN 1 ELSE 0 END) AS failed,SUM(CASE WHEN status='delivering' THEN 1 ELSE 0 END) AS delivering FROM reward_delivery_queue`).first().catch(()=>({})),
     env.DB.prepare(`SELECT COUNT(*) AS count FROM admin_profile_state`).first(),
     env.DB.prepare(`SELECT COUNT(*) AS count FROM leaderboard_seasons`).first(),
     env.DB.prepare(`SELECT COUNT(*) AS count FROM season_pass_seasons`).first(),
     env.DB.prepare(`SELECT COUNT(*) AS count FROM bot_news`).first().catch(()=>({count:0})),
     env.DB.prepare(`SELECT COUNT(*) AS count FROM player_polls WHERE status='active'`).first().catch(()=>({count:0})),
-    env.DB.prepare(`SELECT COUNT(*) AS count FROM player_reset_history`).first().catch(()=>({count:0}))
+    env.DB.prepare(`SELECT COUNT(*) AS count FROM player_reset_history`).first().catch(()=>({count:0})),
+    env.DB.prepare(`SELECT migration_key,phase,cutoff_at,total_rows,migrated_rows,remaining_rows,last_error,checked_at,completed_at FROM player_legacy_migration_audit ORDER BY migration_key`).all().catch(()=>({results:[]}))
   ]);
-  return {ok:true,version:GAME_VERSION,workerBuild:WORKER_BUILD,serverTime:new Date().toISOString(),maintenance,queue:{pending:Number(queue?.pending||0),failed:Number(queue?.failed||0),delivering:Number(queue?.delivering||0)},tables:{profiles:Number(profiles?.count||0),ratingSeasons:Number(ratings?.count||0),seasonPassSeasons:Number(passes?.count||0),news:Number(newsCount?.count||0),activePolls:Number(pollsActive?.count||0),resetOperations:Number(resetsCount?.count||0)},audit};
+  return {ok:true,version:GAME_VERSION,workerBuild:WORKER_BUILD,serverTime:new Date().toISOString(),maintenance,queue:{pending:Number(queue?.pending||0),failed:Number(queue?.failed||0),delivering:Number(queue?.delivering||0)},tables:{profiles:Number(profiles?.count||0),ratingSeasons:Number(ratings?.count||0),seasonPassSeasons:Number(passes?.count||0),news:Number(newsCount?.count||0),activePolls:Number(pollsActive?.count||0),resetOperations:Number(resetsCount?.count||0)},legacyMigrations:(legacyMigrations.results||[]).map((row)=>({key:String(row.migration_key||''),phase:String(row.phase||'backfill'),cutoffAt:Number(row.cutoff_at||0),total:Number(row.total_rows||0),migrated:Number(row.migrated_rows||0),remaining:Number(row.remaining_rows||0),lastError:String(row.last_error||''),checkedAt:Number(row.checked_at||0),completedAt:Number(row.completed_at||0)})),audit};
 }
 
 async function ownerPanelUpdateMaintenance(env, ctx) {
@@ -46920,7 +47031,7 @@ async function ownerPanelTicketReply(env,ctx){
   if(!messageId){const insert=await env.DB.prepare(`INSERT OR IGNORE INTO support_messages(ticket_id,author_kind,author_telegram_id,author_name,message_text,request_id,client_json,created_at,telegram_delivered_at,telegram_error) VALUES(?,'staff',?,?,?,?,?, ?,0,'')`).bind(ticketId,String(ctx.user.id),actor,text,requestId,'{}',now).run();messageId=Number(insert.meta?.last_row_id||0);if(!messageId){messageId=Number((await env.DB.prepare(`SELECT id FROM support_messages WHERE ticket_id=? AND request_id=? LIMIT 1`).bind(ticketId,requestId).first())?.id||0);repeated=Boolean(messageId);}}
   const nextStatus=resolveAfter?'resolved':(String(row.status||'new')==='new'?'working':String(row.status||'working'));
   const closedAt=resolveAfter?now:Number(row.closed_at||0),resolution=resolveAfter?text:String(row.resolution||'');
-  await env.DB.batch([env.DB.prepare(`UPDATE support_tickets SET status=?,assigned_to=?,assigned_to_name=?,resolution=?,updated_at=?,closed_at=? WHERE id=?`).bind(nextStatus,String(ctx.user.id),actor,resolution,now,closedAt,ticketId),env.DB.prepare(`UPDATE support_ticket_meta SET last_staff_message_at=MAX(last_staff_message_at,?),staff_last_read_at=?,updated_at=? WHERE ticket_id=?`).bind(now,now,now,ticketId)]);
+  await env.DB.batch([env.DB.prepare(`UPDATE support_tickets SET assigned_to=?,assigned_to_name=?,resolution=?,updated_at=? WHERE id=?`).bind(String(ctx.user.id),actor,resolution,now,ticketId),env.DB.prepare(`UPDATE support_ticket_meta SET last_staff_message_at=MAX(last_staff_message_at,?),staff_last_read_at=?,updated_at=? WHERE ticket_id=?`).bind(now,now,now,ticketId)]);
   await setSupportTicketWorkflow(env,ticketId,resolveAfter?'resolved':'working',{now,knownIssueId:Number(row.known_issue_id||0),actor:String(ctx.user.id)});
   if(!repeated){await logStaffAction(env,ctx.user,ctx.access,'owner_panel_ticket_reply',String(row.player_telegram_id||''),'ticket',null,ticketId,{ticketId,source:'owner_panel',resolveAfter,status:nextStatus});const task=deliverSupportReplyToPlayer(env,{ticketId,messageId,telegramId:String(row.player_telegram_id),text,status:nextStatus,statusLabel:ticketStatusLabel(nextStatus),closedAt});if(ctx.executionCtx?.waitUntil)ctx.executionCtx.waitUntil(task);else void task;}
   return {ok:true,ticketId,messageId,status:nextStatus,repeated};
@@ -46938,7 +47049,7 @@ async function ownerPanelTicketUpdate(env, ctx) {
   const row=await env.DB.prepare(`SELECT t.*,COALESCE(m.source,'staff') AS source,COALESCE(w.known_issue_id,0) AS known_issue_id FROM support_tickets t LEFT JOIN support_ticket_meta m ON m.ticket_id=t.id LEFT JOIN support_ticket_workflow w ON w.ticket_id=t.id WHERE t.id=? LIMIT 1`).bind(ticketId).first();if(!row)throw new ApiError(404,'Обращение не найдено.');
   const resolution=String(ctx.body?.resolution||'').trim().slice(0,1500),now=Math.floor(Date.now()/1000),actor=telegramDisplayName(ctx.user);
   const assignee=status==='new'?'':String(ctx.user.id),assigneeName=status==='new'?'':actor,closed=['resolved','rejected'].includes(status)?now:0;
-  await env.DB.prepare(`UPDATE support_tickets SET status=?,assigned_to=?,assigned_to_name=?,resolution=?,updated_at=?,closed_at=? WHERE id=?`).bind(status,assignee,assigneeName,resolution,now,closed,ticketId).run();
+  await env.DB.prepare(`UPDATE support_tickets SET assigned_to=?,assigned_to_name=?,resolution=?,updated_at=? WHERE id=?`).bind(assignee,assigneeName,resolution,now,ticketId).run();
   await setSupportTicketWorkflow(env,ticketId,supportWorkflowFromCanonical(status),{now,knownIssueId:Number(row.known_issue_id||0),actor:String(ctx.user.id)});
   const isPlayerTicket=String(row.source||'staff')==='player';
   let resolutionMessageId=0;if(isPlayerTicket&&resolution&&String(row.player_telegram_id||'')){const req=`status_${ticketId}_${status}_${now}`;const ins=await env.DB.prepare(`INSERT OR IGNORE INTO support_messages(ticket_id,author_kind,author_telegram_id,author_name,message_text,request_id,client_json,created_at,telegram_delivered_at,telegram_error) VALUES(?,'staff',?,?,?,?,?, ?,0,'')`).bind(ticketId,String(ctx.user.id),actor,resolution,req,'{}',now).run();resolutionMessageId=Number(ins.meta?.last_row_id||0);await env.DB.prepare(`UPDATE support_ticket_meta SET last_staff_message_at=?,staff_last_read_at=?,updated_at=? WHERE ticket_id=?`).bind(now,now,now,ticketId).run().catch(()=>{});}
@@ -46964,8 +47075,7 @@ async function ownerPanelTicketOperationsUpdate(env,ctx){
   const now=Math.floor(Date.now()/1000),actor=telegramDisplayName(ctx.user),actorId=String(ctx.user.id);
   const statements=[
     env.DB.prepare(`INSERT INTO support_ticket_operations(ticket_id,priority,priority_source,created_at,updated_at,updated_by) VALUES(?,?,'manual',?,?,?) ON CONFLICT(ticket_id) DO UPDATE SET priority=excluded.priority,priority_source='manual',updated_at=excluded.updated_at,updated_by=excluded.updated_by`).bind(ticketId,priority,now,now,actorId),
-    env.DB.prepare(`DELETE FROM support_ticket_tags WHERE ticket_id=?`).bind(ticketId),
-    env.DB.prepare(`INSERT INTO support_ticket_workflow(ticket_id,workflow_state,known_issue_id,last_transition_at,updated_at,updated_by) VALUES(?,?,?,?,?,?) ON CONFLICT(ticket_id) DO UPDATE SET workflow_state=excluded.workflow_state,known_issue_id=excluded.known_issue_id,last_transition_at=CASE WHEN support_ticket_workflow.workflow_state<>excluded.workflow_state OR support_ticket_workflow.known_issue_id<>excluded.known_issue_id THEN excluded.last_transition_at ELSE support_ticket_workflow.last_transition_at END,updated_at=excluded.updated_at,updated_by=excluded.updated_by`).bind(ticketId,workflowState,knownIssueId,now,now,actorId)
+    env.DB.prepare(`DELETE FROM support_ticket_tags WHERE ticket_id=?`).bind(ticketId)
   ];
   for(const tag of tags)statements.push(env.DB.prepare(`INSERT INTO support_ticket_tags(ticket_id,tag,created_at,created_by) VALUES(?,?,?,?)`).bind(ticketId,tag,now,actorId));
   if(knownIssueId&&String(row.player_telegram_id||''))statements.push(env.DB.prepare(`INSERT INTO support_known_issue_impacts(issue_id,player_telegram_id,ticket_id,created_at) VALUES(?,?,?,?) ON CONFLICT(issue_id,player_telegram_id) DO UPDATE SET ticket_id=CASE WHEN excluded.ticket_id>0 THEN excluded.ticket_id ELSE support_known_issue_impacts.ticket_id END`).bind(knownIssueId,String(row.player_telegram_id),ticketId,now));
@@ -46974,9 +47084,10 @@ async function ownerPanelTicketOperationsUpdate(env,ctx){
     const closedAt=['resolved','rejected'].includes(canonicalStatus)?now:0;
     const assignedTo=canonicalStatus==='new'?'':(String(row.assigned_to||'')||actorId);
     const assignedName=canonicalStatus==='new'?'':(String(row.assigned_to_name||'')||actor);
-    statements.push(env.DB.prepare(`UPDATE support_tickets SET status=?,assigned_to=?,assigned_to_name=?,updated_at=?,closed_at=? WHERE id=?`).bind(canonicalStatus,assignedTo,assignedName,now,closedAt,ticketId));
+    statements.push(env.DB.prepare(`UPDATE support_tickets SET assigned_to=?,assigned_to_name=?,updated_at=? WHERE id=?`).bind(assignedTo,assignedName,now,ticketId));
   }
   await env.DB.batch(statements);
+  await setSupportTicketWorkflow(env,ticketId,workflowState,{now,knownIssueId,actor:actorId});
   await logStaffAction(env,ctx.user,ctx.access,'owner_panel_ticket_operations',String(row.player_telegram_id||''),'ticket',null,ticketId,{ticketId,priority,tags,workflowState,knownIssueId,actor});
   return {ok:true,ticketId,priority,priorityLabel:SUPPORT_PRIORITY_LABELS[priority],tags,workflowState,workflowLabel:supportWorkflowLabel(workflowState),knownIssueId};
 }
