@@ -2080,7 +2080,6 @@ export default {
         return await recordFlashOfferEvent(request, env);
       }
       if (url.pathname === "/api/shop/offers/purchase" && request.method === "POST") {
-        const gate = await enforceFeatureFlagForRequest(request, env, "shop"); if (gate) return gate;
         return await withPlayerApiPerformance(env, ctx, "flash_offer_purchase", () => purchaseFlashOffer(request, env));
       }
 
@@ -2089,7 +2088,6 @@ export default {
       }
 
       if (url.pathname === "/api/live-content/shop/buy" && request.method === "POST") {
-        const gate = await enforceFeatureFlagForRequest(request, env, "shop"); if (gate) return gate;
         return await purchaseLiveContentShopItem(request, env);
       }
 
@@ -2097,7 +2095,6 @@ export default {
         return await claimSkinPurchaseCaseBonus(request, env);
       }
       if (url.pathname === "/api/skins/purchase" && request.method === "POST") {
-        const gate = await enforceFeatureFlagForRequest(request, env, "shop"); if (gate) return gate;
         return await withPlayerApiPerformance(env, ctx, "skin_purchase", () => purchaseSkinWithStock(request, env));
       }
 
@@ -2151,8 +2148,6 @@ export default {
       }
 
       if (url.pathname === "/api/rewards/create" && request.method === "POST") {
-        const shopGate = await enforceFeatureFlagForRequest(request, env, "shop"); if (shopGate) return shopGate;
-        const physicalGate = await enforceFeatureFlagForRequest(request, env, "physical_rewards"); if (physicalGate) return physicalGate;
         return await createReward(request, env, ctx);
       }
 
@@ -4326,6 +4321,131 @@ class ApiError extends Error {
     super(message);
     this.status = status;
     this.details = details;
+  }
+}
+
+const PLAYER_OPERATION_CONTRACT_VERSION = 1;
+
+function operationFeatureMessage(feature, fallback = "") {
+  const key = String(feature || "");
+  if (key === "purchases") return "Покупки временно недоступны. Попробуйте немного позже. Средства не списаны.";
+  if (key === "cases") return "Открытие кейсов временно недоступно. Ваши кейсы сохранены. Попробуйте немного позже.";
+  if (key === "physical_rewards") return "Получение физических наград временно недоступно. Покупка не выполнена. Попробуйте немного позже.";
+  return String(fallback || "Операция временно недоступна. Попробуйте немного позже.");
+}
+
+function normalizePlayerOperationCode(code) {
+  const raw = String(code || "").trim();
+  if (raw === "CASE_PRICE_CHANGED") return "PRICE_CHANGED";
+  if (raw === "CASE_STATE_CONFLICT") return "STATE_CONFLICT";
+  if (["CASE_SCHEMA_UNAVAILABLE", "CASE_TEMPORARY_UNAVAILABLE"].includes(raw)) return "TEMPORARILY_UNAVAILABLE";
+  return raw || "OPERATION_REJECTED";
+}
+
+function playerOperationError(status, message, details = {}) {
+  const next = details && typeof details === "object" ? { ...details } : {};
+  if (!next.code) next.code = "OPERATION_REJECTED";
+  if (!next.operationCode) next.operationCode = normalizePlayerOperationCode(next.code);
+  if (typeof next.retryable !== "boolean") next.retryable = Number(status || 0) >= 500;
+  return new ApiError(status, message, next);
+}
+
+function featureUnavailableError(feature, fallback = "", mode = "") {
+  const key = String(feature || "game");
+  return playerOperationError(503, operationFeatureMessage(key, fallback), {
+    code: "FEATURE_TEMPORARILY_DISABLED",
+    operationCode: "FEATURE_TEMPORARILY_DISABLED",
+    feature: key,
+    mode: String(mode || key),
+    retryable: true,
+    action: "retry_later"
+  });
+}
+
+function operationErrorResponse(error, fallbackMessage = "Операция не выполнена.", defaults = {}) {
+  const status = error instanceof ApiError ? Number(error.status || 500) : 500;
+  const source = error?.details && typeof error.details === "object" ? error.details : {};
+  const details = { ...source };
+  const wireCode = String(details.code || defaults.code || (status >= 500 ? "TEMPORARILY_UNAVAILABLE" : "OPERATION_REJECTED"));
+  const operationCode = String(details.operationCode || defaults.operationCode || normalizePlayerOperationCode(wireCode));
+  const feature = String(details.feature || defaults.feature || "");
+  const retryable = typeof details.retryable === "boolean" ? details.retryable : (typeof defaults.retryable === "boolean" ? defaults.retryable : status >= 500);
+  const operationId = String(details.operationId || defaults.operationId || "");
+  const operationKind = String(details.operationKind || defaults.operationKind || "");
+  details.code = wireCode;
+  details.operationCode = operationCode;
+  details.retryable = retryable;
+  if (feature) details.feature = feature;
+  if (operationId) details.operationId = operationId;
+  if (operationKind) details.operationKind = operationKind;
+  const payload = {
+    ok: false,
+    error: String(error?.message || fallbackMessage),
+    code: wireCode,
+    operationCode,
+    retryable,
+    details
+  };
+  if (feature) payload.feature = feature;
+  if (details.mode) payload.mode = String(details.mode);
+  if (wireCode === "FEATURE_TEMPORARILY_DISABLED") payload.maintenance = true;
+  if (operationId || operationKind) payload.operation = { id: operationId, kind: operationKind, state: "blocked", code: operationCode };
+  return jsonResponse(payload, status);
+}
+
+function operationSuccessMeta(id, kind, repeated = false) {
+  return { id: String(id || ""), kind: String(kind || ""), state: "completed", repeated: Boolean(repeated) };
+}
+
+function normalizeOperationPrice(price = {}) {
+  return {
+    points: safeAdminNumber(price?.points),
+    treats: safeAdminNumber(price?.treats),
+    coffee: safeAdminNumber(price?.coffee)
+  };
+}
+
+function assertOperationQuotedPrice(body, currentPrice, options = {}) {
+  const contractVersion = Math.max(0, Math.floor(Number(body?.operationContractVersion || body?.operation?.version || 0)));
+  const expectedRaw = body?.expectedPrice && typeof body.expectedPrice === "object" ? body.expectedPrice : null;
+  if (!expectedRaw && contractVersion < PLAYER_OPERATION_CONTRACT_VERSION && options.legacyCompatible !== false) return;
+  const current = normalizeOperationPrice(currentPrice);
+  const expected = expectedRaw ? normalizeOperationPrice(expectedRaw) : null;
+  const matches = Boolean(expected && expected.points === current.points && expected.treats === current.treats && expected.coffee === current.coffee);
+  if (matches) return;
+  const code = String(options.legacyCode || "PRICE_CHANGED");
+  throw playerOperationError(409, expected ? "Цена изменилась. Проверьте новую стоимость и подтвердите покупку ещё раз." : "Цена требует повторного подтверждения. Проверьте текущую стоимость и подтвердите покупку ещё раз.", {
+    code,
+    operationCode: "PRICE_CHANGED",
+    action: "reconfirm",
+    retryable: false,
+    currentPrice: current,
+    operationId: String(options.operationId || ""),
+    operationKind: String(options.operationKind || ""),
+    productId: String(options.productId || "")
+  });
+}
+
+async function requirePlayerOperationAvailable(env, telegramId, options = {}) {
+  const id = String(telegramId || "");
+  const capabilities = new Set(Array.isArray(options.capabilities) ? options.capabilities.map(String) : []);
+  const featureFlags = Array.isArray(options.featureFlags) ? options.featureFlags.map(String) : [];
+  let settings = null;
+  try { settings = await getMaintenanceSettings(env); } catch {}
+  if (settings) {
+    if (settings.degraded) throw playerOperationError(503,"Не удалось подтвердить доступность операции. Попробуйте немного позже.",{code:"TEMPORARILY_UNAVAILABLE",operationCode:"TEMPORARILY_UNAVAILABLE",retryable:true,action:"retry_later"});
+    const identity = await maintenanceAccessIdentity(id, env).catch(() => ({ allowed:false }));
+    const privileged = Boolean(identity?.allowed);
+    if (settings.testersOnly && !privileged) throw featureUnavailableError("game", settings.message, "testers_only");
+    if (settings.fullClosed && !privileged) throw featureUnavailableError("game", settings.message, "full");
+    if (capabilities.has("purchases") && settings.purchasesDisabled) throw featureUnavailableError("purchases", settings.message, "purchases");
+    if (capabilities.has("cases") && settings.casesDisabled) throw featureUnavailableError("cases", settings.message, "cases");
+    if (capabilities.has("physical_rewards") && settings.physicalRewardsDisabled) throw featureUnavailableError("physical_rewards", settings.message, "physical");
+  }
+  for (const flagKey of featureFlags) {
+    if (await isFeatureEnabled(env, flagKey, id)) continue;
+    const feature = flagKey === "shop" ? "purchases" : flagKey;
+    throw featureUnavailableError(feature, `Функция «${FEATURE_FLAG_LABELS[flagKey] || flagKey}» временно недоступна.`, flagKey);
   }
 }
 
@@ -8472,16 +8592,23 @@ async function purchaseSkinWithStock(request, env) {
     const skinId = String(body.skinId || "").trim().toLowerCase();
     if (!SKINS[skinId] || skinId === "default") throw new ApiError(400, "Неизвестный скин.");
     const telegramId = String(auth.user.id);
+    const requestId = String(body.requestId || "").trim();
+    if (requestId && !/^[A-Za-z0-9_-]{12,100}$/.test(requestId)) throw new ApiError(400, "Некорректный идентификатор покупки.");
     const consumptionId = `skin:${telegramId}:${skinId}`;
+    const operationId = requestId || consumptionId;
     const now = Math.floor(Date.now() / 1000);
     const cutoverAt = await authoritativeEconomyCutoverAt(env);
 
     let ensured = await ensureCasePlayerState(env, telegramId, {});
     if (ensured.state.ownedSkins.includes(skinId)) {
       return jsonResponse(await buildCasePayload(env, telegramId, {}, {
-        repeated:true, purchase:{ skinId,title:SKINS[skinId]?.title || skinId }
+        repeated:true, purchase:{ skinId,title:SKINS[skinId]?.title || skinId },
+        operation:operationSuccessMeta(operationId,"skin_purchase",true)
       }, { ensured }));
     }
+
+    // Recovery is checked above. Only a new purchase is affected by maintenance/feature switches.
+    await requirePlayerOperationAvailable(env, telegramId, { capabilities:["purchases"], featureFlags:["shop"] });
 
     const prices = await readSkinPrices(env);
     const rawPrice = prices[skinId] || DEFAULT_SKIN_PRICES[skinId];
@@ -8491,6 +8618,7 @@ async function purchaseSkinWithStock(request, env) {
       treats: safeAdminNumber(rawPrice.treats),
       coffee: safeAdminNumber(rawPrice.coffee)
     };
+    assertOperationQuotedPrice(body, price, { operationId, operationKind:"skin_purchase", productId:skinId, legacyCompatible:false });
 
     // An old stock-consumption row is the only legacy proof we accept. Rows
     // created at/after the authority cutover are never treated as a free
@@ -8568,7 +8696,8 @@ async function purchaseSkinWithStock(request, env) {
         const freshState = await ensureCasePlayerState(env, telegramId, {});
         if (freshState.state.ownedSkins.includes(skinId)) {
           return jsonResponse(await buildCasePayload(env, telegramId, {}, {
-            repeated:true, purchase:{ skinId,title:SKINS[skinId]?.title || skinId,cost:price,stock }
+            repeated:true, purchase:{ skinId,title:SKINS[skinId]?.title || skinId,cost:price,stock },
+            operation:operationSuccessMeta(operationId,"skin_purchase",true)
           }, { ensured:freshState }));
         }
         if (!stock?.repeated || (stockCreatedAt > 0 && now - stockCreatedAt > 120)) {
@@ -8643,12 +8772,13 @@ async function purchaseSkinWithStock(request, env) {
     await recordPlayerTimeline(env, telegramId, "skin_purchase", `купил скин «${SKINS[skinId]?.title || skinId}»`, { skinId,stock,cost:price,legacyRecovered }, `skin_purchase_${skinId}`, auth.user);
     await recordContentAnalyticsEvent(env, telegramId, "skin", skinId, "acquired", "shop", `skin:${telegramId}:${skinId}`);
     return jsonResponse(await buildCasePayload(env, telegramId, {}, {
-      purchase:{ skinId,title:SKINS[skinId]?.title || skinId,cost:price,stock,legacyRecovered }
+      purchase:{ skinId,title:SKINS[skinId]?.title || skinId,cost:price,stock,legacyRecovered },
+      operation:operationSuccessMeta(operationId,"skin_purchase",false)
     }, { ensured }));
   } catch (error) {
-    if (error instanceof ApiError) return jsonResponse({ ok:false,error:error.message,details:error.details }, error.status);
+    if (error instanceof ApiError) return operationErrorResponse(error, "Не удалось подтвердить покупку скина.", { operationKind:"skin_purchase" });
     console.error("purchaseSkinWithStock failed", error);
-    return jsonResponse({ ok:false,error:"Не удалось подтвердить покупку скина." }, 500);
+    return operationErrorResponse(playerOperationError(503,"Не удалось проверить результат покупки скина. Повторите проверку с тем же запросом.",{code:"TEMPORARILY_UNAVAILABLE",operationCode:"TEMPORARILY_UNAVAILABLE",retryable:true}),"Не удалось проверить результат покупки скина.",{operationKind:"skin_purchase"});
   }
 }
 
@@ -8658,15 +8788,27 @@ function liveContentOwnedDbColumn(kind){return ({avatar:"owned_avatars_json",fra
 async function purchaseLiveContentShopItem(request,env){
   try{
     requireDatabase(env);requireBotToken(env);await ensureAuthoritativeEconomySchema(env);await ensureLiveContentReleaseSchema(env);
-    const body=await readJson(request),auth=await validateTelegramInitData(String(body.initData||""),env),telegramId=String(auth.user.id),kind=String(body.kind||"").trim(),itemId=String(body.itemId||"").trim();const item=futureSeasonContentItem(kind,itemId);if(!item)throw new ApiError(404,"Предмет не найден.");
-    const rules=await readLiveContentReleaseRules(env,true),rule=rules.get(liveContentReleaseKey(kind,itemId)),shopRoute=liveContentRoute(rule,"shop");if(!rule?.released||!shopRoute)throw new ApiError(409,"Этот предмет сейчас не продаётся.");const price={points:Math.max(0,Math.floor(Number(shopRoute.points)||0)),treats:Math.max(0,Math.floor(Number(shopRoute.treats)||0)),coffee:Math.max(0,Math.floor(Number(shopRoute.coffee)||0))};if(price.points+price.treats+price.coffee<=0)throw new ApiError(409,"Цена предмета не настроена.");
-    const ownedKey=liveContentOwnedStateKey(kind),column=liveContentOwnedDbColumn(kind);if(!ownedKey||!column)throw new ApiError(400,"Этот тип контента пока нельзя купить.");let ensured=await ensureCasePlayerState(env,telegramId,{});if((ensured.state?.[ownedKey]||[]).includes(itemId))return jsonResponse(await buildCasePayload(env,telegramId,{}, {repeated:true,purchase:{kind,itemId,title:String(item.title||itemId),cost:price}}, {ensured}));
+    const body=await readJson(request),auth=await validateTelegramInitData(String(body.initData||""),env),telegramId=String(auth.user.id),kind=String(body.kind||"").trim(),itemId=String(body.itemId||"").trim();
+    const item=futureSeasonContentItem(kind,itemId);if(!item)throw new ApiError(404,"Предмет не найден.");
+    const requestId=String(body.requestId||"").trim();if(requestId&&!/^[A-Za-z0-9_-]{12,100}$/.test(requestId))throw new ApiError(400,"Некорректный идентификатор покупки.");
+    const operationId=requestId||`live-content:${kind}:${itemId}`;
+    const ownedKey=liveContentOwnedStateKey(kind),column=liveContentOwnedDbColumn(kind);if(!ownedKey||!column)throw new ApiError(400,"Этот тип контента пока нельзя купить.");
+    let ensured=await ensureCasePlayerState(env,telegramId,{});
+    // Natural ownership is the idempotency proof for this catalog: return the committed
+    // result before maintenance, release rules or the current price can reject a retry.
+    if((ensured.state?.[ownedKey]||[]).includes(itemId))return jsonResponse(await buildCasePayload(env,telegramId,{}, {repeated:true,purchase:{kind,itemId,title:String(item.title||itemId)},operation:operationSuccessMeta(operationId,"live_content_purchase",true)}, {ensured}));
+
+    await requirePlayerOperationAvailable(env,telegramId,{capabilities:["purchases"],featureFlags:["shop"]});
+    const rules=await readLiveContentReleaseRules(env,true),rule=rules.get(liveContentReleaseKey(kind,itemId)),shopRoute=liveContentRoute(rule,"shop");
+    if(!rule?.released||!shopRoute)throw playerOperationError(409,"Этот предмет сейчас не продаётся.",{code:"FEATURE_TEMPORARILY_DISABLED",operationCode:"FEATURE_TEMPORARILY_DISABLED",feature:"purchases",mode:"assortment",retryable:true,operationId,operationKind:"live_content_purchase"});
+    const price={points:Math.max(0,Math.floor(Number(shopRoute.points)||0)),treats:Math.max(0,Math.floor(Number(shopRoute.treats)||0)),coffee:Math.max(0,Math.floor(Number(shopRoute.coffee)||0))};if(price.points+price.treats+price.coffee<=0)throw new ApiError(409,"Цена предмета не настроена.");
+    assertOperationQuotedPrice(body,price,{operationId,operationKind:"live_content_purchase",productId:`${kind}:${itemId}`,legacyCompatible:false});
     const profile=await ensureAuthoritativeProfileRow(env,telegramId,`live-content:${kind}:${itemId}:precheck`),missing=[];if(safeAdminNumber(profile?.wallet)<price.points)missing.push(`${price.points-safeAdminNumber(profile?.wallet)} очков`);if(safeAdminNumber(profile?.treats)<price.treats)missing.push(`${price.treats-safeAdminNumber(profile?.treats)} зефира`);if(safeAdminNumber(profile?.coffee)<price.coffee)missing.push(`${price.coffee-safeAdminNumber(profile?.coffee)} кофе`);if(missing.length)throw new ApiError(400,`Не хватает ${missing.join(" и ")}.`);
     const marker=`live-content:${kind}:${itemId}:${caseGrantId("txn")}`.slice(0,180),now=Math.floor(Date.now()/1000);const charge=env.DB.prepare(`UPDATE admin_profile_state SET wallet=wallet-?,treats=treats-?,coffee=coffee-?,revision=revision+1,updated_at=?,updated_by=? WHERE telegram_id=? AND wallet>=? AND treats>=? AND coffee>=? AND NOT EXISTS(SELECT 1 FROM case_player_state c,json_each(CASE WHEN json_valid(c.${column}) THEN c.${column} ELSE '[]' END) j WHERE c.telegram_id=? AND CAST(j.value AS TEXT)=?)`).bind(price.points,price.treats,price.coffee,now,marker,telegramId,price.points,price.treats,price.coffee,telegramId,itemId);
     const grant=env.DB.prepare(`UPDATE case_player_state SET ${column}=CASE WHEN EXISTS(SELECT 1 FROM json_each(CASE WHEN json_valid(${column}) THEN ${column} ELSE '[]' END) WHERE CAST(value AS TEXT)=?) THEN CASE WHEN json_valid(${column}) THEN ${column} ELSE '[]' END ELSE json_insert(CASE WHEN json_valid(${column}) THEN ${column} ELSE '[]' END,'$[#]',?) END,revision=revision+1,updated_at=? WHERE telegram_id=? AND EXISTS(SELECT 1 FROM admin_profile_state WHERE telegram_id=? AND updated_by=?)`).bind(itemId,itemId,now,telegramId,telegramId,marker);
-    const results=await env.DB.batch([charge,grant]);if(Number(results?.[0]?.meta?.changes||0)!==1||Number(results?.[1]?.meta?.changes||0)!==1){ensured=await ensureCasePlayerState(env,telegramId,{});if((ensured.state?.[ownedKey]||[]).includes(itemId))return jsonResponse(await buildCasePayload(env,telegramId,{}, {repeated:true,purchase:{kind,itemId,title:String(item.title||itemId),cost:price}}, {ensured}));throw new ApiError(409,"Баланс изменился или покупка уже обрабатывается. Обновите магазин и повторите.");}
-    ensured=await ensureCasePlayerState(env,telegramId,{});await recordPlayerTimeline(env,telegramId,"live_content_purchase",`купил «${String(item.title||itemId)}»`,{kind,itemId,cost:price},`live_content_${kind}_${itemId}`,auth.user);await recordContentAnalyticsEvent(env,telegramId,kind,itemId,"acquired","live_content_shop",`live-content:${kind}:${itemId}`);return jsonResponse(await buildCasePayload(env,telegramId,{}, {purchase:{kind,itemId,title:String(item.title||itemId),cost:price}}, {ensured}));
-  }catch(error){if(error instanceof ApiError)return jsonResponse({ok:false,error:error.message},error.status);console.error("purchaseLiveContentShopItem failed",error);return jsonResponse({ok:false,error:"Не удалось купить предмет."},500);}
+    const results=await env.DB.batch([charge,grant]);if(Number(results?.[0]?.meta?.changes||0)!==1||Number(results?.[1]?.meta?.changes||0)!==1){ensured=await ensureCasePlayerState(env,telegramId,{});if((ensured.state?.[ownedKey]||[]).includes(itemId))return jsonResponse(await buildCasePayload(env,telegramId,{}, {repeated:true,purchase:{kind,itemId,title:String(item.title||itemId),cost:price},operation:operationSuccessMeta(operationId,"live_content_purchase",true)}, {ensured}));throw new ApiError(409,"Баланс изменился или покупка уже обрабатывается. Обновите магазин и повторите.");}
+    ensured=await ensureCasePlayerState(env,telegramId,{});await recordPlayerTimeline(env,telegramId,"live_content_purchase",`купил «${String(item.title||itemId)}»`,{kind,itemId,cost:price},`live_content_${kind}_${itemId}`,auth.user);await recordContentAnalyticsEvent(env,telegramId,kind,itemId,"acquired","live_content_shop",`live-content:${kind}:${itemId}`);return jsonResponse(await buildCasePayload(env,telegramId,{}, {purchase:{kind,itemId,title:String(item.title||itemId),cost:price},operation:operationSuccessMeta(operationId,"live_content_purchase",false)}, {ensured}));
+  }catch(error){if(error instanceof ApiError)return operationErrorResponse(error,"Не удалось купить предмет.",{operationKind:"live_content_purchase"});console.error("purchaseLiveContentShopItem failed",error);return operationErrorResponse(new ApiError(500,"Не удалось купить предмет."),"Не удалось купить предмет.",{operationKind:"live_content_purchase"});}
 }
 
 async function getSkinConfig(env) {
@@ -8990,14 +9132,6 @@ async function createReward(request, env, ctx = null) {
     const auth = await validateTelegramInitData(String(body.initData || ""), env);
     const product = PRODUCTS[String(body.productId || "")];
     if (!product) throw new ApiError(400, "Неизвестная награда.");
-    await ensureShopAssortmentSchema(env);
-    const assortmentProduct = await readShopAssortmentProduct(env, product.id);
-    if (!assortmentProduct?.enabled) throw new ApiError(409, "Этот товар временно убран из ассортимента.");
-    const price = {
-      points:safeAdminNumber(assortmentProduct.points),
-      treats:safeAdminNumber(assortmentProduct.treats),
-      coffee:safeAdminNumber(assortmentProduct.coffee)
-    };
     const requestId = String(body.requestId || "").trim();
     if (!/^[A-Za-z0-9_-]{12,80}$/.test(requestId)) throw new ApiError(400, "Некорректный идентификатор покупки.");
     // case_reward_ is reserved for server-generated physical rewards from cases
@@ -9005,17 +9139,28 @@ async function createReward(request, env, ctx = null) {
     // let a client choose that namespace, otherwise the limit could be bypassed.
     if (requestId.startsWith("case_reward_")) throw new ApiError(400, "Некорректный идентификатор покупки.");
     const ownerId = String(auth.user.id);
-    let [profileRow, existing] = await Promise.all([
-      ensureAuthoritativeProfileRow(env, ownerId, `physical:${requestId}`),
-      env.DB.prepare(
-        `SELECT code,product_id,product_name,created_at,expires_at,status FROM reward_codes WHERE request_id=? AND owner_telegram_id=? LIMIT 1`
-      ).bind(requestId, ownerId).first()
-    ]);
+    const existing = await env.DB.prepare(
+      `SELECT code,product_id,product_name,created_at,expires_at,status FROM reward_codes WHERE request_id=? AND owner_telegram_id=? LIMIT 1`
+    ).bind(requestId, ownerId).first();
     const now = Math.floor(Date.now()/1000);
     if (existing) {
-      const limitStatus=await getRewardLimitStatus(env,ownerId,now);
-      return jsonResponse({ok:true,reward:rewardRowToClient(existing),limitStatus,repeated:true,profile:authoritativeProfileView(profileRow),profileXpAwarded:0});
+      const [profileRow,limitStatus]=await Promise.all([
+        ensureAuthoritativeProfileRow(env,ownerId,`physical:${requestId}:recovery`).catch(()=>null),
+        getRewardLimitStatus(env,ownerId,now).catch(()=>null)
+      ]);
+      return jsonResponse({ok:true,reward:rewardRowToClient(existing),limitStatus:limitStatus||null,repeated:true,profile:profileRow?authoritativeProfileView(profileRow):null,profileXpAwarded:0,operation:operationSuccessMeta(requestId,"physical_purchase",true)});
     }
+    let profileRow = await ensureAuthoritativeProfileRow(env, ownerId, `physical:${requestId}`);
+    await requirePlayerOperationAvailable(env,ownerId,{capabilities:["purchases","physical_rewards"],featureFlags:["shop","physical_rewards"]});
+    await ensureShopAssortmentSchema(env);
+    const assortmentProduct = await readShopAssortmentProduct(env, product.id);
+    if (!assortmentProduct?.enabled) throw playerOperationError(409,"Этот товар временно убран из ассортимента.",{code:"FEATURE_TEMPORARILY_DISABLED",operationCode:"FEATURE_TEMPORARILY_DISABLED",feature:"purchases",mode:"assortment",retryable:true,operationId:requestId,operationKind:"physical_purchase"});
+    const price = {
+      points:safeAdminNumber(assortmentProduct.points),
+      treats:safeAdminNumber(assortmentProduct.treats),
+      coffee:safeAdminNumber(assortmentProduct.coffee)
+    };
+    assertOperationQuotedPrice(body,price,{operationId:requestId,operationKind:"physical_purchase",productId:product.id,legacyCompatible:false});
     const limitStatus=await getRewardLimitStatus(env,ownerId,now);
     if(limitStatus.used>=limitStatus.limit)throw new ApiError(429,`Лимит наград: не больше ${limitStatus.limit} за 24 часа.`,limitStatus);
     const missing=[];
@@ -9119,7 +9264,8 @@ async function createReward(request, env, ctx = null) {
     if(repeatedRow){
       return jsonResponse({
         ok:true,reward:rewardRowToClient(repeatedRow),limitStatus:updatedLimitStatus,stock,
-        profile:authoritativeProfileView(profileRow),profileXpAwarded:0,repeated:true
+        profile:authoritativeProfileView(profileRow),profileXpAwarded:0,repeated:true,
+        operation:operationSuccessMeta(requestId,"physical_purchase",true)
       });
     }
     const timelineTask=recordPlayerTimeline(env,ownerId,"physical_purchase",`купил ${product.title}`,{productId:product.id,code:insertedCode,cost:price,profileXpAwarded},`reward_${requestId}`,auth.user,now);
@@ -9127,12 +9273,12 @@ async function createReward(request, env, ctx = null) {
     return jsonResponse({
       ok:true,
       reward:{code:insertedCode,productId:product.id,productName:product.title,issuedAt:now*1000,expiresAt:expiresAt*1000,status:"active"},
-      limitStatus:updatedLimitStatus,stock,profile:authoritativeProfileView(profileRow),profileXpAwarded,repeated:false
+      limitStatus:updatedLimitStatus,stock,profile:authoritativeProfileView(profileRow),profileXpAwarded,repeated:false,operation:operationSuccessMeta(requestId,"physical_purchase",false)
     });
   }catch(error){
-    if(error instanceof ApiError)return jsonResponse({ok:false,error:error.message,details:error.details},error.status);
+    if(error instanceof ApiError)return operationErrorResponse(error,"Не удалось создать код награды.",{operationKind:"physical_purchase"});
     console.error("createReward failed",error);
-    return jsonResponse({ok:false,error:"Не удалось создать код награды."},500);
+    return operationErrorResponse(playerOperationError(503,"Не удалось проверить результат покупки награды. Повторите проверку с тем же запросом.",{code:"TEMPORARILY_UNAVAILABLE",operationCode:"TEMPORARILY_UNAVAILABLE",retryable:true}),"Не удалось проверить результат покупки награды.",{operationKind:"physical_purchase"});
   }
 }
 
@@ -10539,7 +10685,7 @@ async function buildFastCaseRefreshPayload(env, telegramId) {
   };
 }
 
-function buildFastCaseOpenPayload({ state, liveops, profile, opened, caseDelta = null, inventory = null, seasonPassTaskNotice = undefined }) {
+function buildFastCaseOpenPayload({ state, liveops, profile, opened, caseDelta = null, inventory = null, seasonPassTaskNotice = undefined, operation = null }) {
   return {
     ok: true,
     authoritativeProfile: true,
@@ -10560,7 +10706,8 @@ function buildFastCaseOpenPayload({ state, liveops, profile, opened, caseDelta =
     ...(inventory?.openedLevels ? { openedLevels: inventory.openedLevels } : {}),
     ...(inventory?.giftedCases ? { giftedCases: inventory.giftedCases } : {}),
     ...(caseDelta ? { caseDelta } : {}),
-    ...(seasonPassTaskNotice !== undefined ? { seasonPassTaskNotice: seasonPassTaskNotice || null } : {})
+    ...(seasonPassTaskNotice !== undefined ? { seasonPassTaskNotice: seasonPassTaskNotice || null } : {}),
+    ...(operation ? { operation } : {})
   };
 }
 
@@ -11010,7 +11157,8 @@ function classifyCaseOperationFailure(error, fallbackMessage = "Не удало�
 
 function caseFailureResponse(error, fallbackMessage) {
   const failure=classifyCaseOperationFailure(error,fallbackMessage);
-  return jsonResponse({ ok:false,error:failure.error,code:failure.code,details:failure.details },failure.status);
+  const operationCode=normalizePlayerOperationCode(failure.code);
+  return jsonResponse({ ok:false,error:failure.error,code:failure.code,operationCode,retryable:Boolean(failure.details?.retryable),details:{...failure.details,code:failure.code,operationCode} },failure.status);
 }
 
 async function getLevelCaseState(request, env, internal = null, ctx = null) {
@@ -11064,7 +11212,8 @@ async function replayLevelCaseOpening(env, telegramId, row, liveops) {
   return jsonResponse({...buildFastCaseOpenPayload({
     state:fresh.state,liveops,profile:authoritativeProfileView(fresh.profile),inventory,
     opened:{level,caseType,title:LEVEL_CASE_CONFIG[caseType]?.title||"Кейс",rewards,openedAt:Number(row.opened_at||0)*1000,replayed:true},
-    caseDelta:{openedLevel:level}
+    caseDelta:{openedLevel:level},
+    operation:operationSuccessMeta(`level:${level}`,"level_case_open",true)
   }),repeated:true});
 }
 
@@ -11075,7 +11224,6 @@ async function openLevelCase(request, env, ctx = null) {
     const body = await readJson(request);
     const auth = await validateTelegramInitData(String(body.initData || ""), env);
     const telegramId = String(auth.user.id);
-    await requireFeatureFlagForTelegramId(env, "cases", telegramId);
     const requestedLevel = Math.floor(Number(body.level || 0));
     const caseType = LEVEL_CASE_SCHEDULE[requestedLevel];
     if (!caseType) throw new ApiError(400, "На этом уровне кейс не выдаётся.");
@@ -11085,7 +11233,8 @@ async function openLevelCase(request, env, ctx = null) {
       readLevelCaseOpening(env,telegramId,requestedLevel)
     ]);
     if(existing)return await replayLevelCaseOpening(env,telegramId,existing,liveops);
-    if (liveOpsCaseConfig(liveops, caseType)?.enabled === false) throw new ApiError(409, "Этот кейс временно отключён администратором.");
+    await requirePlayerOperationAvailable(env,telegramId,{capabilities:["cases"],featureFlags:["cases"]});
+    if (liveOpsCaseConfig(liveops, caseType)?.enabled === false) throw featureUnavailableError("cases", "Этот кейс временно отключён администратором.", "case_item");
     const playerLevel = caseProfileLevel(safeAdminNumber(ensured.profile?.profile_xp));
     if (playerLevel < requestedLevel) throw new ApiError(403, `Кейс откроется на ${requestedLevel} уровне.`);
     const taskEvent = await prepareSeasonPassTaskProgressEvent(env, telegramId, {cases_opened:1}, now)
@@ -11162,10 +11311,11 @@ async function openLevelCase(request, env, ctx = null) {
       opened,
       inventory,
       caseDelta: { openedLevel: requestedLevel },
-      seasonPassTaskNotice: taskEvent ? seasonPassTaskNoticePublic(taskEvent.taskRows || [], taskEvent.season) : undefined
+      seasonPassTaskNotice: taskEvent ? seasonPassTaskNoticePublic(taskEvent.taskRows || [], taskEvent.season) : undefined,
+      operation: operationSuccessMeta(`level:${requestedLevel}`,"level_case_open",false)
     }));
   } catch (error) {
-    if (error instanceof ApiError) return jsonResponse({ ok: false, error: error.message }, error.status);
+    if (error instanceof ApiError) return operationErrorResponse(error,"Не удалось открыть кейс.",{operationKind:"level_case_open"});
     console.error("openLevelCase failed", error);
     return caseFailureResponse(error, "Не удалось подтвердить результат открытия кейса. Сначала обновите состояние.");
   }
@@ -11178,10 +11328,6 @@ async function purchaseCaseFromShop(request, env, ctx = null) {
     const body = await readJson(request);
     const auth = await validateTelegramInitData(String(body.initData || ""), env);
     const telegramId = String(auth.user.id);
-    await Promise.all([
-      requireFeatureFlagForTelegramId(env, "shop", telegramId),
-      requireFeatureFlagForTelegramId(env, "cases", telegramId)
-    ]);
     const caseType = normalizeCaseType(body.caseType);
     const baseProduct = caseType ? CASE_SHOP_PRODUCTS[caseType] : null;
     if (!baseProduct) throw new ApiError(400, "Неизвестный тип кейса.");
@@ -11199,20 +11345,14 @@ async function purchaseCaseFromShop(request, env, ctx = null) {
     // a retry after a lost response must return that result even if LiveOps price changed later.
     if (existing) {
       return jsonResponse(await buildFastCasePurchasePayload(env, telegramId, ensured, liveops, {
-        repeated:true,purchase:{productId:product.id,caseType,title:product.title}
+        repeated:true,purchase:{productId:product.id,caseType,title:product.title},operation:operationSuccessMeta(requestId,"case_purchase",true)
       }));
     }
+    await requirePlayerOperationAvailable(env,telegramId,{capabilities:["purchases","cases"],featureFlags:["shop","cases"]});
     const currentPrice={points:product.points,treats:product.treats,coffee:product.coffee};
-    const expectedPrice=body.expectedPrice&&typeof body.expectedPrice==="object"?body.expectedPrice:null;
-    if(!expectedPrice){
-      throw new ApiError(409,"Цена кейса требует повторного подтверждения. Проверьте текущую стоимость и подтвердите покупку ещё раз.",{code:"CASE_PRICE_CHANGED",action:"reconfirm",currentPrice,productId:product.id,caseType});
-    }
-    const expected={points:safeAdminNumber(expectedPrice.points),treats:safeAdminNumber(expectedPrice.treats),coffee:safeAdminNumber(expectedPrice.coffee)};
-    if(expected.points!==currentPrice.points||expected.treats!==currentPrice.treats||expected.coffee!==currentPrice.coffee){
-      throw new ApiError(409,"Цена кейса изменилась. Проверьте новую стоимость и подтвердите покупку ещё раз.",{code:"CASE_PRICE_CHANGED",action:"reconfirm",currentPrice,productId:product.id,caseType});
-    }
-    if (liveOpsCaseConfig(liveops, caseType)?.enabled === false) throw new ApiError(409, "Этот кейс временно отключён администратором.");
-    if (!assortmentProduct?.enabled) throw new ApiError(409, "Этот кейс временно убран из ассортимента.");
+    assertOperationQuotedPrice(body,currentPrice,{operationId:requestId,operationKind:"case_purchase",productId:product.id,legacyCode:"CASE_PRICE_CHANGED",legacyCompatible:false});
+    if (liveOpsCaseConfig(liveops, caseType)?.enabled === false) throw featureUnavailableError("cases", "Этот кейс временно отключён администратором.", "case_item");
+    if (!assortmentProduct?.enabled) throw playerOperationError(409,"Этот кейс временно убран из ассортимента.",{code:"FEATURE_TEMPORARILY_DISABLED",operationCode:"FEATURE_TEMPORARILY_DISABLED",feature:"purchases",mode:"assortment",retryable:true,operationId:requestId,operationKind:"case_purchase"});
     const wallet=safeAdminNumber(ensured.profile?.wallet), treats=safeAdminNumber(ensured.profile?.treats), coffee=safeAdminNumber(ensured.profile?.coffee);
     const missing=[];
     if(wallet<product.points)missing.push(`${product.points-wallet} очков`);
@@ -11257,7 +11397,7 @@ async function purchaseCaseFromShop(request, env, ctx = null) {
       if(repeated && isShopStockCommitGuardError(error)){
         const refreshedProfile=await env.DB.prepare(`SELECT * FROM admin_profile_state WHERE telegram_id=? LIMIT 1`).bind(telegramId).first();
         if(refreshedProfile)ensured={...ensured,profile:refreshedProfile};
-        return jsonResponse(await buildFastCasePurchasePayload(env,telegramId,ensured,liveops,{ repeated:true,purchase:{productId:product.id,caseType,title:product.title,stock} }));
+        return jsonResponse(await buildFastCasePurchasePayload(env,telegramId,ensured,liveops,{ repeated:true,purchase:{productId:product.id,caseType,title:product.title,stock},operation:operationSuccessMeta(requestId,"case_purchase",true) }));
       }
       if(!stock.repeated)await releaseShopStock(env,stockConsumptionId);
       throw error;
@@ -11267,10 +11407,10 @@ async function purchaseCaseFromShop(request, env, ctx = null) {
     const timelineTask=recordPlayerTimeline(env,telegramId,"case_purchase",`купил ${product.title}`,{caseType,cost:{points:product.points,treats:product.treats,coffee:product.coffee}},`case_purchase_${requestId}`,auth.user,now);
     if(ctx?.waitUntil)ctx.waitUntil(Promise.resolve(timelineTask).catch((error)=>console.error("case purchase timeline failed",error)));else void Promise.resolve(timelineTask).catch((error)=>console.error("case purchase timeline failed",error));
     return jsonResponse(await buildFastCasePurchasePayload(env,telegramId,ensured,liveops,{
-      purchase:{productId:product.id,caseType,title:product.title,cost:{points:product.points,treats:product.treats,coffee:product.coffee},stock}
+      purchase:{productId:product.id,caseType,title:product.title,cost:{points:product.points,treats:product.treats,coffee:product.coffee},stock},operation:operationSuccessMeta(requestId,"case_purchase",false)
     }));
   } catch(error) {
-    if(error instanceof ApiError)return jsonResponse({ok:false,error:error.message,details:error.details},error.status);
+    if(error instanceof ApiError)return operationErrorResponse(error,"Не удалось купить кейс.",{operationKind:"case_purchase"});
     console.error("purchaseCaseFromShop failed",error);
     return caseFailureResponse(error,"Не удалось купить кейс. Баланс не должен измениться — обновите магазин и повторите действие.");
   }
@@ -11345,14 +11485,14 @@ async function openGrantedCase(request, env, ctx = null) {
     const body = await readJson(request);
     const auth = await validateTelegramInitData(String(body.initData || ""), env);
     const telegramId = String(auth.user.id);
-    await requireFeatureFlagForTelegramId(env, "cases", telegramId);
     const caseType = normalizeCaseType(body.caseType);
     if (!caseType) throw new ApiError(400, "Неизвестный тип кейса.");
     const requestId = String(body.requestId || '').replace(/[^A-Za-z0-9_-]/g, '').slice(0, 96);
     if (requestId) {
       const existingRequest = await grantedCaseExistingRequestPayload(env, telegramId, requestId);
-      if (existingRequest) return jsonResponse(existingRequest, existingRequest.pending ? 202 : 200);
+      if (existingRequest) return jsonResponse({...existingRequest,operation:existingRequest.pending?{id:requestId,kind:"granted_case_open",state:"processing",code:"PROCESSING"}:operationSuccessMeta(requestId,"granted_case_open",true)}, existingRequest.pending ? 202 : 200);
     }
+    await requirePlayerOperationAvailable(env,telegramId,{capabilities:["cases"],featureFlags:["cases"]});
     const now = Math.floor(Date.now() / 1000);
     const [ensured, taskEvent, liveops] = await Promise.all([
       ensureCasePlayerState(env, telegramId, {}),
@@ -11362,7 +11502,7 @@ async function openGrantedCase(request, env, ctx = null) {
     openingClaimAt = now;
     openingClaimToken = requestId || crypto.randomUUID().replace(/-/g, '');
     await recoverStaleGrantedCaseOpenings(env, telegramId, now);
-    if (liveOpsCaseConfig(liveops, caseType)?.enabled === false) throw new ApiError(409, "Этот кейс временно отключён администратором.");
+    if (liveOpsCaseConfig(liveops, caseType)?.enabled === false) throw featureUnavailableError("cases", "Этот кейс временно отключён администратором.", "case_item");
     const gift = await env.DB.prepare(
       `SELECT id FROM granted_cases WHERE telegram_id = ? AND case_type = ? AND status = 'pending'
        ORDER BY created_at ASC, id ASC LIMIT 1`
@@ -11465,15 +11605,16 @@ async function openGrantedCase(request, env, ctx = null) {
       opened,
       inventory,
       caseDelta: { giftedCaseType: caseType, giftedCaseDelta: -1 },
-      seasonPassTaskNotice: taskEvent ? seasonPassTaskNoticePublic(taskEvent.taskRows || [], taskEvent.season) : undefined
+      seasonPassTaskNotice: taskEvent ? seasonPassTaskNoticePublic(taskEvent.taskRows || [], taskEvent.season) : undefined,
+      operation: operationSuccessMeta(requestId || openingClaimToken,"granted_case_open",false)
     }));
   } catch (error) {
     await releaseCasePhysicalStock(env, physicalStockConsumptionIds);
     if (claimedId) {
       try { await env.DB.prepare(`UPDATE granted_cases SET status = 'pending',opening_started_at=0,opening_token='' WHERE id = ? AND status = 'opening' AND opening_started_at=? AND opening_token=?`).bind(claimedId,openingClaimAt,openingClaimToken).run(); } catch {}
     }
-    if (error instanceof ApiError) return jsonResponse({ ok: false, error: error.message }, error.status);
-    if (String(error?.message || error).includes('granted_case_opening_guard_ok')) return jsonResponse({ ok:false, error:'Попытка открытия устарела. Повторите открытие кейса.' },409);
+    if (error instanceof ApiError) return operationErrorResponse(error,"Не удалось открыть подарочный кейс.",{operationId:openingClaimToken,operationKind:"granted_case_open"});
+    if (String(error?.message || error).includes('granted_case_opening_guard_ok')) return operationErrorResponse(playerOperationError(409,'Попытка открытия устарела. Повторите открытие кейса.',{code:'STATE_CONFLICT',operationCode:'STATE_CONFLICT',retryable:true,operationId:openingClaimToken,operationKind:'granted_case_open'}),'Попытка открытия устарела.');
     console.error("openGrantedCase failed", error);
     return caseFailureResponse(error, "Не удалось подтвердить результат открытия подарочного кейса. Сначала обновите состояние.");
   }
@@ -28229,6 +28370,19 @@ function maintenanceHtml(message) {
   return `<!doctype html><html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><title>Сладкий Забег — технические работы</title><style>html,body{margin:0;min-height:100%;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:#fff5f5;color:#4e3a42}body{display:grid;place-items:center;padding:24px;box-sizing:border-box}.card{max-width:430px;padding:28px;border:1px solid #efd0d9;border-radius:28px;background:#fff;box-shadow:0 18px 50px rgba(91,54,68,.13);text-align:center}.icon{font-size:54px}h1{font-size:25px;margin:12px 0}p{font-size:16px;line-height:1.5;color:#786870;margin:0}</style></head><body><div class="card"><div class="icon">🛠</div><h1>Технические работы</h1><p>${escapeHtml(message)}</p></div></body></html>`;
 }
 
+const RECOVERY_AWARE_OPERATION_PATHS = new Set([
+  "/api/rewards/create",
+  "/api/skins/purchase",
+  "/api/skins/bonus-case",
+  "/api/cases/open",
+  "/api/cases/open-granted",
+  "/api/cases/purchase",
+  "/api/shop/offers/purchase",
+  "/api/live-content/shop/buy",
+  "/api/battle-pass/purchase-tier",
+  "/api/battle-pass/purchase-level"
+]);
+
 async function enforceMaintenanceForRequest(request, url, env) {
   const path = String(url.pathname || "");
   if (path === "/api/health" || path === "/api/access/bootstrap" || path === "/api/maintenance/access" || path === "/api/shop/config" || path === "/api/skins/config" || path === "/api/features" || path === "/owner.html" || path.startsWith("/api/owner/") || path.startsWith("/api/admin/") || path.startsWith("/api/bot/") || path === "/telegram/webhook") return null;
@@ -28236,19 +28390,20 @@ async function enforceMaintenanceForRequest(request, url, env) {
   try { settings = await getMaintenanceSettings(env); } catch { return null; }
   if (!settings.fullClosed && !settings.ratingDisabled && !settings.purchasesDisabled && !settings.casesDisabled && !settings.physicalRewardsDisabled && !settings.testersOnly) return null;
   if (!path.startsWith("/api/")) return null;
+
+  // These handlers reconcile a durable/natural idempotency key before checking
+  // whether NEW operations are allowed. Blocking them here would hide an already
+  // committed result when maintenance is enabled after a lost successful response.
+  if (RECOVERY_AWARE_OPERATION_PATHS.has(path)) return null;
+
   const telegramId = await requestTelegramId(request, env);
   const identity = await maintenanceAccessIdentity(telegramId, env);
   const privileged = identity.allowed;
-  // A run that started before maintenance must still be allowed to settle its
-  // already-earned server-validated economy. New sessions remain blocked by
-  // maintenance because /api/runs/start is not exempted.
   const protectedRunSettlement = path === "/api/leaderboard/submit";
-  if (settings.testersOnly && !privileged && !protectedRunSettlement) return jsonResponse({ ok: false, maintenance: true, mode: "testers_only", error: settings.message }, 503);
-  if (settings.fullClosed && !privileged && !protectedRunSettlement) return jsonResponse({ ok: false, maintenance: true, mode: "full", error: settings.message }, 503);
-  if (settings.ratingDisabled && path.startsWith("/api/leaderboard/") && path !== "/api/leaderboard/submit") return jsonResponse({ ok: false, maintenance: true, mode: "rating", error: settings.message }, 503);
-  if (settings.purchasesDisabled && ["/api/rewards/create", "/api/skins/purchase", "/api/skins/bonus-case", "/api/cases/purchase", "/api/shop/offers/purchase", "/api/live-content/shop/buy"].includes(path)) return jsonResponse({ ok: false, maintenance: true, mode: "purchases", error: settings.message }, 503);
-  if (settings.casesDisabled && ["/api/cases/open", "/api/cases/open-granted", "/api/cases/purchase", "/api/cases/activate"].includes(path)) return jsonResponse({ ok: false, maintenance: true, mode: "cases", error: settings.message }, 503);
-  if (settings.physicalRewardsDisabled && path === "/api/rewards/create") return jsonResponse({ ok: false, maintenance: true, mode: "physical", error: settings.message }, 503);
+  if (settings.testersOnly && !privileged && !protectedRunSettlement) return operationErrorResponse(featureUnavailableError("game", settings.message, "testers_only"), settings.message);
+  if (settings.fullClosed && !privileged && !protectedRunSettlement) return operationErrorResponse(featureUnavailableError("game", settings.message, "full"), settings.message);
+  if (settings.ratingDisabled && path.startsWith("/api/leaderboard/") && path !== "/api/leaderboard/submit") return operationErrorResponse(featureUnavailableError("game", settings.message, "rating"), settings.message, { feature:"rating" });
+  if (settings.casesDisabled && path === "/api/cases/activate") return operationErrorResponse(featureUnavailableError("cases", settings.message, "cases"), settings.message);
   return null;
 }
 
@@ -29905,14 +30060,15 @@ async function enforceFeatureFlagForRequest(request, env, flagKey) {
   const telegramId = await requestVerifiedTelegramId(request, env);
   const enabled = await isFeatureEnabled(env, flagKey, telegramId);
   if (enabled) return null;
-  const title = FEATURE_FLAG_LABELS[flagKey] || flagKey;
-  return jsonResponse({ ok:false, error:`Функция «${title}» временно недоступна. Прогресс сохранён.` }, 503);
+  const feature = String(flagKey) === "shop" ? "purchases" : String(flagKey || "game");
+  const error = featureUnavailableError(feature, `Функция «${FEATURE_FLAG_LABELS[flagKey] || flagKey}» временно недоступна.`, flagKey);
+  return operationErrorResponse(error, error.message);
 }
 
 async function requireFeatureFlagForTelegramId(env, flagKey, telegramId) {
   if (await isFeatureEnabled(env, flagKey, String(telegramId || ''))) return;
-  const title = FEATURE_FLAG_LABELS[flagKey] || flagKey;
-  throw new ApiError(503, `Функция «${title}» временно недоступна. Прогресс сохранён.`);
+  const feature = String(flagKey) === "shop" ? "purchases" : String(flagKey || "game");
+  throw featureUnavailableError(feature, `Функция «${FEATURE_FLAG_LABELS[flagKey] || flagKey}» временно недоступна.`, flagKey);
 }
 
 
@@ -30847,17 +31003,18 @@ async function seasonPassPlayerForRequest(env,season,telegramId){
   return ensureSeasonPassPlayer(env,season,String(telegramId));
 }
 
-async function seasonPassRequestContext(request,env){
+async function seasonPassRequestContext(request,env,options={}){
   requireDatabase(env);requireBotToken(env);await ensureSeasonPassSchema(env);
   const body=await readJson(request);const initData=String(body.initData||body.init_data||'');
   const auth=await validateTelegramInitData(initData,env);const telegramId=String(auth.user.id);
+  const allowBlockedRecovery=options?.allowBlockedRecovery===true;
   const flag=await getFeatureFlag(env,'battle_pass');const access=await battlePassAudienceAccess(env,telegramId,flag);
-  if(!access.allowed)throw new ApiError(403,'Сезонный пропуск пока скрыт.');
+  if(!access.allowed&&!allowBlockedRecovery)throw new ApiError(403,'Сезонный пропуск пока скрыт.');
   const forcedClosure=await getSeasonPassForcedClosure(env);
-  if(forcedClosure)throw new ApiError(409,'Сезонный пропуск временно закрыт. Не скучай, новый сезон уже скоро.');
+  if(forcedClosure&&!allowBlockedRecovery)throw new ApiError(409,'Сезонный пропуск временно закрыт. Не скучай, новый сезон уже скоро.');
   const season=await loadSeasonPassSeason(env);
   const player=await seasonPassPlayerForRequest(env,season,telegramId);
-  return {body,auth,telegramId,access,season,player};
+  return {body,auth,telegramId,access,forcedClosure,season,player};
 }
 
 function seasonPassMoscowPeriod(periodValue, nowMs = Date.now()){
@@ -32650,38 +32807,45 @@ async function reconcileDeliveredSeasonPassTier(env,ctx,effectiveTier,now){
 
 async function purchaseSeasonPassTier(request,env){
   try{
-    const ctx=await seasonPassRequestContext(request,env);
+    const ctx=await seasonPassRequestContext(request,env,{allowBlockedRecovery:true});
+    const tier=String(ctx.body.tier||'');
+    if(tier!=='elite'&&tier!=='elite_plus')throw new ApiError(400,'Некорректный тариф сезонного пропуска.');
+    let current=String(ctx.player.premium_tier||'none');
+    const now=Math.floor(Date.now()/1000);
+    const purchaseKey=tier;
+    const operationId=`season-tier:${ctx.season.id}:${tier}`;
+    const existing=await env.DB.prepare(`SELECT status,created_at FROM season_pass_purchases WHERE season_id=? AND telegram_id=? AND purchase_key=? LIMIT 1`).bind(ctx.season.id,ctx.telegramId,purchaseKey).first();
+
+    // Durable purchase state wins over maintenance and current pricing. A retry
+    // after a lost successful response must recover the committed tier first.
+    if(String(existing?.status)==='delivered'){
+      const effectiveTier=tier==='elite_plus'?'elite_plus':(current==='elite_plus'?'elite_plus':'elite');
+      if(current!==effectiveTier)current=await reconcileDeliveredSeasonPassTier(env,ctx,effectiveTier,now);
+      return jsonResponse({...await buildSeasonPassMutationPayload(env,ctx.season,ctx.telegramId,{includeEntitlements:true,includeTasks:true,premiumTier:current}),received:[],repeated:true,purchasedTier:current,operation:operationSuccessMeta(operationId,'season_pass_tier_purchase',true)});
+    }
+    if(current==='elite_plus'||current===tier){
+      return jsonResponse({...await buildSeasonPassMutationPayload(env,ctx.season,ctx.telegramId,{includeEntitlements:true,includeTasks:true,premiumTier:current}),received:[],repeated:true,purchasedTier:current,operation:operationSuccessMeta(operationId,'season_pass_tier_purchase',true)});
+    }
+
+    if(!ctx.access?.allowed)throw featureUnavailableError('purchases','Сезонный пропуск временно скрыт. Попробуйте немного позже.','battle_pass');
+    if(ctx.forcedClosure)throw featureUnavailableError('purchases','Сезонный пропуск временно закрыт. Попробуйте немного позже.','battle_pass');
+    await requirePlayerOperationAvailable(env,ctx.telegramId,{capabilities:['purchases']});
     await assertSeasonPassNotForceClosed(env);
     if(ctx.season.status!=='active'){
       const message=ctx.season.status==='ended'
         ? 'Сезон завершён. Покупка «Элитного» и «Элитного+» недоступна.'
         : 'Сезон ещё не начался. Покупка тарифов недоступна.';
-      throw new ApiError(409,message);
-    }
-    const tier=String(ctx.body.tier||'');if(tier!=='elite'&&tier!=='elite_plus')throw new ApiError(400,'Некорректный тариф сезонного пропуска.');
-    let current=String(ctx.player.premium_tier||'none');
-    const now=Math.floor(Date.now()/1000);const purchaseKey=tier;
-    const existing=await env.DB.prepare(`SELECT status,created_at FROM season_pass_purchases WHERE season_id=? AND telegram_id=? AND purchase_key=? LIMIT 1`).bind(ctx.season.id,ctx.telegramId,purchaseKey).first();
-
-    // Самовосстановление старого состояния: покупка уже записана, а карточка тарифа осталась неактивной.
-    if(String(existing?.status)==='delivered'){
-      const effectiveTier=tier==='elite_plus'?'elite_plus':(current==='elite_plus'?'elite_plus':'elite');
-      if(current!==effectiveTier){
-        current=await reconcileDeliveredSeasonPassTier(env,ctx,effectiveTier,now);
-      }
-      return jsonResponse({...await buildSeasonPassMutationPayload(env,ctx.season,ctx.telegramId,{includeEntitlements:true,includeTasks:true,premiumTier:current}),received:[],repeated:true,purchasedTier:current});
-    }
-    if(current==='elite_plus'||current===tier){
-      return jsonResponse({...await buildSeasonPassMutationPayload(env,ctx.season,ctx.telegramId,{includeEntitlements:true,includeTasks:true,premiumTier:current}),received:[],repeated:true,purchasedTier:current});
+      throw playerOperationError(409,message,{code:'OPERATION_REJECTED',operationCode:'OPERATION_REJECTED',retryable:false,operationId,operationKind:'season_pass_tier_purchase'});
     }
     if(String(existing?.status)==='pending'){
-      if(now-Number(existing.created_at||now)<120)throw new ApiError(409,'Покупка уже обрабатывается. Повторите через несколько секунд.');
+      if(now-Number(existing.created_at||now)<120)throw playerOperationError(409,'Покупка уже обрабатывается. Повторите через несколько секунд.',{code:'PROCESSING',operationCode:'PROCESSING',retryable:true,operationId,operationKind:'season_pass_tier_purchase'});
       await env.DB.prepare(`DELETE FROM season_pass_purchases WHERE season_id=? AND telegram_id=? AND purchase_key=? AND status='pending'`).bind(ctx.season.id,ctx.telegramId,purchaseKey).run();
     }
 
     const price=seasonPassTierCharge(ctx.season,tier,current);
+    assertOperationQuotedPrice(ctx.body,price,{operationId,operationKind:'season_pass_tier_purchase',productId:`season-tier:${tier}`,legacyCompatible:false});
     const balance=await seasonPassAccountBalance(env,ctx.telegramId);
-    if(balance.points<price.points||balance.treats<price.treats||balance.coffee<price.coffee)throw new ApiError(409,'Недостаточно игровой валюты для покупки тарифа.');
+    if(balance.points<price.points||balance.treats<price.treats||balance.coffee<price.coffee)throw playerOperationError(409,'Недостаточно игровой валюты для покупки тарифа.',{code:'INSUFFICIENT_BALANCE',operationCode:'INSUFFICIENT_BALANCE',retryable:false,operationId,operationKind:'season_pass_tier_purchase'});
     const guardId=`tier:${ctx.season.id}:${ctx.telegramId}:${purchaseKey}:${now}`.slice(0,180);
     const tierStateGuardId=`tier-state:${ctx.season.id}:${ctx.telegramId}:${tier}:${current}:${now}`.slice(0,180);
     const statements=[
@@ -32701,14 +32865,14 @@ async function purchaseSeasonPassTier(request,env){
     );
     try{await env.DB.batch(statements);}catch(batchError){
       const after=await env.DB.prepare(`SELECT status FROM season_pass_purchases WHERE season_id=? AND telegram_id=? AND purchase_key=? LIMIT 1`).bind(ctx.season.id,ctx.telegramId,purchaseKey).first();
-      if(String(after?.status)==='delivered')return jsonResponse({...await buildSeasonPassMutationPayload(env,ctx.season,ctx.telegramId,{includeEntitlements:true,includeTasks:true,premiumTier:tier}),received:[],repeated:true,purchasedTier:tier});
+      if(String(after?.status)==='delivered')return jsonResponse({...await buildSeasonPassMutationPayload(env,ctx.season,ctx.telegramId,{includeEntitlements:true,includeTasks:true,premiumTier:tier}),received:[],repeated:true,purchasedTier:tier,operation:operationSuccessMeta(operationId,'season_pass_tier_purchase',true)});
       const text=String(batchError?.message||batchError).toLowerCase();
       if(text.includes('check constraint')||text.includes('season_pass_purchase_guards')){
         const actualTier=String((await env.DB.prepare(`SELECT premium_tier FROM season_pass_players WHERE season_id=? AND telegram_id=? LIMIT 1`).bind(ctx.season.id,ctx.telegramId).first())?.premium_tier||'none');
-        if(actualTier!==current)throw new ApiError(409,'Тариф уже изменился. Обновите сезонный пропуск и повторите покупку по актуальной цене.');
-        throw new ApiError(409,'Баланс изменился. Проверьте валюту и повторите покупку.');
+        if(actualTier!==current)throw playerOperationError(409,'Тариф уже изменился. Обновите сезонный пропуск и повторите покупку по актуальной цене.',{code:'STATE_CONFLICT',operationCode:'STATE_CONFLICT',retryable:true,operationId,operationKind:'season_pass_tier_purchase'});
+        throw playerOperationError(409,'Баланс изменился. Проверьте валюту и повторите покупку.',{code:'STATE_CONFLICT',operationCode:'STATE_CONFLICT',retryable:true,operationId,operationKind:'season_pass_tier_purchase'});
       }
-      if(text.includes('unique')||text.includes('primary key'))throw new ApiError(409,'Покупка уже обрабатывается. Повторите через несколько секунд.');
+      if(text.includes('unique')||text.includes('primary key'))throw playerOperationError(409,'Покупка уже обрабатывается. Повторите через несколько секунд.',{code:'PROCESSING',operationCode:'PROCESSING',retryable:true,operationId,operationKind:'season_pass_tier_purchase'});
       throw batchError;
     }
     if(tier==='elite_plus'){
@@ -32719,56 +32883,72 @@ async function purchaseSeasonPassTier(request,env){
     try{await queueSeasonPassTierActivationNotice(env,{season:ctx.season,telegramId:ctx.telegramId,previousTier:current,newTier:tier,source:'battle_pass_purchase',sourceKey:`purchase:${tier}`,activatedAt:now,payload:elitePlusPlan?.activation||{fromLevel:seasonPassLevelFromXp(ctx.player?.xp),toLevel:seasonPassLevelFromXp(ctx.player?.xp),bonusLevels:0}});}catch(error){console.error('season pass purchase activation notice failed',error);}
     try{await refreshReferralProgressForInvitee(env,ctx.telegramId,{source:'season_tier',seasonId:ctx.season.id,tier});}catch(error){console.error('referral season tier refresh failed',error);}
     const received=tier==='elite_plus'?(elitePlusPlan?.received||[]):[];
-    return jsonResponse({...await buildSeasonPassMutationPayload(env,ctx.season,ctx.telegramId,{includeEntitlements:true,includeTasks:true,premiumTier:tier}),received,pricePaid:price,repeated:false,purchasedTier:tier});
-  }catch(error){if(error instanceof ApiError)return jsonResponse({ok:false,error:error.message},error.status);console.error('purchaseSeasonPassTier failed',error);return jsonResponse({ok:false,error:'Не удалось активировать тариф.'},500);}
+    return jsonResponse({...await buildSeasonPassMutationPayload(env,ctx.season,ctx.telegramId,{includeEntitlements:true,includeTasks:true,premiumTier:tier}),received,pricePaid:price,repeated:false,purchasedTier:tier,operation:operationSuccessMeta(operationId,'season_pass_tier_purchase',false)});
+  }catch(error){
+    if(error instanceof ApiError)return operationErrorResponse(error,'Не удалось активировать тариф.',{operationKind:'season_pass_tier_purchase'});
+    console.error('purchaseSeasonPassTier failed',error);
+    return operationErrorResponse(playerOperationError(503,'Не удалось проверить результат покупки тарифа. Повторите действие — завершённая покупка будет восстановлена без второго списания.',{code:'TEMPORARILY_UNAVAILABLE',operationCode:'TEMPORARILY_UNAVAILABLE',retryable:true}),'Не удалось проверить результат покупки тарифа.',{operationKind:'season_pass_tier_purchase'});
+  }
 }
 
 async function purchaseSeasonPassLevel(request,env){
   try{
-    const ctx=await seasonPassRequestContext(request,env);
-    await assertSeasonPassNotForceClosed(env);
-    if(ctx.season.status!=='active')throw new ApiError(409,ctx.season.status==='ended'?'Сезон завершён. Покупка уровней недоступна.':'Сезон ещё не начался. Покупка уровней недоступна.');
+    const ctx=await seasonPassRequestContext(request,env,{allowBlockedRecovery:true});
     const currentTier=String(ctx.player.premium_tier||'none');
-    if(currentTier!=='elite'&&currentTier!=='elite_plus')throw new ApiError(403,'Покупка уровней доступна только игрокам со статусом Элит / Элит+.');
-    const currentLevel=seasonPassLevelFromXp(ctx.player.xp);if(currentLevel>=50)throw new ApiError(409,'Уже достигнут максимальный уровень. После 50 уровня работает дорожка 50+.');
-
-    const expectedCurrentRaw=ctx.body.expectedCurrentLevel??ctx.body.expected_current_level;
-    if(expectedCurrentRaw!==undefined&&expectedCurrentRaw!==null&&expectedCurrentRaw!==''){
-      const expectedCurrent=Math.floor(Number(expectedCurrentRaw));
-      if(!Number.isFinite(expectedCurrent)||expectedCurrent!==currentLevel)throw new ApiError(409,'Уровень уже изменился. Обновите расчёт покупки.');
-    }
-    const expectedRevisionRaw=ctx.body.expectedRevision??ctx.body.expected_revision;
-    if(expectedRevisionRaw!==undefined&&expectedRevisionRaw!==null&&expectedRevisionRaw!==''){
-      const expectedRevision=Math.floor(Number(expectedRevisionRaw));
-      if(!Number.isFinite(expectedRevision)||expectedRevision!==Math.floor(Number(ctx.player.revision)||0))throw new ApiError(409,'Прогресс сезонного пропуска уже изменился. Обновите расчёт покупки.');
-    }
-
+    const currentLevel=seasonPassLevelFromXp(ctx.player.xp);
     const targetLevel=Math.max(2,Math.min(50,Math.floor(Number(ctx.body.targetLevel||ctx.body.target_level||currentLevel+1))));
-    if(targetLevel<=currentLevel)return jsonResponse({...await buildSeasonPassMutationPayload(env,ctx.season,ctx.telegramId),purchasedLevel:currentLevel,purchasedLevels:0,levelCount:0,unitPricePoints:seasonPassInteger(ctx.season.levelPricePoints,DEFAULT_SEASON_PASS_LEVEL_PRICE_POINTS),pricePoints:0,repeated:true});
+    const operationId=`season-level:${ctx.season.id}:${targetLevel}`;
+    const currentUnitPrice=seasonPassInteger(ctx.season.levelPricePoints,DEFAULT_SEASON_PASS_LEVEL_PRICE_POINTS);
+
+    // The achieved target is a natural idempotency proof. Return it before any
+    // maintenance gate so a lost successful response remains recoverable.
+    if(targetLevel<=currentLevel)return jsonResponse({...await buildSeasonPassMutationPayload(env,ctx.season,ctx.telegramId),purchasedLevel:currentLevel,purchasedLevels:0,levelCount:0,unitPricePoints:currentUnitPrice,pricePoints:0,repeated:true,operation:operationSuccessMeta(operationId,'season_pass_level_purchase',true)});
+
     const levelCount=targetLevel-currentLevel;
-    const unitPrice=seasonPassInteger(ctx.season.levelPricePoints,DEFAULT_SEASON_PASS_LEVEL_PRICE_POINTS);
-    const expectedUnitRaw=ctx.body.expectedUnitPrice??ctx.body.expected_unit_price;
-    if(expectedUnitRaw!==undefined&&expectedUnitRaw!==null&&expectedUnitRaw!==''){
-      const expectedUnit=Math.floor(Number(expectedUnitRaw));
-      if(!Number.isFinite(expectedUnit)||expectedUnit!==unitPrice)throw new ApiError(409,'Стоимость уровня уже изменилась. Проверьте новую цену перед покупкой.');
-    }
-    const totalPriceRaw=unitPrice*levelCount;
-    if(!Number.isSafeInteger(totalPriceRaw)||totalPriceRaw<0||totalPriceRaw>999999999)throw new ApiError(409,'Итоговая стоимость покупки слишком велика. Уменьшите количество уровней.');
-    const totalPrice=Math.floor(totalPriceRaw);
     const now=Math.floor(Date.now()/1000);
     const purchaseKey=levelCount===1?`level:${targetLevel}`:`levels:${currentLevel+1}-${targetLevel}`;
     const existing=await env.DB.prepare(`SELECT status,price_points,created_at FROM season_pass_purchases WHERE season_id=? AND telegram_id=? AND purchase_key=? LIMIT 1`).bind(ctx.season.id,ctx.telegramId,purchaseKey).first();
     if(String(existing?.status)==='delivered'){
       const targetXp=seasonPassXpForLevel(targetLevel);
       await env.DB.prepare(`UPDATE season_pass_players SET xp=MAX(xp,?),revision=revision+1,updated_at=? WHERE season_id=? AND telegram_id=?`).bind(targetXp,now,ctx.season.id,ctx.telegramId).run();
-      return jsonResponse({...await buildSeasonPassMutationPayload(env,ctx.season,ctx.telegramId),purchasedLevel:targetLevel,purchasedLevels:levelCount,levelCount,unitPricePoints:unitPrice,pricePoints:Math.max(0,Number(existing?.price_points)||totalPrice),repeated:true});
+      return jsonResponse({...await buildSeasonPassMutationPayload(env,ctx.season,ctx.telegramId),purchasedLevel:targetLevel,purchasedLevels:levelCount,levelCount,unitPricePoints:currentUnitPrice,pricePoints:Math.max(0,Number(existing?.price_points)||currentUnitPrice*levelCount),repeated:true,operation:operationSuccessMeta(operationId,'season_pass_level_purchase',true)});
+    }
+
+    if(!ctx.access?.allowed)throw featureUnavailableError('purchases','Сезонный пропуск временно скрыт. Попробуйте немного позже.','battle_pass');
+    if(ctx.forcedClosure)throw featureUnavailableError('purchases','Сезонный пропуск временно закрыт. Попробуйте немного позже.','battle_pass');
+    await requirePlayerOperationAvailable(env,ctx.telegramId,{capabilities:['purchases']});
+    await assertSeasonPassNotForceClosed(env);
+    if(ctx.season.status!=='active')throw playerOperationError(409,ctx.season.status==='ended'?'Сезон завершён. Покупка уровней недоступна.':'Сезон ещё не начался. Покупка уровней недоступна.',{code:'OPERATION_REJECTED',operationCode:'OPERATION_REJECTED',retryable:false,operationId,operationKind:'season_pass_level_purchase'});
+    if(currentTier!=='elite'&&currentTier!=='elite_plus')throw playerOperationError(403,'Покупка уровней доступна только игрокам со статусом Элит / Элит+.',{code:'OPERATION_REJECTED',operationCode:'OPERATION_REJECTED',retryable:false,operationId,operationKind:'season_pass_level_purchase'});
+    if(currentLevel>=50)throw playerOperationError(409,'Уже достигнут максимальный уровень. После 50 уровня работает дорожка 50+.',{code:'OPERATION_REJECTED',operationCode:'OPERATION_REJECTED',retryable:false,operationId,operationKind:'season_pass_level_purchase'});
+
+    const expectedCurrentRaw=ctx.body.expectedCurrentLevel??ctx.body.expected_current_level;
+    if(expectedCurrentRaw!==undefined&&expectedCurrentRaw!==null&&expectedCurrentRaw!==''){
+      const expectedCurrent=Math.floor(Number(expectedCurrentRaw));
+      if(!Number.isFinite(expectedCurrent)||expectedCurrent!==currentLevel)throw playerOperationError(409,'Уровень уже изменился. Обновите расчёт покупки.',{code:'STATE_CONFLICT',operationCode:'STATE_CONFLICT',retryable:true,operationId,operationKind:'season_pass_level_purchase'});
+    }
+    const expectedRevisionRaw=ctx.body.expectedRevision??ctx.body.expected_revision;
+    if(expectedRevisionRaw!==undefined&&expectedRevisionRaw!==null&&expectedRevisionRaw!==''){
+      const expectedRevision=Math.floor(Number(expectedRevisionRaw));
+      if(!Number.isFinite(expectedRevision)||expectedRevision!==Math.floor(Number(ctx.player.revision)||0))throw playerOperationError(409,'Прогресс сезонного пропуска уже изменился. Обновите расчёт покупки.',{code:'STATE_CONFLICT',operationCode:'STATE_CONFLICT',retryable:true,operationId,operationKind:'season_pass_level_purchase'});
+    }
+
+    const unitPrice=currentUnitPrice;
+    const expectedUnitRaw=ctx.body.expectedUnitPrice??ctx.body.expected_unit_price;
+    if(expectedUnitRaw!==undefined&&expectedUnitRaw!==null&&expectedUnitRaw!==''){
+      const expectedUnit=Math.floor(Number(expectedUnitRaw));
+      if(!Number.isFinite(expectedUnit)||expectedUnit!==unitPrice)throw playerOperationError(409,'Стоимость уровня уже изменилась. Проверьте новую цену перед покупкой.',{code:'PRICE_CHANGED',operationCode:'PRICE_CHANGED',retryable:false,action:'reconfirm',currentPrice:{points:unitPrice,treats:0,coffee:0},operationId,operationKind:'season_pass_level_purchase'});
     }
     if(String(existing?.status)==='pending'){
-      if(now-Number(existing.created_at||now)<120)throw new ApiError(409,'Покупка уровней уже обрабатывается.');
+      if(now-Number(existing.created_at||now)<120)throw playerOperationError(409,'Покупка уровней уже обрабатывается.',{code:'PROCESSING',operationCode:'PROCESSING',retryable:true,operationId,operationKind:'season_pass_level_purchase'});
       await env.DB.prepare(`DELETE FROM season_pass_purchases WHERE season_id=? AND telegram_id=? AND purchase_key=? AND status='pending'`).bind(ctx.season.id,ctx.telegramId,purchaseKey).run();
     }
 
-    const balance=await seasonPassAccountBalance(env,ctx.telegramId);if(balance.points<totalPrice)throw new ApiError(409,`Недостаточно очков. Требуется ${totalPrice.toLocaleString('ru-RU')}.`);
+    const totalPriceRaw=unitPrice*levelCount;
+    if(!Number.isSafeInteger(totalPriceRaw)||totalPriceRaw<0||totalPriceRaw>999999999)throw new ApiError(409,'Итоговая стоимость покупки слишком велика. Уменьшите количество уровней.');
+    const totalPrice=Math.floor(totalPriceRaw);
+    const balance=await seasonPassAccountBalance(env,ctx.telegramId);
+    if(balance.points<totalPrice)throw playerOperationError(409,`Недостаточно очков. Требуется ${totalPrice.toLocaleString('ru-RU')}.`,{code:'INSUFFICIENT_BALANCE',operationCode:'INSUFFICIENT_BALANCE',retryable:false,operationId,operationKind:'season_pass_level_purchase'});
     const targetXp=seasonPassXpForLevel(targetLevel);
     const nonce=crypto.randomUUID().slice(0,12);
     const balanceGuardId=`level:${ctx.season.id}:${ctx.telegramId}:${targetLevel}:${now}:${nonce}:balance`.slice(0,180);
@@ -32785,7 +32965,7 @@ async function purchaseSeasonPassLevel(request,env){
       env.DB.prepare(`DELETE FROM season_pass_purchase_guards WHERE guard_id IN (?,?)`).bind(balanceGuardId,stateGuardId)
     ]);}catch(batchError){
       const after=await env.DB.prepare(`SELECT status,price_points FROM season_pass_purchases WHERE season_id=? AND telegram_id=? AND purchase_key=? LIMIT 1`).bind(ctx.season.id,ctx.telegramId,purchaseKey).first();
-      if(String(after?.status)==='delivered')return jsonResponse({...await buildSeasonPassMutationPayload(env,ctx.season,ctx.telegramId),purchasedLevel:targetLevel,purchasedLevels:levelCount,levelCount,unitPricePoints:unitPrice,pricePoints:Math.max(0,Number(after?.price_points)||totalPrice),repeated:true});
+      if(String(after?.status)==='delivered')return jsonResponse({...await buildSeasonPassMutationPayload(env,ctx.season,ctx.telegramId),purchasedLevel:targetLevel,purchasedLevels:levelCount,levelCount,unitPricePoints:unitPrice,pricePoints:Math.max(0,Number(after?.price_points)||totalPrice),repeated:true,operation:operationSuccessMeta(operationId,'season_pass_level_purchase',true)});
       const text=String(batchError?.message||batchError).toLowerCase();
       if(text.includes('check constraint')||text.includes('season_pass_purchase_guards')){
         const [actualPlayer,actualSeason]=await Promise.all([
@@ -32793,17 +32973,21 @@ async function purchaseSeasonPassLevel(request,env){
           env.DB.prepare(`SELECT level_price_points FROM season_pass_seasons WHERE season_id=? LIMIT 1`).bind(ctx.season.id).first()
         ]);
         const actualLevel=seasonPassLevelFromXp(actualPlayer?.xp);
-        if(actualLevel!==currentLevel||Number(actualPlayer?.revision||0)!==expectedRevision||String(actualPlayer?.premium_tier||'none')!==currentTier)throw new ApiError(409,'Прогресс или тариф уже изменился. Обновите расчёт покупки.');
-        if(seasonPassInteger(actualSeason?.level_price_points,DEFAULT_SEASON_PASS_LEVEL_PRICE_POINTS)!==unitPrice)throw new ApiError(409,'Стоимость уровня уже изменилась. Проверьте новую цену перед покупкой.');
-        throw new ApiError(409,'Баланс изменился. Проверьте количество очков и повторите покупку.');
+        if(actualLevel!==currentLevel||Number(actualPlayer?.revision||0)!==expectedRevision||String(actualPlayer?.premium_tier||'none')!==currentTier)throw playerOperationError(409,'Прогресс или тариф уже изменился. Обновите расчёт покупки.',{code:'STATE_CONFLICT',operationCode:'STATE_CONFLICT',retryable:true,operationId,operationKind:'season_pass_level_purchase'});
+        if(seasonPassInteger(actualSeason?.level_price_points,DEFAULT_SEASON_PASS_LEVEL_PRICE_POINTS)!==unitPrice)throw playerOperationError(409,'Стоимость уровня уже изменилась. Проверьте новую цену перед покупкой.',{code:'PRICE_CHANGED',operationCode:'PRICE_CHANGED',retryable:false,action:'reconfirm',currentPrice:{points:seasonPassInteger(actualSeason?.level_price_points,DEFAULT_SEASON_PASS_LEVEL_PRICE_POINTS),treats:0,coffee:0},operationId,operationKind:'season_pass_level_purchase'});
+        throw playerOperationError(409,'Баланс изменился. Проверьте количество очков и повторите покупку.',{code:'STATE_CONFLICT',operationCode:'STATE_CONFLICT',retryable:true,operationId,operationKind:'season_pass_level_purchase'});
       }
-      if(text.includes('unique')||text.includes('primary key'))throw new ApiError(409,'Покупка уровней уже обрабатывается.');
+      if(text.includes('unique')||text.includes('primary key'))throw playerOperationError(409,'Покупка уровней уже обрабатывается.',{code:'PROCESSING',operationCode:'PROCESSING',retryable:true,operationId,operationKind:'season_pass_level_purchase'});
       throw batchError;
     }
     const levelLabel=levelCount===1?`${targetLevel} уровень`:`уровни ${currentLevel+1}–${targetLevel}`;
     try{await recordPlayerTimeline(env,ctx.telegramId,'season_pass_level_purchase',`купил ${levelLabel} сезонного пропуска`,{seasonId:ctx.season.id,fromLevel:currentLevel,toLevel:targetLevel,levelCount,unitPricePoints:unitPrice,pricePoints:totalPrice},`season_pass_level_${ctx.season.id}_${targetLevel}`,ctx.auth.user,now);}catch(error){console.error('season pass level timeline failed',error);}
-    return jsonResponse({...await buildSeasonPassMutationPayload(env,ctx.season,ctx.telegramId),purchasedLevel:targetLevel,purchasedLevels:levelCount,levelCount,fromLevel:currentLevel,toLevel:targetLevel,unitPricePoints:unitPrice,pricePoints:totalPrice,repeated:false});
-  }catch(error){if(error instanceof ApiError)return jsonResponse({ok:false,error:error.message},error.status);console.error('purchaseSeasonPassLevel failed',error);return jsonResponse({ok:false,error:'Не удалось купить уровни.'},500);}
+    return jsonResponse({...await buildSeasonPassMutationPayload(env,ctx.season,ctx.telegramId),purchasedLevel:targetLevel,purchasedLevels:levelCount,levelCount,fromLevel:currentLevel,toLevel:targetLevel,unitPricePoints:unitPrice,pricePoints:totalPrice,repeated:false,operation:operationSuccessMeta(operationId,'season_pass_level_purchase',false)});
+  }catch(error){
+    if(error instanceof ApiError)return operationErrorResponse(error,'Не удалось купить уровни.',{operationKind:'season_pass_level_purchase'});
+    console.error('purchaseSeasonPassLevel failed',error);
+    return operationErrorResponse(playerOperationError(503,'Не удалось проверить результат покупки уровней. Повторите действие — завершённая покупка будет восстановлена без второго списания.',{code:'TEMPORARILY_UNAVAILABLE',operationCode:'TEMPORARILY_UNAVAILABLE',retryable:true}),'Не удалось проверить результат покупки уровней.',{operationKind:'season_pass_level_purchase'});
+  }
 }
 
 async function recordSeasonPassRunActivity(env,telegramId,input={},seasonValue=null,options={}){
@@ -38878,9 +39062,13 @@ async function purchaseFlashOffer(request, env) {
     const body=await readJson(request); const auth=await validateTelegramInitData(String(body.initData||""),env); const telegramId=String(auth.user.id); const offerId=String(body.offerId||"").trim(); const requestId=String(body.requestId||"").trim();
     if(!offerId)throw new ApiError(400,"Акция не выбрана."); if(!/^[A-Za-z0-9_-]{12,100}$/.test(requestId))throw new ApiError(400,"Некорректный идентификатор покупки.");
     const existing=await env.DB.prepare(`SELECT * FROM shop_flash_offer_purchases WHERE request_id=? AND telegram_id=? LIMIT 1`).bind(requestId,telegramId).first();
-    if(existing?.status==="completed")return jsonResponse({ok:true,repeated:true,purchaseId:String(existing.purchase_id),profile:await flashOfferProfilePayload(env,telegramId),rewards:ownerV8SafeJson(existing.rewards_json,[]),physicalRewards:ownerV8SafeJson(existing.physical_codes_json,[])});
+    if(existing?.status==="completed")return jsonResponse({ok:true,repeated:true,purchaseId:String(existing.purchase_id),profile:await flashOfferProfilePayload(env,telegramId).catch(()=>null),rewards:ownerV8SafeJson(existing.rewards_json,[]),physicalRewards:ownerV8SafeJson(existing.physical_codes_json,[]),operation:operationSuccessMeta(requestId,"flash_offer_purchase",true)});
     const row=await env.DB.prepare(`SELECT * FROM shop_flash_offers WHERE offer_id=? LIMIT 1`).bind(offerId).first(); if(!row)throw new ApiError(404,"Акция больше недоступна.");
-    const now=Math.floor(Date.now()/1000); const resuming=String(existing?.status||"")==="reserved"; if(!resuming&&(String(row.status)!=="published"||Number(row.enabled)!==1||(Number(row.starts_at)>0&&Number(row.starts_at)>now)||(Number(row.ends_at)>0&&Number(row.ends_at)<=now)))throw new ApiError(409,"Акция уже завершилась или временно отключена.");
+    const now=Math.floor(Date.now()/1000); const resuming=String(existing?.status||"")==="reserved";
+    // A reserved request has already been accepted and must be allowed to finish even
+    // when purchases are disabled afterwards. Only brand-new requests pass the gate.
+    if(!resuming)await requirePlayerOperationAvailable(env,telegramId,{capabilities:["purchases"],featureFlags:["shop"]});
+    if(!resuming&&(String(row.status)!=="published"||Number(row.enabled)!==1||(Number(row.starts_at)>0&&Number(row.starts_at)>now)||(Number(row.ends_at)>0&&Number(row.ends_at)<=now)))throw new ApiError(409,"Акция уже завершилась или временно отключена.");
     if(!resuming&&!(await flashOfferMatchesSegment(env,telegramId,row.segment_key)))throw new ApiError(403,"Эта акция недоступна для вашего аккаунта.");
     const rewards=flashOfferNormalizeRewards(ownerV8SafeJson(row.rewards_json,[])); const limit=Math.max(0,Math.min(99,Number(row.purchase_limit||0)));
     const passContext=await flashOfferSeasonPassContext(env,telegramId,rewards,{createPlayer:true});
@@ -38899,9 +39087,11 @@ async function purchaseFlashOffer(request, env) {
     if(hasXpBooster){offerBoostSeason=await loadSeasonPassSeason(env);if(String(offerBoostSeason?.status||"")==="ended")throw new ApiError(409,"Буст ×2 XP сейчас недоступен: сезонный пропуск завершён.");}
     const profileSync=await syncAdminProfile(null,env,{raw:true,body:{initData:String(body.initData||""),mode:"read",current:body.current||{}},auth});
     const profile=profileSync.profile||{}; const pricing=flashOfferEffectivePricing(row,passContext); const price=resuming?{points:Math.max(0,Number(existing.price_points||0)),treats:Math.max(0,Number(existing.price_treats||0)),coffee:Math.max(0,Number(existing.price_coffee||0))}:pricing.price;
+    if(!resuming)assertOperationQuotedPrice(body,price,{operationId:requestId,operationKind:"flash_offer_purchase",productId:offerId,legacyCompatible:false});
     if(Number(profile.wallet||0)<price.points||Number(profile.treats||0)<price.treats||Number(profile.coffee||0)<price.coffee)throw new ApiError(409,"Недостаточно ресурсов для покупки акции.");
     const physicalCount=rewards.filter(r=>r.kind==="product").reduce((sum,r)=>sum+Number(r.amount||1),0),caseCount=rewards.filter(r=>r.kind==="case").reduce((sum,r)=>sum+Number(r.amount||1),0);
-    if(physicalCount||caseCount){const maintenance=await getMaintenanceSettings(env),flags=await publicFeatureFlags(env,telegramId);if(physicalCount&&(maintenance.physicalRewardsDisabled||flags.physical_rewards===false))throw new ApiError(503,"Физические награды временно отключены.");if(caseCount&&(maintenance.casesDisabled||flags.cases===false))throw new ApiError(503,"Кейсы временно отключены.");}
+    if(!resuming&&physicalCount)await requirePlayerOperationAvailable(env,telegramId,{capabilities:["physical_rewards"],featureFlags:["physical_rewards"]});
+    if(!resuming&&caseCount)await requirePlayerOperationAvailable(env,telegramId,{capabilities:["cases"],featureFlags:["cases"]});
     if(physicalCount){const status=await getRewardLimitStatus(env,telegramId,now);if(physicalCount>Math.max(0,status.limit-status.used))throw new ApiError(429,`Лимит физических наград: доступно ещё ${Math.max(0,status.limit-status.used)}.`,status);}
     let slotNo=0;
     if(resuming){const oldToken=String(existing.execution_token||''),oldStarted=Math.max(0,Number(existing.execution_started_at||0)),leaseBase=oldStarted||Math.max(0,Number(existing.updated_at||existing.created_at||0)),age=leaseBase?Math.max(0,now-leaseBase):12;if(age<12)return jsonResponse({ok:true,pending:true,requestId,retryAfterMs:900},202);executionToken=flashOfferId("exec");executionStartedAt=now;const takeover=await env.DB.prepare(`UPDATE shop_flash_offer_purchases SET execution_token=?,execution_started_at=?,updated_at=? WHERE purchase_id=? AND telegram_id=? AND status='reserved' AND execution_token=? AND execution_started_at=?`).bind(executionToken,executionStartedAt,now,String(existing.purchase_id),telegramId,oldToken,oldStarted).run();if(safeAdminNumber(takeover?.meta?.changes)<1)return jsonResponse({ok:true,pending:true,requestId,retryAfterMs:700},202);reservedPurchaseId=String(existing.purchase_id);slotNo=Math.max(1,Number(existing.slot_no||1));await releaseFlashOfferReservedStock(env,reservedPurchaseId);}
@@ -38970,16 +39160,16 @@ async function purchaseFlashOffer(request, env) {
     try{await recordPlayerTimeline(env,telegramId,"flash_offer_purchase",`купил акцию «${String(row.title||offerId)}»`,{offerId,price,rewards:publicRewards.map(r=>({kind:r.kind,id:r.id||"",amount:r.amount}))},reservedPurchaseId,auth.user,now);}catch(error){console.error("flash offer timeline write failed",error);}
     let seasonPass=null;
     if(passContext?.season){try{const passPlayer=await env.DB.prepare(`SELECT xp,premium_tier,elite_plus_bonus_granted,revision FROM season_pass_players WHERE season_id=? AND telegram_id=? LIMIT 1`).bind(String(passContext.season.id),telegramId).first();const xp=Math.max(0,Number(passPlayer?.xp)||0);seasonPass={seasonId:String(passContext.season.id),tier:String(passPlayer?.premium_tier||"none"),xp,level:seasonPassLevelFromXp(xp),displayLevel:seasonPassOverflowView(xp,0).unlocked?"50+":String(seasonPassLevelFromXp(xp))};}catch{}}
-    return jsonResponse({ok:true,purchaseId:reservedPurchaseId,offerId,profile:await flashOfferProfilePayload(env,telegramId),authoritativeProfile:true,rewards:publicRewards,physicalRewards,seasonPass});
+    return jsonResponse({ok:true,purchaseId:reservedPurchaseId,offerId,profile:await flashOfferProfilePayload(env,telegramId),authoritativeProfile:true,rewards:publicRewards,physicalRewards,seasonPass,operation:operationSuccessMeta(requestId,"flash_offer_purchase",false)});
   } catch(error) {
     let ownsExecution=false;if(!purchaseCommitted&&reservedPurchaseId&&executionToken){try{ownsExecution=Boolean(await env.DB.prepare(`SELECT 1 AS ok FROM shop_flash_offer_purchases WHERE purchase_id=? AND status='reserved' AND execution_token=? AND execution_started_at=? LIMIT 1`).bind(reservedPurchaseId,executionToken,executionStartedAt).first());}catch{}}
     if(!purchaseCommitted){for(const id of stockConsumptionIds){try{await releaseShopStock(env,id);}catch(e){console.error("flash offer stock release failed",e);}}}
     if(!purchaseCommitted&&ownsExecution){try{await env.DB.prepare(`DELETE FROM shop_flash_offer_purchases WHERE purchase_id=? AND status='reserved' AND execution_token=? AND execution_started_at=?`).bind(reservedPurchaseId,executionToken,executionStartedAt).run();}catch{}}
-    if(error instanceof ApiError)return jsonResponse({ok:false,error:error.message,details:error.details},error.status);
+    if(error instanceof ApiError)return operationErrorResponse(error,"Не удалось завершить акционную покупку.",{operationKind:"flash_offer_purchase"});
     const text=String(error?.message||error);
-    if(text.includes('REWARD_DAILY_LIMIT'))return jsonResponse({ok:false,error:"Лимит физических наград за 24 часа уже исчерпан."},429);
-    if(text.includes('flash_offer_purchase_guard_ok'))return jsonResponse({ok:false,error:"Баланс изменился. Откройте магазин ещё раз и повторите покупку."},409);
-    console.error("flash offer purchase failed",error);return jsonResponse({ok:false,error:"Не удалось завершить акционную покупку. Ресурсы не списаны."},500);
+    if(text.includes('REWARD_DAILY_LIMIT'))return operationErrorResponse(playerOperationError(429,"Лимит физических наград за 24 часа уже исчерпан.",{code:"OPERATION_REJECTED",operationCode:"OPERATION_REJECTED",retryable:false}),"Лимит физических наград исчерпан.",{operationKind:"flash_offer_purchase"});
+    if(text.includes('flash_offer_purchase_guard_ok'))return operationErrorResponse(playerOperationError(409,"Состояние покупки изменилось. Обновите магазин и проверьте операцию ещё раз.",{code:"STATE_CONFLICT",operationCode:"STATE_CONFLICT",retryable:true}),"Состояние покупки изменилось.",{operationKind:"flash_offer_purchase"});
+    console.error("flash offer purchase failed",error);return operationErrorResponse(playerOperationError(503,"Не удалось проверить результат акционной покупки. Повторите проверку с тем же запросом.",{code:"TEMPORARILY_UNAVAILABLE",operationCode:"TEMPORARILY_UNAVAILABLE",retryable:true}),"Не удалось проверить результат акционной покупки.",{operationKind:"flash_offer_purchase"});
   }
 }
 async function ownerPanelFlashOffers(env, ctx) {

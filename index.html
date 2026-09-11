@@ -19698,27 +19698,74 @@ function createTutorialDeck(layer, mount, options, words) {
       }
 
 
+      function normalizeOperationClientCode(data = {}) {
+        const details = data?.details &amp;&amp; typeof data.details === &quot;object&quot; ? data.details : {};
+        const raw = String(data?.operationCode || details.operationCode || data?.code || details.code || &quot;&quot;);
+        if (raw === &quot;CASE_PRICE_CHANGED&quot;) return &quot;PRICE_CHANGED&quot;;
+        if (raw === &quot;CASE_STATE_CONFLICT&quot;) return &quot;STATE_CONFLICT&quot;;
+        if ([&quot;CASE_SCHEMA_UNAVAILABLE&quot;,&quot;CASE_TEMPORARY_UNAVAILABLE&quot;].includes(raw)) return &quot;TEMPORARILY_UNAVAILABLE&quot;;
+        return raw;
+      }
+
+      function buildOperationApiError(response, data, fallbackMessage) {
+        const details = data?.details &amp;&amp; typeof data.details === &quot;object&quot; ? data.details : null;
+        const error = Object.assign(new Error(data?.error || fallbackMessage || &quot;Операция временно недоступна.&quot;), {
+          status: Number(response?.status || 0),
+          payload: data,
+          maintenance: Boolean(data?.maintenance),
+          maintenanceMode: String(data?.mode || details?.mode || &quot;&quot;),
+          wireCode: String(data?.code || details?.code || &quot;&quot;),
+          operationCode: normalizeOperationClientCode(data || {}),
+          feature: String(data?.feature || details?.feature || &quot;&quot;),
+          retryable: Boolean(data?.retryable ?? details?.retryable),
+          operation: data?.operation &amp;&amp; typeof data.operation === &quot;object&quot; ? data.operation : null,
+          details
+        });
+        error.code = error.operationCode || error.wireCode;
+        return error;
+      }
+
+      async function operationApiRequest(path, payload = {}, timeoutMs = 6500, fallbackMessage = &quot;Операция временно недоступна.&quot;) {
+        const response = await gameFetchWithTimeout(path, {
+          method: &quot;POST&quot;,
+          headers: { &quot;Content-Type&quot;: &quot;application/json&quot; },
+          body: JSON.stringify({ operationContractVersion: 1, ...payload }),
+          cache: &quot;no-store&quot;,
+          credentials: &quot;same-origin&quot;
+        }, Math.max(1000, Number(timeoutMs || 6500)));
+        const data = await response.json().catch(() =&gt; null);
+        if (!response.ok || !data?.ok) throw buildOperationApiError(response, data, fallbackMessage);
+        return data;
+      }
+
+      function operationIssuePresentation(error, fallbackFeature = &quot;&quot;) {
+        const code = String(error?.operationCode || error?.code || &quot;&quot;);
+        const feature = String(error?.feature || error?.details?.feature || fallbackFeature || &quot;&quot;);
+        if (code === &quot;FEATURE_TEMPORARILY_DISABLED&quot;) {
+          if (feature === &quot;cases&quot;) return { title:&quot;Кейсы временно недоступны&quot;, message:&quot;Открытие и покупка кейсов временно приостановлены. Ваши кейсы сохранены — попробуйте немного позже.&quot; };
+          if (feature === &quot;physical_rewards&quot;) return { title:&quot;Награды временно недоступны&quot;, message:&quot;Получение этой награды временно приостановлено. Покупка не выполнена — попробуйте немного позже.&quot; };
+          if (feature === &quot;game&quot;) return { title:&quot;Функция временно недоступна&quot;, message:error?.message || &quot;Сейчас идут технические работы. Попробуйте немного позже.&quot; };
+          return { title:&quot;Покупки временно недоступны&quot;, message:&quot;Мы временно отключили покупки. Попробуйте немного позже. Средства не списаны.&quot; };
+        }
+        if (code === &quot;TEMPORARILY_UNAVAILABLE&quot;) return { title:&quot;Сервис временно недоступен&quot;, message:&quot;Не удалось завершить проверку операции. Попробуйте ещё раз немного позже — повторная покупка не будет создана автоматически.&quot; };
+        return null;
+      }
+
+      function showPurchaseOperationIssue(error, fallbackTitle, fallbackMessage, fallbackFeature = &quot;&quot;) {
+        const issue = operationIssuePresentation(error, fallbackFeature);
+        if (!issue) return false;
+        showPurchaseNotice(issue.title || fallbackTitle, issue.message || fallbackMessage);
+        return true;
+      }
+
+      function operationPriceChanged(error) {
+        return String(error?.operationCode || error?.code || error?.details?.operationCode || error?.details?.code || &quot;&quot;) === &quot;PRICE_CHANGED&quot;;
+      }
+
       async function caseApiRequest(path, payload = {}, timeoutMs = 6500) {
         const initData = String(telegramProfile?.initData || &quot;&quot;);
         if (!initData) throw Object.assign(new Error(&quot;Откройте игру через Telegram-бота, чтобы получать кейсы.&quot;), { status: 401 });
-        const response = await gameFetchWithTimeout(path, {
-          method: &quot;POST&quot;, headers: { &quot;Content-Type&quot;: &quot;application/json&quot; },
-          body: JSON.stringify({ initData, current: caseCurrentSnapshot(), ...payload }),
-          cache: &quot;no-store&quot;, credentials: &quot;same-origin&quot;
-        }, Math.max(1000, Number(timeoutMs || 6500)));
-        const data = await response.json().catch(() =&gt; null);
-        if (!response.ok || !data?.ok) {
-          const apiError = Object.assign(new Error(data?.error || &quot;Сервис кейсов временно недоступен.&quot;), {
-            status: response.status,
-            payload: data,
-            maintenance: Boolean(data?.maintenance),
-            maintenanceMode: String(data?.mode || &quot;&quot;),
-            code: String(data?.code || data?.details?.code || &quot;&quot;),
-            details: data?.details &amp;&amp; typeof data.details === &quot;object&quot; ? data.details : null
-          });
-          throw apiError;
-        }
-        return data;
+        return operationApiRequest(path, { initData, current: caseCurrentSnapshot(), ...payload }, timeoutMs, &quot;Сервис кейсов временно недоступен.&quot;);
       }
 
       function applyServerCasePayload(data, openedRewards = null) {
@@ -20254,8 +20301,9 @@ function createTutorialDeck(layer, mount, options, words) {
         const payload = error?.payload &amp;&amp; typeof error.payload === &quot;object&quot; ? error.payload : {};
         const mode = String(error?.maintenanceMode || payload?.mode || &quot;&quot;).toLowerCase();
         if (Boolean(error?.maintenance || payload?.maintenance) &amp;&amp; mode === &quot;cases&quot;) return true;
-        const code=String(error?.code || payload?.code || payload?.details?.code || &quot;&quot;);
-        if(code === &quot;CASE_SCHEMA_UNAVAILABLE&quot; || code === &quot;CASE_TEMPORARY_UNAVAILABLE&quot;) return true;
+        const code=String(error?.operationCode || error?.code || payload?.operationCode || payload?.code || payload?.details?.operationCode || payload?.details?.code || &quot;&quot;);
+        if(code === &quot;FEATURE_TEMPORARILY_DISABLED&quot; &amp;&amp; String(error?.feature || payload?.feature || payload?.details?.feature || &quot;&quot;) === &quot;cases&quot;) return true;
+        if(code === &quot;CASE_SCHEMA_UNAVAILABLE&quot; || code === &quot;CASE_TEMPORARY_UNAVAILABLE&quot; || code === &quot;TEMPORARILY_UNAVAILABLE&quot;) return true;
         const message = String(error?.message || payload?.error || &quot;&quot;);
         return /\u0424\u0443\u043d\u043a\u0446\u0438\u044f \u00ab\u041a\u0435\u0439\u0441\u044b\u00bb \u0432\u0440\u0435\u043c\u0435\u043d\u043d\u043e \u043d\u0435\u0434\u043e\u0441\u0442\u0443\u043f\u043d\u0430|\u041a\u0435\u0439\u0441\u044b \u0432\u0440\u0435\u043c\u0435\u043d\u043d\u043e \u043e\u0442\u043a\u043b\u044e\u0447\u0435\u043d\u044b|\u042d\u0442\u043e\u0442 \u043a\u0435\u0439\u0441 \u0432\u0440\u0435\u043c\u0435\u043d\u043d\u043e \u043e\u0442\u043a\u043b\u044e\u0447\u0451\u043d \u0430\u0434\u043c\u0438\u043d\u0438\u0441\u0442\u0440\u0430\u0442\u043e\u0440\u043e\u043c/i.test(message);
       }
@@ -23543,20 +23591,46 @@ function createTutorialDeck(layer, mount, options, words) {
         const cancelButton = purchaseLayer?.querySelector(&quot;[data-purchase-cancel]&quot;);
         if (confirmButton) {
           confirmButton.disabled = true;
-          confirmButton.textContent = &quot;Проверяем остаток…&quot;;
+          confirmButton.textContent = &quot;Подтверждаем покупку…&quot;;
           confirmButton.setAttribute(&quot;aria-busy&quot;, &quot;true&quot;);
         }
         if (cancelButton) cancelButton.disabled = true;
+        purchase.requestId = purchase.requestId || makeRewardRequestId();
+        const payload = {
+          skinId: skin.id,
+          requestId: purchase.requestId,
+          expectedPrice: { points:Number(purchase.cost||0), treats:Number(purchase.treatCost||0), coffee:Number(purchase.coffeeCost||0) }
+        };
         purchaseOperationBusy = true;
         let data;
         try {
-          data = await caseApiRequest(SKIN_PURCHASE_PATH, { skinId: skin.id });
+          try {
+            data = await caseApiRequest(SKIN_PURCHASE_PATH, payload, 8000);
+          } catch (error) {
+            if (!error?.timeout &amp;&amp; error?.code !== &quot;REQUEST_TIMEOUT&quot;) throw error;
+            if (confirmButton) confirmButton.textContent = &quot;Проверяем покупку…&quot;;
+            await new Promise((resolve) =&gt; window.setTimeout(resolve, 250));
+            data = await caseApiRequest(SKIN_PURCHASE_PATH, payload, 6000);
+          }
           applyServerCasePayload(data);
         } catch (error) {
+          if (operationPriceChanged(error)) {
+            const current = error?.details?.currentPrice &amp;&amp; typeof error.details.currentPrice === &quot;object&quot; ? error.details.currentPrice : null;
+            if (current) {
+              skin.points = purchase.cost = Math.max(0, Number(current.points || 0));
+              skin.treats = purchase.treatCost = Math.max(0, Number(current.treats || 0));
+              skin.coffee = purchase.coffeeCost = Math.max(0, Number(current.coffee || 0));
+              pendingPurchase = purchase;
+              const freshMissing = skinMissingItems(skin);
+              setSkinsMessage(&quot;Цена скина изменилась. Проверьте новую стоимость и подтвердите покупку ещё раз.&quot;, &quot;warning&quot;);
+              showSkinPurchaseConfirmation(purchase, freshMissing);
+              return;
+            }
+          }
           const message = error?.message || &quot;Не удалось подтвердить покупку скина.&quot;;
           setSkinsMessage(message, &quot;warning&quot;);
-          showPurchaseNotice(&quot;Скин не куплен&quot;, message);
-          void loadRemoteSkinPrices();
+          if (!showPurchaseOperationIssue(error, &quot;Скин не куплен&quot;, message, &quot;purchases&quot;)) showPurchaseNotice(&quot;Скин не куплен&quot;, message);
+          void loadRemoteSkinPrices(true);
           return;
         } finally {
           purchaseOperationBusy = false;
@@ -23681,16 +23755,35 @@ function createTutorialDeck(layer, mount, options, words) {
             if (!kind || !itemId) return;
             button.disabled = true;
             const oldText = button.textContent;
-            button.textContent = &quot;Покупаем…&quot;;
+            button.textContent = button.dataset.operationRequestId ? &quot;Проверяем…&quot; : &quot;Покупаем…&quot;;
+            const item = items.find((entry) =&gt; String(entry?.kind || &quot;&quot;) === kind &amp;&amp; String(entry?.itemId || &quot;&quot;) === itemId);
+            const requestId = button.dataset.operationRequestId || (button.dataset.operationRequestId = `live_${makeRewardRequestId()}`.slice(0, 96));
+            const payload = { kind, itemId, requestId, expectedPrice: { points:Number(item?.price?.points||0), treats:Number(item?.price?.treats||0), coffee:Number(item?.price?.coffee||0) } };
             try {
-              const data = await caseApiRequest(LIVE_CONTENT_PURCHASE_PATH, { kind, itemId });
+              let data;
+              try { data = await caseApiRequest(LIVE_CONTENT_PURCHASE_PATH, payload, 8000); }
+              catch (error) {
+                if (!error?.timeout &amp;&amp; error?.code !== &quot;REQUEST_TIMEOUT&quot;) throw error;
+                button.textContent = &quot;Проверяем…&quot;;
+                await new Promise((resolve) =&gt; window.setTimeout(resolve, 250));
+                data = await caseApiRequest(LIVE_CONTENT_PURCHASE_PATH, payload, 6000);
+              }
+              delete button.dataset.operationRequestId;
               applyServerCasePayload(data);
               renderLiveContentShop();
               showProfileToast(data?.repeated ? &quot;Этот предмет уже в коллекции.&quot; : &quot;Эксклюзив добавлен в коллекцию.&quot;, &quot;success&quot;);
             } catch (error) {
-              showProfileToast(error?.message || &quot;Не удалось купить предмет.&quot;, &quot;warning&quot;);
+              if (operationPriceChanged(error)) {
+                delete button.dataset.operationRequestId;
+                showPurchaseNotice(&quot;Цена изменилась&quot;, &quot;Стоимость предмета была обновлена. Покупка не выполнена — проверьте новую цену и подтвердите действие ещё раз.&quot;);
+                void loadRemoteShopPrices(true);
+              } else if (!showPurchaseOperationIssue(error, &quot;Покупка не выполнена&quot;, error?.message || &quot;Не удалось купить предмет.&quot;, &quot;purchases&quot;)) {
+                const recoverable = Boolean(error?.timeout || error?.code === &quot;REQUEST_TIMEOUT&quot;);
+                if (!recoverable) delete button.dataset.operationRequestId;
+                showProfileToast(recoverable ? &quot;Результат покупки проверяется. Нажмите ещё раз — повторного списания не будет.&quot; : (error?.message || &quot;Не удалось купить предмет.&quot;), &quot;warning&quot;);
+              } else { delete button.dataset.operationRequestId; }
               button.disabled = false;
-              button.textContent = oldText;
+              button.textContent = button.dataset.operationRequestId ? &quot;Проверить&quot; : oldText;
             }
           };
         });
@@ -23997,21 +24090,7 @@ function createTutorialDeck(layer, mount, options, words) {
       }
 
       async function rewardApiRequest(path, payload, timeoutMs = 6500) {
-        const response = await gameFetchWithTimeout(path, {
-          method: &quot;POST&quot;,
-          headers: { &quot;Content-Type&quot;: &quot;application/json&quot; },
-          body: JSON.stringify(payload),
-          cache: &quot;no-store&quot;,
-          credentials: &quot;same-origin&quot;
-        }, Math.max(1000, Number(timeoutMs || 6500)));
-        const data = await response.json().catch(() =&gt; null);
-        if (!response.ok || !data?.ok) {
-          const error = new Error(data?.error || &quot;Сервис проверки кодов временно недоступен.&quot;);
-          error.status = response.status;
-          error.details = data?.details || null;
-          throw error;
-        }
-        return data;
+        return operationApiRequest(path, payload || {}, timeoutMs, &quot;Сервис проверки покупок временно недоступен.&quot;);
       }
 
       const flashOfferSessionSeen = new Set();
@@ -24189,7 +24268,7 @@ function createTutorialDeck(layer, mount, options, words) {
         let purchaseCompleted = false;
         try {
           const requestId = flashOfferPurchaseRequestId || (flashOfferPurchaseRequestId = `offer_${makeRewardRequestId()}`.slice(0, 96));
-          const payload = { initData:String(telegramProfile.initData), offerId:offer.id, requestId, current:playerProfileSnapshot() };
+          const payload = { initData:String(telegramProfile.initData), offerId:offer.id, requestId, current:playerProfileSnapshot(), expectedPrice:{ points:Number(offer?.price?.points||0), treats:Number(offer?.price?.treats||0), coffee:Number(offer?.price?.coffee||0) } };
           let data = null, lastError = null;
           for (let attempt = 0; attempt &lt; 2; attempt += 1) {
             try {
@@ -24236,11 +24315,18 @@ function createTutorialDeck(layer, mount, options, words) {
           if (postPurchaseSync.length) void Promise.allSettled(postPurchaseSync);
           window.setTimeout(() =&gt; closeFlashOffer(&quot;purchase&quot;), 420);
         } catch (error) {
+          const issue = operationIssuePresentation(error, &quot;purchases&quot;);
+          const priceChanged = operationPriceChanged(error);
           const recoverable = Boolean(error?.recoverablePurchase || error?.timeout || error?.code === &quot;REQUEST_TIMEOUT&quot;);
-          if (!recoverable) flashOfferPurchaseRequestId = &quot;&quot;;
-          flashOfferMessage.textContent = recoverable
-            ? &quot;Не удалось сразу получить результат. Нажмите «Проверить покупку» — повторного списания не будет.&quot;
-            : (error?.message || &quot;Не удалось выполнить покупку.&quot;);
+          if (issue || priceChanged || !recoverable) flashOfferPurchaseRequestId = &quot;&quot;;
+          flashOfferMessage.textContent = issue
+            ? `${issue.title}. ${issue.message}`
+            : priceChanged
+              ? &quot;Цена акции изменилась. Покупка не выполнена — закройте окно, проверьте новую стоимость и подтвердите ещё раз.&quot;
+              : recoverable
+                ? &quot;Не удалось сразу получить результат. Нажмите «Проверить покупку» — повторного списания не будет.&quot;
+                : (error?.message || &quot;Не удалось выполнить покупку.&quot;);
+          if (priceChanged) void loadRemoteShopPrices(true);
           hapticNotify(&quot;error&quot;);
         } finally {
           flashOfferPurchaseBusy = false;
@@ -24269,7 +24355,8 @@ function createTutorialDeck(layer, mount, options, words) {
           initData,
           productId: purchase.id,
           requestId,
-          gameVersion: GAME_VERSION
+          gameVersion: GAME_VERSION,
+          expectedPrice: { points:Number(purchase.cost||0), treats:Number(purchase.treatCost||0), coffee:Number(purchase.coffeeCost||0) }
         };
         let data;
         try {
@@ -25945,7 +26032,7 @@ function createTutorialDeck(layer, mount, options, words) {
           playGameSound(&quot;purchaseReward&quot;);
           hapticNotify(&quot;success&quot;);
         } catch (error) {
-          if (String(error?.code || error?.details?.code || &quot;&quot;) === &quot;CASE_PRICE_CHANGED&quot;) {
+          if (operationPriceChanged(error)) {
             const current=error?.details?.currentPrice &amp;&amp; typeof error.details.currentPrice === &quot;object&quot; ? error.details.currentPrice : null;
             if(current){
               purchase.cost=Math.max(0,Number(current.points||0));purchase.treatCost=Math.max(0,Number(current.treats||0));purchase.coffeeCost=Math.max(0,Number(current.coffee||0));
@@ -25958,7 +26045,7 @@ function createTutorialDeck(layer, mount, options, words) {
               return;
             }
           }
-          showPurchaseNotice(&quot;Кейс не куплен&quot;, error?.message || &quot;Не удалось добавить кейс на склад.&quot;);
+          if (!showPurchaseOperationIssue(error, &quot;Кейс не куплен&quot;, error?.message || &quot;Не удалось добавить кейс на склад.&quot;, &quot;cases&quot;)) showPurchaseNotice(&quot;Кейс не куплен&quot;, error?.message || &quot;Не удалось добавить кейс на склад.&quot;);
           void loadCaseState(true);
         } finally {
           purchaseOperationBusy = false;
@@ -26013,6 +26100,20 @@ function createTutorialDeck(layer, mount, options, words) {
             showPurchaseLimitWarning(getPurchaseLimitStatus());
             return;
           }
+          if (operationPriceChanged(error)) {
+            const current = error?.details?.currentPrice &amp;&amp; typeof error.details.currentPrice === &quot;object&quot; ? error.details.currentPrice : null;
+            if (current) {
+              purchase.cost = Math.max(0, Number(current.points || 0));
+              purchase.treatCost = Math.max(0, Number(current.treats || 0));
+              purchase.coffeeCost = Math.max(0, Number(current.coffee || 0));
+              if (purchase.product) { purchase.product.points=purchase.cost; purchase.product.treats=purchase.treatCost; purchase.product.coffee=purchase.coffeeCost; }
+              pendingPurchase = purchase;
+              showPurchaseConfirmation(purchase, purchaseMissingItems(purchase), &quot;Мы обновили стоимость. Покупка не выполнена — проверь новую цену и подтверди действие ещё раз.&quot;);
+              shopMessageEl.textContent = &quot;Цена изменилась. Требуется новое подтверждение.&quot;;
+              return;
+            }
+          }
+          if (showPurchaseOperationIssue(error, &quot;Код не создан&quot;, error?.message || &quot;Не удалось связаться с сервисом кодов.&quot;, &quot;physical_rewards&quot;)) return;
           const nextAt = Number(error?.details?.nextAvailableAt || 0);
           const suffix = nextAt ? ` Следующая покупка будет доступна ${formatPurchaseExpiry(nextAt)}.` : &quot;&quot;;
           showPurchaseNotice(&quot;Код не создан&quot;, `${error?.message || &quot;Не удалось связаться с сервисом кодов.&quot;}${suffix}`);

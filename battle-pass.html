@@ -4214,6 +4214,7 @@ img[src$="/xp.webp"]{
   let scrollSyncTimer = 0;
   let sliderInteracting = false;
   let pendingPurchaseTier = null;
+  let pendingPurchaseExpectedPrice = null;
   let pendingLevelPurchase = false;
   let levelPurchaseBaseLevel = 1;
   let levelPurchaseQuantity = 1;
@@ -4387,7 +4388,12 @@ img[src$="/xp.webp"]{
       if (!response.ok || data?.ok === false) {
         const apiError = new Error(data?.error || "Сервер сезонного пропуска временно недоступен.");
         apiError.status = response.status;
-        apiError.code = data?.code || "";
+        apiError.code = data?.code || data?.operationCode || "";
+        apiError.operationCode = String(data?.operationCode || data?.details?.operationCode || data?.code || data?.details?.code || "");
+        apiError.feature = String(data?.feature || data?.details?.feature || "");
+        apiError.retryable = Boolean(data?.retryable ?? data?.details?.retryable);
+        apiError.details = data?.details && typeof data.details === "object" ? data.details : null;
+        apiError.operation = data?.operation && typeof data.operation === "object" ? data.operation : null;
         throw apiError;
       }
       return data;
@@ -6236,6 +6242,11 @@ img[src$="/xp.webp"]{
     el("purchaseConfirmSubtitle").textContent = config.subtitle;
     el("purchaseConfirmBenefits").innerHTML = config.benefits.map(item=>tierBenefitMarkup(item,"purchase")).join("");
     const tierPrice = tierPriceForDisplay(tier);
+    pendingPurchaseExpectedPrice = {
+      points:Math.max(0,Math.floor(Number(tierPrice.points)||0)),
+      treats:Math.max(0,Math.floor(Number(tierPrice.treats)||0)),
+      coffee:Math.max(0,Math.floor(Number(tierPrice.coffee)||0))
+    };
     el("purchasePricePoints").textContent = Math.max(0,Number(tierPrice.points||0)).toLocaleString("ru-RU");
     el("purchasePriceMarshmallow").textContent = Math.max(0,Number(tierPrice.treats||0)).toLocaleString("ru-RU");
     el("purchasePriceCoffee").textContent = Math.max(0,Number(tierPrice.coffee||0)).toLocaleString("ru-RU");
@@ -6405,6 +6416,7 @@ img[src$="/xp.webp"]{
     renderLevelPurchaseModal();
     try {
       const data = await seasonPassApi(PURCHASE_LEVEL_PATH,{
+        operationContractVersion:1,
         targetLevel:target,
         expectedCurrentLevel:base,
         expectedRevision:levelPurchaseExpectedRevision,
@@ -6422,14 +6434,26 @@ img[src$="/xp.webp"]{
     } catch (error) {
       levelPurchaseSubmitting = false;
       passNotifyHaptic("error");
+      const operationCode = String(error?.operationCode || error?.code || "");
+      if (operationCode === "FEATURE_TEMPORARILY_DISABLED") {
+        closeLevelPurchaseModal(true);
+        showToast(error.message || "Покупки временно недоступны. Попробуйте немного позже.");
+        return;
+      }
+      if (operationCode === "PRICE_CHANGED") {
+        showToast("Цена изменилась — обновляем расчёт. Подтверди новую стоимость ещё раз.");
+        void refreshLevelPurchaseState();
+        return;
+      }
       showToast(error.message || "Не удалось купить уровни");
-      if (Number(error?.status) === 409) void refreshLevelPurchaseState();
+      if (operationCode === "STATE_CONFLICT" || Number(error?.status) === 409) void refreshLevelPurchaseState();
       else renderLevelPurchaseModal();
     }
   }
 
   function closePurchaseConfirm() {
     pendingPurchaseTier = null;
+    pendingPurchaseExpectedPrice = null;
     pendingLevelPurchase = false;
     delete el("purchaseConfirm").dataset.purchaseKind;
     el("purchaseConfirm").hidden = true;
@@ -6508,12 +6532,23 @@ img[src$="/xp.webp"]{
     finally{if(tierActivationClaimId===id){tierActivationClaimId="";tierActivationClaimPromise=null;}}
   }
 
-  async function activatePremiumTier(tier) {
+  async function activatePremiumTier(tier, expectedPrice = null) {
     if (tierPurchaseSubmitting || !["elite","elite_plus"].includes(tier)) return;
     tierPurchaseSubmitting=true;
     const button=tier==="elite_plus"?el("buyElitePlus"):el("buyElite");const previous=button?.textContent||"";if(button){button.disabled=true;button.textContent=tier==="elite_plus"?"Активируем Элитный+…":"Активируем Элитный…";}
     try {
-      const data = await seasonPassApi(PURCHASE_TIER_PATH,{tier});
+      const visiblePrice = expectedPrice && typeof expectedPrice === "object"
+        ? expectedPrice
+        : tierPriceForDisplay(tier);
+      const data = await seasonPassApi(PURCHASE_TIER_PATH,{
+        operationContractVersion:1,
+        tier,
+        expectedPrice:{
+          points:Math.max(0,Math.floor(Number(visiblePrice?.points)||0)),
+          treats:Math.max(0,Math.floor(Number(visiblePrice?.treats)||0)),
+          coffee:Math.max(0,Math.floor(Number(visiblePrice?.coffee)||0))
+        }
+      });
       const confirmedTier = ["elite","elite_plus"].includes(String(data?.purchasedTier))
         ? String(data.purchasedTier)
         : (["elite","elite_plus"].includes(String(data?.player?.premiumTier)) ? String(data.player.premiumTier) : tier);
@@ -6529,7 +6564,26 @@ img[src$="/xp.webp"]{
         if(!shown&&received.length)openRewardSummary(received);
       }else if(received.length)openRewardSummary(received);
       notifyAccountChanged();
-    } catch (error) { passNotifyHaptic("error"); showToast(error.message || "Не удалось активировать тариф"); }
+    } catch (error) {
+      passNotifyHaptic("error");
+      const operationCode = String(error?.operationCode || error?.code || "");
+      if (operationCode === "PRICE_CHANGED") {
+        tierPurchaseSubmitting=false;
+        try {
+          const fresh = await seasonPassApi(STATE_PATH);
+          applyServerPass(fresh);
+          render();
+        } catch {}
+        openPurchaseConfirm(tier);
+        showToast("Цена изменилась — проверь новую стоимость и подтверди покупку ещё раз.");
+        return;
+      }
+      if (operationCode === "FEATURE_TEMPORARILY_DISABLED") {
+        showToast(error.message || "Покупки временно недоступны. Попробуйте немного позже.");
+        return;
+      }
+      showToast(error.message || "Не удалось активировать тариф");
+    }
     finally { tierPurchaseSubmitting=false; if(button){button.textContent=previous;button.disabled=false;} render(); }
   }
 
@@ -6997,10 +7051,11 @@ img[src$="/xp.webp"]{
   el("purchaseSubmit").addEventListener("click",()=>{
     passImpactHaptic("medium");
     const tier = pendingPurchaseTier;
+    const expectedPrice = pendingPurchaseExpectedPrice ? {...pendingPurchaseExpectedPrice} : null;
     const buyLevelNow = pendingLevelPurchase;
     closePurchaseConfirm();
     if (buyLevelNow) performLevelPurchase();
-    else if (tier) activatePremiumTier(tier);
+    else if (tier) activatePremiumTier(tier, expectedPrice);
   });
   el("purchaseConfirm").addEventListener("click",event=>{
     if (event.target === el("purchaseConfirm")) closePurchaseConfirm();
