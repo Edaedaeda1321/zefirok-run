@@ -2142,12 +2142,16 @@ button{-webkit-tap-highlight-color:transparent}
 .purchase-price img{width:34px;height:34px;object-fit:contain;margin-bottom:1px}
 .reward-art .reward-emoji-fallback{display:none!important}
 .reward-cell.locked .reward-status-mark span{
-  width:25px;
-  height:25px;
-  font-size:12px;
+  width:34px;
+  height:34px;
+  border:0;
+  border-radius:0;
+  background:transparent;
+  font-size:0;
   transform:translateY(13px);
-  box-shadow:0 4px 10px rgba(63,52,55,.2)
+  box-shadow:none
 }
+.reward-lock-icon{display:block;width:34px;height:34px;object-fit:contain;filter:drop-shadow(0 4px 7px rgba(111,70,40,.18))}
 .reward-cell.locked .reward-state{
   z-index:5;
   top:4px;
@@ -3035,15 +3039,12 @@ img[src$="/xp.webp"]{
 .reward-unlock-animation span{
   display:grid;
   place-items:center;
-  width:42px;
-  height:42px;
-  border-radius:50%;
-  background:#fff9dc;
-  box-shadow:0 0 0 7px rgba(255,220,116,.22),0 9px 24px rgba(161,100,14,.28);
-  font-size:22px;
+  width:52px;
+  height:52px;
   transform-origin:52% 70%;
   animation:seasonLockTurn .72s cubic-bezier(.2,.8,.2,1)
 }
+.reward-unlock-animation .reward-unlock-lock{display:block;width:52px;height:52px;object-fit:contain;filter:drop-shadow(0 9px 17px rgba(161,100,14,.22))}
 .reward-connector.is-unlocking span{animation:seasonConnectorPulse .9s ease-out}
 @keyframes seasonXpSheen{0%,32%{transform:translateX(-120%)}68%,100%{transform:translateX(130%)}}
 @keyframes seasonXpNumberPulse{0%{opacity:.42;transform:translateY(4px)}100%{opacity:1;transform:translateY(0)}}
@@ -5314,7 +5315,7 @@ img[src$="/xp.webp"]{
     const label = levelLocked ? "Закрыто" : tierLocked ? "Нужен Элитный" : "Получить";
     const state = claimed ? "✓ Получено" : claimable ? "Можно забрать" : tierLocked ? "Элитный" : `Уровень ${level}`;
     const availability = claimed ? "Награда уже забрана" : claimable ? "Награда открыта" : tierLocked ? "Откроется с премиумом" : `Откроется на ${level} уровне`;
-    const mark = claimed ? "✓" : locked ? "🔒" : "";
+    const mark = claimed ? "✓" : locked ? `<img class="reward-lock-icon" src="/assets/ui/icon_closed.png" alt="" aria-hidden="true">` : "";
     return `<article class="reward-cell ${premium?"premium":""} ${unlocked?"unlocked":""} ${claimable?"claimable":""} ${claimed?"claimed":""} ${locked?"locked":""} ${levelLocked?"level-locked":""} ${tierLocked?"tier-locked":""} ${goldReward?"gold-reward":""} ${silverReward?"silver-reward":""}" data-reward-preview="${id}" data-reward-level="${level}" data-reward-lane="${type}" aria-label="${rewardName}. ${availability}">
       <span class="reward-state">${state}</span>
       <div class="reward-icon">
@@ -5869,12 +5870,8 @@ img[src$="/xp.webp"]{
           const overlay = document.createElement("span");
           overlay.className = "reward-unlock-animation";
           overlay.setAttribute("aria-hidden","true");
-          overlay.innerHTML = "<span>🔒</span>";
+          overlay.innerHTML = '<span><img class="reward-unlock-lock" src="/assets/ui/icon_closed.png" alt="" aria-hidden="true"></span>';
           cell.append(overlay);
-          window.setTimeout(()=>{
-            const lock = overlay.querySelector("span");
-            if (lock) lock.textContent = "🔓";
-          },330);
           window.setTimeout(()=>overlay.remove(),940);
         });
         window.setTimeout(()=>{

@@ -1,7 +1,7 @@
 {
   "version": 1,
-  "catalogHash": "889f689107339e96",
-  "count": 453,
+  "catalogHash": "d2a7cab2ddb797a3",
+  "count": 454,
   "images": [
     {
       "fileName": "achievements/background_achivment_panel.webp",
@@ -3322,6 +3322,14 @@
       "path": "/assets/ui/icon_busters.webp",
       "size": 251328,
       "modified": 1788993614447
+    },
+    {
+      "fileName": "ui/icon_closed.png",
+      "label": "Icon closed",
+      "folder": "ui",
+      "path": "/assets/ui/icon_closed.png",
+      "size": 1008553,
+      "modified": 1789141000000
     },
     {
       "fileName": "ui/icon_documents.webp",

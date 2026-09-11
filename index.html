@@ -3506,6 +3506,15 @@ html&gt;body{padding:
       filter: drop-shadow(0 10px 13px rgba(163, 94, 107, 0.14));
     }
 
+    #zefirok-maltipoo-runner .purchase-closed-icon {
+      display: block;
+      width: 82px;
+      height: 82px;
+      margin: 12px auto 8px;
+      object-fit: contain;
+      filter: drop-shadow(0 10px 18px rgba(177, 105, 70, 0.18));
+    }
+
     #zefirok-maltipoo-runner .purchase-dialog h2 {
       margin: 4px 0 6px;
       font-size: clamp(22px, 6vw, 28px);
@@ -7063,6 +7072,13 @@ html&gt;body{padding:
     background: linear-gradient(145deg,#fff0f4,#ffe1ea);
     font-size: 19px;
   }
+  #zefirok-maltipoo-runner .profile-legal-icon img {
+    display:block;
+    width:30px;
+    height:30px;
+    object-fit:contain;
+    filter:drop-shadow(0 3px 5px rgba(111,70,40,.14));
+  }
   #zefirok-maltipoo-runner .profile-legal-row strong,
   #zefirok-maltipoo-runner .profile-legal-row small { display: block; }
   #zefirok-maltipoo-runner .profile-legal-row strong { color: #6e4052; font-size: 13px; font-weight: 900; }
@@ -7448,6 +7464,13 @@ html&gt;body{padding:
   display: block;
   object-fit: cover;
   border-radius: inherit;
+}
+#zefirok-maltipoo-runner .profile-music-icon img.profile-music-closed-icon {
+  width:30px;
+  height:30px;
+  object-fit:contain;
+  border-radius:0;
+  filter:drop-shadow(0 3px 5px rgba(111,70,40,.14));
 }
 #zefirok-maltipoo-runner .profile-music-copy {
   min-width: 0;
@@ -8923,7 +8946,7 @@ html&gt;body{padding:
 #zefirok-maltipoo-runner .booster-coming-soon&gt;span:nth-child(2){display:grid;gap:2px}
 #zefirok-maltipoo-runner .booster-coming-soon strong{font-size:11px;line-height:1.2}
 #zefirok-maltipoo-runner .booster-coming-soon small{font-size:9px;color:#a98490}
-#zefirok-maltipoo-runner .booster-coming-soon-lock{position:relative;width:24px;height:22px;opacity:.48}#zefirok-maltipoo-runner .booster-coming-soon-lock:before{content:&quot;&quot;;position:absolute;left:6px;top:0;width:10px;height:10px;border:2px solid #c96d91;border-bottom:0;border-radius:8px 8px 0 0}#zefirok-maltipoo-runner .booster-coming-soon-lock:after{content:&quot;&quot;;position:absolute;left:3px;right:3px;bottom:0;height:14px;border-radius:6px;background:#f2bfd0;box-shadow:inset 0 0 0 1px rgba(201,109,145,.35)}
+#zefirok-maltipoo-runner .booster-coming-soon-lock{position:relative;width:27px;height:27px;opacity:.72;background:url(&quot;/assets/ui/icon_closed.png&quot;) center/contain no-repeat;filter:drop-shadow(0 2px 4px rgba(111,70,40,.12))}#zefirok-maltipoo-runner .booster-coming-soon-lock:before,#zefirok-maltipoo-runner .booster-coming-soon-lock:after{content:none}
 @media(max-width:360px){
   #zefirok-maltipoo-runner .booster-consumables-grid{gap:6px}
   #zefirok-maltipoo-runner .booster-consumables-grid .case-booster-card{padding-left:4px;padding-right:4px}
@@ -12446,7 +12469,7 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
     &lt;/div&gt;
     &lt;div class=&quot;profile-legal-card&quot;&gt;
       &lt;button type=&quot;button&quot; class=&quot;profile-legal-row&quot; data-profile-legal-open=&quot;agreement&quot;&gt;&lt;span class=&quot;profile-legal-icon&quot;&gt;📜&lt;/span&gt;&lt;span&gt;&lt;strong&gt;Лицензионное соглашение&lt;/strong&gt;&lt;small&gt;Условия использования сервиса · RU / EN&lt;/small&gt;&lt;/span&gt;&lt;b&gt;›&lt;/b&gt;&lt;/button&gt;
-      &lt;button type=&quot;button&quot; class=&quot;profile-legal-row&quot; data-profile-legal-open=&quot;privacy&quot;&gt;&lt;span class=&quot;profile-legal-icon&quot;&gt;🔐&lt;/span&gt;&lt;span&gt;&lt;strong&gt;Политика конфиденциальности&lt;/strong&gt;&lt;small&gt;Обработка и защита данных · RU / EN&lt;/small&gt;&lt;/span&gt;&lt;b&gt;›&lt;/b&gt;&lt;/button&gt;
+      &lt;button type=&quot;button&quot; class=&quot;profile-legal-row&quot; data-profile-legal-open=&quot;privacy&quot;&gt;&lt;span class=&quot;profile-legal-icon&quot;&gt;&lt;img src=&quot;/assets/ui/icon_closed.png&quot; alt=&quot;&quot; aria-hidden=&quot;true&quot; loading=&quot;lazy&quot; decoding=&quot;async&quot;&gt;&lt;/span&gt;&lt;span&gt;&lt;strong&gt;Политика конфиденциальности&lt;/strong&gt;&lt;small&gt;Обработка и защита данных · RU / EN&lt;/small&gt;&lt;/span&gt;&lt;b&gt;›&lt;/b&gt;&lt;/button&gt;
       &lt;button type=&quot;button&quot; class=&quot;profile-legal-row&quot; data-profile-legal-open=&quot;consent&quot;&gt;&lt;span class=&quot;profile-legal-icon&quot;&gt;✅&lt;/span&gt;&lt;span&gt;&lt;strong&gt;Согласие на обработку ПДн&lt;/strong&gt;&lt;small&gt;Отдельное согласие · RU / EN&lt;/small&gt;&lt;/span&gt;&lt;b&gt;›&lt;/b&gt;&lt;/button&gt;
       &lt;button type=&quot;button&quot; class=&quot;profile-v2-service-row profile-legal-history&quot; data-profile-legal-open=&quot;hub&quot;&gt;&lt;span class=&quot;profile-v2-service-icon&quot; aria-hidden=&quot;true&quot;&gt;&lt;img src=&quot;/assets/ui/icon_documents.webp&quot; alt=&quot;&quot; loading=&quot;lazy&quot; decoding=&quot;async&quot;&gt;&lt;/span&gt;&lt;span class=&quot;profile-v2-service-copy&quot;&gt;&lt;strong&gt;Документы&lt;/strong&gt;&lt;small&gt;Соглашения, конфиденциальность и история принятия&lt;/small&gt;&lt;/span&gt;&lt;b aria-hidden=&quot;true&quot;&gt;›&lt;/b&gt;&lt;/button&gt;
     &lt;/div&gt;
@@ -13313,12 +13336,12 @@ function installProgressInfo(){
       }
       function myStyleSelected(){return myStyleItems().find(x=&gt;x.id===myStyle.selected)||null;}
       function myStyleIcon(name){
+        if(name===&#x27;lock&#x27;)return `&lt;img class=&quot;zms-icon zms-closed-icon&quot; src=&quot;/assets/ui/icon_closed.png&quot; alt=&quot;&quot; aria-hidden=&quot;true&quot; loading=&quot;lazy&quot; decoding=&quot;async&quot;&gt;`;
         const paths={
           avatar:&#x27;&lt;circle cx=&quot;12&quot; cy=&quot;8&quot; r=&quot;3&quot;/&gt;&lt;path d=&quot;M5 21v-3a7 7 0 0 1 14 0v3&quot;/&gt;&#x27;,
           frame:&#x27;&lt;rect x=&quot;3&quot; y=&quot;3&quot; width=&quot;18&quot; height=&quot;18&quot; rx=&quot;4&quot;/&gt;&lt;rect x=&quot;7&quot; y=&quot;7&quot; width=&quot;10&quot; height=&quot;10&quot; rx=&quot;2&quot;/&gt;&#x27;,
           trail:&#x27;&lt;ellipse cx=&quot;12&quot; cy=&quot;16&quot; rx=&quot;5&quot; ry=&quot;4&quot;/&gt;&lt;circle cx=&quot;5&quot; cy=&quot;10&quot; r=&quot;2&quot;/&gt;&lt;circle cx=&quot;10&quot; cy=&quot;5&quot; r=&quot;2&quot;/&gt;&lt;circle cx=&quot;16&quot; cy=&quot;6&quot; r=&quot;2&quot;/&gt;&lt;circle cx=&quot;20&quot; cy=&quot;11&quot; r=&quot;2&quot;/&gt;&#x27;,
           music:&#x27;&lt;path d=&quot;M9 18V5l11-2v13M9 9l11-2&quot;/&gt;&lt;ellipse cx=&quot;6&quot; cy=&quot;18&quot; rx=&quot;3&quot; ry=&quot;2&quot;/&gt;&lt;ellipse cx=&quot;17&quot; cy=&quot;16&quot; rx=&quot;3&quot; ry=&quot;2&quot;/&gt;&#x27;,
-          lock:&#x27;&lt;rect x=&quot;5&quot; y=&quot;10&quot; width=&quot;14&quot; height=&quot;11&quot; rx=&quot;3&quot;/&gt;&lt;path d=&quot;M8 10V7a4 4 0 0 1 8 0v3m-4 4v3&quot;/&gt;&#x27;,
           check:&#x27;&lt;path d=&quot;m5 12 4 4L19 6&quot;/&gt;&#x27;,
           play:&#x27;&lt;path d=&quot;m9 5 10 7-10 7Z&quot;/&gt;&#x27;,
           stop:&#x27;&lt;rect x=&quot;6&quot; y=&quot;6&quot; width=&quot;12&quot; height=&quot;12&quot; rx=&quot;2&quot;/&gt;&#x27;
@@ -15294,9 +15317,22 @@ function installProgressInfo(){
                 iconEl.appendChild(image);
               }
               if (image.getAttribute(&quot;src&quot;) !== item.imageUrl) image.setAttribute(&quot;src&quot;, item.imageUrl);
+            } else if (unlocked) {
+              if (iconEl.textContent !== &quot;♫&quot; || iconEl.querySelector(&quot;img&quot;)) iconEl.textContent = &quot;♫&quot;;
             } else {
-              const fallback = unlocked ? &quot;♫&quot; : &quot;🔒&quot;;
-              if (iconEl.textContent !== fallback || iconEl.querySelector(&quot;img&quot;)) iconEl.textContent = fallback;
+              let image = iconEl.querySelector(&quot;img&quot;);
+              if (!image) {
+                iconEl.textContent = &quot;&quot;;
+                image = document.createElement(&quot;img&quot;);
+                image.alt = &quot;&quot;;
+                image.setAttribute(&quot;aria-hidden&quot;, &quot;true&quot;);
+                image.loading = &quot;eager&quot;;
+                image.decoding = &quot;async&quot;;
+                image.draggable = false;
+                iconEl.appendChild(image);
+              }
+              image.className = &quot;profile-music-closed-icon&quot;;
+              if (image.getAttribute(&quot;src&quot;) !== &quot;/assets/ui/icon_closed.png&quot;) image.setAttribute(&quot;src&quot;, &quot;/assets/ui/icon_closed.png&quot;);
             }
           }
         }
@@ -19754,7 +19790,8 @@ function createTutorialDeck(layer, mount, options, words) {
       function showPurchaseOperationIssue(error, fallbackTitle, fallbackMessage, fallbackFeature = &quot;&quot;) {
         const issue = operationIssuePresentation(error, fallbackFeature);
         if (!issue) return false;
-        showPurchaseNotice(issue.title || fallbackTitle, issue.message || fallbackMessage);
+        const code = String(error?.operationCode || error?.code || &quot;&quot;);
+        showPurchaseNotice(issue.title || fallbackTitle, issue.message || fallbackMessage, { closed: code === &quot;FEATURE_TEMPORARILY_DISABLED&quot; });
         return true;
       }
 
@@ -20318,7 +20355,7 @@ function createTutorialDeck(layer, mount, options, words) {
         caseLayer.classList.remove(&quot;is-info-view&quot;, &quot;is-opening-busy&quot;);
         caseLayer.classList.add(&quot;case-xp-active&quot;);
         caseContentEl.innerHTML = `&lt;div class=&quot;case-xp-shell case-xp-status is-disabled&quot; data-case-theme=&quot;${escapePurchaseText(type)}&quot;&gt;
-          &lt;div class=&quot;case-xp-status-mark is-lock&quot; aria-hidden=&quot;true&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/div&gt;
+          &lt;div class=&quot;case-xp-status-mark is-lock&quot; aria-hidden=&quot;true&quot;&gt;&lt;img src=&quot;/assets/ui/icon_closed.png&quot; alt=&quot;&quot; loading=&quot;eager&quot; decoding=&quot;async&quot;&gt;&lt;/div&gt;
           &lt;div class=&quot;case-xp-status-case&quot;&gt;${caseImageMarkup(type, false, &quot;case-xp-status-case-img&quot;)}&lt;/div&gt;
           &lt;span class=&quot;case-xp-status-pill&quot;&gt;Временно отключено&lt;/span&gt;
           &lt;h2 id=&quot;case-dialog-title&quot;&gt;Открытие кейсов временно недоступно&lt;/h2&gt;
@@ -25864,10 +25901,14 @@ function createTutorialDeck(layer, mount, options, words) {
         return true;
       }
 
-      function showPurchaseNotice(title, text) {
+      function showPurchaseNotice(title, text, options = {}) {
         hapticNotify(&quot;error&quot;);
+        const closedIcon = options?.closed
+          ? `&lt;img class=&quot;purchase-closed-icon&quot; src=&quot;/assets/ui/icon_closed.png&quot; alt=&quot;&quot; aria-hidden=&quot;true&quot;&gt;`
+          : &quot;&quot;;
         openPurchaseLayer(`
           &lt;span class=&quot;purchase-kicker&quot;&gt;Магазин&lt;/span&gt;
+          ${closedIcon}
           &lt;h2 id=&quot;purchase-dialog-title&quot;&gt;${escapePurchaseText(title)}&lt;/h2&gt;
           &lt;p&gt;${escapePurchaseText(text)}&lt;/p&gt;
           &lt;div class=&quot;purchase-warning&quot;&gt;&lt;strong&gt;Покупка не выполнена&lt;/strong&gt;&lt;span&gt;Баланс останется без изменений.&lt;/span&gt;&lt;/div&gt;
@@ -29300,9 +29341,8 @@ html &gt; body.zefirok-game-expanded{height:var(--zefirok-visible-height,100dvh)
 #zefirok-maltipoo-runner .case-state-art .case-state-chest{position:relative;z-index:1;width:112px!important;height:112px!important;margin:0!important;object-fit:contain;filter:drop-shadow(0 9px 13px rgba(93,55,39,.15))!important}
 #zefirok-maltipoo-runner .case-status-screen.is-disabled .case-state-art .case-state-chest{filter:grayscale(.16) saturate(.83) drop-shadow(0 9px 13px rgba(93,55,39,.13))!important;opacity:.9}
 #zefirok-maltipoo-runner .case-state-lock,#zefirok-maltipoo-runner .case-state-alert,#zefirok-maltipoo-runner .case-state-check{position:absolute;z-index:3;right:8px;bottom:8px;display:grid;place-items:center;width:37px;height:37px;border:3px solid #fff;border-radius:13px;box-shadow:0 7px 14px rgba(103,54,72,.16)}
-#zefirok-maltipoo-runner .case-state-lock{background:linear-gradient(145deg,#f390b1,#d85384)}
-#zefirok-maltipoo-runner .case-state-lock::before{content:&quot;&quot;;position:absolute;left:11px;top:7px;width:11px;height:10px;border:3px solid #fff;border-bottom:0;border-radius:8px 8px 0 0}
-#zefirok-maltipoo-runner .case-state-lock::after{content:&quot;&quot;;position:absolute;left:8px;top:16px;width:17px;height:13px;border-radius:4px;background:#fff}
+#zefirok-maltipoo-runner .case-state-lock{width:42px;height:42px;right:5px;bottom:5px;border:0;border-radius:0;background:url(&quot;/assets/ui/icon_closed.png&quot;) center/contain no-repeat;box-shadow:none;filter:drop-shadow(0 5px 8px rgba(103,54,72,.16))}
+#zefirok-maltipoo-runner .case-state-lock::before,#zefirok-maltipoo-runner .case-state-lock::after{content:none}
 #zefirok-maltipoo-runner .case-state-alert{background:linear-gradient(145deg,#f5a068,#dc6d4f);color:#fff;font-size:22px;font-weight:950}
 #zefirok-maltipoo-runner .case-state-check{background:linear-gradient(145deg,#b8c85d,#819839);color:#fff;font-size:17px;font-weight:950}
 #zefirok-maltipoo-runner .case-status-screen h2{max-width:315px;margin:2px auto 7px;color:#603b2e;font-size:22px;line-height:1.08;text-wrap:balance}
@@ -29417,7 +29457,7 @@ html &gt; body.zefirok-game-expanded{height:var(--zefirok-visible-height,100dvh)
 #zefirok-maltipoo-runner .case-xp-reward-copy{position:relative;z-index:3;display:flex;flex-direction:column;align-items:center;min-height:126px}.case-xp-rarity-badge{display:inline-flex;align-items:center;min-height:25px;padding:5px 10px;border-radius:999px;background:color-mix(in srgb,var(--reward-accent) 13%,#fff);border:1px solid color-mix(in srgb,var(--reward-accent) 28%,transparent);color:color-mix(in srgb,var(--reward-accent) 76%,#55403d);font-size:9px;font-weight:900;text-transform:uppercase;letter-spacing:.055em}.case-xp-reward-copy h2{margin:7px 0 4px;max-width:315px;color:#4a3331;font-size:27px;line-height:1.08;letter-spacing:-.032em}.case-xp-reward-copy p{margin:0;max-width:310px;color:#8e7670;font-size:12px;line-height:1.4}.case-xp-credited{display:inline-flex;align-items:center;gap:6px;margin-top:9px;color:#6f9b7d;font-size:10px;font-weight:850}.case-xp-credited i{display:grid;place-items:center;width:17px;height:17px;border-radius:50%;background:#e9f6ed;color:#55916a;font-size:10px;font-style:normal}
 #zefirok-maltipoo-runner .case-xp-result-actions,#zefirok-maltipoo-runner .case-xp-status-actions{position:relative;z-index:4;display:grid;grid-template-columns:1fr 1fr;gap:9px;width:100%;margin-top:auto;padding-top:14px}.case-xp-result-actions.is-single{grid-template-columns:1fr}.case-xp-primary,.case-xp-secondary{min-height:48px!important;padding:10px 14px!important;border-radius:15px!important;font-size:12px!important;font-weight:900!important;letter-spacing:.01em!important}.case-xp-primary{border:0!important;background:linear-gradient(135deg,#df9a7b,#c97867)!important;color:#fff!important;box-shadow:0 11px 24px rgba(184,104,84,.22)!important}.case-xp-secondary{border:1px solid #eadbd4!important;background:#fff!important;color:#74544d!important;box-shadow:0 8px 18px rgba(89,52,48,.06)!important}
 #zefirok-maltipoo-runner .case-xp-alex-collection{position:relative;z-index:3;display:flex;align-items:center;justify-content:space-between;gap:10px;width:100%;margin-top:5px;padding:10px 12px;border:1px solid rgba(76,158,146,.18);border-radius:14px;background:rgba(234,248,244,.72);text-align:left}.case-xp-alex-collection span{display:flex;flex-direction:column;gap:2px}.case-xp-alex-collection strong{font-size:10px;color:#426d67}.case-xp-alex-collection small{font-size:9px;color:#7e9d98}.case-xp-alex-collection.is-complete{border-color:rgba(216,167,47,.28);background:#fff7dc}.case-xp-alex-gold{width:48px!important;height:48px!important;margin:0!important;object-fit:contain!important}
-#zefirok-maltipoo-runner .case-xp-status{justify-content:flex-start;min-height:590px;padding-top:35px}.case-xp-status-mark,.case-xp-network-mark{position:relative;z-index:4;display:grid;place-items:center;width:55px;height:55px;margin-bottom:-5px}.case-xp-status-mark.is-lock:before{content:&quot;&quot;;position:absolute;width:37px;height:30px;bottom:4px;border-radius:10px;background:#f1b876;box-shadow:0 8px 22px rgba(164,101,58,.18)}.case-xp-status-mark.is-lock:after{content:&quot;&quot;;position:absolute;top:4px;width:24px;height:25px;border:5px solid #d89b5c;border-bottom:0;border-radius:16px 16px 0 0}.case-xp-status-mark.is-lock span{position:absolute;z-index:2;bottom:13px;width:6px;height:9px;border-radius:4px;background:#fff8eb}
+#zefirok-maltipoo-runner .case-xp-status{justify-content:flex-start;min-height:590px;padding-top:35px}.case-xp-status-mark,.case-xp-network-mark{position:relative;z-index:4;display:grid;place-items:center;width:55px;height:55px;margin-bottom:-5px}.case-xp-status-mark.is-lock{width:72px;height:72px;margin-bottom:-10px}.case-xp-status-mark.is-lock:before,.case-xp-status-mark.is-lock:after{content:none}.case-xp-status-mark.is-lock img{display:block;width:72px;height:72px;object-fit:contain;filter:drop-shadow(0 8px 15px rgba(164,101,58,.16))}
 #zefirok-maltipoo-runner .case-xp-network-mark{height:45px}.case-xp-network-mark i{position:absolute;bottom:6px;width:9px;height:9px;border-radius:50%;background:#b8897d}.case-xp-network-mark i:nth-child(2),.case-xp-network-mark i:nth-child(3){bottom:12px;width:32px;height:20px;border:3px solid #b8897d;border-color:#b8897d transparent transparent transparent;border-radius:50%;background:none}.case-xp-network-mark i:nth-child(3){bottom:20px;width:49px;height:30px;opacity:.56}.case-xp-network-mark.is-checking{animation:caseXpNetworkPulse 1.1s ease-in-out infinite}
 #zefirok-maltipoo-runner .case-xp-status-case{position:relative;display:grid;place-items:center;width:190px;height:190px;margin:1px auto -6px}.case-xp-status-case:before{content:&quot;&quot;;position:absolute;width:145px;height:145px;border-radius:50%;background:radial-gradient(circle,color-mix(in srgb,var(--case-accent) 16%,#fff),transparent 68%)}.case-xp-status-case-img{position:relative!important;width:155px!important;height:155px!important;max-width:155px!important;max-height:155px!important;margin:0!important;object-fit:contain!important;filter:grayscale(.08) drop-shadow(0 15px 16px rgba(70,42,39,.13))}.case-xp-status-pill{position:relative;z-index:4;display:inline-flex;padding:5px 9px;margin:4px 0 4px;border-radius:999px;background:#f7ece7;color:#a06f63;font-size:9px;font-weight:900;letter-spacing:.05em;text-transform:uppercase}.case-xp-status-note{position:relative;z-index:3;display:flex;flex-direction:column;gap:2px;width:100%;margin-top:17px;padding:11px 13px;border:1px solid #eee2dc;border-radius:14px;background:rgba(255,255,255,.76);text-align:left}.case-xp-status-note strong{color:#6e514b;font-size:10px}.case-xp-status-note small{color:#9b837d;font-size:9px;line-height:1.4}.case-xp-status-actions{margin-top:auto}.case-xp-status-actions{grid-template-columns:repeat(auto-fit,minmax(140px,1fr))}
 #zefirok-maltipoo-runner .case-xp-fallback{justify-content:center}.case-xp-fallback-icon{display:grid;place-items:center;width:150px;height:150px;margin:21px 0 10px;border-radius:50%;background:radial-gradient(circle,#fff,#f7e7df);box-shadow:0 18px 40px rgba(78,46,43,.10);font-size:58px}.case-xp-fallback .case-xp-primary{width:100%;margin-top:28px}
@@ -29675,6 +29715,7 @@ html &gt; body.zefirok-game-expanded{height:var(--zefirok-visible-height,100dvh)
 #zefirok-maltipoo-runner .zms-lock,#zefirok-maltipoo-runner .zms-equipped{display:grid;place-items:center;position:absolute;right:-2px;top:-2px;width:24px;height:24px;background:#fff;border:1px solid #d9cbd1;border-radius:8px;color:#89727e}
 #zefirok-maltipoo-runner .zms-equipped{background:#e6f4e8;color:#558264;border-color:#c0d8c5}
 #zefirok-maltipoo-runner .zms-lock .zms-icon,#zefirok-maltipoo-runner .zms-equipped .zms-icon{width:15px;height:15px}
+#zefirok-maltipoo-runner .zms-lock .zms-closed-icon{display:block;object-fit:contain;filter:drop-shadow(0 2px 3px rgba(111,70,40,.12))}
 #zefirok-maltipoo-runner .zms-empty{grid-column:1/-1;text-align:center;color:#987b89;font-size:12px;line-height:1.5;border:1px dashed #dec5d0;border-radius:16px;padding:23px 12px}
 #zefirok-maltipoo-runner .zms-footer{flex:none;padding:10px 17px 15px;border-top:1px solid #eddde1;background:#fffaf6}
 #zefirok-maltipoo-runner .zms-message{font-size:11px;line-height:1.45;margin:0 0 9px!important;color:#987988;min-height:30px;font-weight:450}
