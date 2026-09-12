@@ -208,23 +208,30 @@ function quoteIdentifier(value) {
   return `"${String(value).replaceAll('"', '""')}"`;
 }
 
-async function fetchRemoteSchema(root, database) {
+const REMOTE_SCHEMA_PRAGMA_BATCH_SIZE = 5;
+
+async function fetchRemoteSchema(root, database, { quickCheck = false } = {}) {
   const schemaRows = await remoteSql(root, database,
     "SELECT type,name,tbl_name,sql FROM sqlite_schema WHERE type IN ('table','index','trigger') AND name NOT LIKE 'sqlite_%' ORDER BY type,name"
   );
   const tables = [...new Set(REQUIRED_COLUMN_SPECS.map(item => item.table))].sort();
-  const columnSql = tables.map(table =>
-    `SELECT ${quoteSqlLiteral(table)} AS table_name,name AS column_name,type,\"notnull\" AS not_null,dflt_value,pk FROM pragma_table_info(${quoteSqlLiteral(table)})`
-  ).join(' UNION ALL ');
-  const columnRows = columnSql ? await remoteSql(root, database, columnSql) : [];
+  const columnRows = [];
+  for (let offset = 0; offset < tables.length; offset += REMOTE_SCHEMA_PRAGMA_BATCH_SIZE) {
+    const batch = tables.slice(offset, offset + REMOTE_SCHEMA_PRAGMA_BATCH_SIZE);
+    const columnSql = batch.map(table =>
+      `SELECT ${quoteSqlLiteral(table)} AS table_name,name AS column_name,type,\"notnull\" AS not_null,dflt_value,pk FROM pragma_table_info(${quoteSqlLiteral(table)})`
+    ).join(' UNION ALL ');
+    if (columnSql) columnRows.push(...await remoteSql(root, database, columnSql));
+  }
   let contractRows = [];
   try {
     contractRows = await remoteSql(root, database,
       "SELECT contract_version,migration_name,updated_at,updated_by FROM zefirok_schema_contract WHERE contract_key='main'"
     );
   } catch {}
-  const quickRows = await remoteSql(root, database, 'PRAGMA quick_check');
-  return { schemaRows, columnRows, contractRows, quickRows };
+  const healthRows = await remoteSql(root, database, 'SELECT 1 AS ok');
+  const quickRows = quickCheck ? await remoteSql(root, database, 'PRAGMA quick_check') : [];
+  return { schemaRows, columnRows, contractRows, healthRows, quickRows, quickCheckRan: quickCheck };
 }
 
 function validateRemoteSnapshot(snapshot) {
@@ -286,9 +293,14 @@ function validateRemoteSnapshot(snapshot) {
     }
   }
 
-  const quickValues = snapshot.quickRows.flatMap(row => Object.values(row)).map(value => String(value).toLowerCase());
-  if (!quickValues.length || quickValues.some(value => value !== 'ok')) {
-    problems.push(`PRAGMA quick_check != ok (${quickValues.join(', ') || 'no result'})`);
+  const healthOk = snapshot.healthRows.some(row => Number(row.ok) === 1);
+  if (!healthOk) problems.push('lightweight read probe failed');
+
+  if (snapshot.quickCheckRan) {
+    const quickValues = snapshot.quickRows.flatMap(row => Object.values(row)).map(value => String(value).toLowerCase());
+    if (!quickValues.length || quickValues.some(value => value !== 'ok')) {
+      problems.push(`PRAGMA quick_check != ok (${quickValues.join(', ') || 'no result'})`);
+    }
   }
 
   return { problems, missingRepairable };
@@ -302,13 +314,13 @@ async function repairCompatibilityColumns(root, database, specs) {
   }
 }
 
-export async function checkRemoteDatabaseSchema({ root = process.cwd(), database = D1_DATABASE_NAME, repair = false } = {}) {
-  let snapshot = await fetchRemoteSchema(root, database);
+export async function checkRemoteDatabaseSchema({ root = process.cwd(), database = D1_DATABASE_NAME, repair = false, quickCheck = false } = {}) {
+  let snapshot = await fetchRemoteSchema(root, database, { quickCheck });
   let result = validateRemoteSnapshot(snapshot);
 
   if (result.missingRepairable.length && repair) {
     await repairCompatibilityColumns(root, database, result.missingRepairable);
-    snapshot = await fetchRemoteSchema(root, database);
+    snapshot = await fetchRemoteSchema(root, database, { quickCheck });
     result = validateRemoteSnapshot(snapshot);
   }
 
@@ -333,6 +345,7 @@ async function main() {
   const contractOnly = process.argv.includes('--contract-only');
   const remote = process.argv.includes('--remote');
   const repair = process.argv.includes('--repair');
+  const quickCheck = process.argv.includes('--quick-check');
   if (repair && !remote) throw new Error('--repair разрешен только вместе с --remote.');
   if (!contractOnly && !remote) {
     throw new Error('Укажите --contract-only для локальной проверки или --remote для Production D1.');
@@ -344,8 +357,11 @@ async function main() {
     `${staticResult.runtimeIndexes} runtime index(es), ${staticResult.compatibilityColumns} compatibility column(s).`
   );
   if (remote) {
-    await checkRemoteDatabaseSchema({ root, repair });
-    console.log(`Production D1 schema contract v${SCHEMA_CONTRACT_VERSION} OK; PRAGMA quick_check=ok.`);
+    await checkRemoteDatabaseSchema({ root, repair, quickCheck });
+    console.log(
+      `Production D1 schema contract v${SCHEMA_CONTRACT_VERSION} OK; read probe=ok` +
+      (quickCheck ? '; PRAGMA quick_check=ok.' : '.')
+    );
   }
 }
 

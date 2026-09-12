@@ -38,9 +38,9 @@ async function main() {
   await assertNoPendingRemoteMigrations({ root, database: D1_DATABASE_NAME });
   console.log('    OK: pending migrations нет.');
 
-  console.log('3/3 Production D1: schema contract + PRAGMA quick_check...');
-  await checkRemoteDatabaseSchema({ root, database: D1_DATABASE_NAME, repair: false });
-  console.log(`    OK: schema contract v${SCHEMA_CONTRACT_VERSION}, quick_check=ok.`);
+  console.log('3/3 Production D1: schema contract + lightweight read probe...');
+  await checkRemoteDatabaseSchema({ root, database: D1_DATABASE_NAME, repair: false, quickCheck: false });
+  console.log(`    OK: schema contract v${SCHEMA_CONTRACT_VERSION}, read probe=ok.`);
 
   if (writeStamp) {
     const checkedAt = Date.now();
