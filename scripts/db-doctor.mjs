@@ -225,16 +225,24 @@ add({
   sample:`SELECT json_object('kind',s.item_kind,'item_id',s.item_id) AS sample FROM live_content_registry_state s LEFT JOIN live_content_release_rules r ON r.item_kind=s.item_kind AND r.item_id=s.item_id WHERE r.item_id IS NULL LIMIT 5`
 });
 
-const countSql = checks.map(check => `SELECT ${quote(check.id)} AS check_id, (${check.count.replace(/^SELECT\s+/i, 'SELECT ').replace(/;\s*$/, '')}) AS wrapped`).join('');
-// SQLite cannot wrap arbitrary SELECT text as a scalar reliably when it already has FROM,
-// so execute one compact UNION ALL statement instead.
-const union = checks.map(check => {
-  const match = check.count.match(/^SELECT\s+(.+?)\s+AS\s+c\s+FROM\s+([\s\S]+)$/i);
-  if (!match) throw new Error(`Internal DB Doctor count SQL is not normalized for ${check.id}`);
-  return `SELECT ${quote(check.id)} AS check_id, ${match[1]} AS issue_count FROM ${match[2]}`;
-}).join(' UNION ALL ');
+// Cloudflare D1 caps compound SELECT complexity more aggressively than local SQLite.
+// Keep all DB Doctor checks, but execute their COUNT queries in small deterministic batches
+// instead of one unbounded UNION ALL statement.
+const DB_DOCTOR_COUNT_BATCH_SIZE = 4;
+function buildCountUnion(checkBatch) {
+  return checkBatch.map(check => {
+    const match = check.count.match(/^SELECT\s+(.+?)\s+AS\s+c\s+FROM\s+([\s\S]+)$/i);
+    if (!match) throw new Error(`Internal DB Doctor count SQL is not normalized for ${check.id}`);
+    return `SELECT ${quote(check.id)} AS check_id, ${match[1]} AS issue_count FROM ${match[2]}`;
+  }).join(' UNION ALL ');
+}
 
-const countRows = checks.length ? await sql(union) : [];
+const countRows = [];
+for (let offset = 0; offset < checks.length; offset += DB_DOCTOR_COUNT_BATCH_SIZE) {
+  const batch = checks.slice(offset, offset + DB_DOCTOR_COUNT_BATCH_SIZE);
+  if (!batch.length) continue;
+  countRows.push(...await sql(buildCountUnion(batch)));
+}
 const counts = new Map(countRows.map(row => [String(row.check_id || ''), Math.max(0, Number(row.issue_count || 0))]));
 const results = [];
 for (const check of checks) {
