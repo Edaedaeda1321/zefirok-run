@@ -5,13 +5,16 @@
 .assetsignore
 .DS_Store
 __MACOSX
-node_modules
+node_modules/
+dev-history/
 src
 migrations
 scripts
 wrangler.jsonc
 worker.js
 update.sh
+package.json
+package-lock.json
 *.zip
 *.patch
 *.diff

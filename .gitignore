@@ -1,40 +1,27 @@
-# wrangler files
-.wrangler
+# Wrangler / Cloudflare local state
+.wrangler/
 .dev.vars*
 !.dev.vars.example
 .env*
 !.env.example
 
+# OS / editor junk
 .DS_Store
+Thumbs.db
 
-# Local backups
+# Node dependencies
+node_modules/
+
+# Local archives and backups
+*.zip
 *копия.html
-Сборка.zip
 
-# Local backups
-*копия.html
-Сборка.zip
+# Legacy development copies must not return to production root
+/*.patch
+/*.diff
+/*_test.html
+/*_testing*.html
+/*New_Version*.html
 
-# Local backups
-*копия.html
-Сборка.zip
-
-# Local backups
-*копия.html
-Сборка.zip
-
-# Local backups
-*копия.html
-Сборка.zip
-assets.zip
-<<<<<<< HEAD
-=======
-assets.zip
->>>>>>> 0979a1a (Update in season 2, hotfix game and control panell)
-Архив.zip
-
-Архив.zip
-runners.zip
-
-# Local project archives
-project.zip
+# Git history is the only commit identity source
+/BASE_COMMIT.txt
