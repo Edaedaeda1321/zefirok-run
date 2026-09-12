@@ -3,65 +3,546 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
-<meta name="color-scheme" content="light dark">
+<meta name="color-scheme" content="light">
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://telegram.org; style-src 'unsafe-inline'; connect-src 'self'; img-src 'self' data:; base-uri 'none'; form-action 'none'">
 <title>Сканер наград</title>
 <script src="https://telegram.org/js/telegram-web-app.js?63"></script>
 <style>
-:root{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:#573b45;background:#fff6f8}*{box-sizing:border-box}body{margin:0;min-height:100vh;background:radial-gradient(circle at 50% -20%,#ffdce8 0,transparent 45%),linear-gradient(180deg,#fffafd,#fff1f5);padding:max(18px,env(safe-area-inset-top)) 16px max(24px,env(safe-area-inset-bottom))}.app{max-width:440px;margin:0 auto}.head{text-align:center;margin:6px 0 16px}.head .icon{width:62px;height:62px;margin:auto;display:grid;place-items:center;border-radius:21px;background:linear-gradient(145deg,#f7a9c4,#e978a1);box-shadow:0 12px 28px rgba(194,74,116,.22);font-size:30px}.head h1{margin:12px 0 5px;font-size:24px}.head p{margin:0;color:#92727e;font-size:14px;line-height:1.4}.card{padding:16px;border:1px solid rgba(207,139,161,.32);border-radius:24px;background:rgba(255,255,255,.88);box-shadow:0 15px 42px rgba(98,51,67,.1);backdrop-filter:blur(10px)}.actions{display:grid;grid-template-columns:1fr 1fr;gap:9px}.btn{min-height:49px;border:0;border-radius:16px;padding:11px 13px;font:inherit;font-weight:800;cursor:pointer}.btn.primary{background:linear-gradient(180deg,#ef8fb1,#df628f);color:white;box-shadow:0 8px 20px rgba(205,81,125,.22)}.btn.secondary{background:#f7edf1;color:#805666}.btn:disabled{opacity:.48;cursor:default}.manual{display:flex;gap:8px;margin-top:10px}.manual input{min-width:0;flex:1;border:1px solid #e6c9d3;border-radius:15px;background:#fff;padding:13px;color:#5c3c47;font:700 15px ui-monospace,monospace;text-transform:uppercase}.status{margin-top:12px;padding:12px;border-radius:16px;background:#fff5e9;color:#8b6440;font-size:13px;line-height:1.4}.status.ok{background:#edf9f1;color:#397452}.status.bad{background:#fff0f0;color:#a44f4f}.result{display:none;margin-top:13px;padding:15px;border:1px solid #ead3db;border-radius:19px;background:#fff}.result.show{display:block}.badge{display:inline-flex;padding:5px 9px;border-radius:999px;background:#eaf8ef;color:#3e7756;font-size:11px;font-weight:900}.badge.used,.badge.expired,.badge.cancelled{background:#f3ecef;color:#8a6f79}.result h2{margin:10px 0 8px;font-size:21px}.meta{display:grid;gap:7px;margin:12px 0 15px;padding:12px;border-radius:15px;background:#fff5f8;font-size:13px}.meta div{display:flex;justify-content:space-between;gap:10px}.meta span{color:#9b7b87}.meta strong{text-align:right;overflow-wrap:anywhere}.footer{margin:14px 4px 0;color:#9e7d89;text-align:center;font-size:11px;line-height:1.4}
-.access-gate{max-width:440px;margin:10vh auto 0;padding:24px 18px;border:1px solid rgba(207,139,161,.32);border-radius:26px;background:rgba(255,255,255,.92);box-shadow:0 15px 42px rgba(98,51,67,.12);text-align:center}.access-gate[hidden],.app[hidden]{display:none!important}.access-gate .gate-icon{width:68px;height:68px;margin:0 auto 15px;display:grid;place-items:center;border-radius:23px;background:linear-gradient(145deg,#f7a9c4,#e978a1);box-shadow:0 12px 28px rgba(194,74,116,.22);font-size:31px}.access-gate.denied .gate-icon{background:linear-gradient(145deg,#d8cdd1,#bdaeb4);box-shadow:none}.access-gate h1{margin:0 0 8px;font-size:23px}.access-gate p{margin:0;color:#92727e;font-size:14px;line-height:1.5}.access-gate .btn{width:100%;margin-top:17px}
+:root{
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+  color:#553a45;
+  background:#fff7fa;
+  --pink:#df648f;
+  --pink-strong:#d85182;
+  --pink-soft:#fff0f5;
+  --ink:#4f3740;
+  --muted:#987b86;
+  --line:rgba(200,126,151,.25);
+  --ok:#2f7b59;
+  --ok-bg:#ebf8f1;
+  --bad:#a84857;
+  --bad-bg:#fff0f2;
+}
+*{box-sizing:border-box}
+html,body{margin:0;min-height:100%}
+body{
+  min-height:100vh;
+  padding:max(16px,env(safe-area-inset-top)) 16px max(24px,env(safe-area-inset-bottom));
+  background:
+    radial-gradient(circle at 50% -14%,rgba(255,196,217,.62),transparent 35%),
+    linear-gradient(180deg,#fffafd 0%,#fff3f7 100%);
+}
+button,input{font:inherit}
+button{-webkit-tap-highlight-color:transparent}
+.app{width:min(100%,460px);margin:0 auto}
+.topbar{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:2px 2px 16px}
+.staff-block{min-width:0}
+.eyebrow{font-size:12px;font-weight:900;letter-spacing:.11em;text-transform:uppercase;color:#c44e78}
+.staff-line{display:flex;align-items:center;gap:8px;margin-top:4px;min-width:0}
+.staff-name{font-size:14px;font-weight:800;color:#684954;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.access-dot{width:9px;height:9px;border-radius:50%;background:#41a477;box-shadow:0 0 0 4px rgba(65,164,119,.12);flex:0 0 auto}
+.icon-btn{
+  width:42px;height:42px;border:1px solid var(--line);border-radius:15px;background:rgba(255,255,255,.76);
+  display:grid;place-items:center;color:#815966;box-shadow:0 7px 22px rgba(95,52,67,.08);cursor:pointer
+}
+.icon-btn svg{width:21px;height:21px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.hero{text-align:center;padding:8px 8px 18px}
+.hero-icon{
+  width:74px;height:74px;border-radius:25px;margin:0 auto 15px;display:grid;place-items:center;
+  background:linear-gradient(145deg,#f8a8c4,#e56c99);box-shadow:0 16px 34px rgba(195,74,117,.22)
+}
+.hero-icon svg{width:37px;height:37px;stroke:#fff;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.hero h1{margin:0;font-size:30px;line-height:1.08;color:#513640;letter-spacing:-.02em}
+.hero p{margin:9px auto 0;max-width:350px;color:var(--muted);font-size:15px;line-height:1.45}
+.card{
+  border:1px solid var(--line);border-radius:28px;background:rgba(255,255,255,.88);box-shadow:0 18px 50px rgba(95,52,67,.10);
+  backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px)
+}
+.scan-card{padding:16px}
+.scan-primary{
+  width:100%;min-height:74px;border:0;border-radius:22px;padding:16px 20px;background:linear-gradient(180deg,#ee8caf,#df628f);
+  color:#fff;font-weight:900;font-size:18px;display:flex;align-items:center;justify-content:center;gap:11px;
+  box-shadow:0 12px 26px rgba(205,81,125,.24);cursor:pointer
+}
+.scan-primary:active{transform:translateY(1px)}
+.scan-primary svg{width:25px;height:25px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.scan-primary:disabled{opacity:.46;box-shadow:none;cursor:default}
+.scan-help{text-align:center;margin:10px 8px 0;color:#9a7c87;font-size:12px;line-height:1.4}
+.manual-toggle{
+  width:100%;margin-top:11px;min-height:48px;border:0;border-radius:17px;background:#f9edf2;color:#795360;font-weight:850;cursor:pointer
+}
+.manual-panel{display:none;margin-top:10px;padding-top:10px;border-top:1px solid rgba(207,139,161,.20)}
+.manual-panel.open{display:block}
+.manual-row{display:flex;gap:9px}
+.manual-row input{
+  min-width:0;flex:1;border:1.5px solid #e8c7d3;border-radius:16px;background:#fff;padding:13px 14px;color:#5b3c47;
+  font:800 15px ui-monospace,SFMono-Regular,Menlo,monospace;text-transform:uppercase;outline:none
+}
+.manual-row input:focus{border-color:#e0789e;box-shadow:0 0 0 3px rgba(224,120,158,.10)}
+.small-btn{border:0;border-radius:16px;padding:11px 17px;background:#f5e7ed;color:#744f5c;font-weight:900;cursor:pointer}
+.small-btn:disabled,.manual-row input:disabled{opacity:.46;cursor:default}
+.status{
+  margin-top:12px;padding:13px 14px;border-radius:17px;background:#fff5e9;color:#8b6440;font-size:13px;line-height:1.42
+}
+.status.ok{background:var(--ok-bg);color:var(--ok)}
+.status.bad{background:var(--bad-bg);color:var(--bad)}
+.result{display:none;margin-top:14px;padding:18px}
+.result.show{display:block}
+.result-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
+.result-kicker{font-size:11px;font-weight:950;letter-spacing:.09em;text-transform:uppercase;color:#bc5b7d}
+.badge{flex:0 0 auto;padding:6px 10px;border-radius:999px;background:#eaf8ef;color:#347151;font-size:11px;font-weight:950}
+.badge.used,.badge.expired,.badge.cancelled{background:#f3ecef;color:#856c76}
+.result h2{margin:6px 0 4px;font-size:25px;line-height:1.1;color:#513740}
+.result-sub{margin:0;color:#9a7c87;font-size:13px}
+.meta{display:grid;gap:0;margin:16px 0;padding:2px 14px;border-radius:18px;background:#fff5f8}
+.meta div{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;padding:12px 0;border-bottom:1px solid rgba(210,150,170,.16);font-size:13px}
+.meta div:last-child{border-bottom:0}
+.meta span{color:#9a7c87}
+.meta strong{color:#583c46;text-align:right;overflow-wrap:anywhere}
+.redeem-btn{
+  width:100%;min-height:58px;border:0;border-radius:18px;padding:14px 18px;background:linear-gradient(180deg,#ee8caf,#df628f);
+  color:#fff;font-weight:950;font-size:16px;cursor:pointer;box-shadow:0 10px 22px rgba(205,81,125,.20)
+}
+.redeem-btn.confirm{background:linear-gradient(180deg,#52aa7e,#3c8f68);box-shadow:0 10px 22px rgba(60,143,104,.18)}
+.redeem-btn.done{background:#e8f6ee;color:#347151;box-shadow:none}
+.redeem-btn:disabled{cursor:default}
+.next-btn{display:none;width:100%;margin-top:9px;min-height:48px;border:0;border-radius:17px;background:#f7edf1;color:#76515e;font-weight:900;cursor:pointer}
+.next-btn.show{display:block}
+.recent{margin-top:16px;padding:17px 18px}
+.recent-head{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:10px}
+.recent h3{margin:0;font-size:16px;color:#5a3f49}
+.recent small{color:#a08790}
+.recent-empty{color:#a08790;font-size:13px;line-height:1.45;padding:5px 0}
+.recent-list{display:grid;gap:8px}
+.recent-item{display:grid;grid-template-columns:1fr auto;gap:5px 12px;padding:11px 12px;border-radius:16px;background:#fff5f8}
+.recent-item strong{font-size:13px;color:#5a3e48}
+.recent-item span{font-size:12px;color:#9b7d88}
+.recent-item time{grid-row:1 / span 2;grid-column:2;align-self:center;font-size:11px;color:#a58a93}
+.footer{margin:14px 8px 0;text-align:center;color:#a18791;font-size:11px;line-height:1.45}
+
+.access-gate{
+  width:min(100%,440px);margin:10vh auto 0;padding:26px 20px;border:1px solid var(--line);border-radius:28px;background:rgba(255,255,255,.93);
+  box-shadow:0 18px 50px rgba(95,52,67,.12);text-align:center
+}
+.access-gate[hidden],.app[hidden]{display:none!important}
+.gate-icon{
+  width:72px;height:72px;margin:0 auto 15px;display:grid;place-items:center;border-radius:24px;background:linear-gradient(145deg,#f8a8c4,#e56c99);
+  box-shadow:0 14px 30px rgba(194,74,116,.22)
+}
+.gate-icon img{width:40px;height:40px;object-fit:contain}
+.access-gate.denied .gate-icon{background:#f1e7eb;box-shadow:none;filter:grayscale(.35)}
+.access-gate h1{margin:0 0 8px;font-size:24px;color:#513740}
+.access-gate p{margin:0;color:#92727e;font-size:14px;line-height:1.5}
+.gate-close{width:100%;margin-top:17px;min-height:48px;border:0;border-radius:17px;background:#f7edf1;color:#76515e;font-weight:900}
+
+.tour-layer{position:fixed;inset:0;z-index:9000;pointer-events:none}
+.tour-layer[hidden]{display:none!important}
+.tour-spot{
+  position:fixed;border:2px solid rgba(255,255,255,.98);border-radius:22px;
+  box-shadow:0 0 0 9999px rgba(45,26,34,.58),0 0 0 5px rgba(224,99,144,.28);
+  transition:top .18s ease,left .18s ease,width .18s ease,height .18s ease
+}
+.tour-card{
+  position:fixed;left:16px;right:16px;max-width:420px;margin:auto;padding:17px;border-radius:22px;background:#fff;
+  box-shadow:0 18px 46px rgba(28,14,20,.24);pointer-events:auto;color:#523943
+}
+.tour-step{font-size:11px;font-weight:950;letter-spacing:.08em;text-transform:uppercase;color:#c45279}
+.tour-card h3{margin:5px 0 7px;font-size:20px}
+.tour-card p{margin:0;color:#846873;font-size:14px;line-height:1.45}
+.tour-actions{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:14px}
+.tour-skip{border:0;background:transparent;color:#9a7d88;font-weight:800;padding:9px 5px;cursor:pointer}
+.tour-next{border:0;border-radius:14px;background:#e46d98;color:#fff;font-weight:900;padding:10px 16px;cursor:pointer}
+
+@media (max-width:360px){
+  body{padding-left:12px;padding-right:12px}
+  .hero h1{font-size:27px}
+  .scan-primary{font-size:17px}
+  .manual-row{flex-direction:column}
+  .small-btn{min-height:46px}
+}
 </style>
 </head>
 <body>
 <section class="access-gate" id="accessGate" aria-live="polite">
-  <div class="gate-icon" id="gateIcon">🔐</div>
+  <div class="gate-icon"><img src="/assets/ui/icon_closed.png" alt=""></div>
   <h1 id="gateTitle">Проверяем доступ</h1>
   <p id="gateText">Сканер откроется только сотруднику из рабочего списка с активной сессией.</p>
-  <button class="btn secondary" id="closeGate" hidden>Закрыть</button>
+  <button class="gate-close" id="closeGate" hidden>Закрыть</button>
 </section>
+
 <main class="app" id="app" hidden>
-  <header class="head"><div class="icon">📷</div><h1>Сканер наград</h1><p>Наведите камеру на QR игрока или введите код вручную.</p></header>
-  <section class="card">
-    <div class="actions"><button class="btn primary" id="scan" disabled>Сканировать QR</button><button class="btn secondary" id="reset" disabled>Очистить</button></div>
-    <div class="manual"><input id="manual" autocomplete="off" inputmode="text" placeholder="Код награды"><button class="btn secondary" id="lookup" disabled>Проверить</button></div>
-    <div class="status" id="status">Сканер готов. Для работы нужна активная сессия сотрудника.</div>
-    <div class="result" id="result">
-      <span class="badge" id="badge">Активен</span>
-      <h2 id="product">Награда</h2>
-      <div class="meta">
-        <div><span>Игрок</span><strong id="owner">—</strong></div>
-        <div><span>Код</span><strong id="code">—</strong></div>
-        <div><span>Действует до</span><strong id="expires">—</strong></div>
-      </div>
-      <button class="btn primary" id="redeem" style="width:100%" disabled>Подарок выдан — списать</button>
+  <div class="topbar">
+    <div class="staff-block">
+      <div class="eyebrow">Рабочий режим</div>
+      <div class="staff-line"><span class="access-dot" aria-hidden="true"></span><span class="staff-name" id="staffName">Доступ подтверждён</span></div>
     </div>
+    <button class="icon-btn" id="helpTour" type="button" aria-label="Показать обучение">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M9.7 9a2.5 2.5 0 0 1 4.8 1c0 1.9-2.5 2.2-2.5 4"></path><path d="M12 18h.01"></path></svg>
+    </button>
+  </div>
+
+  <header class="hero">
+    <div class="hero-icon" aria-hidden="true">
+      <svg viewBox="0 0 24 24"><path d="M3 7V5a2 2 0 0 1 2-2h2"></path><path d="M17 3h2a2 2 0 0 1 2 2v2"></path><path d="M21 17v2a2 2 0 0 1-2 2h-2"></path><path d="M7 21H5a2 2 0 0 1-2-2v-2"></path><rect x="7" y="7" width="4" height="4" rx=".5"></rect><rect x="13" y="7" width="4" height="4" rx=".5"></rect><rect x="7" y="13" width="4" height="4" rx=".5"></rect><path d="M13 13h2v2h2v2h-4z"></path></svg>
+    </div>
+    <h1>Сканер наград</h1>
+    <p>Сканируйте QR игрока. Данные награды загрузятся с сервера перед выдачей.</p>
+  </header>
+
+  <section class="card scan-card">
+    <button class="scan-primary" id="scan" disabled>
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 7V5a2 2 0 0 1 2-2h2"></path><path d="M17 3h2a2 2 0 0 1 2 2v2"></path><path d="M21 17v2a2 2 0 0 1-2 2h-2"></path><path d="M7 21H5a2 2 0 0 1-2-2v-2"></path><rect x="7" y="7" width="4" height="4"></rect><rect x="13" y="7" width="4" height="4"></rect><rect x="7" y="13" width="4" height="4"></rect><path d="M13 13h4v4h-4"></path></svg>
+      Сканировать награду
+    </button>
+    <div class="scan-help">Наведите камеру на QR-код игрока</div>
+
+    <button class="manual-toggle" id="manualToggle" type="button" disabled>Ввести код вручную</button>
+    <div class="manual-panel" id="manualPanel">
+      <div class="manual-row">
+        <input id="manual" autocomplete="off" inputmode="text" placeholder="КОД НАГРАДЫ" disabled>
+        <button class="small-btn" id="lookup" disabled>Проверить</button>
+      </div>
+    </div>
+
+    <div class="status" id="status">Сканер готов. Для работы нужна активная сессия сотрудника.</div>
   </section>
+
+  <section class="card result" id="result" aria-live="polite">
+    <div class="result-head">
+      <div>
+        <div class="result-kicker">Награда найдена</div>
+        <h2 id="product">Награда</h2>
+        <p class="result-sub" id="resultSub">Проверьте данные перед выдачей.</p>
+      </div>
+      <span class="badge" id="badge">Активна</span>
+    </div>
+
+    <div class="meta">
+      <div><span>Игрок</span><strong id="owner">—</strong></div>
+      <div><span>Код</span><strong id="code">—</strong></div>
+      <div><span>Действует до</span><strong id="expires">—</strong></div>
+    </div>
+
+    <button class="redeem-btn" id="redeem" disabled>Выдать награду</button>
+    <button class="next-btn" id="nextScan" type="button">Сканировать следующую</button>
+  </section>
+
+  <section class="card recent" id="recent">
+    <div class="recent-head"><h3>Последние операции</h3><small>эта сессия</small></div>
+    <div class="recent-empty" id="recentEmpty">После выдачи здесь появятся последние операции сотрудника.</div>
+    <div class="recent-list" id="recentList"></div>
+  </section>
+
   <p class="footer">QR содержит только одноразовый код. Данные игрока и награды загружаются с сервера после проверки.</p>
 </main>
+
+<div class="tour-layer" id="tourLayer" hidden aria-live="polite">
+  <div class="tour-spot" id="tourSpot"></div>
+  <div class="tour-card" id="tourCard" role="dialog" aria-modal="true" aria-labelledby="tourTitle">
+    <div class="tour-step" id="tourStep">Шаг 1 из 2</div>
+    <h3 id="tourTitle">Сканирование награды</h3>
+    <p id="tourText"></p>
+    <div class="tour-actions">
+      <button class="tour-skip" id="tourSkip" type="button">Пропустить</button>
+      <button class="tour-next" id="tourNext" type="button">Далее</button>
+    </div>
+  </div>
+</div>
+
 <script>
 (function(){
-  var tg=window.Telegram&&window.Telegram.WebApp,current=null,confirmUntil=0,scanHandled=false,authorized=false,accessCheckBusy=false;
-  var el=function(id){return document.getElementById(id)},status=el('status'),result=el('result'),redeem=el('redeem'),manual=el('manual'),app=el('app'),gate=el('accessGate');
-  var protectedControls=[el('scan'),el('reset'),el('lookup'),redeem,manual];
-  if(tg){tg.ready();tg.expand();try{tg.setHeaderColor('#fff6f8');tg.setBackgroundColor('#fff6f8')}catch(e){}}
-  function setControls(enabled){protectedControls.forEach(function(node){if(node)node.disabled=!enabled})}
-  function setStatus(text,type){status.textContent=text;status.className='status'+(type?' '+type:'')}
-  function setGate(title,text,denied){el('gateTitle').textContent=title;el('gateText').textContent=text;el('gateIcon').textContent=denied?'⛔':'🔐';gate.className='access-gate'+(denied?' denied':'');el('closeGate').hidden=!denied;gate.hidden=false;app.hidden=true}
-  function denyAccess(message){authorized=false;current=null;setControls(false);result.classList.remove('show');setGate('Доступ закрыт',message||'Сканер доступен только сотрудникам. Откройте его из рабочей панели бота.',true);try{tg&&tg.HapticFeedback&&tg.HapticFeedback.notificationOccurred('error')}catch(e){}}
-  function allowAccess(staff){authorized=true;gate.hidden=true;app.hidden=false;setControls(true);redeem.disabled=true;var name=staff&&staff.displayName?staff.displayName:'сотрудник';setStatus('Доступ подтверждён: '+name+'. Сканер готов.','ok')}
-  function formatDate(sec){if(!sec)return '—';return new Intl.DateTimeFormat('ru-RU',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'}).format(new Date(sec*1000))}
-  function showReward(r){current=r;result.classList.add('show');el('product').textContent=r.productName||'Физическая награда';el('owner').textContent=(r.ownerName||'Гость')+(r.ownerTelegramId?' · '+r.ownerTelegramId:'');el('code').textContent=r.code||'—';el('expires').textContent=formatDate(r.expiresAt);var labels={active:'Активен',used:'Уже списан',expired:'Срок истёк',cancelled:'Отменён'};el('badge').textContent=labels[r.status]||r.status;el('badge').className='badge '+(r.status||'');redeem.disabled=!authorized||r.status!=='active';redeem.textContent=r.status==='active'?'Подарок выдан — списать':labels[r.status]||'Недоступно';confirmUntil=0}
-  async function api(path,payload,accessProbe){if(!accessProbe&&!authorized)throw new Error('Доступ к сканеру не подтверждён.');var response=await fetch(path,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(Object.assign({initData:tg&&tg.initData||''},payload||{})),cache:'no-store',credentials:'same-origin'});var data=await response.json().catch(function(){return null});if(!response.ok||!data||!data.ok)throw new Error(data&&data.error||'Сервис временно недоступен.');return data}
-  async function verifyAccess(silent){if(accessCheckBusy)return;accessCheckBusy=true;if(!silent)setGate('Проверяем доступ','Сверяем Telegram-профиль с актуальным списком сотрудников.',false);try{if(!tg||!tg.initData)throw new Error('Откройте сканер только кнопкой из рабочей панели Telegram-бота.');var data=await api('/api/staff/qr/access',{},true);allowAccess(data.staff||{})}catch(e){denyAccess(e.message||String(e))}finally{accessCheckBusy=false}}
-  async function lookup(value){if(!authorized){denyAccess('Сессия сотрудника не подтверждена. Вернитесь в бот и выполните /staff.');return}var raw=String(value||'').trim();if(!raw){setStatus('Введите код или отсканируйте QR.','bad');return}setStatus('Проверяем код…');result.classList.remove('show');try{var data=await api('/api/staff/rewards/lookup',{code:raw});showReward(data.reward);setStatus(data.reward.status==='active'?'Код действителен. Перед списанием передайте подарок игроку.':'Код найден, но уже недоступен.',data.reward.status==='active'?'ok':'bad');try{tg&&tg.HapticFeedback&&tg.HapticFeedback.notificationOccurred(data.reward.status==='active'?'success':'warning')}catch(e){}}catch(e){current=null;if(/сессия|сотрудник|доступ/i.test(e.message||'')){denyAccess(e.message);return}setStatus(e.message||String(e),'bad');try{tg&&tg.HapticFeedback&&tg.HapticFeedback.notificationOccurred('error')}catch(x){}}}
-  function acceptScan(value){if(!authorized||scanHandled)return true;scanHandled=true;try{tg&&tg.closeScanQrPopup&&tg.closeScanQrPopup()}catch(e){}lookup(value);return true}
-  function scan(){if(!authorized){denyAccess('Доступ к сканеру не подтверждён.');return}if(!tg||typeof tg.showScanQrPopup!=='function'){setStatus('В этой версии Telegram встроенный сканер недоступен. Используйте ручной ввод.','bad');return}scanHandled=false;setStatus('Наведите камеру на QR-код игрока.');try{tg.showScanQrPopup({text:'Наведите камеру на QR награды'},function(text){return acceptScan(text)})}catch(e){setStatus('Не удалось открыть камеру. Проверьте разрешение или введите код вручную.','bad')}}
+  var tg=window.Telegram&&window.Telegram.WebApp;
+  var current=null,confirmUntil=0,scanHandled=false,authorized=false,accessCheckBusy=false,recentOps=[];
+  var TOUR_KEY='zefirok_staff_qr_tour_v2',REDEEM_TIP_KEY='zefirok_staff_qr_redeem_tip_v2';
+  var el=function(id){return document.getElementById(id)};
+  var status=el('status'),result=el('result'),redeem=el('redeem'),manual=el('manual'),app=el('app'),gate=el('accessGate');
+  var scanBtn=el('scan'),manualToggle=el('manualToggle'),manualPanel=el('manualPanel'),lookupBtn=el('lookup'),nextScan=el('nextScan');
+  var tourLayer=el('tourLayer'),tourSpot=el('tourSpot'),tourCard=el('tourCard');
+  var protectedControls=[scanBtn,manualToggle,lookupBtn,manual,redeem];
+
+  if(tg){
+    tg.ready();tg.expand();
+    try{tg.setHeaderColor('#fff7fa');tg.setBackgroundColor('#fff7fa')}catch(e){}
+  }
+
+  function storageGet(key){try{return localStorage.getItem(key)}catch(e){return null}}
+  function storageSet(key,value){try{localStorage.setItem(key,value)}catch(e){}}
+  function setControls(enabled){
+    scanBtn.disabled=!enabled;
+    manualToggle.disabled=!enabled;
+    manual.disabled=!enabled;
+    lookupBtn.disabled=!enabled;
+    if(!enabled)redeem.disabled=true;
+  }
+  function setStatus(text,type){
+    status.textContent=text;
+    status.className='status'+(type?' '+type:'');
+  }
+  function setGate(title,text,denied){
+    el('gateTitle').textContent=title;
+    el('gateText').textContent=text;
+    gate.className='access-gate'+(denied?' denied':'');
+    el('closeGate').hidden=!denied;
+    gate.hidden=false;app.hidden=true;
+  }
+  function denyAccess(message){
+    authorized=false;current=null;setControls(false);result.classList.remove('show');stopTour(false);
+    setGate('Доступ закрыт',message||'Сканер доступен только сотрудникам. Откройте его из рабочей панели бота.',true);
+    try{tg&&tg.HapticFeedback&&tg.HapticFeedback.notificationOccurred('error')}catch(e){}
+  }
+  function allowAccess(staff){
+    authorized=true;gate.hidden=true;app.hidden=false;setControls(true);redeem.disabled=true;
+    var name=staff&&staff.displayName?staff.displayName:'Сотрудник';
+    el('staffName').textContent=name+' · доступ подтверждён';
+    setStatus('Готов к сканированию.','ok');
+    if(!storageGet(TOUR_KEY))setTimeout(function(){startTour(false)},350);
+  }
+  function formatDate(sec){
+    if(!sec)return '—';
+    return new Intl.DateTimeFormat('ru-RU',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'}).format(new Date(sec*1000));
+  }
+  function formatTime(date){
+    return new Intl.DateTimeFormat('ru-RU',{hour:'2-digit',minute:'2-digit'}).format(date||new Date());
+  }
+  function addRecentOperation(r){
+    recentOps.unshift({name:r.productName||'Физическая награда',owner:r.ownerName||'Игрок',time:formatTime(new Date())});
+    recentOps=recentOps.slice(0,3);
+    renderRecent();
+  }
+  function renderRecent(){
+    var list=el('recentList'),empty=el('recentEmpty');
+    list.innerHTML='';
+    empty.hidden=recentOps.length>0;
+    recentOps.forEach(function(item){
+      var node=document.createElement('div');node.className='recent-item';
+      var strong=document.createElement('strong');strong.textContent=item.name;
+      var span=document.createElement('span');span.textContent=item.owner+' · выдано';
+      var time=document.createElement('time');time.textContent=item.time;
+      node.appendChild(strong);node.appendChild(span);node.appendChild(time);list.appendChild(node);
+    });
+  }
+  function resetScanner(){
+    current=null;confirmUntil=0;manual.value='';
+    result.classList.remove('show');
+    redeem.className='redeem-btn';redeem.textContent='Выдать награду';redeem.disabled=true;
+    nextScan.classList.remove('show');
+    setStatus('Готов к сканированию.','ok');
+  }
+  function showReward(r){
+    current=r;result.classList.add('show');
+    el('product').textContent=r.productName||'Физическая награда';
+    el('owner').textContent=(r.ownerName||'Гость')+(r.ownerTelegramId?' · '+r.ownerTelegramId:'');
+    el('code').textContent=r.code||'—';
+    el('expires').textContent=formatDate(r.expiresAt);
+    var labels={active:'Активна',used:'Уже списана',expired:'Срок истёк',cancelled:'Отменена'};
+    el('badge').textContent=labels[r.status]||r.status;
+    el('badge').className='badge '+(r.status||'');
+    el('resultSub').textContent=r.status==='active'?'Проверьте игрока и награду перед выдачей.':'Эта награда недоступна для выдачи.';
+    redeem.className='redeem-btn';
+    redeem.disabled=!authorized||r.status!=='active';
+    redeem.textContent=r.status==='active'?'Выдать награду':labels[r.status]||'Недоступно';
+    nextScan.classList.toggle('show',r.status!=='active');
+    confirmUntil=0;
+    if(r.status==='active'&&!storageGet(REDEEM_TIP_KEY))setTimeout(showRedeemTip,260);
+  }
+  async function api(path,payload,accessProbe){
+    if(!accessProbe&&!authorized)throw new Error('Доступ к сканеру не подтверждён.');
+    var response=await fetch(path,{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify(Object.assign({initData:tg&&tg.initData||''},payload||{})),
+      cache:'no-store',
+      credentials:'same-origin'
+    });
+    var data=await response.json().catch(function(){return null});
+    if(!response.ok||!data||!data.ok)throw new Error(data&&data.error||'Сервис временно недоступен.');
+    return data;
+  }
+  async function verifyAccess(silent){
+    if(accessCheckBusy)return;
+    accessCheckBusy=true;
+    if(!silent)setGate('Проверяем доступ','Сверяем Telegram-профиль с актуальным списком сотрудников.',false);
+    try{
+      if(!tg||!tg.initData)throw new Error('Откройте сканер только кнопкой из рабочей панели Telegram-бота.');
+      var data=await api('/api/staff/qr/access',{},true);
+      allowAccess(data.staff||{});
+    }catch(e){denyAccess(e.message||String(e))}
+    finally{accessCheckBusy=false}
+  }
+  async function lookup(value){
+    if(!authorized){denyAccess('Сессия сотрудника не подтверждена. Вернитесь в бот и выполните /staff.');return}
+    var raw=String(value||'').trim();
+    if(!raw){setStatus('Введите код или отсканируйте QR.','bad');return}
+    setStatus('Проверяем код…');
+    result.classList.remove('show');
+    try{
+      var data=await api('/api/staff/rewards/lookup',{code:raw});
+      showReward(data.reward);
+      setStatus(data.reward.status==='active'?'Код действителен. Можно выдавать награду.':'Код найден, но награда уже недоступна.',data.reward.status==='active'?'ok':'bad');
+      try{tg&&tg.HapticFeedback&&tg.HapticFeedback.notificationOccurred(data.reward.status==='active'?'success':'warning')}catch(e){}
+    }catch(e){
+      current=null;
+      if(/сессия|сотрудник|доступ/i.test(e.message||'')){denyAccess(e.message);return}
+      setStatus(e.message||String(e),'bad');
+      try{tg&&tg.HapticFeedback&&tg.HapticFeedback.notificationOccurred('error')}catch(x){}
+    }
+  }
+  function acceptScan(value){
+    if(!authorized||scanHandled)return true;
+    scanHandled=true;
+    try{tg&&tg.closeScanQrPopup&&tg.closeScanQrPopup()}catch(e){}
+    lookup(value);
+    return true;
+  }
+  function scan(){
+    stopTour(true);
+    if(!authorized){denyAccess('Доступ к сканеру не подтверждён.');return}
+    if(!tg||typeof tg.showScanQrPopup!=='function'){
+      manualPanel.classList.add('open');
+      setStatus('В этой версии Telegram встроенный сканер недоступен. Введите код вручную.','bad');
+      manual.focus();
+      return;
+    }
+    scanHandled=false;setStatus('Наведите камеру на QR-код игрока.');
+    try{
+      tg.showScanQrPopup({text:'Наведите камеру на QR награды'},function(text){return acceptScan(text)});
+    }catch(e){
+      manualPanel.classList.add('open');
+      setStatus('Не удалось открыть камеру. Проверьте разрешение или введите код вручную.','bad');
+    }
+  }
+
+  var tourSteps=[
+    {
+      target:function(){return scanBtn},
+      title:'Сканирование награды',
+      text:'Нажмите эту кнопку и наведите камеру на QR-код игрока. Сканер сам загрузит данные награды с сервера.'
+    },
+    {
+      target:function(){return manualToggle},
+      title:'Если QR не читается',
+      text:'Откройте ручной ввод и введите код награды. Это запасной способ — выдача всё равно будет проверена сервером.'
+    }
+  ];
+  var tourIndex=0,tourActive=false,tourMode='intro';
+
+  function positionTour(target){
+    if(!target)return;
+    var r=target.getBoundingClientRect(),pad=7;
+    tourSpot.style.left=Math.max(7,r.left-pad)+'px';
+    tourSpot.style.top=Math.max(7,r.top-pad)+'px';
+    tourSpot.style.width=Math.min(window.innerWidth-14,r.width+pad*2)+'px';
+    tourSpot.style.height=(r.height+pad*2)+'px';
+    var cardHeight=tourCard.offsetHeight||180;
+    var below=r.bottom+18;
+    var above=r.top-cardHeight-18;
+    var top=below+cardHeight<window.innerHeight-12?below:Math.max(12,above);
+    tourCard.style.top=top+'px';
+    tourCard.style.bottom='auto';
+  }
+  function renderTourStep(){
+    var step=tourSteps[tourIndex],target=step&&step.target();
+    if(!target){stopTour(false);return}
+    el('tourStep').textContent='Шаг '+(tourIndex+1)+' из '+tourSteps.length;
+    el('tourTitle').textContent=step.title;
+    el('tourText').textContent=step.text;
+    el('tourNext').textContent=tourIndex===tourSteps.length-1?'Готово':'Далее';
+    tourLayer.hidden=false;tourActive=true;tourMode='intro';
+    requestAnimationFrame(function(){positionTour(target)});
+  }
+  function startTour(force){
+    if(!authorized)return;
+    if(!force&&storageGet(TOUR_KEY))return;
+    tourIndex=0;renderTourStep();
+  }
+  function stopTour(markDone){
+    if(markDone&&tourMode==='intro')storageSet(TOUR_KEY,'1');
+    tourLayer.hidden=true;tourActive=false;
+  }
+  function showRedeemTip(){
+    if(!authorized||!current||current.status!=='active'||storageGet(REDEEM_TIP_KEY))return;
+    tourMode='redeem';
+    el('tourStep').textContent='Перед первой выдачей';
+    el('tourTitle').textContent='Проверьте награду';
+    el('tourText').textContent='Сначала передайте подарок игроку. Затем нажмите «Выдать награду». Для защиты от случайного списания потребуется повторное подтверждение.';
+    el('tourNext').textContent='Понятно';
+    el('tourSkip').textContent='Больше не показывать';
+    tourLayer.hidden=false;tourActive=true;
+    requestAnimationFrame(function(){positionTour(redeem)});
+  }
+
   if(tg&&tg.onEvent)tg.onEvent('qrTextReceived',function(event){acceptScan(event&&event.data||event||'')});
-  el('scan').addEventListener('click',scan);el('lookup').addEventListener('click',function(){lookup(manual.value)});manual.addEventListener('keydown',function(e){if(e.key==='Enter')lookup(manual.value)});el('reset').addEventListener('click',function(){if(!authorized)return;current=null;manual.value='';result.classList.remove('show');confirmUntil=0;redeem.disabled=true;setStatus('Сканер готов.','')});
-  el('closeGate').addEventListener('click',function(){try{if(tg&&typeof tg.close==='function'){tg.close();return}}catch(e){}if(history.length>1)history.back()});
-  redeem.addEventListener('click',async function(){if(!authorized||!current||current.status!=='active')return;var now=Date.now();if(now>confirmUntil){confirmUntil=now+4500;redeem.textContent='Нажмите ещё раз для списания';setStatus('Проверьте, что подарок уже передан игроку, и подтвердите ещё раз.');return}redeem.disabled=true;setStatus('Списываем награду…');try{var data=await api('/api/staff/rewards/redeem',{code:current.code});showReward(data.reward);setStatus('Готово. Награда выдана и код списан.','ok');try{tg&&tg.HapticFeedback&&tg.HapticFeedback.notificationOccurred('success')}catch(e){}}catch(e){if(/сессия|сотрудник|доступ/i.test(e.message||'')){denyAccess(e.message);return}redeem.disabled=false;redeem.textContent='Подарок выдан — списать';confirmUntil=0;setStatus(e.message||String(e),'bad')}});
+  scanBtn.addEventListener('click',scan);
+  manualToggle.addEventListener('click',function(){
+    var open=!manualPanel.classList.contains('open');
+    manualPanel.classList.toggle('open',open);
+    manualToggle.textContent=open?'Скрыть ручной ввод':'Ввести код вручную';
+    if(open)setTimeout(function(){manual.focus()},80);
+  });
+  lookupBtn.addEventListener('click',function(){lookup(manual.value)});
+  manual.addEventListener('keydown',function(e){if(e.key==='Enter')lookup(manual.value)});
+  nextScan.addEventListener('click',resetScanner);
+  el('helpTour').addEventListener('click',function(){startTour(true)});
+  el('closeGate').addEventListener('click',function(){
+    try{if(tg&&typeof tg.close==='function'){tg.close();return}}catch(e){}
+    if(history.length>1)history.back();
+  });
+
+  el('tourNext').addEventListener('click',function(){
+    if(tourMode==='redeem'){
+      storageSet(REDEEM_TIP_KEY,'1');tourLayer.hidden=true;tourActive=false;el('tourSkip').textContent='Пропустить';return;
+    }
+    if(tourIndex<tourSteps.length-1){tourIndex++;renderTourStep()}
+    else stopTour(true);
+  });
+  el('tourSkip').addEventListener('click',function(){
+    if(tourMode==='redeem'){storageSet(REDEEM_TIP_KEY,'1');tourLayer.hidden=true;tourActive=false;el('tourSkip').textContent='Пропустить';return}
+    stopTour(true);
+  });
+  window.addEventListener('resize',function(){
+    if(!tourActive)return;
+    if(tourMode==='redeem')positionTour(redeem);
+    else positionTour(tourSteps[tourIndex].target());
+  });
+  window.addEventListener('scroll',function(){
+    if(!tourActive)return;
+    if(tourMode==='redeem')positionTour(redeem);
+    else positionTour(tourSteps[tourIndex].target());
+  },{passive:true});
+
+  redeem.addEventListener('click',async function(){
+    if(!authorized||!current||current.status!=='active')return;
+    if(tourMode==='redeem'&&tourActive){storageSet(REDEEM_TIP_KEY,'1');tourLayer.hidden=true;tourActive=false}
+    var now=Date.now();
+    if(now>confirmUntil){
+      confirmUntil=now+4500;
+      redeem.textContent='Подтвердить выдачу';
+      redeem.className='redeem-btn confirm';
+      setStatus('Убедитесь, что подарок уже передан игроку, и подтвердите выдачу ещё раз.');
+      try{tg&&tg.HapticFeedback&&tg.HapticFeedback.impactOccurred('medium')}catch(e){}
+      return;
+    }
+    redeem.disabled=true;setStatus('Списываем награду…');
+    try{
+      var before=current;
+      var data=await api('/api/staff/rewards/redeem',{code:current.code});
+      current=data.reward;
+      el('badge').textContent='Выдана';el('badge').className='badge used';
+      el('resultSub').textContent='Награда успешно выдана и списана.';
+      redeem.textContent='Награда выдана';redeem.className='redeem-btn done';redeem.disabled=true;
+      nextScan.classList.add('show');
+      addRecentOperation(before);
+      setStatus('Готово. Награда выдана и код списан.','ok');
+      try{tg&&tg.HapticFeedback&&tg.HapticFeedback.notificationOccurred('success')}catch(e){}
+    }catch(e){
+      if(/сессия|сотрудник|доступ/i.test(e.message||'')){denyAccess(e.message);return}
+      redeem.disabled=false;redeem.textContent='Выдать награду';redeem.className='redeem-btn';confirmUntil=0;setStatus(e.message||String(e),'bad');
+    }
+  });
+
   document.addEventListener('visibilitychange',function(){if(!document.hidden)verifyAccess(true)});
   setInterval(function(){verifyAccess(true)},60000);
+  renderRecent();
   verifyAccess(false);
 })();
 </script>
