@@ -5,7 +5,7 @@
 .assetsignore
 .DS_Store
 __MACOSX
-node_modules
+node_modules/
 dev-history/
 src
 migrations
