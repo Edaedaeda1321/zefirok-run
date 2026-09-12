@@ -418,7 +418,8 @@ const CASE_PHYSICAL_REWARDS = Object.freeze({
 });
 
 const CASE_REWARD_BOOSTER_TYPES = Object.freeze(["points", "treats", "coffee"]);
-const CASE_BOOSTER_TYPES = Object.freeze([...CASE_REWARD_BOOSTER_TYPES, "shield", "second_chance", "pause"]);
+const CASE_UTILITY_BOOSTER_TYPES = Object.freeze(["shield", "second_chance", "pause"]);
+const CASE_BOOSTER_TYPES = Object.freeze([...CASE_REWARD_BOOSTER_TYPES, ...CASE_UTILITY_BOOSTER_TYPES]);
 const CASE_BOOSTER_RUNS = Object.freeze({ points:2, treats:2, coffee:2, shield:1, second_chance:1, pause:1 });
 const CASE_DUPLICATE_COMPENSATION = Object.freeze({ skin: 150000, avatar: 500, frame: 1500, trail: 5000, music: 150000 });
 const CASE_RARITY_ORDER = Object.freeze({ common: 0, rare: 1, superrare: 2, epic: 3, mythic: 4, legendary: 5 });
@@ -10553,6 +10554,32 @@ function caseBoosterRunsForType(rawType) {
   return CASE_BOOSTER_TYPES.includes(type) ? Math.max(1, safeAdminNumber(CASE_BOOSTER_RUNS[type] || 1)) : 0;
 }
 
+function caseBoosterGroupForType(rawType) {
+  const type=String(rawType || "");
+  if (CASE_REWARD_BOOSTER_TYPES.includes(type)) return "reward";
+  if (CASE_UTILITY_BOOSTER_TYPES.includes(type)) return "utility";
+  return "";
+}
+
+function caseBoosterGroupLabel(rawGroup) {
+  const group=String(rawGroup || "");
+  if (group === "reward") return "Бонус награды";
+  if (group === "utility") return "Помощник в забеге";
+  return "Усилитель";
+}
+
+function caseBoosterTitle(rawType) {
+  return ({ points:"×2 Очки", treats:"×2 Зефир", coffee:"×2 Кофе", shield:"Щит Зеффи", second_chance:"Второй шанс", pause:"Пауза Зеффи" })[String(rawType || "")] || "Усилитель";
+}
+
+function caseActiveBoosterConflict(value, rawType) {
+  const type=String(rawType || "");
+  const group=caseBoosterGroupForType(type);
+  if (!group) return "";
+  const active=caseNormalizeActiveBoosters(value);
+  return CASE_BOOSTER_TYPES.find((candidate) => candidate !== type && caseBoosterGroupForType(candidate) === group && safeAdminNumber(active[candidate]) > 0) || "";
+}
+
 function caseParseBoosterExtras(value) {
   let source={};
   try { source=value && typeof value === "object" ? value : JSON.parse(String(value || "{}")); } catch {}
@@ -11996,13 +12023,24 @@ async function activateCaseBooster(request, env) {
       throw new ApiError(409, "Этот усилитель уже активен.");
     }
     if (safeAdminNumber(state.boosters[boosterType]) <= 0) throw new ApiError(409, "Такого усилителя нет в коллекции.");
+    const conflictType=caseActiveBoosterConflict(state.activeBoosters,boosterType);
+    if (conflictType) {
+      const group=caseBoosterGroupForType(boosterType);
+      throw new ApiError(409, `Сейчас уже активен «${caseBoosterTitle(conflictType)}». Одновременно можно использовать только один усилитель из группы «${caseBoosterGroupLabel(group)}».`, {
+        code:"BOOSTER_GROUP_CONFLICT",
+        group,
+        requestedType:boosterType,
+        activeType:conflictType,
+        activeRunsLeft:safeAdminNumber(state.activeBoosters[conflictType])
+      });
+    }
     state.boosters[boosterType] = safeAdminNumber(state.boosters[boosterType] - 1);
     state.activeBoosters[boosterType] = caseBoosterRunsForType(boosterType);
     state.activeBooster = caseLegacyActiveBooster(state.activeBoosters);
     await caseStateUpdateStatement(env, telegramId, state, Math.floor(Date.now() / 1000)).run();
     return jsonResponse(await buildCasePayload(env, telegramId, body.current || {}));
   } catch (error) {
-    if (error instanceof ApiError) return jsonResponse({ ok: false, error: error.message }, error.status);
+    if (error instanceof ApiError) return jsonResponse({ ok: false, error: error.message, ...(error.details ? { details:error.details } : {}) }, error.status);
     console.error("activateCaseBooster failed", error);
     return jsonResponse({ ok: false, error: "Не удалось активировать усилитель." }, 500);
   }
@@ -42611,7 +42649,7 @@ async function testProjectSandboxGameData(env, ctx) {
     const caseType=normalizeCaseType(payload?.caseType);if(!caseType)throw new ApiError(400,"Выберите тестовый кейс.");const result=await ownerPanelTestProjectAction(env,{...ctx,body:{action:"case_buy",caseType}});await reload();return response(testProjectSandboxCasePayload(state,snapshot,{purchase:{caseType,cost:result.result?.price||{}}}));
   }
   if(path==="/api/cases/activate"){
-    const type=CASE_BOOSTER_TYPES.includes(String(payload?.type||payload?.boosterType||""))?String(payload?.type||payload?.boosterType):"";if(!type)throw new ApiError(400,"Неизвестный усилитель.");if(Number(state.caseState?.boosters?.[type]||0)<1)throw new ApiError(409,"Усилителя нет в тестовом инвентаре.");const before=testProjectClone(state),active=caseNormalizeActiveBoosters(state.caseState?.activeBoosters,state.caseState?.activeBooster?.type,state.caseState?.activeBooster?.runsLeft);if(Number(active[type]||0)>0)throw new ApiError(409,"Этот усилитель уже активен.");state.caseState.boosters[type]-=1;active[type]=caseBoosterRunsForType(type);state.caseState.activeBoosters=active;state.caseState.activeBooster=caseLegacyActiveBooster(active);await testProjectSandboxSave(env,ownerId,state,snapshot,before,"game_booster_activate",`Игра · активирован ${type}`);await reload();return response(testProjectSandboxCasePayload(state,snapshot));
+    const type=CASE_BOOSTER_TYPES.includes(String(payload?.type||payload?.boosterType||""))?String(payload?.type||payload?.boosterType):"";if(!type)throw new ApiError(400,"Неизвестный усилитель.");if(Number(state.caseState?.boosters?.[type]||0)<1)throw new ApiError(409,"Усилителя нет в тестовом инвентаре.");const before=testProjectClone(state),active=caseNormalizeActiveBoosters(state.caseState?.activeBoosters,state.caseState?.activeBooster?.type,state.caseState?.activeBooster?.runsLeft);if(Number(active[type]||0)>0)throw new ApiError(409,"Этот усилитель уже активен.");const conflictType=caseActiveBoosterConflict(active,type);if(conflictType)throw new ApiError(409,`Сейчас уже активен «${caseBoosterTitle(conflictType)}». Одновременно можно использовать только один усилитель из группы «${caseBoosterGroupLabel(caseBoosterGroupForType(type))}».`,{code:"BOOSTER_GROUP_CONFLICT",group:caseBoosterGroupForType(type),requestedType:type,activeType:conflictType,activeRunsLeft:safeAdminNumber(active[conflictType])});state.caseState.boosters[type]-=1;active[type]=caseBoosterRunsForType(type);state.caseState.activeBoosters=active;state.caseState.activeBooster=caseLegacyActiveBooster(active);await testProjectSandboxSave(env,ownerId,state,snapshot,before,"game_booster_activate",`Игра · активирован ${type}`);await reload();return response(testProjectSandboxCasePayload(state,snapshot));
   }
   if(path==="/api/cases/consume-run"){
     const before=testProjectClone(state),active=caseNormalizeActiveBoosters(state.caseState?.activeBoosters,state.caseState?.activeBooster?.type,state.caseState?.activeBooster?.runsLeft),types=caseActiveBoosterTypes(active);if(types.length){for(const type of types)active[type]=Math.max(0,Number(active[type]||0)-1);state.caseState.activeBoosters=active;state.caseState.activeBooster=caseLegacyActiveBooster(active);await testProjectSandboxSave(env,ownerId,state,snapshot,before,"game_booster_consume","Игра · расход усилителей");await reload();}return response(testProjectSandboxCasePayload(state,snapshot));

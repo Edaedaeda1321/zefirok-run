@@ -8,6 +8,8 @@ const battlePassPath = path.join(root, 'battle-pass.html');
 const worker = fs.readFileSync(workerPath, 'utf8');
 const index = fs.readFileSync(indexPath, 'utf8');
 const battlePass = fs.readFileSync(battlePassPath, 'utf8');
+const playerUiPaths = ['index.html','battle-pass.html','rating.html','referrals.html','achievements.html','album.html','legal.html'];
+const playerUis = playerUiPaths.map((name) => [name, fs.readFileSync(path.join(root, name), 'utf8')]);
 
 let checks = 0;
 function assert(condition, message) {
@@ -199,6 +201,53 @@ assert(battlePass.includes('operationContractVersion:1,\n        targetLevel:tar
 assert(battlePass.includes('operationCode === "FEATURE_TEMPORARILY_DISABLED"'), 'battle-pass client does not show disabled-purchase state');
 assert(battlePass.includes('operationCode === "PRICE_CHANGED"'), 'battle-pass client does not require a new confirmation after price change');
 assert(battlePass.includes('activatePremiumTier(tier, expectedPrice)'), 'battle-pass confirmation does not pass the displayed quote');
+
+// Consumable boosters use two server-authoritative slots: one reward booster and
+// one run-helper booster. Same-group alternatives remain inspectable in the UI
+// so the player gets an explanation instead of a silent disabled control.
+assert(worker.includes('const CASE_UTILITY_BOOSTER_TYPES = Object.freeze(["shield", "second_chance", "pause"]);'), 'utility booster group catalog is missing');
+assert(worker.includes('function caseBoosterGroupForType(rawType)'), 'server booster group resolver is missing');
+assert(worker.includes('function caseActiveBoosterConflict(value, rawType)'), 'server booster group conflict resolver is missing');
+const boosterActivation = section(worker, 'async function activateCaseBooster(request, env)', '\nasync function consumeCaseBoosterRun');
+assert(boosterActivation.includes('const conflictType=caseActiveBoosterConflict(state.activeBoosters,boosterType);'), 'real booster activation does not enforce same-group exclusivity');
+assert(boosterActivation.includes('code:"BOOSTER_GROUP_CONFLICT"'), 'real booster conflict does not expose a stable error code');
+assert(worker.includes('if(path==="/api/cases/activate")'), 'test-project booster activation route is missing');
+assert(worker.includes('const conflictType=caseActiveBoosterConflict(active,type);if(conflictType)'), 'test-project booster activation does not mirror production group rules');
+assert(index.includes('const CASE_UTILITY_BOOSTER_TYPES = Object.freeze([&quot;shield&quot;, &quot;second_chance&quot;, &quot;pause&quot;]);'), 'client utility booster group catalog is missing');
+assert(index.includes('function activeCaseBoosterConflict(rawType, value = state.activeCaseBoosters)'), 'client booster conflict resolver is missing');
+assert(index.includes('data-booster-conflict='), 'same-group booster card is not tappable for conflict explanation');
+assert(index.includes('class=&quot;zpi-booster-conflict&quot;'), 'booster conflict popup is missing');
+assert(index.includes('Одновременно может быть активен только один усилитель из группы'), 'booster conflict popup does not explain the one-per-group rule');
+assert(index.includes('Один усилитель из каждой группы'), 'booster tutorial does not teach the two-slot rule');
+assert(index.includes('Открой «Мои покупки» → «Усилители».'), 'booster tutorial does not use the current My Purchases terminology');
+assert(index.includes('Мои покупки&lt;/strong&gt;'), 'player warehouse heading was not renamed to My Purchases');
+assert(index.includes('aria-label=&quot;Разделы «Моих покупок»&quot;'), 'My Purchases tab group still exposes legacy warehouse wording');
+assert(index.includes('&quot;finishStock&quot;:&quot;Открыть «Мои покупки»&quot;'), 'tutorial destination CTA still uses legacy warehouse wording');
+assert(!index.includes('Разные типы работают одновременно. Второй такой же тип нельзя активировать'), 'legacy unlimited cross-type booster rule is still present');
+assert(!index.includes('&quot;title&quot;:&quot;Склад&quot;'), 'tutorial catalog still presents a player-facing Warehouse title');
+for (const [name, source] of playerUis) {
+  const legacyWarehouseNoun = new RegExp('(^|[^\\p{L}])склад(?:а|е|ом|у|ы|ов)?(?=$|[^\\p{L}])', 'iu');
+  assert(!legacyWarehouseNoun.test(source), `${name}: player-facing legacy «Склад» terminology is still present`);
+}
+
+const boosterHelperSource = [
+  'const CASE_REWARD_BOOSTER_TYPES = Object.freeze(["points", "treats", "coffee"]);',
+  'const CASE_UTILITY_BOOSTER_TYPES = Object.freeze(["shield", "second_chance", "pause"]);',
+  'const CASE_BOOSTER_TYPES = Object.freeze([...CASE_REWARD_BOOSTER_TYPES, ...CASE_UTILITY_BOOSTER_TYPES]);',
+  'const CASE_BOOSTER_RUNS = Object.freeze({ points:2, treats:2, coffee:2, shield:1, second_chance:1, pause:1 });',
+  'function safeAdminNumber(value){ const number=Number(value); return Number.isFinite(number)?Math.max(0,Math.min(999999999,Math.floor(number))):0; }',
+  extractNamedFunction(worker, 'caseBoosterRunsForType'),
+  extractNamedFunction(worker, 'caseBoosterGroupForType'),
+  extractNamedFunction(worker, 'caseNormalizeActiveBoosters'),
+  extractNamedFunction(worker, 'caseActiveBoosterConflict'),
+  'return { caseBoosterGroupForType, caseActiveBoosterConflict };'
+].join('\n');
+const boosterHelpers = new Function(boosterHelperSource)();
+assert(boosterHelpers.caseBoosterGroupForType('coffee') === 'reward', 'coffee is not classified as a reward booster');
+assert(boosterHelpers.caseBoosterGroupForType('shield') === 'utility', 'shield is not classified as a run helper');
+assert(boosterHelpers.caseActiveBoosterConflict({coffee:2}, 'treats') === 'coffee', 'reward booster does not block another reward booster');
+assert(boosterHelpers.caseActiveBoosterConflict({shield:1}, 'pause') === 'shield', 'run helper does not block another run helper');
+assert(boosterHelpers.caseActiveBoosterConflict({coffee:2}, 'shield') === '', 'different booster groups incorrectly block each other');
 
 // FullScreen run HUD must surface reward x2 state without relying on the legacy
 // bottom pill, and the settled result must state how many boosted runs remain.
