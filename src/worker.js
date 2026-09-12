@@ -3826,7 +3826,22 @@ async function ownerPanelRestoreDailyStreak(env, ctx) {
 
 const SERVER_CRON_LEASE_SECONDS = 4 * 60;
 const SERVER_CRON_MAX_JOBS_PER_TICK = 4;
-const SERVER_ANALYTICS_RETENTION_SECONDS = 180 * 24 * 60 * 60;
+const OPERATIONAL_RETENTION_DAY_SECONDS = 24 * 60 * 60;
+const OPERATIONAL_RETENTION_QUALIFICATION_MS = DEFAULT_LEADERBOARD_MIN_RUN_SECONDS * 1000;
+const OPERATIONAL_RETENTION_POLICIES = Object.freeze({
+  gameRunSessions:Object.freeze({key:"game_run_sessions",detailDays:90,archiveKind:"daily_by_status_season",batchSize:1200}),
+  gameRunLiveProofs:Object.freeze({key:"game_run_live_proofs",detailDays:14,archiveKind:"daily",batchSize:3000}),
+  playerEconomyRunLedger:Object.freeze({key:"player_economy_run_ledger",detailDays:730,archiveKind:"daily_player_plus_compact_run_facts",batchSize:1200}),
+  adminPerformanceSamples:Object.freeze({key:"admin_performance_samples",detailDays:14,archiveKind:"hourly",batchSize:4000}),
+  adminPerformanceHourly:Object.freeze({key:"admin_performance_hourly_archive",detailDays:90,archiveKind:"daily",batchSize:2500}),
+  serverAnalyticsHourly:Object.freeze({key:"server_analytics_hourly",detailDays:180,archiveKind:"daily",batchSize:1500}),
+  contentAnalytics:Object.freeze({key:"content_analytics_events",detailDays:180,archiveKind:"daily_item_event",batchSize:2500}),
+  playerTimeline:Object.freeze({key:"player_timeline_events",detailDays:365,archiveKind:"daily_player_event",batchSize:2000}),
+  playerNotificationLog:Object.freeze({key:"player_notification_log",detailDays:30,archiveKind:"daily_category_sent",batchSize:4000}),
+  playerNotificationQueue:Object.freeze({key:"player_notification_queue",detailDays:90,archiveKind:"daily_category_terminal",batchSize:2500}),
+  staffNotificationQueue:Object.freeze({key:"leaderboard_staff_notifications",detailDays:90,archiveKind:"daily_terminal",batchSize:2000}),
+  rewardDelivery:Object.freeze({key:"reward_delivery_queue",detailDays:365,archiveKind:"compact_terminal_forever",batchSize:1000})
+});
 const SERVER_NOTIFICATION_LEASE_SECONDS = 2 * 60;
 const GIFT_INBOX_STALE_SECONDS = 12;
 const GIFT_INBOX_REWARD_LEASE_SECONDS = 12;
@@ -3972,6 +3987,177 @@ async function runServerCronSteps(label, steps) {
   }
   if (errors.length) throw new Error(errors.join(" | "));
   return results;
+}
+
+function operationalRetentionChanges(result) {
+  return Math.max(0, Number(result?.meta?.changes || 0));
+}
+
+async function writeOperationalRetentionState(env, policy, cutoffAt, processed = 0, errorText = "") {
+  const now=Math.floor(Date.now()/1000),count=Math.max(0,Math.floor(Number(processed)||0));
+  await env.DB.prepare(`INSERT INTO operational_retention_state(
+      policy_key,detail_days,archive_kind,cutoff_at,rows_archived,rows_deleted,last_run_at,last_error,updated_at
+    ) VALUES(?,?,?,?,?,?,?,?,?)
+    ON CONFLICT(policy_key) DO UPDATE SET
+      detail_days=excluded.detail_days,archive_kind=excluded.archive_kind,cutoff_at=excluded.cutoff_at,
+      rows_archived=operational_retention_state.rows_archived+excluded.rows_archived,
+      rows_deleted=operational_retention_state.rows_deleted+excluded.rows_deleted,
+      last_run_at=excluded.last_run_at,last_error=excluded.last_error,updated_at=excluded.updated_at`)
+    .bind(String(policy.key),Number(policy.detailDays),String(policy.archiveKind),cutoffAt,count,count,now,String(errorText||'').slice(0,500),now).run();
+}
+
+async function runOperationalRetentionPolicy(env, policy, handler) {
+  const cutoffAt=Math.floor(Date.now()/1000)-Number(policy.detailDays)*OPERATIONAL_RETENTION_DAY_SECONDS;
+  try {
+    const processed=Math.max(0,Math.floor(Number(await handler(cutoffAt,Number(policy.batchSize)))||0));
+    await writeOperationalRetentionState(env,policy,cutoffAt,processed,'');
+    return {policy:String(policy.key),cutoffAt,processed};
+  } catch (error) {
+    const message=String(error?.message||error);
+    try { await writeOperationalRetentionState(env,policy,cutoffAt,0,message); } catch {}
+    if(message.startsWith('ledger retention paused:'))return {policy:String(policy.key),cutoffAt,processed:0,paused:true,error:message};
+    throw error;
+  }
+}
+
+async function retainGameRunSessions(env, cutoffAt, batchSize) {
+  const selected=`SELECT run_id,updated_at,status,season_id,duration_ms,score,run_treats,run_coffee,economy_points,economy_treats,economy_coffee,profile_xp,new_record,accepted_rating
+    FROM game_run_sessions WHERE status IN ('finished','expired','superseded') AND updated_at<? ORDER BY updated_at,run_id LIMIT ?`;
+  const result=await env.DB.batch([
+    env.DB.prepare(`INSERT INTO game_run_session_daily_archive(day_at,status,season_id,runs,duration_ms,score,run_treats,run_coffee,economy_points,economy_treats,economy_coffee,profile_xp,new_records,accepted_rating)
+      SELECT CAST(updated_at/86400 AS INTEGER)*86400,status,COALESCE(season_id,''),COUNT(*),COALESCE(SUM(duration_ms),0),COALESCE(SUM(score),0),COALESCE(SUM(run_treats),0),COALESCE(SUM(run_coffee),0),COALESCE(SUM(economy_points),0),COALESCE(SUM(economy_treats),0),COALESCE(SUM(economy_coffee),0),COALESCE(SUM(profile_xp),0),COALESCE(SUM(new_record),0),COALESCE(SUM(accepted_rating),0)
+      FROM (${selected}) GROUP BY CAST(updated_at/86400 AS INTEGER)*86400,status,COALESCE(season_id,'')
+      ON CONFLICT(day_at,status,season_id) DO UPDATE SET runs=game_run_session_daily_archive.runs+excluded.runs,duration_ms=game_run_session_daily_archive.duration_ms+excluded.duration_ms,score=game_run_session_daily_archive.score+excluded.score,run_treats=game_run_session_daily_archive.run_treats+excluded.run_treats,run_coffee=game_run_session_daily_archive.run_coffee+excluded.run_coffee,economy_points=game_run_session_daily_archive.economy_points+excluded.economy_points,economy_treats=game_run_session_daily_archive.economy_treats+excluded.economy_treats,economy_coffee=game_run_session_daily_archive.economy_coffee+excluded.economy_coffee,profile_xp=game_run_session_daily_archive.profile_xp+excluded.profile_xp,new_records=game_run_session_daily_archive.new_records+excluded.new_records,accepted_rating=game_run_session_daily_archive.accepted_rating+excluded.accepted_rating`).bind(cutoffAt,batchSize),
+    env.DB.prepare(`DELETE FROM game_run_sessions WHERE run_id IN (SELECT run_id FROM game_run_sessions WHERE status IN ('finished','expired','superseded') AND updated_at<? ORDER BY updated_at,run_id LIMIT ?)` ).bind(cutoffAt,batchSize)
+  ]);
+  return operationalRetentionChanges(result[1]);
+}
+
+async function retainGameRunLiveProofs(env, cutoffAt, batchSize) {
+  const selected=`SELECT run_id,updated_at,seq,duration_ms,score,run_treats,run_coffee FROM game_run_live_proofs WHERE updated_at<? ORDER BY updated_at,run_id LIMIT ?`;
+  const result=await env.DB.batch([
+    env.DB.prepare(`INSERT INTO game_run_proof_daily_archive(day_at,proofs,seq_total,seq_max,duration_ms,score,run_treats,run_coffee)
+      SELECT CAST(updated_at/86400 AS INTEGER)*86400,COUNT(*),COALESCE(SUM(seq),0),COALESCE(MAX(seq),0),COALESCE(SUM(duration_ms),0),COALESCE(SUM(score),0),COALESCE(SUM(run_treats),0),COALESCE(SUM(run_coffee),0) FROM (${selected}) GROUP BY CAST(updated_at/86400 AS INTEGER)*86400
+      ON CONFLICT(day_at) DO UPDATE SET proofs=game_run_proof_daily_archive.proofs+excluded.proofs,seq_total=game_run_proof_daily_archive.seq_total+excluded.seq_total,seq_max=MAX(game_run_proof_daily_archive.seq_max,excluded.seq_max),duration_ms=game_run_proof_daily_archive.duration_ms+excluded.duration_ms,score=game_run_proof_daily_archive.score+excluded.score,run_treats=game_run_proof_daily_archive.run_treats+excluded.run_treats,run_coffee=game_run_proof_daily_archive.run_coffee+excluded.run_coffee`).bind(cutoffAt,batchSize),
+    env.DB.prepare(`DELETE FROM game_run_live_proofs WHERE run_id IN (SELECT run_id FROM game_run_live_proofs WHERE updated_at<? ORDER BY updated_at,run_id LIMIT ?)` ).bind(cutoffAt,batchSize)
+  ]);
+  return operationalRetentionChanges(result[1]);
+}
+
+async function retainPlayerEconomyRunLedger(env, cutoffAt, batchSize) {
+  const configuredMinMs=positiveInt(env.LEADERBOARD_MIN_RUN_SECONDS,DEFAULT_LEADERBOARD_MIN_RUN_SECONDS)*1000;
+  if(configuredMinMs!==OPERATIONAL_RETENTION_QUALIFICATION_MS)throw new Error(`ledger retention paused: LEADERBOARD_MIN_RUN_SECONDS=${configuredMinMs/1000}; expected ${OPERATIONAL_RETENTION_QUALIFICATION_MS/1000}`);
+  const selected=`SELECT run_id,telegram_id,points,treats,coffee,profile_xp,raw_score,raw_treats,raw_coffee,duration_ms,new_record,accepted_rating,created_at FROM player_economy_run_ledger WHERE created_at<? ORDER BY created_at,run_id LIMIT ?`;
+  const result=await env.DB.batch([
+    env.DB.prepare(`INSERT OR IGNORE INTO player_economy_run_fact_archive(run_id,telegram_id,qualification_ms,qualified,raw_score,raw_treats,raw_coffee,created_at) SELECT run_id,telegram_id,?,CASE WHEN duration_ms>=? THEN 1 ELSE 0 END,raw_score,raw_treats,raw_coffee,created_at FROM (${selected})`).bind(OPERATIONAL_RETENTION_QUALIFICATION_MS,OPERATIONAL_RETENTION_QUALIFICATION_MS,cutoffAt,batchSize),
+    env.DB.prepare(`INSERT INTO player_economy_run_daily_archive(day_at,telegram_id,qualification_ms,runs,qualifying_runs,points,treats,coffee,profile_xp,raw_score,raw_treats,raw_coffee,qualifying_raw_score,qualifying_raw_treats,qualifying_raw_coffee,duration_ms,new_records,accepted_rating)
+      SELECT CAST(created_at/86400 AS INTEGER)*86400,telegram_id,?,COUNT(*),SUM(CASE WHEN duration_ms>=? THEN 1 ELSE 0 END),COALESCE(SUM(points),0),COALESCE(SUM(treats),0),COALESCE(SUM(coffee),0),COALESCE(SUM(profile_xp),0),COALESCE(SUM(raw_score),0),COALESCE(SUM(raw_treats),0),COALESCE(SUM(raw_coffee),0),COALESCE(SUM(CASE WHEN duration_ms>=? THEN raw_score ELSE 0 END),0),COALESCE(SUM(CASE WHEN duration_ms>=? THEN raw_treats ELSE 0 END),0),COALESCE(SUM(CASE WHEN duration_ms>=? THEN raw_coffee ELSE 0 END),0),COALESCE(SUM(duration_ms),0),COALESCE(SUM(new_record),0),COALESCE(SUM(accepted_rating),0) FROM (${selected}) GROUP BY CAST(created_at/86400 AS INTEGER)*86400,telegram_id
+      ON CONFLICT(day_at,telegram_id) DO UPDATE SET runs=player_economy_run_daily_archive.runs+excluded.runs,qualifying_runs=player_economy_run_daily_archive.qualifying_runs+excluded.qualifying_runs,points=player_economy_run_daily_archive.points+excluded.points,treats=player_economy_run_daily_archive.treats+excluded.treats,coffee=player_economy_run_daily_archive.coffee+excluded.coffee,profile_xp=player_economy_run_daily_archive.profile_xp+excluded.profile_xp,raw_score=player_economy_run_daily_archive.raw_score+excluded.raw_score,raw_treats=player_economy_run_daily_archive.raw_treats+excluded.raw_treats,raw_coffee=player_economy_run_daily_archive.raw_coffee+excluded.raw_coffee,qualifying_raw_score=player_economy_run_daily_archive.qualifying_raw_score+excluded.qualifying_raw_score,qualifying_raw_treats=player_economy_run_daily_archive.qualifying_raw_treats+excluded.qualifying_raw_treats,qualifying_raw_coffee=player_economy_run_daily_archive.qualifying_raw_coffee+excluded.qualifying_raw_coffee,duration_ms=player_economy_run_daily_archive.duration_ms+excluded.duration_ms,new_records=player_economy_run_daily_archive.new_records+excluded.new_records,accepted_rating=player_economy_run_daily_archive.accepted_rating+excluded.accepted_rating`).bind(OPERATIONAL_RETENTION_QUALIFICATION_MS,OPERATIONAL_RETENTION_QUALIFICATION_MS,OPERATIONAL_RETENTION_QUALIFICATION_MS,OPERATIONAL_RETENTION_QUALIFICATION_MS,OPERATIONAL_RETENTION_QUALIFICATION_MS,cutoffAt,batchSize),
+    env.DB.prepare(`DELETE FROM player_economy_run_ledger WHERE run_id IN (SELECT run_id FROM player_economy_run_ledger WHERE created_at<? ORDER BY created_at,run_id LIMIT ?)` ).bind(cutoffAt,batchSize)
+  ]);
+  return operationalRetentionChanges(result[2]);
+}
+
+async function retainAdminPerformanceSamples(env, cutoffAt, batchSize) {
+  const selected=`SELECT id,area,duration_ms,success,created_at FROM admin_performance_samples WHERE created_at<? ORDER BY created_at,id LIMIT ?`;
+  const result=await env.DB.batch([
+    env.DB.prepare(`INSERT INTO admin_performance_hourly_archive(bucket_at,area,samples,total_duration_ms,max_duration_ms,errors) SELECT CAST(created_at/3600 AS INTEGER)*3600,area,COUNT(*),COALESCE(SUM(duration_ms),0),COALESCE(MAX(duration_ms),0),SUM(CASE WHEN success=1 THEN 0 ELSE 1 END) FROM (${selected}) GROUP BY CAST(created_at/3600 AS INTEGER)*3600,area ON CONFLICT(bucket_at,area) DO UPDATE SET samples=admin_performance_hourly_archive.samples+excluded.samples,total_duration_ms=admin_performance_hourly_archive.total_duration_ms+excluded.total_duration_ms,max_duration_ms=MAX(admin_performance_hourly_archive.max_duration_ms,excluded.max_duration_ms),errors=admin_performance_hourly_archive.errors+excluded.errors`).bind(cutoffAt,batchSize),
+    env.DB.prepare(`DELETE FROM admin_performance_samples WHERE id IN (SELECT id FROM admin_performance_samples WHERE created_at<? ORDER BY created_at,id LIMIT ?)` ).bind(cutoffAt,batchSize)
+  ]);
+  return operationalRetentionChanges(result[1]);
+}
+
+async function retainAdminPerformanceHourly(env, cutoffAt, batchSize) {
+  const selected=`SELECT bucket_at,area,samples,total_duration_ms,max_duration_ms,errors FROM admin_performance_hourly_archive WHERE bucket_at<? ORDER BY bucket_at,area LIMIT ?`;
+  const result=await env.DB.batch([
+    env.DB.prepare(`INSERT INTO admin_performance_daily_archive(day_at,area,samples,total_duration_ms,max_duration_ms,errors) SELECT CAST(bucket_at/86400 AS INTEGER)*86400,area,SUM(samples),SUM(total_duration_ms),MAX(max_duration_ms),SUM(errors) FROM (${selected}) GROUP BY CAST(bucket_at/86400 AS INTEGER)*86400,area ON CONFLICT(day_at,area) DO UPDATE SET samples=admin_performance_daily_archive.samples+excluded.samples,total_duration_ms=admin_performance_daily_archive.total_duration_ms+excluded.total_duration_ms,max_duration_ms=MAX(admin_performance_daily_archive.max_duration_ms,excluded.max_duration_ms),errors=admin_performance_daily_archive.errors+excluded.errors`).bind(cutoffAt,batchSize),
+    env.DB.prepare(`DELETE FROM admin_performance_hourly_archive WHERE (bucket_at,area) IN (SELECT bucket_at,area FROM admin_performance_hourly_archive WHERE bucket_at<? ORDER BY bucket_at,area LIMIT ?)` ).bind(cutoffAt,batchSize)
+  ]);
+  return operationalRetentionChanges(result[1]);
+}
+
+async function retainServerAnalyticsHourly(env, cutoffAt, batchSize) {
+  const selected=`SELECT * FROM server_analytics_hourly WHERE bucket_at<? ORDER BY bucket_at LIMIT ?`;
+  const result=await env.DB.batch([
+    env.DB.prepare(`INSERT INTO server_analytics_daily_archive(day_at,peak_active_players,active_player_hours,new_players,runs_total,runs_accepted,cases_opened,shop_operations,rewards_delivered,rewards_failed,staff_notifications_sent,staff_notifications_failed,player_notifications_sent,player_notifications_failed,cron_runs,cron_failures,cron_duration_ms) SELECT CAST(bucket_at/86400 AS INTEGER)*86400,MAX(active_players),SUM(active_players),SUM(new_players),SUM(runs_total),SUM(runs_accepted),SUM(cases_opened),SUM(shop_operations),SUM(rewards_delivered),SUM(rewards_failed),SUM(staff_notifications_sent),SUM(staff_notifications_failed),SUM(player_notifications_sent),SUM(player_notifications_failed),SUM(cron_runs),SUM(cron_failures),SUM(cron_duration_ms) FROM (${selected}) GROUP BY CAST(bucket_at/86400 AS INTEGER)*86400 ON CONFLICT(day_at) DO UPDATE SET peak_active_players=MAX(server_analytics_daily_archive.peak_active_players,excluded.peak_active_players),active_player_hours=server_analytics_daily_archive.active_player_hours+excluded.active_player_hours,new_players=server_analytics_daily_archive.new_players+excluded.new_players,runs_total=server_analytics_daily_archive.runs_total+excluded.runs_total,runs_accepted=server_analytics_daily_archive.runs_accepted+excluded.runs_accepted,cases_opened=server_analytics_daily_archive.cases_opened+excluded.cases_opened,shop_operations=server_analytics_daily_archive.shop_operations+excluded.shop_operations,rewards_delivered=server_analytics_daily_archive.rewards_delivered+excluded.rewards_delivered,rewards_failed=server_analytics_daily_archive.rewards_failed+excluded.rewards_failed,staff_notifications_sent=server_analytics_daily_archive.staff_notifications_sent+excluded.staff_notifications_sent,staff_notifications_failed=server_analytics_daily_archive.staff_notifications_failed+excluded.staff_notifications_failed,player_notifications_sent=server_analytics_daily_archive.player_notifications_sent+excluded.player_notifications_sent,player_notifications_failed=server_analytics_daily_archive.player_notifications_failed+excluded.player_notifications_failed,cron_runs=server_analytics_daily_archive.cron_runs+excluded.cron_runs,cron_failures=server_analytics_daily_archive.cron_failures+excluded.cron_failures,cron_duration_ms=server_analytics_daily_archive.cron_duration_ms+excluded.cron_duration_ms`).bind(cutoffAt,batchSize),
+    env.DB.prepare(`DELETE FROM server_analytics_hourly WHERE bucket_at IN (SELECT bucket_at FROM server_analytics_hourly WHERE bucket_at<? ORDER BY bucket_at LIMIT ?)` ).bind(cutoffAt,batchSize)
+  ]);
+  return operationalRetentionChanges(result[1]);
+}
+
+async function retainContentAnalytics(env, cutoffAt, batchSize) {
+  const selected=`SELECT id,item_kind,item_id,event_type,source_type,created_at FROM content_analytics_events WHERE created_at<? ORDER BY created_at,id LIMIT ?`;
+  const result=await env.DB.batch([
+    env.DB.prepare(`INSERT INTO content_analytics_daily_archive(day_at,item_kind,item_id,event_type,source_type,events) SELECT CAST(created_at/86400 AS INTEGER)*86400,item_kind,item_id,event_type,COALESCE(source_type,''),COUNT(*) FROM (${selected}) GROUP BY CAST(created_at/86400 AS INTEGER)*86400,item_kind,item_id,event_type,COALESCE(source_type,'') ON CONFLICT(day_at,item_kind,item_id,event_type,source_type) DO UPDATE SET events=content_analytics_daily_archive.events+excluded.events`).bind(cutoffAt,batchSize),
+    env.DB.prepare(`DELETE FROM content_analytics_events WHERE id IN (SELECT id FROM content_analytics_events WHERE created_at<? ORDER BY created_at,id LIMIT ?)` ).bind(cutoffAt,batchSize)
+  ]);
+  return operationalRetentionChanges(result[1]);
+}
+
+async function retainPlayerTimeline(env, cutoffAt, batchSize) {
+  const selected=`SELECT id,telegram_id,event_type,created_at FROM player_timeline_events WHERE created_at<? ORDER BY created_at,id LIMIT ?`;
+  const result=await env.DB.batch([
+    env.DB.prepare(`INSERT INTO player_timeline_daily_archive(day_at,telegram_id,event_type,events) SELECT CAST(created_at/86400 AS INTEGER)*86400,telegram_id,event_type,COUNT(*) FROM (${selected}) GROUP BY CAST(created_at/86400 AS INTEGER)*86400,telegram_id,event_type ON CONFLICT(day_at,telegram_id,event_type) DO UPDATE SET events=player_timeline_daily_archive.events+excluded.events`).bind(cutoffAt,batchSize),
+    env.DB.prepare(`DELETE FROM player_timeline_events WHERE id IN (SELECT id FROM player_timeline_events WHERE created_at<? ORDER BY created_at,id LIMIT ?)` ).bind(cutoffAt,batchSize)
+  ]);
+  return operationalRetentionChanges(result[1]);
+}
+
+async function retainPlayerNotificationLog(env, cutoffAt, batchSize) {
+  const selected=`SELECT id,category,sent_at FROM player_notification_log WHERE sent_at<? ORDER BY sent_at,id LIMIT ?`;
+  const result=await env.DB.batch([
+    env.DB.prepare(`INSERT INTO notification_delivery_daily_archive(day_at,channel,category,status,deliveries,attempts,errors) SELECT CAST(sent_at/86400 AS INTEGER)*86400,'player_log',COALESCE(category,''),'sent',COUNT(*),0,0 FROM (${selected}) GROUP BY CAST(sent_at/86400 AS INTEGER)*86400,COALESCE(category,'') ON CONFLICT(day_at,channel,category,status) DO UPDATE SET deliveries=notification_delivery_daily_archive.deliveries+excluded.deliveries`).bind(cutoffAt,batchSize),
+    env.DB.prepare(`DELETE FROM player_notification_log WHERE id IN (SELECT id FROM player_notification_log WHERE sent_at<? ORDER BY sent_at,id LIMIT ?)` ).bind(cutoffAt,batchSize)
+  ]);
+  return operationalRetentionChanges(result[1]);
+}
+
+async function retainPlayerNotificationQueue(env, cutoffAt, batchSize) {
+  const terminal=`(status IN ('sent','cancelled') OR (status='failed' AND attempts>=5)) AND updated_at<?`;
+  const selected=`SELECT id,category,status,attempts,updated_at FROM player_notification_queue WHERE ${terminal} ORDER BY updated_at,id LIMIT ?`;
+  const result=await env.DB.batch([
+    env.DB.prepare(`INSERT INTO notification_delivery_daily_archive(day_at,channel,category,status,deliveries,attempts,errors) SELECT CAST(updated_at/86400 AS INTEGER)*86400,'player_queue',COALESCE(category,''),status,COUNT(*),COALESCE(SUM(attempts),0),SUM(CASE WHEN status='failed' THEN 1 ELSE 0 END) FROM (${selected}) GROUP BY CAST(updated_at/86400 AS INTEGER)*86400,COALESCE(category,''),status ON CONFLICT(day_at,channel,category,status) DO UPDATE SET deliveries=notification_delivery_daily_archive.deliveries+excluded.deliveries,attempts=notification_delivery_daily_archive.attempts+excluded.attempts,errors=notification_delivery_daily_archive.errors+excluded.errors`).bind(cutoffAt,batchSize),
+    env.DB.prepare(`DELETE FROM player_notification_queue WHERE id IN (SELECT id FROM player_notification_queue WHERE ${terminal} ORDER BY updated_at,id LIMIT ?)` ).bind(cutoffAt,batchSize)
+  ]);
+  return operationalRetentionChanges(result[1]);
+}
+
+async function retainStaffNotificationQueue(env, cutoffAt, batchSize) {
+  const terminal=`(status='sent' OR (status='failed' AND attempts>=5)) AND updated_at<?`;
+  const selected=`SELECT id,status,attempts,updated_at FROM leaderboard_staff_notifications WHERE ${terminal} ORDER BY updated_at,id LIMIT ?`;
+  const result=await env.DB.batch([
+    env.DB.prepare(`INSERT INTO notification_delivery_daily_archive(day_at,channel,category,status,deliveries,attempts,errors) SELECT CAST(updated_at/86400 AS INTEGER)*86400,'staff_queue','leaderboard',status,COUNT(*),COALESCE(SUM(attempts),0),SUM(CASE WHEN status='failed' THEN 1 ELSE 0 END) FROM (${selected}) GROUP BY CAST(updated_at/86400 AS INTEGER)*86400,status ON CONFLICT(day_at,channel,category,status) DO UPDATE SET deliveries=notification_delivery_daily_archive.deliveries+excluded.deliveries,attempts=notification_delivery_daily_archive.attempts+excluded.attempts,errors=notification_delivery_daily_archive.errors+excluded.errors`).bind(cutoffAt,batchSize),
+    env.DB.prepare(`DELETE FROM leaderboard_staff_notifications WHERE id IN (SELECT id FROM leaderboard_staff_notifications WHERE ${terminal} ORDER BY updated_at,id LIMIT ?)` ).bind(cutoffAt,batchSize)
+  ]);
+  return operationalRetentionChanges(result[1]);
+}
+
+async function retainRewardDeliveryHistory(env, cutoffAt, batchSize) {
+  const terminal=`(status IN ('delivered','claimed','cancelled') OR (status='failed' AND attempts>=5)) AND updated_at<?`;
+  const result=await env.DB.batch([
+    env.DB.prepare(`INSERT OR IGNORE INTO reward_delivery_archive(operation_id,queue_id,telegram_id,source_type,source_id,reward_kind,reward_id,amount,final_status,created_at,completed_at) SELECT CASE WHEN TRIM(COALESCE(operation_id,''))<>'' THEN operation_id ELSE 'rq:legacy:'||id END,id,telegram_id,source_type,COALESCE(source_id,''),reward_kind,COALESCE(reward_id,''),amount,status,created_at,MAX(updated_at,delivered_at,claimed_at) FROM reward_delivery_queue WHERE ${terminal} ORDER BY updated_at,id LIMIT ?`).bind(cutoffAt,batchSize),
+    env.DB.prepare(`DELETE FROM reward_delivery_effects WHERE queue_id IN (SELECT id FROM reward_delivery_queue WHERE ${terminal} ORDER BY updated_at,id LIMIT ?)` ).bind(cutoffAt,batchSize),
+    env.DB.prepare(`DELETE FROM reward_delivery_queue WHERE id IN (SELECT id FROM reward_delivery_queue WHERE ${terminal} ORDER BY updated_at,id LIMIT ?)` ).bind(cutoffAt,batchSize)
+  ]);
+  return operationalRetentionChanges(result[2]);
+}
+
+async function processOperationalRetention(env) {
+  const p=OPERATIONAL_RETENTION_POLICIES;
+  return runServerCronSteps('operational-retention',[
+    [p.gameRunSessions.key,()=>runOperationalRetentionPolicy(env,p.gameRunSessions,(cutoff,batch)=>retainGameRunSessions(env,cutoff,batch))],
+    [p.gameRunLiveProofs.key,()=>runOperationalRetentionPolicy(env,p.gameRunLiveProofs,(cutoff,batch)=>retainGameRunLiveProofs(env,cutoff,batch))],
+    [p.playerEconomyRunLedger.key,()=>runOperationalRetentionPolicy(env,p.playerEconomyRunLedger,(cutoff,batch)=>retainPlayerEconomyRunLedger(env,cutoff,batch))],
+    [p.adminPerformanceSamples.key,()=>runOperationalRetentionPolicy(env,p.adminPerformanceSamples,(cutoff,batch)=>retainAdminPerformanceSamples(env,cutoff,batch))],
+    [p.adminPerformanceHourly.key,()=>runOperationalRetentionPolicy(env,p.adminPerformanceHourly,(cutoff,batch)=>retainAdminPerformanceHourly(env,cutoff,batch))],
+    [p.serverAnalyticsHourly.key,()=>runOperationalRetentionPolicy(env,p.serverAnalyticsHourly,(cutoff,batch)=>retainServerAnalyticsHourly(env,cutoff,batch))],
+    [p.contentAnalytics.key,()=>runOperationalRetentionPolicy(env,p.contentAnalytics,(cutoff,batch)=>retainContentAnalytics(env,cutoff,batch))],
+    [p.playerTimeline.key,()=>runOperationalRetentionPolicy(env,p.playerTimeline,(cutoff,batch)=>retainPlayerTimeline(env,cutoff,batch))],
+    [p.playerNotificationLog.key,()=>runOperationalRetentionPolicy(env,p.playerNotificationLog,(cutoff,batch)=>retainPlayerNotificationLog(env,cutoff,batch))],
+    [p.playerNotificationQueue.key,()=>runOperationalRetentionPolicy(env,p.playerNotificationQueue,(cutoff,batch)=>retainPlayerNotificationQueue(env,cutoff,batch))],
+    [p.staffNotificationQueue.key,()=>runOperationalRetentionPolicy(env,p.staffNotificationQueue,(cutoff,batch)=>retainStaffNotificationQueue(env,cutoff,batch))],
+    [p.rewardDelivery.key,()=>runOperationalRetentionPolicy(env,p.rewardDelivery,(cutoff,batch)=>retainRewardDeliveryHistory(env,cutoff,batch))]
+  ]);
 }
 
 let seasonEndReminderSchemaPromise=null;
@@ -4205,7 +4391,8 @@ async function processHourlyServerMaintenance(env) {
     ["stockForecast", () => processV67StockForecastAlerts(env)],
     ["smartAlerts", () => scanV77SmartAlerts(env)],
     ["legacyPlayerBackfill", () => backfillLegacyPlayerMigrations(env, 40)],
-    ["analytics", () => collectServerAnalyticsHourly(env)]
+    ["analytics", () => collectServerAnalyticsHourly(env)],
+    ["retention", () => processOperationalRetention(env)]
   ]);
 }
 
@@ -4217,12 +4404,7 @@ async function processDailyServerCleanup(env) {
     ["seasonPass", () => cleanupExpiredSeasonPassSeasons(env)],
     ["history", async () => {
       await env.DB.batch([
-        env.DB.prepare(`DELETE FROM admin_performance_samples WHERE created_at<?`).bind(now - 7 * V67_DAY),
-        env.DB.prepare(`DELETE FROM stock_forecast_snapshots WHERE created_at<?`).bind(now - 30 * V67_DAY),
-        env.DB.prepare(`DELETE FROM player_notification_log WHERE sent_at<?`).bind(now - 30 * V67_DAY),
-        env.DB.prepare(`DELETE FROM leaderboard_staff_notifications WHERE status='sent' AND sent_at>0 AND sent_at<?`).bind(now - 30 * V67_DAY),
-        env.DB.prepare(`DELETE FROM player_notification_queue WHERE status='sent' AND updated_at<?`).bind(now - 30 * V67_DAY),
-        env.DB.prepare(`DELETE FROM server_analytics_hourly WHERE bucket_at<?`).bind(now - SERVER_ANALYTICS_RETENTION_SECONDS)
+        env.DB.prepare(`DELETE FROM stock_forecast_snapshots WHERE created_at<?`).bind(now - 30 * V67_DAY)
       ]);
     }]
   ]);
@@ -6638,9 +6820,9 @@ function achievementUnlockCandidate(definition, fact, now = Math.floor(Date.now(
 const ACHIEVEMENT_RUN_SOURCES = new Set(["runs","totalScore","bestScore","runZefir","runCoffee","level"]);
 
 async function achievementRunStatsRow(env, telegramId, minRunMs) {
-  const playerId=String(telegramId||"");
-  return env.DB.prepare(`SELECT COUNT(*) AS count,COALESCE(SUM(score),0) AS total_score,COALESCE(SUM(run_zefir),0) AS run_zefir,COALESCE(SUM(run_coffee),0) AS run_coffee FROM (SELECT run_id,MAX(score) AS score,MAX(run_zefir) AS run_zefir,MAX(run_coffee) AS run_coffee FROM (SELECT run_id,raw_score AS score,raw_treats AS run_zefir,raw_coffee AS run_coffee FROM player_economy_run_ledger WHERE telegram_id=? AND duration_ms>=? UNION ALL SELECT run_id,score,0,0 FROM leaderboard_runs WHERE telegram_id=? AND accepted=1) GROUP BY run_id)`)
-    .bind(playerId,Math.max(0,Number(minRunMs)||0),playerId).first();
+  const playerId=String(telegramId||""),qualificationMs=Math.max(0,Number(minRunMs)||0);
+  return env.DB.prepare(`SELECT COUNT(*) AS count,COALESCE(SUM(score),0) AS total_score,COALESCE(SUM(run_zefir),0) AS run_zefir,COALESCE(SUM(run_coffee),0) AS run_coffee FROM (SELECT run_id,MAX(score) AS score,MAX(run_zefir) AS run_zefir,MAX(run_coffee) AS run_coffee FROM (SELECT run_id,raw_score AS score,raw_treats AS run_zefir,raw_coffee AS run_coffee FROM player_economy_run_ledger WHERE telegram_id=? AND duration_ms>=? UNION ALL SELECT run_id,raw_score AS score,raw_treats AS run_zefir,raw_coffee AS run_coffee FROM player_economy_run_fact_archive WHERE telegram_id=? AND qualification_ms=? AND qualified=1 UNION ALL SELECT run_id,score,0,0 FROM leaderboard_runs WHERE telegram_id=? AND accepted=1) GROUP BY run_id)`)
+    .bind(playerId,qualificationMs,playerId,qualificationMs,playerId).first();
 }
 
 async function prepareRunAchievementUnlockContext(env, telegramId, minRunMs) {
@@ -25832,9 +26014,12 @@ async function enqueueRewardDelivery(env, telegramId, sourceType, sourceId, rewa
   if (!reward || reward.kind === "none") return 0;
   const playerId=String(telegramId||"").trim(),type=String(sourceType||"").trim(),source=String(sourceId||"").trim();
   const operationId=rewardQueueOperationId(playerId,type,source,reward);
+  const archived=await env.DB.prepare(`SELECT 1 AS archived FROM reward_delivery_archive WHERE operation_id=? LIMIT 1`).bind(operationId).first().catch((error)=>{if(isMissingRuntimeDatabaseSchemaError(error))return null;throw error;});
+  if(archived)return 0;
   const now = Math.floor(Date.now() / 1000);
   const result = await env.DB.prepare(`INSERT OR IGNORE INTO reward_delivery_queue (operation_id,telegram_id,source_type,source_id,reward_kind,reward_id,amount,reason,payload_json,status,attempts,last_error,available_at,created_at,updated_at,notify_after,report_chat_id,lease_token,lease_until) VALUES (?,?,?,?,?,?,?,?, '{}','pending',0,'',?,?,?, ?,?,'',0)`)
     .bind(operationId,playerId,type,source,String(reward.kind),String(reward.id || ""),Math.max(1, Number(reward.amount || 1)),String(reason || "").slice(0, 300),now,now,now,now + 900,String(reportChatId || "")).run();
+  if(Number(result.meta?.changes||0)<1)return 0;
   return Number(result.meta?.last_row_id || 0);
 }
 
@@ -36489,7 +36674,7 @@ ${escapeHtml(r.details)}
 
 ${lines.join("\n\n")||"🟢 Значимых отклонений не обнаружено."}`,{inline_keyboard:[[{text:"🔄 Проверить",callback_data:"v77_alerts"}],[{text:"⬅️ Центр",callback_data:"v77_home"}]]});}
 
-async function processV77Cron(env){await ensureV77Schema(env);await processV77NotificationQueue(env,40);const now=Math.floor(Date.now()/1000);try{await env.DB.prepare(`UPDATE dangerous_action_approvals SET status='expired',updated_at=? WHERE status='pending' AND expires_at<=?`).bind(now,now).run();}catch(error){console.error('dangerous approval expiry cleanup failed',error);}const state=await getSystemState(env,"v77:alerts:last");if(!state||now-Number(state.value||0)>=3600){await scanV77SmartAlerts(env);await setSystemState(env,"v77:alerts:last",String(now));}await env.DB.prepare(`DELETE FROM player_notification_log WHERE sent_at<?`).bind(now-30*V67_DAY).run();}
+async function processV77Cron(env){await ensureV77Schema(env);await processV77NotificationQueue(env,40);const now=Math.floor(Date.now()/1000);try{await env.DB.prepare(`UPDATE dangerous_action_approvals SET status='expired',updated_at=? WHERE status='pending' AND expires_at<=?`).bind(now,now).run();}catch(error){console.error('dangerous approval expiry cleanup failed',error);}const state=await getSystemState(env,"v77:alerts:last");if(!state||now-Number(state.value||0)>=3600){await scanV77SmartAlerts(env);await setSystemState(env,"v77:alerts:last",String(now));}}
 
 async function handleV77Callback(query,env){const data=String(query.data||"");const chatId=query.message?.chat?.id;if(!chatId)return false;
   if(data==="v77_home"){await answerCallback(env,query.id,"Центр обновлён.");await showV77OperationsHub(chatId,query.from,env);return true;}
@@ -46603,7 +46788,7 @@ async function ownerPanelDeleteStaff(env, ctx) {
 async function ownerPanelSystem(env, ctx) {
   const maintenance=await getMaintenanceSettings(env);const audit=await ownerPanelRecentAudit(env,40);
   await ensureLegacyMigrationAuditSchema(env);
-  const [queue,profiles,ratings,passes,newsCount,pollsActive,resetsCount,legacyMigrations]=await Promise.all([
+  const [queue,profiles,ratings,passes,newsCount,pollsActive,resetsCount,legacyMigrations,retention]=await Promise.all([
     env.DB.prepare(`SELECT SUM(CASE WHEN status='pending' THEN 1 ELSE 0 END) AS pending,SUM(CASE WHEN status='failed' THEN 1 ELSE 0 END) AS failed,SUM(CASE WHEN status='delivering' THEN 1 ELSE 0 END) AS delivering FROM reward_delivery_queue`).first().catch(()=>({})),
     env.DB.prepare(`SELECT COUNT(*) AS count FROM admin_profile_state`).first(),
     env.DB.prepare(`SELECT COUNT(*) AS count FROM leaderboard_seasons`).first(),
@@ -46611,9 +46796,10 @@ async function ownerPanelSystem(env, ctx) {
     env.DB.prepare(`SELECT COUNT(*) AS count FROM bot_news`).first().catch(()=>({count:0})),
     env.DB.prepare(`SELECT COUNT(*) AS count FROM player_polls WHERE status='active'`).first().catch(()=>({count:0})),
     env.DB.prepare(`SELECT COUNT(*) AS count FROM player_reset_history`).first().catch(()=>({count:0})),
-    env.DB.prepare(`SELECT migration_key,phase,cutoff_at,total_rows,migrated_rows,remaining_rows,last_error,checked_at,completed_at FROM player_legacy_migration_audit ORDER BY migration_key`).all().catch(()=>({results:[]}))
+    env.DB.prepare(`SELECT migration_key,phase,cutoff_at,total_rows,migrated_rows,remaining_rows,last_error,checked_at,completed_at FROM player_legacy_migration_audit ORDER BY migration_key`).all().catch(()=>({results:[]})),
+    env.DB.prepare(`SELECT policy_key,detail_days,archive_kind,cutoff_at,rows_archived,rows_deleted,last_run_at,last_error,updated_at FROM operational_retention_state ORDER BY policy_key`).all().catch(()=>({results:[]}))
   ]);
-  return {ok:true,version:GAME_VERSION,workerBuild:WORKER_BUILD,serverTime:new Date().toISOString(),maintenance,queue:{pending:Number(queue?.pending||0),failed:Number(queue?.failed||0),delivering:Number(queue?.delivering||0)},tables:{profiles:Number(profiles?.count||0),ratingSeasons:Number(ratings?.count||0),seasonPassSeasons:Number(passes?.count||0),news:Number(newsCount?.count||0),activePolls:Number(pollsActive?.count||0),resetOperations:Number(resetsCount?.count||0)},legacyMigrations:(legacyMigrations.results||[]).map((row)=>({key:String(row.migration_key||''),phase:String(row.phase||'backfill'),cutoffAt:Number(row.cutoff_at||0),total:Number(row.total_rows||0),migrated:Number(row.migrated_rows||0),remaining:Number(row.remaining_rows||0),lastError:String(row.last_error||''),checkedAt:Number(row.checked_at||0),completedAt:Number(row.completed_at||0)})),audit};
+  return {ok:true,version:GAME_VERSION,workerBuild:WORKER_BUILD,serverTime:new Date().toISOString(),maintenance,queue:{pending:Number(queue?.pending||0),failed:Number(queue?.failed||0),delivering:Number(queue?.delivering||0)},tables:{profiles:Number(profiles?.count||0),ratingSeasons:Number(ratings?.count||0),seasonPassSeasons:Number(passes?.count||0),news:Number(newsCount?.count||0),activePolls:Number(pollsActive?.count||0),resetOperations:Number(resetsCount?.count||0)},legacyMigrations:(legacyMigrations.results||[]).map((row)=>({key:String(row.migration_key||''),phase:String(row.phase||'backfill'),cutoffAt:Number(row.cutoff_at||0),total:Number(row.total_rows||0),migrated:Number(row.migrated_rows||0),remaining:Number(row.remaining_rows||0),lastError:String(row.last_error||''),checkedAt:Number(row.checked_at||0),completedAt:Number(row.completed_at||0)})),retention:(retention.results||[]).map((row)=>({key:String(row.policy_key||''),detailDays:Number(row.detail_days||0),archiveKind:String(row.archive_kind||''),cutoffAt:Number(row.cutoff_at||0),rowsArchived:Number(row.rows_archived||0),rowsDeleted:Number(row.rows_deleted||0),lastRunAt:Number(row.last_run_at||0),lastError:String(row.last_error||''),updatedAt:Number(row.updated_at||0)})),audit};
 }
 
 async function ownerPanelUpdateMaintenance(env, ctx) {

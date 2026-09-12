@@ -1,6 +1,7 @@
 {
-  "version": 1,
-  "catalogHash": "1ca1e6aea88e583b",
+  "version": 2,
+  "hashAlgorithm": "sha256",
+  "catalogHash": "f930acf7ac250f22",
   "count": 455,
   "images": [
     {
@@ -8,3640 +9,3640 @@
       "label": "Background achivment panel",
       "folder": "achievements",
       "path": "/assets/achievements/background_achivment_panel.webp",
-      "size": 23354,
-      "modified": 1788993226141
+      "hash": "5b331998c5e4",
+      "size": 23354
     },
     {
       "fileName": "achievements/badges/album-complete-1.webp",
       "label": "Album complete 1",
       "folder": "achievements/badges",
       "path": "/assets/achievements/badges/album-complete-1.webp",
-      "size": 375246,
-      "modified": 1788993229043
+      "hash": "79b04426abd6",
+      "size": 375246
     },
     {
       "fileName": "achievements/badges/album-milestone-1.webp",
       "label": "Album milestone 1",
       "folder": "achievements/badges",
       "path": "/assets/achievements/badges/album-milestone-1.webp",
-      "size": 334320,
-      "modified": 1788993229094
+      "hash": "a55f7868ef95",
+      "size": 334320
     },
     {
       "fileName": "achievements/badges/avatar-1.webp",
       "label": "Avatar 1",
       "folder": "achievements/badges",
       "path": "/assets/achievements/badges/avatar-1.webp",
-      "size": 251444,
-      "modified": 1788993228689
+      "hash": "65ea3b29c2ea",
+      "size": 251444
     },
     {
       "fileName": "achievements/badges/best-score-1000.webp",
       "label": "Best score 1000",
       "folder": "achievements/badges",
       "path": "/assets/achievements/badges/best-score-1000.webp",
-      "size": 272158,
-      "modified": 1788993401715
+      "hash": "39d2d651b2a1",
+      "size": 272158
     },
     {
       "fileName": "achievements/badges/best-score-10000.webp",
       "label": "Best score 10000",
       "folder": "achievements/badges",
       "path": "/assets/achievements/badges/best-score-10000.webp",
-      "size": 363280,
-      "modified": 1788993403222
+      "hash": "6168c3851e91",
+      "size": 363280
     },
     {
       "fileName": "achievements/badges/best-score-2500.webp",
       "label": "Best score 2500",
       "folder": "achievements/badges",
       "path": "/assets/achievements/badges/best-score-2500.webp",
-      "size": 305006,
-      "modified": 1788993401963
+      "hash": "3979efb395c4",
+      "size": 305006
     },
     {
       "fileName": "achievements/badges/best-score-5000.webp",
       "label": "Best score 5000",
       "folder": "achievements/badges",
       "path": "/assets/achievements/badges/best-score-5000.webp",
-      "size": 381980,
-      "modified": 1788993403550
+      "hash": "4c87986f0a5d",
+      "size": 381980
     },
     {
       "fileName": "achievements/badges/case-open-1.webp",
       "label": "Case open 1",
       "folder": "achievements/badges",
       "path": "/assets/achievements/badges/case-open-1.webp",
-      "size": 312602,
-      "modified": 1788993405016
+      "hash": "34e8d2853d1b",
+      "size": 312602
     },
     {
       "fileName": "achievements/badges/case-open-10.webp",
       "label": "Case open 10",
       "folder": "achievements/badges",
       "path": "/assets/achievements/badges/case-open-10.webp",
-      "size": 329900,
-      "modified": 1788993405383
+      "hash": "da8221503a21",
+      "size": 329900
     },
     {
       "fileName": "achievements/badges/first-run.webp",
       "label": "First run",
       "folder": "achievements/badges",
       "path": "/assets/achievements/badges/first-run.webp",
-      "size": 222438,
-      "modified": 1788993406398
+      "hash": "ff7202af7a42",
+      "size": 222438
     },
     {
       "fileName": "achievements/badges/frame-1.webp",
       "label": "Frame 1",
       "folder": "achievements/badges",
       "path": "/assets/achievements/badges/frame-1.webp",
-      "size": 211334,
-      "modified": 1788993406297
+      "hash": "991c44c041f1",
+      "size": 211334
     },
     {
       "fileName": "achievements/badges/level-10.webp",
       "label": "Level 10",
       "folder": "achievements/badges",
       "path": "/assets/achievements/badges/level-10.webp",
-      "size": 245196,
-      "modified": 1788993407935
+      "hash": "dce5cc830e0e",
+      "size": 245196
     },
     {
       "fileName": "achievements/badges/level-25.webp",
       "label": "Level 25",
       "folder": "achievements/badges",
       "path": "/assets/achievements/badges/level-25.webp",
-      "size": 353660,
-      "modified": 1788993409462
+      "hash": "83eee95fdf5c",
+      "size": 353660
     },
     {
       "fileName": "achievements/badges/level-5.webp",
       "label": "Level 5",
       "folder": "achievements/badges",
       "path": "/assets/achievements/badges/level-5.webp",
-      "size": 188622,
-      "modified": 1788993409705
+      "hash": "8a94ddff27a8",
+      "size": 188622
     },
     {
       "fileName": "achievements/badges/level-50.webp",
       "label": "Level 50",
       "folder": "achievements/badges",
       "path": "/assets/achievements/badges/level-50.webp",
-      "size": 385778,
-      "modified": 1788993410815
+      "hash": "491a6bdd9b5d",
+      "size": 385778
     },
     {
       "fileName": "achievements/badges/music-2.webp",
       "label": "Music 2",
       "folder": "achievements/badges",
       "path": "/assets/achievements/badges/music-2.webp",
-      "size": 225028,
-      "modified": 1788993410538
+      "hash": "344c4482df81",
+      "size": 225028
     },
     {
       "fileName": "achievements/badges/referral-1.webp",
       "label": "Referral 1",
       "folder": "achievements/badges",
       "path": "/assets/achievements/badges/referral-1.webp",
-      "size": 307622,
-      "modified": 1788993413526
+      "hash": "fad7476319bc",
+      "size": 307622
     },
     {
       "fileName": "achievements/badges/referral-5.webp",
       "label": "Referral 5",
       "folder": "achievements/badges",
       "path": "/assets/achievements/badges/referral-5.webp",
-      "size": 374550,
-      "modified": 1788993414520
+      "hash": "a1c0b8288bad",
+      "size": 374550
     },
     {
       "fileName": "achievements/badges/run-coffee-25.webp",
       "label": "Run coffee 25",
       "folder": "achievements/badges",
       "path": "/assets/achievements/badges/run-coffee-25.webp",
-      "size": 213076,
-      "modified": 1788993413265
+      "hash": "da506c3420aa",
+      "size": 213076
     },
     {
       "fileName": "achievements/badges/run-zefir-25.webp",
       "label": "Run zefir 25",
       "folder": "achievements/badges",
       "path": "/assets/achievements/badges/run-zefir-25.webp",
-      "size": 286164,
-      "modified": 1788993413833
+      "hash": "fee88ebe4796",
+      "size": 286164
     },
     {
       "fileName": "achievements/badges/runs-10.webp",
       "label": "Runs 10",
       "folder": "achievements/badges",
       "path": "/assets/achievements/badges/runs-10.webp",
-      "size": 220224,
-      "modified": 1788993416598
+      "hash": "79d5e4f31580",
+      "size": 220224
     },
     {
       "fileName": "achievements/badges/runs-100.webp",
       "label": "Runs 100",
       "folder": "achievements/badges",
       "path": "/assets/achievements/badges/runs-100.webp",
-      "size": 347046,
-      "modified": 1788993418280
+      "hash": "070854f1d4e3",
+      "size": 347046
     },
     {
       "fileName": "achievements/badges/runs-1000.webp",
       "label": "Runs 1000",
       "folder": "achievements/badges",
       "path": "/assets/achievements/badges/runs-1000.webp",
-      "size": 353292,
-      "modified": 1788993417448
+      "hash": "5a89f1a2640c",
+      "size": 353292
     },
     {
       "fileName": "achievements/badges/runs-250.webp",
       "label": "Runs 250",
       "folder": "achievements/badges",
       "path": "/assets/achievements/badges/runs-250.webp",
-      "size": 285576,
-      "modified": 1788993418461
+      "hash": "ad2e8eb1b77f",
+      "size": 285576
     },
     {
       "fileName": "achievements/badges/runs-500.webp",
       "label": "Runs 500",
       "folder": "achievements/badges",
       "path": "/assets/achievements/badges/runs-500.webp",
-      "size": 399814,
-      "modified": 1788993421927
+      "hash": "441f69044d1e",
+      "size": 399814
     },
     {
       "fileName": "achievements/badges/season-belkino-complete.webp",
       "label": "Season belkino complete",
       "folder": "achievements/badges",
       "path": "/assets/achievements/badges/season-belkino-complete.webp",
-      "size": 428926,
-      "modified": 1788993423226
+      "hash": "323172e2339b",
+      "size": 428926
     },
     {
       "fileName": "achievements/badges/season-belkino-joined.webp",
       "label": "Season belkino joined",
       "folder": "achievements/badges",
       "path": "/assets/achievements/badges/season-belkino-joined.webp",
-      "size": 346818,
-      "modified": 1788993422613
+      "hash": "aae32731cc43",
+      "size": 346818
     },
     {
       "fileName": "achievements/badges/season-reward-1.webp",
       "label": "Season reward 1",
       "folder": "achievements/badges",
       "path": "/assets/achievements/badges/season-reward-1.webp",
-      "size": 333210,
-      "modified": 1788993421766
+      "hash": "d7024504cafc",
+      "size": 333210
     },
     {
       "fileName": "achievements/badges/season-reward-10.webp",
       "label": "Season reward 10",
       "folder": "achievements/badges",
       "path": "/assets/achievements/badges/season-reward-10.webp",
-      "size": 340246,
-      "modified": 1788993425432
+      "hash": "33cf9b5327fc",
+      "size": 340246
     },
     {
       "fileName": "achievements/badges/secret-locked.webp",
       "label": "Secret locked",
       "folder": "achievements/badges",
       "path": "/assets/achievements/badges/secret-locked.webp",
-      "size": 287510,
-      "modified": 1788993426011
+      "hash": "d87168d190d4",
+      "size": 287510
     },
     {
       "fileName": "achievements/badges/total-score-5000.webp",
       "label": "Total score 5000",
       "folder": "achievements/badges",
       "path": "/assets/achievements/badges/total-score-5000.webp",
-      "size": 429878,
-      "modified": 1788993427008
+      "hash": "d220b4d1287a",
+      "size": 429878
     },
     {
       "fileName": "achievements/badges/trail-1.webp",
       "label": "Trail 1",
       "folder": "achievements/badges",
       "path": "/assets/achievements/badges/trail-1.webp",
-      "size": 252188,
-      "modified": 1788993426269
+      "hash": "d1ba5f996fb0",
+      "size": 252188
     },
     {
       "fileName": "achievements/series/icon_begyn.webp",
       "label": "Icon begyn",
       "folder": "achievements/series",
       "path": "/assets/achievements/series/icon_begyn.webp",
-      "size": 28280,
-      "modified": 1788993427045
+      "hash": "f383e1ebdeee",
+      "size": 28280
     },
     {
       "fileName": "achievements/series/icon_collectibl_achivments.webp",
       "label": "Icon collectibl achivments",
       "folder": "achievements/series",
       "path": "/assets/achievements/series/icon_collectibl_achivments.webp",
-      "size": 23708,
-      "modified": 1788993427426
+      "hash": "4be0fd79d8f7",
+      "size": 23708
     },
     {
       "fileName": "achievements/series/icon_hanter_case.webp",
       "label": "Icon hanter case",
       "folder": "achievements/series",
       "path": "/assets/achievements/series/icon_hanter_case.webp",
-      "size": 32566,
-      "modified": 1788993428119
+      "hash": "7ae112dc7837",
+      "size": 32566
     },
     {
       "fileName": "achievements/series/icon_my_company.webp",
       "label": "Icon my company",
       "folder": "achievements/series",
       "path": "/assets/achievements/series/icon_my_company.webp",
-      "size": 31524,
-      "modified": 1788993428823
+      "hash": "6cb045d3ccb4",
+      "size": 31524
     },
     {
       "fileName": "achievements/series/icon_put_zeffi.webp",
       "label": "Icon put zeffi",
       "folder": "achievements/series",
       "path": "/assets/achievements/series/icon_put_zeffi.webp",
-      "size": 25390,
-      "modified": 1788993428787
+      "hash": "635024993c7e",
+      "size": 25390
     },
     {
       "fileName": "achievements/series/icon_recordsmen.webp",
       "label": "Icon recordsmen",
       "folder": "achievements/series",
       "path": "/assets/achievements/series/icon_recordsmen.webp",
-      "size": 29444,
-      "modified": 1788993429514
+      "hash": "0096e5f1b4b1",
+      "size": 29444
     },
     {
       "fileName": "achievements/series/icon_season_put.webp",
       "label": "Icon season put",
       "folder": "achievements/series",
       "path": "/assets/achievements/series/icon_season_put.webp",
-      "size": 26562,
-      "modified": 1788993429639
+      "hash": "0a18c14ee281",
+      "size": 26562
     },
     {
       "fileName": "achievements/showcases/gold_vitrina.webp",
       "label": "Gold vitrina",
       "folder": "achievements/showcases",
       "path": "/assets/achievements/showcases/gold_vitrina.webp",
-      "size": 110804,
-      "modified": 1788993433123
+      "hash": "070d1ef67b9f",
+      "size": 110804
     },
     {
       "fileName": "achievements/showcases/Standart_vitrina.webp",
       "label": "Standart vitrina",
       "folder": "achievements/showcases",
       "path": "/assets/achievements/showcases/Standart_vitrina.webp",
-      "size": 55020,
-      "modified": 1788993431801
+      "hash": "6029e9ebe9f4",
+      "size": 55020
     },
     {
       "fileName": "achievements/showcases/vitrina_At_the_origins.webp",
       "label": "Vitrina At the origins",
       "folder": "achievements/showcases",
       "path": "/assets/achievements/showcases/vitrina_At_the_origins.webp",
-      "size": 342000,
-      "modified": 1788993433998
+      "hash": "bebab7af8b1e",
+      "size": 342000
     },
     {
       "fileName": "achievements/showcases/vitrina_creator_zeffirok.webp",
       "label": "Vitrina creator zeffirok",
       "folder": "achievements/showcases",
       "path": "/assets/achievements/showcases/vitrina_creator_zeffirok.webp",
-      "size": 369062,
-      "modified": 1788993434423
+      "hash": "3defb0c1e16c",
+      "size": 369062
     },
     {
       "fileName": "achievements/showcases/vitrina_Legenda_cafe.webp",
       "label": "Vitrina Legenda cafe",
       "folder": "achievements/showcases",
       "path": "/assets/achievements/showcases/vitrina_Legenda_cafe.webp",
-      "size": 403208,
-      "modified": 1788993436813
+      "hash": "22166a7016fb",
+      "size": 403208
     },
     {
       "fileName": "achievements/showcases/vitrina_s1.webp",
       "label": "Vitrina s1",
       "folder": "achievements/showcases",
       "path": "/assets/achievements/showcases/vitrina_s1.webp",
-      "size": 280322,
-      "modified": 1788993437251
+      "hash": "d54644d464e3",
+      "size": 280322
     },
     {
       "fileName": "achievements/showcases/vitrina_s2.webp",
       "label": "Vitrina s2",
       "folder": "achievements/showcases",
       "path": "/assets/achievements/showcases/vitrina_s2.webp",
-      "size": 319870,
-      "modified": 1788993438690
+      "hash": "753bbff5d2cf",
+      "size": 319870
     },
     {
       "fileName": "achievements/showcases/vitrina_s3.webp",
       "label": "Vitrina s3",
       "folder": "achievements/showcases",
       "path": "/assets/achievements/showcases/vitrina_s3.webp",
-      "size": 401978,
-      "modified": 1788993440292
+      "hash": "1dcfd1f8df76",
+      "size": 401978
     },
     {
       "fileName": "albom_all/alex_albom_oblozka.webp",
       "label": "Alex albom oblozka",
       "folder": "albom_all",
       "path": "/assets/albom_all/alex_albom_oblozka.webp",
-      "size": 350288,
-      "modified": 1788993437104
+      "hash": "ecb19f36de81",
+      "size": 350288
     },
     {
       "fileName": "albom_all/background_alex_albom.webp",
       "label": "Background alex albom",
       "folder": "albom_all",
       "path": "/assets/albom_all/background_alex_albom.webp",
-      "size": 192074,
-      "modified": 1788993437311
+      "hash": "3b241e0ba556",
+      "size": 192074
     },
     {
       "fileName": "albom_all/background_s2.webp",
       "label": "Background s2",
       "folder": "albom_all",
       "path": "/assets/albom_all/background_s2.webp",
-      "size": 257880,
-      "modified": 1788993437490
+      "hash": "c0f688fdebb3",
+      "size": 257880
     },
     {
       "fileName": "albom_all/background_s3.webp",
       "label": "Background s3",
       "folder": "albom_all",
       "path": "/assets/albom_all/background_s3.webp",
-      "size": 376288,
-      "modified": 1788993437599
+      "hash": "86eea9276fe3",
+      "size": 376288
     },
     {
       "fileName": "albom_all/icon_albom_s2.webp",
       "label": "Icon albom s2",
       "folder": "albom_all",
       "path": "/assets/albom_all/icon_albom_s2.webp",
-      "size": 390326,
-      "modified": 1788993437784
+      "hash": "3cadecc50c7f",
+      "size": 390326
     },
     {
       "fileName": "albom_all/icon_albom_s3.webp",
       "label": "Icon albom s3",
       "folder": "albom_all",
       "path": "/assets/albom_all/icon_albom_s3.webp",
-      "size": 487592,
-      "modified": 1788993437927
+      "hash": "d96c014e53cc",
+      "size": 487592
     },
     {
       "fileName": "cases/398D69BA-8943-4846-94B3-FC5CB717A67F.webp",
       "label": "398D69BA 8943 4846 94B3 FC5CB717A67F",
       "folder": "cases",
       "path": "/assets/cases/398D69BA-8943-4846-94B3-FC5CB717A67F.webp",
-      "size": 72414,
-      "modified": 1788993437936
+      "hash": "2b9ecc4670c7",
+      "size": 72414
     },
     {
       "fileName": "cases/4271C4F1-CD5F-4C4B-A5BD-FE577585AFFF.webp",
       "label": "4271C4F1 CD5F 4C4B A5BD FE577585AFFF",
       "folder": "cases",
       "path": "/assets/cases/4271C4F1-CD5F-4C4B-A5BD-FE577585AFFF.webp",
-      "size": 84794,
-      "modified": 1788993438089
+      "hash": "f00d76bd9f35",
+      "size": 84794
     },
     {
       "fileName": "cases/5B2F53B6-5728-40CA-866E-74EECA3238FD.webp",
       "label": "5B2F53B6 5728 40CA 866E 74EECA3238FD",
       "folder": "cases",
       "path": "/assets/cases/5B2F53B6-5728-40CA-866E-74EECA3238FD.webp",
-      "size": 145332,
-      "modified": 1788993438121
+      "hash": "1b7fe2ac3397",
+      "size": 145332
     },
     {
       "fileName": "cases/84571D50-75DA-4C22-B35A-FAF921094BEF.webp",
       "label": "84571D50 75DA 4C22 B35A FAF921094BEF",
       "folder": "cases",
       "path": "/assets/cases/84571D50-75DA-4C22-B35A-FAF921094BEF.webp",
-      "size": 133598,
-      "modified": 1788993438269
+      "hash": "93cb59a606cb",
+      "size": 133598
     },
     {
       "fileName": "cases/988D058E-EA15-43EB-8564-AA297CF745B4.webp",
       "label": "988D058E EA15 43EB 8564 AA297CF745B4",
       "folder": "cases",
       "path": "/assets/cases/988D058E-EA15-43EB-8564-AA297CF745B4.webp",
-      "size": 123174,
-      "modified": 1788993438302
+      "hash": "a439e8de8e79",
+      "size": 123174
     },
     {
       "fileName": "cases/alex/alex_case_close.webp",
       "label": "Alex case close",
       "folder": "cases/alex",
       "path": "/assets/cases/alex/alex_case_close.webp",
-      "size": 358064,
-      "modified": 1788993441947
+      "hash": "f30970bc800b",
+      "size": 358064
     },
     {
       "fileName": "cases/alex/alex_case_open.webp",
       "label": "Alex case open",
       "folder": "cases/alex",
       "path": "/assets/cases/alex/alex_case_open.webp",
-      "size": 414078,
-      "modified": 1788993442858
+      "hash": "eed5e4272b8e",
+      "size": 414078
     },
     {
       "fileName": "cases/avatars/1454DD0F-5B8E-4931-99CD-E249D9066526.webp",
       "label": "1454DD0F 5B8E 4931 99CD E249D9066526",
       "folder": "cases/avatars",
       "path": "/assets/cases/avatars/1454DD0F-5B8E-4931-99CD-E249D9066526.webp",
-      "size": 163398,
-      "modified": 1788993438891
+      "hash": "b2a89783e6ae",
+      "size": 163398
     },
     {
       "fileName": "cases/avatars/42185960-59F9-4C06-8665-94B0A7621034.webp",
       "label": "42185960 59F9 4C06 8665 94B0A7621034",
       "folder": "cases/avatars",
       "path": "/assets/cases/avatars/42185960-59F9-4C06-8665-94B0A7621034.webp",
-      "size": 172110,
-      "modified": 1788993439096
+      "hash": "abd500a92219",
+      "size": 172110
     },
     {
       "fileName": "cases/avatars/478DBDFA-BE30-4EF5-904E-59F205056E62.webp",
       "label": "478DBDFA BE30 4EF5 904E 59F205056E62",
       "folder": "cases/avatars",
       "path": "/assets/cases/avatars/478DBDFA-BE30-4EF5-904E-59F205056E62.webp",
-      "size": 144374,
-      "modified": 1788993439286
+      "hash": "02a483e0e87f",
+      "size": 144374
     },
     {
       "fileName": "cases/avatars/64D37092-96E1-48BC-9BC5-BCBE99E15E02.webp",
       "label": "64D37092 96E1 48BC 9BC5 BCBE99E15E02",
       "folder": "cases/avatars",
       "path": "/assets/cases/avatars/64D37092-96E1-48BC-9BC5-BCBE99E15E02.webp",
-      "size": 159830,
-      "modified": 1788993439481
+      "hash": "7882dd39da59",
+      "size": 159830
     },
     {
       "fileName": "cases/avatars/9FEC3750-A0ED-4053-8D12-EABF7798D914.webp",
       "label": "9FEC3750 A0ED 4053 8D12 EABF7798D914",
       "folder": "cases/avatars",
       "path": "/assets/cases/avatars/9FEC3750-A0ED-4053-8D12-EABF7798D914.webp",
-      "size": 133400,
-      "modified": 1788993439668
+      "hash": "0f9d5d44d159",
+      "size": 133400
     },
     {
       "fileName": "cases/avatars/A34D0D9F-4BF6-4618-8E2B-3D4833CED067.webp",
       "label": "A34D0D9F 4BF6 4618 8E2B 3D4833CED067",
       "folder": "cases/avatars",
       "path": "/assets/cases/avatars/A34D0D9F-4BF6-4618-8E2B-3D4833CED067.webp",
-      "size": 129396,
-      "modified": 1788993439849
+      "hash": "15098adb6703",
+      "size": 129396
     },
     {
       "fileName": "cases/avatars/achievements/achievement_albums.webp",
       "label": "Achievement albums",
       "folder": "cases/avatars/achievements",
       "path": "/assets/cases/avatars/achievements/achievement_albums.webp",
-      "size": 151056,
-      "modified": 1788993440038
+      "hash": "99f16ebb3210",
+      "size": 151056
     },
     {
       "fileName": "cases/avatars/achievements/achievement_case.webp",
       "label": "Achievement case",
       "folder": "cases/avatars/achievements",
       "path": "/assets/cases/avatars/achievements/achievement_case.webp",
-      "size": 140658,
-      "modified": 1788993440221
+      "hash": "51a880a26e43",
+      "size": 140658
     },
     {
       "fileName": "cases/avatars/achievements/achievement_coffee.webp",
       "label": "Achievement coffee",
       "folder": "cases/avatars/achievements",
       "path": "/assets/cases/avatars/achievements/achievement_coffee.webp",
-      "size": 144216,
-      "modified": 1788993440407
+      "hash": "76be13800680",
+      "size": 144216
     },
     {
       "fileName": "cases/avatars/achievements/achievement_friend.webp",
       "label": "Achievement friend",
       "folder": "cases/avatars/achievements",
       "path": "/assets/cases/avatars/achievements/achievement_friend.webp",
-      "size": 153332,
-      "modified": 1788993440481
+      "hash": "75fe6bb38fc9",
+      "size": 153332
     },
     {
       "fileName": "cases/avatars/achievements/achievement_music.webp",
       "label": "Achievement music",
       "folder": "cases/avatars/achievements",
       "path": "/assets/cases/avatars/achievements/achievement_music.webp",
-      "size": 163420,
-      "modified": 1788993440597
+      "hash": "b2e14c919148",
+      "size": 163420
     },
     {
       "fileName": "cases/avatars/achievements/achievement_paws.webp",
       "label": "Achievement paws",
       "folder": "cases/avatars/achievements",
       "path": "/assets/cases/avatars/achievements/achievement_paws.webp",
-      "size": 143786,
-      "modified": 1788993440669
+      "hash": "c04d2cdc3162",
+      "size": 143786
     },
     {
       "fileName": "cases/avatars/achievements/achievement_records.webp",
       "label": "Achievement records",
       "folder": "cases/avatars/achievements",
       "path": "/assets/cases/avatars/achievements/achievement_records.webp",
-      "size": 178568,
-      "modified": 1788993440795
+      "hash": "55f97569c629",
+      "size": 178568
     },
     {
       "fileName": "cases/avatars/achievements/achievement_runs.webp",
       "label": "Achievement runs",
       "folder": "cases/avatars/achievements",
       "path": "/assets/cases/avatars/achievements/achievement_runs.webp",
-      "size": 151206,
-      "modified": 1788993440857
+      "hash": "a0304ba87462",
+      "size": 151206
     },
     {
       "fileName": "cases/avatars/achievements/achievement_score.webp",
       "label": "Achievement score",
       "folder": "cases/avatars/achievements",
       "path": "/assets/cases/avatars/achievements/achievement_score.webp",
-      "size": 129606,
-      "modified": 1788993440970
+      "hash": "69e0decf9f44",
+      "size": 129606
     },
     {
       "fileName": "cases/avatars/achievements/achievement_zefir.webp",
       "label": "Achievement zefir",
       "folder": "cases/avatars/achievements",
       "path": "/assets/cases/avatars/achievements/achievement_zefir.webp",
-      "size": 151834,
-      "modified": 1788993441049
+      "hash": "70bf00b0e09f",
+      "size": 151834
     },
     {
       "fileName": "cases/avatars/AE100D7E-3441-428C-B67F-C7A46B23F712.webp",
       "label": "AE100D7E 3441 428C B67F C7A46B23F712",
       "folder": "cases/avatars",
       "path": "/assets/cases/avatars/AE100D7E-3441-428C-B67F-C7A46B23F712.webp",
-      "size": 177940,
-      "modified": 1788993441172
+      "hash": "97793fd9f70d",
+      "size": 177940
     },
     {
       "fileName": "cases/avatars/alex_avatar_1.webp",
       "label": "Alex avatar 1",
       "folder": "cases/avatars",
       "path": "/assets/cases/avatars/alex_avatar_1.webp",
-      "size": 375026,
-      "modified": 1788993446241
+      "hash": "4561d71ef8a3",
+      "size": 375026
     },
     {
       "fileName": "cases/avatars/alex_avatar_2.webp",
       "label": "Alex avatar 2",
       "folder": "cases/avatars",
       "path": "/assets/cases/avatars/alex_avatar_2.webp",
-      "size": 343486,
-      "modified": 1788993445090
+      "hash": "c7b93b65f235",
+      "size": 343486
     },
     {
       "fileName": "cases/avatars/avatrs_season2Elit.webp",
       "label": "Avatrs season2Elit",
       "folder": "cases/avatars",
       "path": "/assets/cases/avatars/avatrs_season2Elit.webp",
-      "size": 348204,
-      "modified": 1788993447108
+      "hash": "0a689505acd3",
+      "size": 348204
     },
     {
       "fileName": "cases/avatars/avatrs_season2Epik.webp",
       "label": "Avatrs season2Epik",
       "folder": "cases/avatars",
       "path": "/assets/cases/avatars/avatrs_season2Epik.webp",
-      "size": 272308,
-      "modified": 1788993446969
+      "hash": "2a1903d40e12",
+      "size": 272308
     },
     {
       "fileName": "cases/avatars/avatrs_season2Epik2.webp",
       "label": "Avatrs season2Epik2",
       "folder": "cases/avatars",
       "path": "/assets/cases/avatars/avatrs_season2Epik2.webp",
-      "size": 246752,
-      "modified": 1788993448907
+      "hash": "f70ace1270d1",
+      "size": 246752
     },
     {
       "fileName": "cases/avatars/avatrs_season2Mifik.webp",
       "label": "Avatrs season2Mifik",
       "folder": "cases/avatars",
       "path": "/assets/cases/avatars/avatrs_season2Mifik.webp",
-      "size": 377398,
-      "modified": 1788993450942
+      "hash": "d3100fb79fa4",
+      "size": 377398
     },
     {
       "fileName": "cases/avatars/E74178F8-3156-4301-8559-D818D85404DA.webp",
       "label": "E74178F8 3156 4301 8559 D818D85404DA",
       "folder": "cases/avatars",
       "path": "/assets/cases/avatars/E74178F8-3156-4301-8559-D818D85404DA.webp",
-      "size": 134282,
-      "modified": 1788993447150
+      "hash": "0bb62812af40",
+      "size": 134282
     },
     {
       "fileName": "cases/avatars/E8A3AFDB-BCAC-4623-BB8B-C7C429799061.webp",
       "label": "E8A3AFDB BCAC 4623 BB8B C7C429799061",
       "folder": "cases/avatars",
       "path": "/assets/cases/avatars/E8A3AFDB-BCAC-4623-BB8B-C7C429799061.webp",
-      "size": 203932,
-      "modified": 1788993447319
+      "hash": "9ee541e090ea",
+      "size": 203932
     },
     {
       "fileName": "cases/avatars/F1680265-2EC6-4028-9FED-E26997442675.webp",
       "label": "F1680265 2EC6 4028 9FED E26997442675",
       "folder": "cases/avatars",
       "path": "/assets/cases/avatars/F1680265-2EC6-4028-9FED-E26997442675.webp",
-      "size": 149810,
-      "modified": 1788993447340
+      "hash": "4c18a3c97d15",
+      "size": 149810
     },
     {
       "fileName": "cases/avatars/legendary_avatarka_1.webp",
       "label": "Legendary avatarka 1",
       "folder": "cases/avatars",
       "path": "/assets/cases/avatars/legendary_avatarka_1.webp",
-      "size": 284004,
-      "modified": 1788993452855
+      "hash": "2ec2097a49c2",
+      "size": 284004
     },
     {
       "fileName": "cases/avatars/legendary_avatarka_2.webp",
       "label": "Legendary avatarka 2",
       "folder": "cases/avatars",
       "path": "/assets/cases/avatars/legendary_avatarka_2.webp",
-      "size": 292380,
-      "modified": 1788993453035
+      "hash": "1d7a6ea1c36d",
+      "size": 292380
     },
     {
       "fileName": "cases/avatars/legendary_avatarka_3.webp",
       "label": "Legendary avatarka 3",
       "folder": "cases/avatars",
       "path": "/assets/cases/avatars/legendary_avatarka_3.webp",
-      "size": 319254,
-      "modified": 1788993454669
+      "hash": "9f7e01e164ae",
+      "size": 319254
     },
     {
       "fileName": "cases/avatars/legendary_avatarka_4.webp",
       "label": "Legendary avatarka 4",
       "folder": "cases/avatars",
       "path": "/assets/cases/avatars/legendary_avatarka_4.webp",
-      "size": 318904,
-      "modified": 1788993456955
+      "hash": "4c8cb4c84b05",
+      "size": 318904
     },
     {
       "fileName": "cases/avatars/legendary_avatarka_5.webp",
       "label": "Legendary avatarka 5",
       "folder": "cases/avatars",
       "path": "/assets/cases/avatars/legendary_avatarka_5.webp",
-      "size": 338722,
-      "modified": 1788993458607
+      "hash": "c68c6ead3448",
+      "size": 338722
     },
     {
       "fileName": "cases/avatars/season3_avatar_epic_new_1.webp",
       "label": "Season3 avatar epic new 1",
       "folder": "cases/avatars",
       "path": "/assets/cases/avatars/season3_avatar_epic_new_1.webp",
-      "size": 264562,
-      "modified": 1788993453282
+      "hash": "805340c00f69",
+      "size": 264562
     },
     {
       "fileName": "cases/avatars/season3_avatar_epic_new_2.webp",
       "label": "Season3 avatar epic new 2",
       "folder": "cases/avatars",
       "path": "/assets/cases/avatars/season3_avatar_epic_new_2.webp",
-      "size": 247006,
-      "modified": 1788993453519
+      "hash": "e74b7a532364",
+      "size": 247006
     },
     {
       "fileName": "cases/avatars/season3_avatar_epic_new_3.webp",
       "label": "Season3 avatar epic new 3",
       "folder": "cases/avatars",
       "path": "/assets/cases/avatars/season3_avatar_epic_new_3.webp",
-      "size": 208036,
-      "modified": 1788993453732
+      "hash": "d043f17f01e8",
+      "size": 208036
     },
     {
       "fileName": "cases/avatars/season3_avatar_legendary_new_1.webp",
       "label": "Season3 avatar legendary new 1",
       "folder": "cases/avatars",
       "path": "/assets/cases/avatars/season3_avatar_legendary_new_1.webp",
-      "size": 369324,
-      "modified": 1788993454016
+      "hash": "161dd58e8ba4",
+      "size": 369324
     },
     {
       "fileName": "cases/avatars/season3_avatar_legendary_new_2.webp",
       "label": "Season3 avatar legendary new 2",
       "folder": "cases/avatars",
       "path": "/assets/cases/avatars/season3_avatar_legendary_new_2.webp",
-      "size": 309578,
-      "modified": 1788993454277
+      "hash": "5f5fc44c307e",
+      "size": 309578
     },
     {
       "fileName": "cases/avatars/season3_avatar_mythic_new_1.webp",
       "label": "Season3 avatar mythic new 1",
       "folder": "cases/avatars",
       "path": "/assets/cases/avatars/season3_avatar_mythic_new_1.webp",
-      "size": 285412,
-      "modified": 1788993454526
+      "hash": "ec9cf3946887",
+      "size": 285412
     },
     {
       "fileName": "cases/avatars/season3_avatar_mythic_new_2.webp",
       "label": "Season3 avatar mythic new 2",
       "folder": "cases/avatars",
       "path": "/assets/cases/avatars/season3_avatar_mythic_new_2.webp",
-      "size": 311096,
-      "modified": 1788993454793
+      "hash": "373904ae09e1",
+      "size": 311096
     },
     {
       "fileName": "cases/avatars/season3_avatar_standard_1.webp",
       "label": "Season3 avatar standard 1",
       "folder": "cases/avatars",
       "path": "/assets/cases/avatars/season3_avatar_standard_1.webp",
-      "size": 163716,
-      "modified": 1788993454874
+      "hash": "48e23368743d",
+      "size": 163716
     },
     {
       "fileName": "cases/avatars/season3_avatar_standard_2.webp",
       "label": "Season3 avatar standard 2",
       "folder": "cases/avatars",
       "path": "/assets/cases/avatars/season3_avatar_standard_2.webp",
-      "size": 178154,
-      "modified": 1788993455007
+      "hash": "8ee875d5c54d",
+      "size": 178154
     },
     {
       "fileName": "cases/avatars/season3_avatar_standard_3.webp",
       "label": "Season3 avatar standard 3",
       "folder": "cases/avatars",
       "path": "/assets/cases/avatars/season3_avatar_standard_3.webp",
-      "size": 206212,
-      "modified": 1788993455100
+      "hash": "c828a6c23e10",
+      "size": 206212
     },
     {
       "fileName": "cases/boosters/11FDBEBF-D838-4DA5-AA57-9DE0E4BA26AE.webp",
       "label": "11FDBEBF D838 4DA5 AA57 9DE0E4BA26AE",
       "folder": "cases/boosters",
       "path": "/assets/cases/boosters/11FDBEBF-D838-4DA5-AA57-9DE0E4BA26AE.webp",
-      "size": 127568,
-      "modified": 1788993456635
+      "hash": "d2fcb72ed947",
+      "size": 127568
     },
     {
       "fileName": "cases/boosters/1F00010C-F984-4A41-B8B6-8E5CD7DF637A.webp",
       "label": "1F00010C F984 4A41 B8B6 8E5CD7DF637A",
       "folder": "cases/boosters",
       "path": "/assets/cases/boosters/1F00010C-F984-4A41-B8B6-8E5CD7DF637A.webp",
-      "size": 120418,
-      "modified": 1788993458312
+      "hash": "4f536617458f",
+      "size": 120418
     },
     {
       "fileName": "cases/boosters/80C21DC3-04A8-46F7-B8E4-9AC8FE13CCEB.webp",
       "label": "80C21DC3 04A8 46F7 B8E4 9AC8FE13CCEB",
       "folder": "cases/boosters",
       "path": "/assets/cases/boosters/80C21DC3-04A8-46F7-B8E4-9AC8FE13CCEB.webp",
-      "size": 93926,
-      "modified": 1788993458209
+      "hash": "78f3c1ebbdc7",
+      "size": 93926
     },
     {
       "fileName": "cases/boosters/icon_2shans.webp",
       "label": "Icon 2shans",
       "folder": "cases/boosters",
       "path": "/assets/cases/boosters/icon_2shans.webp",
-      "size": 224534,
-      "modified": 1788993460712
+      "hash": "d1ca1cd9bd1c",
+      "size": 224534
     },
     {
       "fileName": "cases/boosters/icon_buster_shit_zeffi.webp",
       "label": "Icon buster shit zeffi",
       "folder": "cases/boosters",
       "path": "/assets/cases/boosters/icon_buster_shit_zeffi.webp",
-      "size": 200076,
-      "modified": 1788993461020
+      "hash": "f91d1ff08446",
+      "size": 200076
     },
     {
       "fileName": "cases/boosters/icon_pause_zeffi.webp",
       "label": "Icon pause zeffi",
       "folder": "cases/boosters",
       "path": "/assets/cases/boosters/icon_pause_zeffi.webp",
-      "size": 312890,
-      "modified": 1788993462970
+      "hash": "3392b6f94d15",
+      "size": 312890
     },
     {
       "fileName": "cases/Bronze_close.webp",
       "label": "Bronze close",
       "folder": "cases",
       "path": "/assets/cases/Bronze_close.webp",
-      "size": 144144,
-      "modified": 1788993460122
+      "hash": "d08b1983cc28",
+      "size": 144144
     },
     {
       "fileName": "cases/Bronze_open.webp",
       "label": "Bronze open",
       "folder": "cases",
       "path": "/assets/cases/Bronze_open.webp",
-      "size": 130554,
-      "modified": 1788993461639
+      "hash": "e210565b2cbf",
+      "size": 130554
     },
     {
       "fileName": "cases/effects/effect_epick.webp",
       "label": "Effect epick",
       "folder": "cases/effects",
       "path": "/assets/cases/effects/effect_epick.webp",
-      "size": 157226,
-      "modified": 1788993460896
+      "hash": "804313de099b",
+      "size": 157226
     },
     {
       "fileName": "cases/effects/effect_mifick.webp",
       "label": "Effect mifick",
       "folder": "cases/effects",
       "path": "/assets/cases/effects/effect_mifick.webp",
-      "size": 478790,
-      "modified": 1788993466925
+      "hash": "5e632856c9e9",
+      "size": 478790
     },
     {
       "fileName": "cases/effects/effect_rar.webp",
       "label": "Effect rar",
       "folder": "cases/effects",
       "path": "/assets/cases/effects/effect_rar.webp",
-      "size": 426812,
-      "modified": 1788993467886
+      "hash": "5d0bd9ff4192",
+      "size": 426812
     },
     {
       "fileName": "cases/effects/effect_standart.webp",
       "label": "Effect standart",
       "folder": "cases/effects",
       "path": "/assets/cases/effects/effect_standart.webp",
-      "size": 482364,
-      "modified": 1788993470107
+      "hash": "aed88080864f",
+      "size": 482364
     },
     {
       "fileName": "cases/effects/effect_super_rar.webp",
       "label": "Effect super rar",
       "folder": "cases/effects",
       "path": "/assets/cases/effects/effect_super_rar.webp",
-      "size": 484772,
-      "modified": 1788993470339
+      "hash": "c3f865cff793",
+      "size": 484772
     },
     {
       "fileName": "cases/effects/legendary_effect.webp",
       "label": "Legendary effect",
       "folder": "cases/effects",
       "path": "/assets/cases/effects/legendary_effect.webp",
-      "size": 411396,
-      "modified": 1788993472396
+      "hash": "6c170f364700",
+      "size": 411396
     },
     {
       "fileName": "cases/F41C3D35-4820-401C-BE45-375EB8897837.webp",
       "label": "F41C3D35 4820 401C BE45 375EB8897837",
       "folder": "cases",
       "path": "/assets/cases/F41C3D35-4820-401C-BE45-375EB8897837.webp",
-      "size": 116878,
-      "modified": 1788993468068
+      "hash": "dd82336788ba",
+      "size": 116878
     },
     {
       "fileName": "cases/gold_closed.webp",
       "label": "Gold closed",
       "folder": "cases",
       "path": "/assets/cases/gold_closed.webp",
-      "size": 151460,
-      "modified": 1788993470902
+      "hash": "84a93c66404c",
+      "size": 151460
     },
     {
       "fileName": "cases/gold_open.webp",
       "label": "Gold open",
       "folder": "cases",
       "path": "/assets/cases/gold_open.webp",
-      "size": 151352,
-      "modified": 1788993472932
+      "hash": "cd10c630ef10",
+      "size": 151352
     },
     {
       "fileName": "cases/legendary_closed.webp",
       "label": "Legendary closed",
       "folder": "cases",
       "path": "/assets/cases/legendary_closed.webp",
-      "size": 395652,
-      "modified": 1788993475987
+      "hash": "4f18ef798c37",
+      "size": 395652
     },
     {
       "fileName": "cases/legendary_open.webp",
       "label": "Legendary open",
       "folder": "cases",
       "path": "/assets/cases/legendary_open.webp",
-      "size": 347076,
-      "modified": 1788993476654
+      "hash": "842a1ed8adff",
+      "size": 347076
     },
     {
       "fileName": "cases/Mifik_case_closed.webp",
       "label": "Mifik case closed",
       "folder": "cases",
       "path": "/assets/cases/Mifik_case_closed.webp",
-      "size": 313964,
-      "modified": 1788993476588
+      "hash": "e8a8bbe02f9b",
+      "size": 313964
     },
     {
       "fileName": "cases/Mifik_case_open.webp",
       "label": "Mifik case open",
       "folder": "cases",
       "path": "/assets/cases/Mifik_case_open.webp",
-      "size": 359702,
-      "modified": 1788993477383
+      "hash": "f24b813eb954",
+      "size": 359702
     },
     {
       "fileName": "cases/seasonal/season_2_closed.webp",
       "label": "Season 2 closed",
       "folder": "cases/seasonal",
       "path": "/assets/cases/seasonal/season_2_closed.webp",
-      "size": 203792,
-      "modified": 1788993478357
+      "hash": "50c079e95238",
+      "size": 203792
     },
     {
       "fileName": "cases/seasonal/season_2_open.webp",
       "label": "Season 2 open",
       "folder": "cases/seasonal",
       "path": "/assets/cases/seasonal/season_2_open.webp",
-      "size": 269664,
-      "modified": 1788993479452
+      "hash": "ac09a71e97bd",
+      "size": 269664
     },
     {
       "fileName": "cases/seasonal/season_case_s3_closed.webp",
       "label": "Season case s3 closed",
       "folder": "cases/seasonal",
       "path": "/assets/cases/seasonal/season_case_s3_closed.webp",
-      "size": 260054,
-      "modified": 1788993479667
+      "hash": "d3bcd44044dc",
+      "size": 260054
     },
     {
       "fileName": "cases/seasonal/season_case_s3_open.webp",
       "label": "Season case s3 open",
       "folder": "cases/seasonal",
       "path": "/assets/cases/seasonal/season_case_s3_open.webp",
-      "size": 316764,
-      "modified": 1788993480426
+      "hash": "e56820315472",
+      "size": 316764
     },
     {
       "fileName": "cases/standart_closed.webp",
       "label": "Standart closed",
       "folder": "cases",
       "path": "/assets/cases/standart_closed.webp",
-      "size": 74302,
-      "modified": 1788993480397
+      "hash": "d05fd1d9d8f8",
+      "size": 74302
     },
     {
       "fileName": "cases/Standart_open.webp",
       "label": "Standart open",
       "folder": "cases",
       "path": "/assets/cases/Standart_open.webp",
-      "size": 70536,
-      "modified": 1788993480782
+      "hash": "1c59d41cf373",
+      "size": 70536
     },
     {
       "fileName": "cases/trails/1C180321-0C98-48DD-9B43-0F6E5D3B61EA.webp",
       "label": "1C180321 0C98 48DD 9B43 0F6E5D3B61EA",
       "folder": "cases/trails",
       "path": "/assets/cases/trails/1C180321-0C98-48DD-9B43-0F6E5D3B61EA.webp",
-      "size": 45714,
-      "modified": 1788993480611
+      "hash": "4e899e9a6b9d",
+      "size": 45714
     },
     {
       "fileName": "cases/trails/244230CD-1043-4087-A5AC-E5BEBF949C22.webp",
       "label": "244230CD 1043 4087 A5AC E5BEBF949C22",
       "folder": "cases/trails",
       "path": "/assets/cases/trails/244230CD-1043-4087-A5AC-E5BEBF949C22.webp",
-      "size": 36392,
-      "modified": 1788993481069
+      "hash": "4e33dc3d4f27",
+      "size": 36392
     },
     {
       "fileName": "cases/trails/6A8C47A2-F099-40A9-8270-A676725538D8.webp",
       "label": "6A8C47A2 F099 40A9 8270 A676725538D8",
       "folder": "cases/trails",
       "path": "/assets/cases/trails/6A8C47A2-F099-40A9-8270-A676725538D8.webp",
-      "size": 43618,
-      "modified": 1788993481298
+      "hash": "6956e6bf6416",
+      "size": 43618
     },
     {
       "fileName": "cases/trails/7F194357-28F3-4CC0-BD09-D4937777E361.webp",
       "label": "7F194357 28F3 4CC0 BD09 D4937777E361",
       "folder": "cases/trails",
       "path": "/assets/cases/trails/7F194357-28F3-4CC0-BD09-D4937777E361.webp",
-      "size": 25962,
-      "modified": 1788993481912
+      "hash": "959b18b86730",
+      "size": 25962
     },
     {
       "fileName": "cases/trails/BBFD9E7E-393D-4B0A-B990-CC93BFCFB505.webp",
       "label": "BBFD9E7E 393D 4B0A B990 CC93BFCFB505",
       "folder": "cases/trails",
       "path": "/assets/cases/trails/BBFD9E7E-393D-4B0A-B990-CC93BFCFB505.webp",
-      "size": 45076,
-      "modified": 1788993483295
+      "hash": "358e2fd8eee4",
+      "size": 45076
     },
     {
       "fileName": "cases/trails/Epik_sled_season2_2.webp",
       "label": "Epik sled season2 2",
       "folder": "cases/trails",
       "path": "/assets/cases/trails/Epik_sled_season2_2.webp",
-      "size": 285452,
-      "modified": 1788993485469
+      "hash": "a6544a2be1c1",
+      "size": 285452
     },
     {
       "fileName": "cases/trails/Epik_sled_season2.webp",
       "label": "Epik sled season2",
       "folder": "cases/trails",
       "path": "/assets/cases/trails/Epik_sled_season2.webp",
-      "size": 220790,
-      "modified": 1788993485532
+      "hash": "b8ae5753621a",
+      "size": 220790
     },
     {
       "fileName": "cases/trails/Legendary_sled_season2.webp",
       "label": "Legendary sled season2",
       "folder": "cases/trails",
       "path": "/assets/cases/trails/Legendary_sled_season2.webp",
-      "size": 242832,
-      "modified": 1788993486002
+      "hash": "597d8394698d",
+      "size": 242832
     },
     {
       "fileName": "cases/trails/legendary_trail_1_season2.webp",
       "label": "Legendary trail 1 season2",
       "folder": "cases/trails",
       "path": "/assets/cases/trails/legendary_trail_1_season2.webp",
-      "size": 178808,
-      "modified": 1788993487127
+      "hash": "93637bf53747",
+      "size": 178808
     },
     {
       "fileName": "cases/trails/legendary_trail_2_season2.webp",
       "label": "Legendary trail 2 season2",
       "folder": "cases/trails",
       "path": "/assets/cases/trails/legendary_trail_2_season2.webp",
-      "size": 187868,
-      "modified": 1788993489364
+      "hash": "16b07cf995a4",
+      "size": 187868
     },
     {
       "fileName": "cases/trails/legendary_trail_3_season2.webp",
       "label": "Legendary trail 3 season2",
       "folder": "cases/trails",
       "path": "/assets/cases/trails/legendary_trail_3_season2.webp",
-      "size": 251552,
-      "modified": 1788993489375
+      "hash": "a2a3a3ca89cb",
+      "size": 251552
     },
     {
       "fileName": "cases/trails/legendary_trail_4_season2.webp",
       "label": "Legendary trail 4 season2",
       "folder": "cases/trails",
       "path": "/assets/cases/trails/legendary_trail_4_season2.webp",
-      "size": 202048,
-      "modified": 1788993489434
+      "hash": "b66aaa69c5ec",
+      "size": 202048
     },
     {
       "fileName": "cases/trails/legendary_trail_5_season2.webp",
       "label": "Legendary trail 5 season2",
       "folder": "cases/trails",
       "path": "/assets/cases/trails/legendary_trail_5_season2.webp",
-      "size": 229726,
-      "modified": 1788993490701
+      "hash": "90d453b0c580",
+      "size": 229726
     },
     {
       "fileName": "cases/trails/legendary+_sled_season_2.webp",
       "label": "Legendary+ sled season 2",
       "folder": "cases/trails",
       "path": "/assets/cases/trails/legendary%2B_sled_season_2.webp",
-      "size": 286812,
-      "modified": 1788993493458
+      "hash": "176f1fe81c12",
+      "size": 286812
     },
     {
       "fileName": "cases/trails/mifik_sled_season2.webp",
       "label": "Mifik sled season2",
       "folder": "cases/trails",
       "path": "/assets/cases/trails/mifik_sled_season2.webp",
-      "size": 276320,
-      "modified": 1788993493750
+      "hash": "e873276bf565",
+      "size": 276320
     },
     {
       "fileName": "cases/trails/sled_alex_collectia.webp",
       "label": "Sled alex collectia",
       "folder": "cases/trails",
       "path": "/assets/cases/trails/sled_alex_collectia.webp",
-      "size": 234696,
-      "modified": 1788993492950
+      "hash": "2b6bf1adc6d6",
+      "size": 234696
     },
     {
       "fileName": "cases/trails/sled_s3_epick1.webp",
       "label": "Sled s3 epick1",
       "folder": "cases/trails",
       "path": "/assets/cases/trails/sled_s3_epick1.webp",
-      "size": 329922,
-      "modified": 1788993495471
+      "hash": "091fa26b2cf6",
+      "size": 329922
     },
     {
       "fileName": "cases/trails/sled_s3_epick2.webp",
       "label": "Sled s3 epick2",
       "folder": "cases/trails",
       "path": "/assets/cases/trails/sled_s3_epick2.webp",
-      "size": 357046,
-      "modified": 1788993498264
+      "hash": "fdc246cc667a",
+      "size": 357046
     },
     {
       "fileName": "cases/trails/sled_s3_epick3.webp",
       "label": "Sled s3 epick3",
       "folder": "cases/trails",
       "path": "/assets/cases/trails/sled_s3_epick3.webp",
-      "size": 373602,
-      "modified": 1788993498649
+      "hash": "df3b53475ef8",
+      "size": 373602
     },
     {
       "fileName": "cases/trails/sled_s3_legendary1.webp",
       "label": "Sled s3 legendary1",
       "folder": "cases/trails",
       "path": "/assets/cases/trails/sled_s3_legendary1.webp",
-      "size": 443410,
-      "modified": 1788993499469
+      "hash": "4beb5cb6c765",
+      "size": 443410
     },
     {
       "fileName": "cases/trails/sled_s3_mifik1.webp",
       "label": "Sled s3 mifik1",
       "folder": "cases/trails",
       "path": "/assets/cases/trails/sled_s3_mifik1.webp",
-      "size": 453986,
-      "modified": 1788993501645
+      "hash": "40628553565c",
+      "size": 453986
     },
     {
       "fileName": "cases/trails/sled_s3_mifik2.webp",
       "label": "Sled s3 mifik2",
       "folder": "cases/trails",
       "path": "/assets/cases/trails/sled_s3_mifik2.webp",
-      "size": 437988,
-      "modified": 1788993504183
+      "hash": "33e05d6b8370",
+      "size": 437988
     },
     {
       "fileName": "cases/trails/sled_s3_standart1.webp",
       "label": "Sled s3 standart1",
       "folder": "cases/trails",
       "path": "/assets/cases/trails/sled_s3_standart1.webp",
-      "size": 231384,
-      "modified": 1788993502328
+      "hash": "a494fdd75906",
+      "size": 231384
     },
     {
       "fileName": "cases/trails/sled_s3_standart2.webp",
       "label": "Sled s3 standart2",
       "folder": "cases/trails",
       "path": "/assets/cases/trails/sled_s3_standart2.webp",
-      "size": 255780,
-      "modified": 1788993503473
+      "hash": "db4ad0d69118",
+      "size": 255780
     },
     {
       "fileName": "cases/trails/sled_s3_standart3.webp",
       "label": "Sled s3 standart3",
       "folder": "cases/trails",
       "path": "/assets/cases/trails/sled_s3_standart3.webp",
-      "size": 223334,
-      "modified": 1788993505339
+      "hash": "e691f43b9c99",
+      "size": 223334
     },
     {
       "fileName": "letter/letter_season_3.webp",
       "label": "Letter season 3",
       "folder": "letter",
       "path": "/assets/letter/letter_season_3.webp",
-      "size": 179768,
-      "modified": 1788993502536
+      "hash": "0861a60e879d",
+      "size": 179768
     },
     {
       "fileName": "letter/pick/end_pick.webp",
       "label": "End pick",
       "folder": "letter/pick",
       "path": "/assets/letter/pick/end_pick.webp",
-      "size": 234672,
-      "modified": 1788993502773
+      "hash": "32406aff92d8",
+      "size": 234672
     },
     {
       "fileName": "letter/pick/season2_pick.webp",
       "label": "Season2 pick",
       "folder": "letter/pick",
       "path": "/assets/letter/pick/season2_pick.webp",
-      "size": 169056,
-      "modified": 1788993502982
+      "hash": "9402e8ba7ef9",
+      "size": 169056
     },
     {
       "fileName": "letter/pick/Season2_Pick2.webp",
       "label": "Season2 Pick2",
       "folder": "letter/pick",
       "path": "/assets/letter/pick/Season2_Pick2.webp",
-      "size": 184832,
-      "modified": 1788993503195
+      "hash": "12c6578ffdb9",
+      "size": 184832
     },
     {
       "fileName": "letter/pick/Season2_Pick3.webp",
       "label": "Season2 Pick3",
       "folder": "letter/pick",
       "path": "/assets/letter/pick/Season2_Pick3.webp",
-      "size": 238770,
-      "modified": 1788993503432
+      "hash": "4153e9f77266",
+      "size": 238770
     },
     {
       "fileName": "letter/pick/Season2_Pick4.webp",
       "label": "Season2 Pick4",
       "folder": "letter/pick",
       "path": "/assets/letter/pick/Season2_Pick4.webp",
-      "size": 296866,
-      "modified": 1788993503685
+      "hash": "9eaedad4b401",
+      "size": 296866
     },
     {
       "fileName": "news/cases-5.0.1.webp",
       "label": "Cases 5.0.1",
       "folder": "news",
       "path": "/assets/news/cases-5.0.1.webp",
-      "size": 297388,
-      "modified": 1788993503718
+      "hash": "af39bb990064",
+      "size": 297388
     },
     {
       "fileName": "news/clear_progress_news.webp",
       "label": "Clear progress news",
       "folder": "news",
       "path": "/assets/news/clear_progress_news.webp",
-      "size": 234038,
-      "modified": 1788993503909
+      "hash": "998b9d114ae4",
+      "size": 234038
     },
     {
       "fileName": "news/img_bugs.webp",
       "label": "Img bugs",
       "folder": "news",
       "path": "/assets/news/img_bugs.webp",
-      "size": 254392,
-      "modified": 1788993503943
+      "hash": "d189d107fe82",
+      "size": 254392
     },
     {
       "fileName": "news/news_post_final_season1.webp",
       "label": "News post final season1",
       "folder": "news",
       "path": "/assets/news/news_post_final_season1.webp",
-      "size": 311232,
-      "modified": 1788993504159
+      "hash": "be8a47cadd0f",
+      "size": 311232
     },
     {
       "fileName": "news/news.webp",
       "label": "News",
       "folder": "news",
       "path": "/assets/news/news.webp",
-      "size": 250556,
-      "modified": 1788993504175
+      "hash": "9af281e19afb",
+      "size": 250556
     },
     {
       "fileName": "news/relise_clear_progress_news.webp",
       "label": "Relise clear progress news",
       "folder": "news",
       "path": "/assets/news/relise_clear_progress_news.webp",
-      "size": 245306,
-      "modified": 1788993504383
+      "hash": "8ea658cf36fe",
+      "size": 245306
     },
     {
       "fileName": "news/relise_game_news.webp",
       "label": "Relise game news",
       "folder": "news",
       "path": "/assets/news/relise_game_news.webp",
-      "size": 331444,
-      "modified": 1788993504451
+      "hash": "fd804e0c7e73",
+      "size": 331444
     },
     {
       "fileName": "news/tex_raboty_news.webp",
       "label": "Tex raboty news",
       "folder": "news",
       "path": "/assets/news/tex_raboty_news.webp",
-      "size": 317348,
-      "modified": 1788993504454
+      "hash": "c93cbbb02cae",
+      "size": 317348
     },
     {
       "fileName": "news/update_v_1_0_9.webp",
       "label": "Update v 1 0 9",
       "folder": "news",
       "path": "/assets/news/update_v_1_0_9.webp",
-      "size": 332318,
-      "modified": 1788993504650
+      "hash": "9d3dae126ef9",
+      "size": 332318
     },
     {
       "fileName": "news/update_v_1_2_0.webp",
       "label": "Update v 1 2 0",
       "folder": "news",
       "path": "/assets/news/update_v_1_2_0.webp",
-      "size": 318894,
-      "modified": 1788993504687
+      "hash": "ca04685df961",
+      "size": 318894
     },
     {
       "fileName": "optimized/v0.79.5/background_season2.webp",
       "label": "Background season2",
       "folder": "optimized/v0.79.5",
       "path": "/assets/optimized/v0.79.5/background_season2.webp",
-      "size": 1521024,
-      "modified": 1788384772295
+      "hash": "cb34c56cb195",
+      "size": 1521024
     },
     {
       "fileName": "optimized/v0.79.5/cafeBackground.webp",
       "label": "CafeBackground",
       "folder": "optimized/v0.79.5",
       "path": "/assets/optimized/v0.79.5/cafeBackground.webp",
-      "size": 40186,
-      "modified": 1785306717000
+      "hash": "cde24ee86114",
+      "size": 40186
     },
     {
       "fileName": "optimized/v0.79.5/coffeePickup.webp",
       "label": "CoffeePickup",
       "folder": "optimized/v0.79.5",
       "path": "/assets/optimized/v0.79.5/coffeePickup.webp",
-      "size": 13068,
-      "modified": 1788993505236
+      "hash": "396655fa4d00",
+      "size": 13068
     },
     {
       "fileName": "optimized/v0.79.5/iconCoffee.webp",
       "label": "IconCoffee",
       "folder": "optimized/v0.79.5",
       "path": "/assets/optimized/v0.79.5/iconCoffee.webp",
-      "size": 13490,
-      "modified": 1788993505164
+      "hash": "a79a3eee78bd",
+      "size": 13490
     },
     {
       "fileName": "optimized/v0.79.5/iconRecord.webp",
       "label": "IconRecord",
       "folder": "optimized/v0.79.5",
       "path": "/assets/optimized/v0.79.5/iconRecord.webp",
-      "size": 14436,
-      "modified": 1788993505362
+      "hash": "dba84b3c94d4",
+      "size": 14436
     },
     {
       "fileName": "optimized/v0.79.5/iconScore.webp",
       "label": "IconScore",
       "folder": "optimized/v0.79.5",
       "path": "/assets/optimized/v0.79.5/iconScore.webp",
-      "size": 46654,
-      "modified": 1788993506981
+      "hash": "c7d3944daee9",
+      "size": 46654
     },
     {
       "fileName": "optimized/v0.79.5/navGameButtonSelected.webp",
       "label": "NavGameButtonSelected",
       "folder": "optimized/v0.79.5",
       "path": "/assets/optimized/v0.79.5/navGameButtonSelected.webp",
-      "size": 30870,
-      "modified": 1788993508162
+      "hash": "14129ebbc52b",
+      "size": 30870
     },
     {
       "fileName": "optimized/v0.79.5/navGameButtonUnselected.webp",
       "label": "NavGameButtonUnselected",
       "folder": "optimized/v0.79.5",
       "path": "/assets/optimized/v0.79.5/navGameButtonUnselected.webp",
-      "size": 29126,
-      "modified": 1788993508239
+      "hash": "1875fab880ed",
+      "size": 29126
     },
     {
       "fileName": "optimized/v0.79.5/pillowObstacle.webp",
       "label": "PillowObstacle",
       "folder": "optimized/v0.79.5",
       "path": "/assets/optimized/v0.79.5/pillowObstacle.webp",
-      "size": 14190,
-      "modified": 1788993505965
+      "hash": "71c6376e2451",
+      "size": 14190
     },
     {
       "fileName": "optimized/v0.79.5/shopAmericano.webp",
       "label": "ShopAmericano",
       "folder": "optimized/v0.79.5",
       "path": "/assets/optimized/v0.79.5/shopAmericano.webp",
-      "size": 14126,
-      "modified": 1786158830000
+      "hash": "dea3a875d9cf",
+      "size": 14126
     },
     {
       "fileName": "optimized/v0.79.5/shopCappuccino.webp",
       "label": "ShopCappuccino",
       "folder": "optimized/v0.79.5",
       "path": "/assets/optimized/v0.79.5/shopCappuccino.webp",
-      "size": 14726,
-      "modified": 1786158830000
+      "hash": "b77a5d7f48b9",
+      "size": 14726
     },
     {
       "fileName": "optimized/v0.79.5/shopMarshmallowAssortment.webp",
       "label": "ShopMarshmallowAssortment",
       "folder": "optimized/v0.79.5",
       "path": "/assets/optimized/v0.79.5/shopMarshmallowAssortment.webp",
-      "size": 29246,
-      "modified": 1788993507787
+      "hash": "eafbf4f3749b",
+      "size": 29246
     },
     {
       "fileName": "optimized/v0.79.5/shopMascot.webp",
       "label": "ShopMascot",
       "folder": "optimized/v0.79.5",
       "path": "/assets/optimized/v0.79.5/shopMascot.webp",
-      "size": 15300,
-      "modified": 1788993508604
+      "hash": "199939f39dc1",
+      "size": 15300
     },
     {
       "fileName": "optimized/v0.79.5/skinDefaultAvatar.webp",
       "label": "SkinDefaultAvatar",
       "folder": "optimized/v0.79.5",
       "path": "/assets/optimized/v0.79.5/skinDefaultAvatar.webp",
-      "size": 32418,
-      "modified": 1788993509787
+      "hash": "5b2b282d7c1b",
+      "size": 32418
     },
     {
       "fileName": "optimized/v0.79.5/skinDefaultPortrait.webp",
       "label": "SkinDefaultPortrait",
       "folder": "optimized/v0.79.5",
       "path": "/assets/optimized/v0.79.5/skinDefaultPortrait.webp",
-      "size": 69424,
-      "modified": 1788993509327
+      "hash": "36e50197dc97",
+      "size": 69424
     },
     {
       "fileName": "optimized/v0.79.5/vaseObstacle.webp",
       "label": "VaseObstacle",
       "folder": "optimized/v0.79.5",
       "path": "/assets/optimized/v0.79.5/vaseObstacle.webp",
-      "size": 15976,
-      "modified": 1788993508852
+      "hash": "b6456d87aa24",
+      "size": 15976
     },
     {
       "fileName": "optimized/v0.79.5/white_rabbit_background_season4.webp",
       "label": "White rabbit background season4",
       "folder": "optimized/v0.79.5",
       "path": "/assets/optimized/v0.79.5/white_rabbit_background_season4.webp",
-      "size": 96124,
-      "modified": 1788993508768
+      "hash": "6fdaba379ce6",
+      "size": 96124
     },
     {
       "fileName": "rating/avatars/avatar-bear-bow.webp",
       "label": "Avatar bear bow",
       "folder": "rating/avatars",
       "path": "/assets/rating/avatars/avatar-bear-bow.webp",
-      "size": 9300,
-      "modified": 1788993508781
+      "hash": "b4c04edfc179",
+      "size": 9300
     },
     {
       "fileName": "rating/avatars/avatar-bear.webp",
       "label": "Avatar bear",
       "folder": "rating/avatars",
       "path": "/assets/rating/avatars/avatar-bear.webp",
-      "size": 7034,
-      "modified": 1788993509088
+      "hash": "e3604b68e9b3",
+      "size": 7034
     },
     {
       "fileName": "rating/avatars/avatar-bunny-white.webp",
       "label": "Avatar bunny white",
       "folder": "rating/avatars",
       "path": "/assets/rating/avatars/avatar-bunny-white.webp",
-      "size": 6228,
-      "modified": 1788993508861
+      "hash": "37dcd46c4c5f",
+      "size": 6228
     },
     {
       "fileName": "rating/avatars/avatar-bunny.webp",
       "label": "Avatar bunny",
       "folder": "rating/avatars",
       "path": "/assets/rating/avatars/avatar-bunny.webp",
-      "size": 5396,
-      "modified": 1788993509161
+      "hash": "419a29dd6411",
+      "size": 5396
     },
     {
       "fileName": "rating/avatars/avatar-cat.webp",
       "label": "Avatar cat",
       "folder": "rating/avatars",
       "path": "/assets/rating/avatars/avatar-cat.webp",
-      "size": 6240,
-      "modified": 1788993509399
+      "hash": "b3f698f72664",
+      "size": 6240
     },
     {
       "fileName": "rating/avatars/avatar-chick.webp",
       "label": "Avatar chick",
       "folder": "rating/avatars",
       "path": "/assets/rating/avatars/avatar-chick.webp",
-      "size": 8078,
-      "modified": 1788993509173
+      "hash": "49bd9c6dab83",
+      "size": 8078
     },
     {
       "fileName": "rating/avatars/avatar-corgi-blue.webp",
       "label": "Avatar corgi blue",
       "folder": "rating/avatars",
       "path": "/assets/rating/avatars/avatar-corgi-blue.webp",
-      "size": 9548,
-      "modified": 1788993509183
+      "hash": "193c5f2b0cdd",
+      "size": 9548
     },
     {
       "fileName": "rating/avatars/avatar-corgi.webp",
       "label": "Avatar corgi",
       "folder": "rating/avatars",
       "path": "/assets/rating/avatars/avatar-corgi.webp",
-      "size": 7928,
-      "modified": 1788993509493
+      "hash": "81458edb5e79",
+      "size": 7928
     },
     {
       "fileName": "rating/avatars/avatar-deer.webp",
       "label": "Avatar deer",
       "folder": "rating/avatars",
       "path": "/assets/rating/avatars/avatar-deer.webp",
-      "size": 10926,
-      "modified": 1788993509341
+      "hash": "500eb841eab3",
+      "size": 10926
     },
     {
       "fileName": "rating/avatars/avatar-fox-red.webp",
       "label": "Avatar fox red",
       "folder": "rating/avatars",
       "path": "/assets/rating/avatars/avatar-fox-red.webp",
-      "size": 9524,
-      "modified": 1788993509351
+      "hash": "85b66a12cf77",
+      "size": 9524
     },
     {
       "fileName": "rating/avatars/avatar-fox.webp",
       "label": "Avatar fox",
       "folder": "rating/avatars",
       "path": "/assets/rating/avatars/avatar-fox.webp",
-      "size": 8102,
-      "modified": 1788993509661
+      "hash": "fd6e8f78ac3c",
+      "size": 8102
     },
     {
       "fileName": "rating/avatars/avatar-hamster.webp",
       "label": "Avatar hamster",
       "folder": "rating/avatars",
       "path": "/assets/rating/avatars/avatar-hamster.webp",
-      "size": 8626,
-      "modified": 1788993509409
+      "hash": "668f594b7330",
+      "size": 8626
     },
     {
       "fileName": "rating/avatars/avatar-hedgehog-mint.webp",
       "label": "Avatar hedgehog mint",
       "folder": "rating/avatars",
       "path": "/assets/rating/avatars/avatar-hedgehog-mint.webp",
-      "size": 10900,
-      "modified": 1788993509420
+      "hash": "c80ec623240e",
+      "size": 10900
     },
     {
       "fileName": "rating/avatars/avatar-hedgehog.webp",
       "label": "Avatar hedgehog",
       "folder": "rating/avatars",
       "path": "/assets/rating/avatars/avatar-hedgehog.webp",
-      "size": 7880,
-      "modified": 1788993509708
+      "hash": "226c85d0e11e",
+      "size": 7880
     },
     {
       "fileName": "rating/avatars/avatar-husky.webp",
       "label": "Avatar husky",
       "folder": "rating/avatars",
       "path": "/assets/rating/avatars/avatar-husky.webp",
-      "size": 9936,
-      "modified": 1788993509506
+      "hash": "ceaf5e8ff3fe",
+      "size": 9936
     },
     {
       "fileName": "rating/avatars/avatar-kitten-gray.webp",
       "label": "Avatar kitten gray",
       "folder": "rating/avatars",
       "path": "/assets/rating/avatars/avatar-kitten-gray.webp",
-      "size": 9778,
-      "modified": 1788993509516
+      "hash": "eb0292022252",
+      "size": 9778
     },
     {
       "fileName": "rating/avatars/avatar-koala-leaf.webp",
       "label": "Avatar koala leaf",
       "folder": "rating/avatars",
       "path": "/assets/rating/avatars/avatar-koala-leaf.webp",
-      "size": 8390,
-      "modified": 1788993509527
+      "hash": "e27d3abec3a7",
+      "size": 8390
     },
     {
       "fileName": "rating/avatars/avatar-koala.webp",
       "label": "Avatar koala",
       "folder": "rating/avatars",
       "path": "/assets/rating/avatars/avatar-koala.webp",
-      "size": 5916,
-      "modified": 1788993509834
+      "hash": "8875a48a1c63",
+      "size": 5916
     },
     {
       "fileName": "rating/avatars/avatar-panda.webp",
       "label": "Avatar panda",
       "folder": "rating/avatars",
       "path": "/assets/rating/avatars/avatar-panda.webp",
-      "size": 8996,
-      "modified": 1788993509673
+      "hash": "221432400604",
+      "size": 8996
     },
     {
       "fileName": "rating/avatars/avatar-penguin-blue.webp",
       "label": "Avatar penguin blue",
       "folder": "rating/avatars",
       "path": "/assets/rating/avatars/avatar-penguin-blue.webp",
-      "size": 9678,
-      "modified": 1788993509684
+      "hash": "2e3b4064a25c",
+      "size": 9678
     },
     {
       "fileName": "rating/avatars/avatar-penguin.webp",
       "label": "Avatar penguin",
       "folder": "rating/avatars",
       "path": "/assets/rating/avatars/avatar-penguin.webp",
-      "size": 6654,
-      "modified": 1788993509985
+      "hash": "66941fc67fc6",
+      "size": 6654
     },
     {
       "fileName": "rating/avatars/avatar-poodle.webp",
       "label": "Avatar poodle",
       "folder": "rating/avatars",
       "path": "/assets/rating/avatars/avatar-poodle.webp",
-      "size": 9906,
-      "modified": 1788993509719
+      "hash": "bdf89840291c",
+      "size": 9906
     },
     {
       "fileName": "rating/avatars/avatar-raccoon.webp",
       "label": "Avatar raccoon",
       "folder": "rating/avatars",
       "path": "/assets/rating/avatars/avatar-raccoon.webp",
-      "size": 10512,
-      "modified": 1788993509730
+      "hash": "ad847e744150",
+      "size": 10512
     },
     {
       "fileName": "rating/avatars/avatar-shiba.webp",
       "label": "Avatar shiba",
       "folder": "rating/avatars",
       "path": "/assets/rating/avatars/avatar-shiba.webp",
-      "size": 8860,
-      "modified": 1788993509740
+      "hash": "0f33239ed994",
+      "size": 8860
     },
     {
       "fileName": "rating/frames/coffee.webp",
       "label": "Coffee",
       "folder": "rating/frames",
       "path": "/assets/rating/frames/coffee.webp",
-      "size": 11320,
-      "modified": 1788993510581
+      "hash": "0374cbacc7ed",
+      "size": 11320
     },
     {
       "fileName": "rating/frames/gold.webp",
       "label": "Gold",
       "folder": "rating/frames",
       "path": "/assets/rating/frames/gold.webp",
-      "size": 11902,
-      "modified": 1788993510660
+      "hash": "935e21146de9",
+      "size": 11902
     },
     {
       "fileName": "rating/frames/mint.webp",
       "label": "Mint",
       "folder": "rating/frames",
       "path": "/assets/rating/frames/mint.webp",
-      "size": 10890,
-      "modified": 1788993510717
+      "hash": "3a1abb876f5d",
+      "size": 10890
     },
     {
       "fileName": "rating/frames/profile/Elit+avatrs_season2.webp",
       "label": "Elit+avatrs season2",
       "folder": "rating/frames/profile",
       "path": "/assets/rating/frames/profile/Elit%2Bavatrs_season2.webp",
-      "size": 324386,
-      "modified": 1788993513937
+      "hash": "1c9ee993a9b8",
+      "size": 324386
     },
     {
       "fileName": "rating/frames/profile/Elit+ramka_season2_5.webp",
       "label": "Elit+ramka season2 5",
       "folder": "rating/frames/profile",
       "path": "/assets/rating/frames/profile/Elit%2Bramka_season2_5.webp",
-      "size": 506198,
-      "modified": 1788993516501
+      "hash": "95a47ab8ae5c",
+      "size": 506198
     },
     {
       "fileName": "rating/frames/profile/Elitramka_season2_1.webp",
       "label": "Elitramka season2 1",
       "folder": "rating/frames/profile",
       "path": "/assets/rating/frames/profile/Elitramka_season2_1.webp",
-      "size": 384694,
-      "modified": 1788993515888
+      "hash": "a60ee5ebdea2",
+      "size": 384694
     },
     {
       "fileName": "rating/frames/profile/Elitramka_season2_4.webp",
       "label": "Elitramka season2 4",
       "folder": "rating/frames/profile",
       "path": "/assets/rating/frames/profile/Elitramka_season2_4.webp",
-      "size": 494022,
-      "modified": 1788993516987
+      "hash": "6d92b3faebba",
+      "size": 494022
     },
     {
       "fileName": "rating/frames/profile/epickramka_season2_2.webp",
       "label": "Epickramka season2 2",
       "folder": "rating/frames/profile",
       "path": "/assets/rating/frames/profile/epickramka_season2_2.webp",
-      "size": 221976,
-      "modified": 1788993517418
+      "hash": "718943010998",
+      "size": 221976
     },
     {
       "fileName": "rating/frames/profile/legendary_ramka_1.webp",
       "label": "Legendary ramka 1",
       "folder": "rating/frames/profile",
       "path": "/assets/rating/frames/profile/legendary_ramka_1.webp",
-      "size": 273824,
-      "modified": 1788993520867
+      "hash": "a29d64ebe581",
+      "size": 273824
     },
     {
       "fileName": "rating/frames/profile/legendary_ramka_2.webp",
       "label": "Legendary ramka 2",
       "folder": "rating/frames/profile",
       "path": "/assets/rating/frames/profile/legendary_ramka_2.webp",
-      "size": 296184,
-      "modified": 1788993521660
+      "hash": "d4c70920b511",
+      "size": 296184
     },
     {
       "fileName": "rating/frames/profile/legendary_ramka_3.webp",
       "label": "Legendary ramka 3",
       "folder": "rating/frames/profile",
       "path": "/assets/rating/frames/profile/legendary_ramka_3.webp",
-      "size": 318456,
-      "modified": 1788993522138
+      "hash": "d9207fa5b8f3",
+      "size": 318456
     },
     {
       "fileName": "rating/frames/profile/legendary_ramka_4.webp",
       "label": "Legendary ramka 4",
       "folder": "rating/frames/profile",
       "path": "/assets/rating/frames/profile/legendary_ramka_4.webp",
-      "size": 313016,
-      "modified": 1788993520043
+      "hash": "415a05f6941f",
+      "size": 313016
     },
     {
       "fileName": "rating/frames/profile/legendary_ramka_5.webp",
       "label": "Legendary ramka 5",
       "folder": "rating/frames/profile",
       "path": "/assets/rating/frames/profile/legendary_ramka_5.webp",
-      "size": 319570,
-      "modified": 1788993525145
+      "hash": "31414b22d7fb",
+      "size": 319570
     },
     {
       "fileName": "rating/frames/profile/mifikramka_season2_3.webp",
       "label": "Mifikramka season2 3",
       "folder": "rating/frames/profile",
       "path": "/assets/rating/frames/profile/mifikramka_season2_3.webp",
-      "size": 205140,
-      "modified": 1788993524276
+      "hash": "f3e206722df2",
+      "size": 205140
     },
     {
       "fileName": "rating/frames/profile/ramka_alex_1.webp",
       "label": "Ramka alex 1",
       "folder": "rating/frames/profile",
       "path": "/assets/rating/frames/profile/ramka_alex_1.webp",
-      "size": 312228,
-      "modified": 1788993525342
+      "hash": "206f518a7d90",
+      "size": 312228
     },
     {
       "fileName": "rating/frames/profile/ramka_alex_2.webp",
       "label": "Ramka alex 2",
       "folder": "rating/frames/profile",
       "path": "/assets/rating/frames/profile/ramka_alex_2.webp",
-      "size": 292080,
-      "modified": 1788993525552
+      "hash": "8b49898ce4ea",
+      "size": 292080
     },
     {
       "fileName": "rating/frames/profile/ramka_profile_coffie.webp",
       "label": "Ramka profile coffie",
       "folder": "rating/frames/profile",
       "path": "/assets/rating/frames/profile/ramka_profile_coffie.webp",
-      "size": 148678,
-      "modified": 1788993525650
+      "hash": "b07e1ee87a79",
+      "size": 148678
     },
     {
       "fileName": "rating/frames/profile/ramka_profile_elita.webp",
       "label": "Ramka profile elita",
       "folder": "rating/frames/profile",
       "path": "/assets/rating/frames/profile/ramka_profile_elita.webp",
-      "size": 130462,
-      "modified": 1788993526317
+      "hash": "07b0ee6f394f",
+      "size": 130462
     },
     {
       "fileName": "rating/frames/profile/ramka_profile_klybnika.webp",
       "label": "Ramka profile klybnika",
       "folder": "rating/frames/profile",
       "path": "/assets/rating/frames/profile/ramka_profile_klybnika.webp",
-      "size": 133566,
-      "modified": 1788993526598
+      "hash": "063a3017b9b7",
+      "size": 133566
     },
     {
       "fileName": "rating/frames/profile/ramka_profile_lovers.webp",
       "label": "Ramka profile lovers",
       "folder": "rating/frames/profile",
       "path": "/assets/rating/frames/profile/ramka_profile_lovers.webp",
-      "size": 143054,
-      "modified": 1788993526713
+      "hash": "e3de47da57dc",
+      "size": 143054
     },
     {
       "fileName": "rating/frames/profile/ramka_profile_princess.webp",
       "label": "Ramka profile princess",
       "folder": "rating/frames/profile",
       "path": "/assets/rating/frames/profile/ramka_profile_princess.webp",
-      "size": 145526,
-      "modified": 1788993526824
+      "hash": "e8c2a8830731",
+      "size": 145526
     },
     {
       "fileName": "rating/frames/profile/ramka_profile_sedce.webp",
       "label": "Ramka profile sedce",
       "folder": "rating/frames/profile",
       "path": "/assets/rating/frames/profile/ramka_profile_sedce.webp",
-      "size": 99192,
-      "modified": 1788993527539
+      "hash": "6d87d9214734",
+      "size": 99192
     },
     {
       "fileName": "rating/frames/profile/ramka_profile_sleep.webp",
       "label": "Ramka profile sleep",
       "folder": "rating/frames/profile",
       "path": "/assets/rating/frames/profile/ramka_profile_sleep.webp",
-      "size": 97504,
-      "modified": 1788993527729
+      "hash": "34b651b5a81c",
+      "size": 97504
     },
     {
       "fileName": "rating/frames/profile/ramka_profile_zefir.webp",
       "label": "Ramka profile zefir",
       "folder": "rating/frames/profile",
       "path": "/assets/rating/frames/profile/ramka_profile_zefir.webp",
-      "size": 106256,
-      "modified": 1788993528025
+      "hash": "2c7953c609c0",
+      "size": 106256
     },
     {
       "fileName": "rating/frames/profile/ramka_profile_zima.webp",
       "label": "Ramka profile zima",
       "folder": "rating/frames/profile",
       "path": "/assets/rating/frames/profile/ramka_profile_zima.webp",
-      "size": 140534,
-      "modified": 1788993527987
+      "hash": "1281e6c5fbc8",
+      "size": 140534
     },
     {
       "fileName": "rating/frames/profile/ramka_s3_epick1.webp",
       "label": "Ramka s3 epick1",
       "folder": "rating/frames/profile",
       "path": "/assets/rating/frames/profile/ramka_s3_epick1.webp",
-      "size": 395684,
-      "modified": 1788993532664
+      "hash": "1f658f6a498b",
+      "size": 395684
     },
     {
       "fileName": "rating/frames/profile/ramka_s3_epick2.webp",
       "label": "Ramka s3 epick2",
       "folder": "rating/frames/profile",
       "path": "/assets/rating/frames/profile/ramka_s3_epick2.webp",
-      "size": 332464,
-      "modified": 1788993531762
+      "hash": "c582a91fff6b",
+      "size": 332464
     },
     {
       "fileName": "rating/frames/profile/ramka_s3_epick3.webp",
       "label": "Ramka s3 epick3",
       "folder": "rating/frames/profile",
       "path": "/assets/rating/frames/profile/ramka_s3_epick3.webp",
-      "size": 322980,
-      "modified": 1788993531973
+      "hash": "22e24bcac7e0",
+      "size": 322980
     },
     {
       "fileName": "rating/frames/profile/ramka_s3_legendary1.webp",
       "label": "Ramka s3 legendary1",
       "folder": "rating/frames/profile",
       "path": "/assets/rating/frames/profile/ramka_s3_legendary1.webp",
-      "size": 452464,
-      "modified": 1788993533827
+      "hash": "48e9e73f33cd",
+      "size": 452464
     },
     {
       "fileName": "rating/frames/profile/ramka_s3_legendary2.webp",
       "label": "Ramka s3 legendary2",
       "folder": "rating/frames/profile",
       "path": "/assets/rating/frames/profile/ramka_s3_legendary2.webp",
-      "size": 507908,
-      "modified": 1788993537835
+      "hash": "e2f68ab3375a",
+      "size": 507908
     },
     {
       "fileName": "rating/frames/profile/ramka_s3_mifik1.webp",
       "label": "Ramka s3 mifik1",
       "folder": "rating/frames/profile",
       "path": "/assets/rating/frames/profile/ramka_s3_mifik1.webp",
-      "size": 483456,
-      "modified": 1788993538239
+      "hash": "d945e10dbf71",
+      "size": 483456
     },
     {
       "fileName": "rating/frames/profile/ramka_s3_mifik2.webp",
       "label": "Ramka s3 mifik2",
       "folder": "rating/frames/profile",
       "path": "/assets/rating/frames/profile/ramka_s3_mifik2.webp",
-      "size": 487458,
-      "modified": 1788993538861
+      "hash": "725648ea6552",
+      "size": 487458
     },
     {
       "fileName": "rating/frames/profile/ramka_s3_standart1.webp",
       "label": "Ramka s3 standart1",
       "folder": "rating/frames/profile",
       "path": "/assets/rating/frames/profile/ramka_s3_standart1.webp",
-      "size": 223158,
-      "modified": 1788993536789
+      "hash": "c1b86c955235",
+      "size": 223158
     },
     {
       "fileName": "rating/frames/profile/ramka_s3_standart2.webp",
       "label": "Ramka s3 standart2",
       "folder": "rating/frames/profile",
       "path": "/assets/rating/frames/profile/ramka_s3_standart2.webp",
-      "size": 196142,
-      "modified": 1788993539532
+      "hash": "21cf0edb5f71",
+      "size": 196142
     },
     {
       "fileName": "rating/frames/profile/ramka_s3_standart3.webp",
       "label": "Ramka s3 standart3",
       "folder": "rating/frames/profile",
       "path": "/assets/rating/frames/profile/ramka_s3_standart3.webp",
-      "size": 198144,
-      "modified": 1788993540831
+      "hash": "a2a98055350b",
+      "size": 198144
     },
     {
       "fileName": "rating/frames/ramka_coffe.webp",
       "label": "Ramka coffe",
       "folder": "rating/frames",
       "path": "/assets/rating/frames/ramka_coffe.webp",
-      "size": 86236,
-      "modified": 1788993541298
+      "hash": "0b63941cd919",
+      "size": 86236
     },
     {
       "fileName": "rating/frames/ramka_elit.webp",
       "label": "Ramka elit",
       "folder": "rating/frames",
       "path": "/assets/rating/frames/ramka_elit.webp",
-      "size": 62448,
-      "modified": 1788993541904
+      "hash": "e04d7a9cf025",
+      "size": 62448
     },
     {
       "fileName": "rating/frames/ramka_flower.webp",
       "label": "Ramka flower",
       "folder": "rating/frames",
       "path": "/assets/rating/frames/ramka_flower.webp",
-      "size": 60814,
-      "modified": 1788993541067
+      "hash": "d2c4810c4cb8",
+      "size": 60814
     },
     {
       "fileName": "rating/frames/ramka_gold.webp",
       "label": "Ramka gold",
       "folder": "rating/frames",
       "path": "/assets/rating/frames/ramka_gold.webp",
-      "size": 71474,
-      "modified": 1788993543306
+      "hash": "b2bcd08d73a0",
+      "size": 71474
     },
     {
       "fileName": "rating/frames/ramka_klybnika.webp",
       "label": "Ramka klybnika",
       "folder": "rating/frames",
       "path": "/assets/rating/frames/ramka_klybnika.webp",
-      "size": 82936,
-      "modified": 1788993541784
+      "hash": "b187afe8b509",
+      "size": 82936
     },
     {
       "fileName": "rating/frames/ramka_zefir.webp",
       "label": "Ramka zefir",
       "folder": "rating/frames",
       "path": "/assets/rating/frames/ramka_zefir.webp",
-      "size": 64006,
-      "modified": 1788993542017
+      "hash": "145251913abf",
+      "size": 64006
     },
     {
       "fileName": "rating/frames/strawberry.webp",
       "label": "Strawberry",
       "folder": "rating/frames",
       "path": "/assets/rating/frames/strawberry.webp",
-      "size": 11326,
-      "modified": 1788993542704
+      "hash": "00e238515585",
+      "size": 11326
     },
     {
       "fileName": "rating/icon_2winner_raiting.webp",
       "label": "Icon 2winner raiting",
       "folder": "rating",
       "path": "/assets/rating/icon_2winner_raiting.webp",
-      "size": 248236,
-      "modified": 1788993545141
+      "hash": "7b0c4b200752",
+      "size": 248236
     },
     {
       "fileName": "rating/icon_3winner_raiting.webp",
       "label": "Icon 3winner raiting",
       "folder": "rating",
       "path": "/assets/rating/icon_3winner_raiting.webp",
-      "size": 186274,
-      "modified": 1788993545145
+      "hash": "221f7b1e392b",
+      "size": 186274
     },
     {
       "fileName": "rating/icon_vitrina_raiting.webp",
       "label": "Icon vitrina raiting",
       "folder": "rating",
       "path": "/assets/rating/icon_vitrina_raiting.webp",
-      "size": 78890,
-      "modified": 1788993544682
+      "hash": "b1bf0c3d9b9b",
+      "size": 78890
     },
     {
       "fileName": "rating/icon_winner_raiting.webp",
       "label": "Icon winner raiting",
       "folder": "rating",
       "path": "/assets/rating/icon_winner_raiting.webp",
-      "size": 223682,
-      "modified": 1788993546775
+      "hash": "d34ab6cf8632",
+      "size": 223682
     },
     {
       "fileName": "rating/season-leaderboard-banner.webp",
       "label": "Season leaderboard banner",
       "folder": "rating",
       "path": "/assets/rating/season-leaderboard-banner.webp",
-      "size": 43270,
-      "modified": 1788993544740
+      "hash": "79680434e03a",
+      "size": 43270
     },
     {
       "fileName": "rating/season-news.webp",
       "label": "Season news",
       "folder": "rating",
       "path": "/assets/rating/season-news.webp",
-      "size": 319546,
-      "modified": 1788993544995
+      "hash": "29d279cc39dc",
+      "size": 319546
     },
     {
       "fileName": "rating/season-rating-modal.webp",
       "label": "Season rating modal",
       "folder": "rating",
       "path": "/assets/rating/season-rating-modal.webp",
-      "size": 268986,
-      "modified": 1788993551177
+      "hash": "d2f212c4df54",
+      "size": 268986
     },
     {
       "fileName": "rating/season-waiting-card.webp",
       "label": "Season waiting card",
       "folder": "rating",
       "path": "/assets/rating/season-waiting-card.webp",
-      "size": 72714,
-      "modified": 1788993545286
+      "hash": "10a4f8ce0eb2",
+      "size": 72714
     },
     {
       "fileName": "rating/v4/leaderboard-hero.webp",
       "label": "Leaderboard hero",
       "folder": "rating/v4",
       "path": "/assets/rating/v4/leaderboard-hero.webp",
-      "size": 89158,
-      "modified": 1788993548853
+      "hash": "a3ce129eea71",
+      "size": 89158
     },
     {
       "fileName": "rating/v4/season-plaque.webp",
       "label": "Season plaque",
       "folder": "rating/v4",
       "path": "/assets/rating/v4/season-plaque.webp",
-      "size": 27484,
-      "modified": 1788993547003
+      "hash": "65d60fef4195",
+      "size": 27484
     },
     {
       "fileName": "rating/v5/header-badge-v2.webp",
       "label": "Header badge v2",
       "folder": "rating/v5",
       "path": "/assets/rating/v5/header-badge-v2.webp",
-      "size": 7588,
-      "modified": 1788993548061
+      "hash": "cf65e5430737",
+      "size": 7588
     },
     {
       "fileName": "rating/v5/podium-score-bronze.webp",
       "label": "Podium score bronze",
       "folder": "rating/v5",
       "path": "/assets/rating/v5/podium-score-bronze.webp",
-      "size": 5360,
-      "modified": 1788993547965
+      "hash": "f3fa9021cb2b",
+      "size": 5360
     },
     {
       "fileName": "rating/v5/podium-score-gold.webp",
       "label": "Podium score gold",
       "folder": "rating/v5",
       "path": "/assets/rating/v5/podium-score-gold.webp",
-      "size": 5438,
-      "modified": 1788993548927
+      "hash": "be074eea8694",
+      "size": 5438
     },
     {
       "fileName": "rating/v5/podium-score-silver.webp",
       "label": "Podium score silver",
       "folder": "rating/v5",
       "path": "/assets/rating/v5/podium-score-silver.webp",
-      "size": 4872,
-      "modified": 1788993549024
+      "hash": "7d3622b202e9",
+      "size": 4872
     },
     {
       "fileName": "rating/v5/reward-card-v2.webp",
       "label": "Reward card v2",
       "folder": "rating/v5",
       "path": "/assets/rating/v5/reward-card-v2.webp",
-      "size": 17930,
-      "modified": 1788993549993
+      "hash": "5a16a3147220",
+      "size": 17930
     },
     {
       "fileName": "rating/v5/season-badge-v2.webp",
       "label": "Season badge v2",
       "folder": "rating/v5",
       "path": "/assets/rating/v5/season-badge-v2.webp",
-      "size": 8238,
-      "modified": 1788993550652
+      "hash": "981861f62a24",
+      "size": 8238
     },
     {
       "fileName": "rating/v6/header-badge-premium.webp",
       "label": "Header badge premium",
       "folder": "rating/v6",
       "path": "/assets/rating/v6/header-badge-premium.webp",
-      "size": 9526,
-      "modified": 1788993550881
+      "hash": "0cd40ee933a5",
+      "size": 9526
     },
     {
       "fileName": "rating/v6/podium-score-bronze-premium.webp",
       "label": "Podium score bronze premium",
       "folder": "rating/v6",
       "path": "/assets/rating/v6/podium-score-bronze-premium.webp",
-      "size": 3796,
-      "modified": 1788993550305
+      "hash": "a2ac06c7825a",
+      "size": 3796
     },
     {
       "fileName": "rating/v6/podium-score-gold-premium.webp",
       "label": "Podium score gold premium",
       "folder": "rating/v6",
       "path": "/assets/rating/v6/podium-score-gold-premium.webp",
-      "size": 3820,
-      "modified": 1788993550618
+      "hash": "6d8d6d9ee31b",
+      "size": 3820
     },
     {
       "fileName": "rating/v6/podium-score-silver-premium.webp",
       "label": "Podium score silver premium",
       "folder": "rating/v6",
       "path": "/assets/rating/v6/podium-score-silver-premium.webp",
-      "size": 2564,
-      "modified": 1788993550930
+      "hash": "7aa0304def7f",
+      "size": 2564
     },
     {
       "fileName": "rating/v6/reward-card-premium.webp",
       "label": "Reward card premium",
       "folder": "rating/v6",
       "path": "/assets/rating/v6/reward-card-premium.webp",
-      "size": 14700,
-      "modified": 1788993552055
+      "hash": "577ce65ab399",
+      "size": 14700
     },
     {
       "fileName": "rating/v6/season-badge-premium.webp",
       "label": "Season badge premium",
       "folder": "rating/v6",
       "path": "/assets/rating/v6/season-badge-premium.webp",
-      "size": 9842,
-      "modified": 1788993553068
+      "hash": "d33dfca95212",
+      "size": 9842
     },
     {
       "fileName": "rating/v7/bronze_podl.webp",
       "label": "Bronze podl",
       "folder": "rating/v7",
       "path": "/assets/rating/v7/bronze_podl.webp",
-      "size": 165978,
-      "modified": 1788993554786
+      "hash": "82a5124d7c3f",
+      "size": 165978
     },
     {
       "fileName": "rating/v7/podlozka_gold.webp",
       "label": "Podlozka gold",
       "folder": "rating/v7",
       "path": "/assets/rating/v7/podlozka_gold.webp",
-      "size": 207398,
-      "modified": 1788993555470
+      "hash": "25d375756c2f",
+      "size": 207398
     },
     {
       "fileName": "rating/v7/premium-crown-plaque.webp",
       "label": "Premium crown plaque",
       "folder": "rating/v7",
       "path": "/assets/rating/v7/premium-crown-plaque.webp",
-      "size": 41256,
-      "modified": 1788993554517
+      "hash": "9700e66ede50",
+      "size": 41256
     },
     {
       "fileName": "rating/v7/premium-simple-plaque.webp",
       "label": "Premium simple plaque",
       "folder": "rating/v7",
       "path": "/assets/rating/v7/premium-simple-plaque.webp",
-      "size": 27982,
-      "modified": 1788993555439
+      "hash": "7deacb6d8b5d",
+      "size": 27982
     },
     {
       "fileName": "rating/v7/reward-frame.webp",
       "label": "Reward frame",
       "folder": "rating/v7",
       "path": "/assets/rating/v7/reward-frame.webp",
-      "size": 44910,
-      "modified": 1788993557117
+      "hash": "37f1b675be32",
+      "size": 44910
     },
     {
       "fileName": "rating/v7/season-name-frame.webp",
       "label": "Season name frame",
       "folder": "rating/v7",
       "path": "/assets/rating/v7/season-name-frame.webp",
-      "size": 84066,
-      "modified": 1788993557952
+      "hash": "184e02c78048",
+      "size": 84066
     },
     {
       "fileName": "rating/v7/serebryannay.webp",
       "label": "Serebryannay",
       "folder": "rating/v7",
       "path": "/assets/rating/v7/serebryannay.webp",
-      "size": 205608,
-      "modified": 1788993559354
+      "hash": "c46931d0eb43",
+      "size": 205608
     },
     {
       "fileName": "rating/v8/all-time-banner.webp",
       "label": "All time banner",
       "folder": "rating/v8",
       "path": "/assets/rating/v8/all-time-banner.webp",
-      "size": 113758,
-      "modified": 1788993555584
+      "hash": "35dc44159321",
+      "size": 113758
     },
     {
       "fileName": "rating/v8/all-time-rating.webp",
       "label": "All time rating",
       "folder": "rating/v8",
       "path": "/assets/rating/v8/all-time-rating.webp",
-      "size": 443886,
-      "modified": 1788993561959
+      "hash": "9229d42f92f7",
+      "size": 443886
     },
     {
       "fileName": "rating/v8/season_3_reiting.webp",
       "label": "Season 3 reiting",
       "folder": "rating/v8",
       "path": "/assets/rating/v8/season_3_reiting.webp",
-      "size": 141004,
-      "modified": 1788993559571
+      "hash": "c931a1352ba4",
+      "size": 141004
     },
     {
       "fileName": "rating/v8/season-1-cafe-opening.webp",
       "label": "Season 1 cafe opening",
       "folder": "rating/v8",
       "path": "/assets/rating/v8/season-1-cafe-opening.webp",
-      "size": 419180,
-      "modified": 1788993564015
+      "hash": "c0310085705c",
+      "size": 419180
     },
     {
       "fileName": "rating/v8/season-current-banner.webp",
       "label": "Season current banner",
       "folder": "rating/v8",
       "path": "/assets/rating/v8/season-current-banner.webp",
-      "size": 130850,
-      "modified": 1788993559475
+      "hash": "9495331d898e",
+      "size": 130850
     },
     {
       "fileName": "rating/v8/season3_reiting_all.webp",
       "label": "Season3 reiting all",
       "folder": "rating/v8",
       "path": "/assets/rating/v8/season3_reiting_all.webp",
-      "size": 139882,
-      "modified": 1788993562229
+      "hash": "79e6501b7c0e",
+      "size": 139882
     },
     {
       "fileName": "season/s2/minigame/currency/background_season2.webp",
       "label": "Background season2",
       "folder": "season/s2/minigame/currency",
       "path": "/assets/season/s2/minigame/currency/background_season2.webp",
-      "size": 126502,
-      "modified": 1788993559754
+      "hash": "c11200fc7c95",
+      "size": 126502
     },
     {
       "fileName": "season/s2/minigame/currency/treats.webp",
       "label": "Treats",
       "folder": "season/s2/minigame/currency",
       "path": "/assets/season/s2/minigame/currency/treats.webp",
-      "size": 176548,
-      "modified": 1788993562939
+      "hash": "1c864e0ebd15",
+      "size": 176548
     },
     {
       "fileName": "season/s3/minigame/currency/belkina_background_season3.webp",
       "label": "Belkina background season3",
       "folder": "season/s3/minigame/currency",
       "path": "/assets/season/s3/minigame/currency/belkina_background_season3.webp",
-      "size": 324782,
-      "modified": 1788993562216
+      "hash": "781e2e992cf1",
+      "size": 324782
     },
     {
       "fileName": "season/s3/minigame/currency/coffe.webp",
       "label": "Coffe",
       "folder": "season/s3/minigame/currency",
       "path": "/assets/season/s3/minigame/currency/coffe.webp",
-      "size": 138946,
-      "modified": 1788993564373
+      "hash": "33d1e9e66940",
+      "size": 138946
     },
     {
       "fileName": "season-pass/avatars_season_pass3.webp",
       "label": "Avatars season pass3",
       "folder": "season-pass",
       "path": "/assets/season-pass/avatars_season_pass3.webp",
-      "size": 328530,
-      "modified": 1788993566766
+      "hash": "c618b716950a",
+      "size": 328530
     },
     {
       "fileName": "season-pass/elite_plus.webp",
       "label": "Elite plus",
       "folder": "season-pass",
       "path": "/assets/season-pass/elite_plus.webp",
-      "size": 299060,
-      "modified": 1788993567204
+      "hash": "2f6438f93199",
+      "size": 299060
     },
     {
       "fileName": "season-pass/elite.webp",
       "label": "Elite",
       "folder": "season-pass",
       "path": "/assets/season-pass/elite.webp",
-      "size": 267892,
-      "modified": 1788993568310
+      "hash": "11c5fab8f5a6",
+      "size": 267892
     },
     {
       "fileName": "season-pass/free_line.webp",
       "label": "Free line",
       "folder": "season-pass",
       "path": "/assets/season-pass/free_line.webp",
-      "size": 163590,
-      "modified": 1788993564576
+      "hash": "355ef4b1d1bd",
+      "size": 163590
     },
     {
       "fileName": "season-pass/icon_one_season.webp",
       "label": "Icon one season",
       "folder": "season-pass",
       "path": "/assets/season-pass/icon_one_season.webp",
-      "size": 287246,
-      "modified": 1788993570411
+      "hash": "8d2d6c6ece0d",
+      "size": 287246
     },
     {
       "fileName": "season-pass/icon_tarif_elit_plus.webp",
       "label": "Icon tarif elit plus",
       "folder": "season-pass",
       "path": "/assets/season-pass/icon_tarif_elit_plus.webp",
-      "size": 410538,
-      "modified": 1788993570539
+      "hash": "b86160425e5a",
+      "size": 410538
     },
     {
       "fileName": "season-pass/icon_tarif_elit.webp",
       "label": "Icon tarif elit",
       "folder": "season-pass",
       "path": "/assets/season-pass/icon_tarif_elit.webp",
-      "size": 349994,
-      "modified": 1788993573256
+      "hash": "de4647ca174f",
+      "size": 349994
     },
     {
       "fileName": "season-pass/levels_5.webp",
       "label": "Levels 5",
       "folder": "season-pass",
       "path": "/assets/season-pass/levels_5.webp",
-      "size": 250664,
-      "modified": 1788993569261
+      "hash": "8866f95b1417",
+      "size": 250664
     },
     {
       "fileName": "season-pass/premium_line.webp",
       "label": "Premium line",
       "folder": "season-pass",
       "path": "/assets/season-pass/premium_line.webp",
-      "size": 360284,
-      "modified": 1788993569540
+      "hash": "81631d139a23",
+      "size": 360284
     },
     {
       "fileName": "season-pass/quest.webp",
       "label": "Quest",
       "folder": "season-pass",
       "path": "/assets/season-pass/quest.webp",
-      "size": 162498,
-      "modified": 1788993570422
+      "hash": "74943a5d713f",
+      "size": 162498
     },
     {
       "fileName": "season-pass/season_3_pass.webp",
       "label": "Season 3 pass",
       "folder": "season-pass",
       "path": "/assets/season-pass/season_3_pass.webp",
-      "size": 290120,
-      "modified": 1788993575349
+      "hash": "ee0b79e19268",
+      "size": 290120
     },
     {
       "fileName": "season-pass/season_pass1.webp",
       "label": "Season pass1",
       "folder": "season-pass",
       "path": "/assets/season-pass/season_pass1.webp",
-      "size": 305284,
-      "modified": 1788993576340
+      "hash": "a504ae3d88e3",
+      "size": 305284
     },
     {
       "fileName": "season-pass/season_pass3_2xp.webp",
       "label": "Season pass3 2xp",
       "folder": "season-pass",
       "path": "/assets/season-pass/season_pass3_2xp.webp",
-      "size": 303888,
-      "modified": 1788993574462
+      "hash": "0a41f660b9ba",
+      "size": 303888
     },
     {
       "fileName": "season-pass/season_pass3_5levels.webp",
       "label": "Season pass3 5levels",
       "folder": "season-pass",
       "path": "/assets/season-pass/season_pass3_5levels.webp",
-      "size": 316750,
-      "modified": 1788993577015
+      "hash": "33dded205d4d",
+      "size": 316750
     },
     {
       "fileName": "season-pass/season_pass3_prize.webp",
       "label": "Season pass3 prize",
       "folder": "season-pass",
       "path": "/assets/season-pass/season_pass3_prize.webp",
-      "size": 286330,
-      "modified": 1788993578528
+      "hash": "54691b36d5a6",
+      "size": 286330
     },
     {
       "fileName": "season-pass/season_pass3_quest.webp",
       "label": "Season pass3 quest",
       "folder": "season-pass",
       "path": "/assets/season-pass/season_pass3_quest.webp",
-      "size": 281552,
-      "modified": 1788993578639
+      "hash": "127c427ec425",
+      "size": 281552
     },
     {
       "fileName": "season-pass/season_pass3_xp.webp",
       "label": "Season pass3 xp",
       "folder": "season-pass",
       "path": "/assets/season-pass/season_pass3_xp.webp",
-      "size": 374844,
-      "modified": 1788993580852
+      "hash": "51df646961aa",
+      "size": 374844
     },
     {
       "fileName": "season-pass/Season_pass3.webp",
       "label": "Season pass3",
       "folder": "season-pass",
       "path": "/assets/season-pass/Season_pass3.webp",
-      "size": 209972,
-      "modified": 1788993580075
+      "hash": "d4d55b5f743d",
+      "size": 209972
     },
     {
       "fileName": "season-pass/season.webp",
       "label": "Season",
       "folder": "season-pass",
       "path": "/assets/season-pass/season.webp",
-      "size": 213746,
-      "modified": 1788993579436
+      "hash": "f0e1ed581093",
+      "size": 213746
     },
     {
       "fileName": "season-pass/xp_x2.webp",
       "label": "Xp x2",
       "folder": "season-pass",
       "path": "/assets/season-pass/xp_x2.webp",
-      "size": 188170,
-      "modified": 1788993583277
+      "hash": "d8f1d631ad19",
+      "size": 188170
     },
     {
       "fileName": "season-pass/xp.webp",
       "label": "Xp",
       "folder": "season-pass",
       "path": "/assets/season-pass/xp.webp",
-      "size": 311240,
-      "modified": 1788993580409
+      "hash": "e9695cb75e47",
+      "size": 311240
     },
     {
       "fileName": "season-pass/zaglyshka_season.webp",
       "label": "Zaglyshka season",
       "folder": "season-pass",
       "path": "/assets/season-pass/zaglyshka_season.webp",
-      "size": 304364,
-      "modified": 1788993580337
+      "hash": "369153e99e43",
+      "size": 304364
     },
     {
       "fileName": "season-pass/zefir_currency.webp",
       "label": "Zefir currency",
       "folder": "season-pass",
       "path": "/assets/season-pass/zefir_currency.webp",
-      "size": 4210,
-      "modified": 1788993580456
+      "hash": "b95507ca02a0",
+      "size": 4210
     },
     {
       "fileName": "shop/currency_star_256x256.webp",
       "label": "Currency star 256x256",
       "folder": "shop",
       "path": "/assets/shop/currency_star_256x256.webp",
-      "size": 8828,
-      "modified": 1788993581209
+      "hash": "df7ddf2299aa",
+      "size": 8828
     },
     {
       "fileName": "shop/deco_heart_128x128.webp",
       "label": "Deco heart 128x128",
       "folder": "shop",
       "path": "/assets/shop/deco_heart_128x128.webp",
-      "size": 3414,
-      "modified": 1788993580670
+      "hash": "f6cd7ccc3a9a",
+      "size": 3414
     },
     {
       "fileName": "shop/deco_sparkles_160x160.webp",
       "label": "Deco sparkles 160x160",
       "folder": "shop",
       "path": "/assets/shop/deco_sparkles_160x160.webp",
-      "size": 4150,
-      "modified": 1788993581028
+      "hash": "7e44a304f331",
+      "size": 4150
     },
     {
       "fileName": "shop/dessert_cheesecake_256x256.webp",
       "label": "Dessert cheesecake 256x256",
       "folder": "shop",
       "path": "/assets/shop/dessert_cheesecake_256x256.webp",
-      "size": 11150,
-      "modified": 1788993581653
+      "hash": "697247ba8615",
+      "size": 11150
     },
     {
       "fileName": "shop/dessert_chocolate_cake_256x256.webp",
       "label": "Dessert chocolate cake 256x256",
       "folder": "shop",
       "path": "/assets/shop/dessert_chocolate_cake_256x256.webp",
-      "size": 10108,
-      "modified": 1788993581824
+      "hash": "32d9cbcb97bc",
+      "size": 10108
     },
     {
       "fileName": "shop/dessert_macaron_256x256.webp",
       "label": "Dessert macaron 256x256",
       "folder": "shop",
       "path": "/assets/shop/dessert_macaron_256x256.webp",
-      "size": 9682,
-      "modified": 1788993582011
+      "hash": "677b2e525b13",
+      "size": 9682
     },
     {
       "fileName": "shop/dessert_marshmallow_256x256.webp",
       "label": "Dessert marshmallow 256x256",
       "folder": "shop",
       "path": "/assets/shop/dessert_marshmallow_256x256.webp",
-      "size": 8042,
-      "modified": 1788993582457
+      "hash": "fc65e3f8456b",
+      "size": 8042
     },
     {
       "fileName": "shop/mascot_maltipoo_384x384.webp",
       "label": "Mascot maltipoo 384x384",
       "folder": "shop",
       "path": "/assets/shop/mascot_maltipoo_384x384.webp",
-      "size": 15300,
-      "modified": 1788993583449
+      "hash": "199939f39dc1",
+      "size": 15300
     },
     {
       "fileName": "skins/avatars/alex.webp",
       "label": "Alex",
       "folder": "skins/avatars",
       "path": "/assets/skins/avatars/alex.webp",
-      "size": 250578,
-      "modified": 1788993586022
+      "hash": "ad299820ca89",
+      "size": 250578
     },
     {
       "fileName": "skins/avatars/angel.webp",
       "label": "Angel",
       "folder": "skins/avatars",
       "path": "/assets/skins/avatars/angel.webp",
-      "size": 23314,
-      "modified": 1788993585176
+      "hash": "86143d2dd777",
+      "size": 23314
     },
     {
       "fileName": "skins/avatars/barista.webp",
       "label": "Barista",
       "folder": "skins/avatars",
       "path": "/assets/skins/avatars/barista.webp",
-      "size": 26022,
-      "modified": 1788993585995
+      "hash": "27c673c34b6f",
+      "size": 26022
     },
     {
       "fileName": "skins/avatars/bee.webp",
       "label": "Bee",
       "folder": "skins/avatars",
       "path": "/assets/skins/avatars/bee.webp",
-      "size": 31150,
-      "modified": 1788993586172
+      "hash": "7ccc2595f4e3",
+      "size": 31150
     },
     {
       "fileName": "skins/avatars/default.webp",
       "label": "Default",
       "folder": "skins/avatars",
       "path": "/assets/skins/avatars/default.webp",
-      "size": 24578,
-      "modified": 1788993587900
+      "hash": "e45d0c608273",
+      "size": 24578
     },
     {
       "fileName": "skins/avatars/princess.webp",
       "label": "Princess",
       "folder": "skins/avatars",
       "path": "/assets/skins/avatars/princess.webp",
-      "size": 28286,
-      "modified": 1788993588721
+      "hash": "ffc09004eb20",
+      "size": 28286
     },
     {
       "fileName": "skins/avatars/sailor.webp",
       "label": "Sailor",
       "folder": "skins/avatars",
       "path": "/assets/skins/avatars/sailor.webp",
-      "size": 28652,
-      "modified": 1788993588739
+      "hash": "4449c591ba82",
+      "size": 28652
     },
     {
       "fileName": "skins/avatars/strawberry.webp",
       "label": "Strawberry",
       "folder": "skins/avatars",
       "path": "/assets/skins/avatars/strawberry.webp",
-      "size": 27600,
-      "modified": 1788993588892
+      "hash": "7bffb04c516d",
+      "size": 27600
     },
     {
       "fileName": "skins/gameplay/alex/jump.webp",
       "label": "Jump",
       "folder": "skins/gameplay/alex",
       "path": "/assets/skins/gameplay/alex/jump.webp",
-      "size": 237584,
-      "modified": 1788993591426
+      "hash": "9e9ce4bf1da5",
+      "size": 237584
     },
     {
       "fileName": "skins/gameplay/alex/run1- запасной 2.webp",
       "label": "Run1 запасной 2",
       "folder": "skins/gameplay/alex",
       "path": "/assets/skins/gameplay/alex/run1-%20%D0%B7%D0%B0%D0%BF%D0%B0%D1%81%D0%BD%D0%BE%D0%B8%CC%86%202.webp",
-      "size": 234508,
-      "modified": 1788993592040
+      "hash": "c976667ef1b1",
+      "size": 234508
     },
     {
       "fileName": "skins/gameplay/alex/run1.webp",
       "label": "Run1",
       "folder": "skins/gameplay/alex",
       "path": "/assets/skins/gameplay/alex/run1.webp",
-      "size": 212680,
-      "modified": 1788993591784
+      "hash": "5180905f2fc0",
+      "size": 212680
     },
     {
       "fileName": "skins/gameplay/alex/run2- Запаска.webp",
       "label": "Run2 Запаска",
       "folder": "skins/gameplay/alex",
       "path": "/assets/skins/gameplay/alex/run2-%20%D0%97%D0%B0%D0%BF%D0%B0%D1%81%D0%BA%D0%B0.webp",
-      "size": 234508,
-      "modified": 1788993592211
+      "hash": "c976667ef1b1",
+      "size": 234508
     },
     {
       "fileName": "skins/gameplay/alex/run2.webp",
       "label": "Run2",
       "folder": "skins/gameplay/alex",
       "path": "/assets/skins/gameplay/alex/run2.webp",
-      "size": 209278,
-      "modified": 1788993594466
+      "hash": "b034365f2377",
+      "size": 209278
     },
     {
       "fileName": "skins/gameplay/alex/stand.webp",
       "label": "Stand",
       "folder": "skins/gameplay/alex",
       "path": "/assets/skins/gameplay/alex/stand.webp",
-      "size": 296456,
-      "modified": 1788993596574
+      "hash": "7becab48fb5a",
+      "size": 296456
     },
     {
       "fileName": "skins/gameplay/angel/jump.webp",
       "label": "Jump",
       "folder": "skins/gameplay/angel",
       "path": "/assets/skins/gameplay/angel/jump.webp",
-      "size": 12486,
-      "modified": 1788993592954
+      "hash": "6495e781f725",
+      "size": 12486
     },
     {
       "fileName": "skins/gameplay/angel/run.webp",
       "label": "Run",
       "folder": "skins/gameplay/angel",
       "path": "/assets/skins/gameplay/angel/run.webp",
-      "size": 13296,
-      "modified": 1788993593176
+      "hash": "d34cf79e2b8b",
+      "size": 13296
     },
     {
       "fileName": "skins/gameplay/angel/run1.webp",
       "label": "Run1",
       "folder": "skins/gameplay/angel",
       "path": "/assets/skins/gameplay/angel/run1.webp",
-      "size": 12068,
-      "modified": 1788993593889
+      "hash": "b85bce6a4ddb",
+      "size": 12068
     },
     {
       "fileName": "skins/gameplay/angel/run2.webp",
       "label": "Run2",
       "folder": "skins/gameplay/angel",
       "path": "/assets/skins/gameplay/angel/run2.webp",
-      "size": 21288,
-      "modified": 1788993594322
+      "hash": "56d037182d9c",
+      "size": 21288
     },
     {
       "fileName": "skins/gameplay/angel/run3.webp",
       "label": "Run3",
       "folder": "skins/gameplay/angel",
       "path": "/assets/skins/gameplay/angel/run3.webp",
-      "size": 12068,
-      "modified": 1788993594824
+      "hash": "b85bce6a4ddb",
+      "size": 12068
     },
     {
       "fileName": "skins/gameplay/angel/run4.webp",
       "label": "Run4",
       "folder": "skins/gameplay/angel",
       "path": "/assets/skins/gameplay/angel/run4.webp",
-      "size": 21400,
-      "modified": 1788993595447
+      "hash": "845791ffcfe7",
+      "size": 21400
     },
     {
       "fileName": "skins/gameplay/angel/stand.webp",
       "label": "Stand",
       "folder": "skins/gameplay/angel",
       "path": "/assets/skins/gameplay/angel/stand.webp",
-      "size": 12720,
-      "modified": 1788993595426
+      "hash": "3b094317f245",
+      "size": 12720
     },
     {
       "fileName": "skins/gameplay/barista/jump.webp",
       "label": "Jump",
       "folder": "skins/gameplay/barista",
       "path": "/assets/skins/gameplay/barista/jump.webp",
-      "size": 14008,
-      "modified": 1788993595739
+      "hash": "23c228cb5df1",
+      "size": 14008
     },
     {
       "fileName": "skins/gameplay/barista/run.webp",
       "label": "Run",
       "folder": "skins/gameplay/barista",
       "path": "/assets/skins/gameplay/barista/run.webp",
-      "size": 15100,
-      "modified": 1788993596344
+      "hash": "faa104d9c164",
+      "size": 15100
     },
     {
       "fileName": "skins/gameplay/barista/run1.webp",
       "label": "Run1",
       "folder": "skins/gameplay/barista",
       "path": "/assets/skins/gameplay/barista/run1.webp",
-      "size": 13912,
-      "modified": 1788993596360
+      "hash": "491caf978a4d",
+      "size": 13912
     },
     {
       "fileName": "skins/gameplay/barista/run2.webp",
       "label": "Run2",
       "folder": "skins/gameplay/barista",
       "path": "/assets/skins/gameplay/barista/run2.webp",
-      "size": 14756,
-      "modified": 1788993596647
+      "hash": "175b87437937",
+      "size": 14756
     },
     {
       "fileName": "skins/gameplay/barista/run3.webp",
       "label": "Run3",
       "folder": "skins/gameplay/barista",
       "path": "/assets/skins/gameplay/barista/run3.webp",
-      "size": 13912,
-      "modified": 1788993597260
+      "hash": "491caf978a4d",
+      "size": 13912
     },
     {
       "fileName": "skins/gameplay/barista/run4.webp",
       "label": "Run4",
       "folder": "skins/gameplay/barista",
       "path": "/assets/skins/gameplay/barista/run4.webp",
-      "size": 14748,
-      "modified": 1788993597285
+      "hash": "fb5d953e7d7a",
+      "size": 14748
     },
     {
       "fileName": "skins/gameplay/barista/stand.webp",
       "label": "Stand",
       "folder": "skins/gameplay/barista",
       "path": "/assets/skins/gameplay/barista/stand.webp",
-      "size": 15150,
-      "modified": 1788993597505
+      "hash": "5b3552bf6a8c",
+      "size": 15150
     },
     {
       "fileName": "skins/gameplay/bee/jump.webp",
       "label": "Jump",
       "folder": "skins/gameplay/bee",
       "path": "/assets/skins/gameplay/bee/jump.webp",
-      "size": 16368,
-      "modified": 1788993597573
+      "hash": "ff857d78a830",
+      "size": 16368
     },
     {
       "fileName": "skins/gameplay/bee/run.webp",
       "label": "Run",
       "folder": "skins/gameplay/bee",
       "path": "/assets/skins/gameplay/bee/run.webp",
-      "size": 16716,
-      "modified": 1788993598180
+      "hash": "1ac4a8b60a55",
+      "size": 16716
     },
     {
       "fileName": "skins/gameplay/bee/run1.webp",
       "label": "Run1",
       "folder": "skins/gameplay/bee",
       "path": "/assets/skins/gameplay/bee/run1.webp",
-      "size": 15460,
-      "modified": 1788993598196
+      "hash": "34c7be0f410b",
+      "size": 15460
     },
     {
       "fileName": "skins/gameplay/bee/run2.webp",
       "label": "Run2",
       "folder": "skins/gameplay/bee",
       "path": "/assets/skins/gameplay/bee/run2.webp",
-      "size": 15896,
-      "modified": 1788993598412
+      "hash": "6f2b3c8685a2",
+      "size": 15896
     },
     {
       "fileName": "skins/gameplay/bee/run3.webp",
       "label": "Run3",
       "folder": "skins/gameplay/bee",
       "path": "/assets/skins/gameplay/bee/run3.webp",
-      "size": 15460,
-      "modified": 1788993598485
+      "hash": "34c7be0f410b",
+      "size": 15460
     },
     {
       "fileName": "skins/gameplay/bee/run4.webp",
       "label": "Run4",
       "folder": "skins/gameplay/bee",
       "path": "/assets/skins/gameplay/bee/run4.webp",
-      "size": 15852,
-      "modified": 1788993599082
+      "hash": "4b01ecb7b4a2",
+      "size": 15852
     },
     {
       "fileName": "skins/gameplay/bee/stand.webp",
       "label": "Stand",
       "folder": "skins/gameplay/bee",
       "path": "/assets/skins/gameplay/bee/stand.webp",
-      "size": 16412,
-      "modified": 1788993599106
+      "hash": "c01e7ad56686",
+      "size": 16412
     },
     {
       "fileName": "skins/gameplay/default/jump.webp",
       "label": "Jump",
       "folder": "skins/gameplay/default",
       "path": "/assets/skins/gameplay/default/jump.webp",
-      "size": 13850,
-      "modified": 1788993599317
+      "hash": "d2d4d2ae8f33",
+      "size": 13850
     },
     {
       "fileName": "skins/gameplay/default/run.webp",
       "label": "Run",
       "folder": "skins/gameplay/default",
       "path": "/assets/skins/gameplay/default/run.webp",
-      "size": 14552,
-      "modified": 1788993599392
+      "hash": "d002377f06ee",
+      "size": 14552
     },
     {
       "fileName": "skins/gameplay/default/run1.webp",
       "label": "Run1",
       "folder": "skins/gameplay/default",
       "path": "/assets/skins/gameplay/default/run1.webp",
-      "size": 14552,
-      "modified": 1788993599989
+      "hash": "d002377f06ee",
+      "size": 14552
     },
     {
       "fileName": "skins/gameplay/default/run2.webp",
       "label": "Run2",
       "folder": "skins/gameplay/default",
       "path": "/assets/skins/gameplay/default/run2.webp",
-      "size": 14734,
-      "modified": 1788993600032
+      "hash": "bc5a28cbed5d",
+      "size": 14734
     },
     {
       "fileName": "skins/gameplay/default/run3.webp",
       "label": "Run3",
       "folder": "skins/gameplay/default",
       "path": "/assets/skins/gameplay/default/run3.webp",
-      "size": 14552,
-      "modified": 1788993600224
+      "hash": "d002377f06ee",
+      "size": 14552
     },
     {
       "fileName": "skins/gameplay/default/run4.webp",
       "label": "Run4",
       "folder": "skins/gameplay/default",
       "path": "/assets/skins/gameplay/default/run4.webp",
-      "size": 15038,
-      "modified": 1788993600325
+      "hash": "218e7ca20fd0",
+      "size": 15038
     },
     {
       "fileName": "skins/gameplay/default/stand.webp",
       "label": "Stand",
       "folder": "skins/gameplay/default",
       "path": "/assets/skins/gameplay/default/stand.webp",
-      "size": 15270,
-      "modified": 1788993600931
+      "hash": "f67528304973",
+      "size": 15270
     },
     {
       "fileName": "skins/gameplay/princess/jump.webp",
       "label": "Jump",
       "folder": "skins/gameplay/princess",
       "path": "/assets/skins/gameplay/princess/jump.webp",
-      "size": 14782,
-      "modified": 1788993600946
+      "hash": "9b43ce1af36b",
+      "size": 14782
     },
     {
       "fileName": "skins/gameplay/princess/run.webp",
       "label": "Run",
       "folder": "skins/gameplay/princess",
       "path": "/assets/skins/gameplay/princess/run.webp",
-      "size": 15028,
-      "modified": 1788993601128
+      "hash": "6d98c3d4a201",
+      "size": 15028
     },
     {
       "fileName": "skins/gameplay/princess/run1.webp",
       "label": "Run1",
       "folder": "skins/gameplay/princess",
       "path": "/assets/skins/gameplay/princess/run1.webp",
-      "size": 13880,
-      "modified": 1788993601212
+      "hash": "041f5690d446",
+      "size": 13880
     },
     {
       "fileName": "skins/gameplay/princess/run2.webp",
       "label": "Run2",
       "folder": "skins/gameplay/princess",
       "path": "/assets/skins/gameplay/princess/run2.webp",
-      "size": 19750,
-      "modified": 1788993601987
+      "hash": "259116051e4f",
+      "size": 19750
     },
     {
       "fileName": "skins/gameplay/princess/run3.webp",
       "label": "Run3",
       "folder": "skins/gameplay/princess",
       "path": "/assets/skins/gameplay/princess/run3.webp",
-      "size": 13880,
-      "modified": 1788993601832
+      "hash": "041f5690d446",
+      "size": 13880
     },
     {
       "fileName": "skins/gameplay/princess/run4.webp",
       "label": "Run4",
       "folder": "skins/gameplay/princess",
       "path": "/assets/skins/gameplay/princess/run4.webp",
-      "size": 20008,
-      "modified": 1788993602158
+      "hash": "aa388eeaa5fa",
+      "size": 20008
     },
     {
       "fileName": "skins/gameplay/princess/stand.webp",
       "label": "Stand",
       "folder": "skins/gameplay/princess",
       "path": "/assets/skins/gameplay/princess/stand.webp",
-      "size": 14906,
-      "modified": 1788993602130
+      "hash": "ada6a925c6bb",
+      "size": 14906
     },
     {
       "fileName": "skins/gameplay/sailor/jump.webp",
       "label": "Jump",
       "folder": "skins/gameplay/sailor",
       "path": "/assets/skins/gameplay/sailor/jump.webp",
-      "size": 14270,
-      "modified": 1788993602734
+      "hash": "8596fe3df764",
+      "size": 14270
     },
     {
       "fileName": "skins/gameplay/sailor/run.webp",
       "label": "Run",
       "folder": "skins/gameplay/sailor",
       "path": "/assets/skins/gameplay/sailor/run.webp",
-      "size": 15588,
-      "modified": 1788993602915
+      "hash": "c1f4680eaf66",
+      "size": 15588
     },
     {
       "fileName": "skins/gameplay/sailor/run1.webp",
       "label": "Run1",
       "folder": "skins/gameplay/sailor",
       "path": "/assets/skins/gameplay/sailor/run1.webp",
-      "size": 14178,
-      "modified": 1788993603024
+      "hash": "d7714ec9bb08",
+      "size": 14178
     },
     {
       "fileName": "skins/gameplay/sailor/run2.webp",
       "label": "Run2",
       "folder": "skins/gameplay/sailor",
       "path": "/assets/skins/gameplay/sailor/run2.webp",
-      "size": 14882,
-      "modified": 1788993603068
+      "hash": "edaf1cfef6cd",
+      "size": 14882
     },
     {
       "fileName": "skins/gameplay/sailor/run3.webp",
       "label": "Run3",
       "folder": "skins/gameplay/sailor",
       "path": "/assets/skins/gameplay/sailor/run3.webp",
-      "size": 14178,
-      "modified": 1788993603629
+      "hash": "d7714ec9bb08",
+      "size": 14178
     },
     {
       "fileName": "skins/gameplay/sailor/run4.webp",
       "label": "Run4",
       "folder": "skins/gameplay/sailor",
       "path": "/assets/skins/gameplay/sailor/run4.webp",
-      "size": 14918,
-      "modified": 1788993603839
+      "hash": "44cbfbfd6244",
+      "size": 14918
     },
     {
       "fileName": "skins/gameplay/sailor/stand.webp",
       "label": "Stand",
       "folder": "skins/gameplay/sailor",
       "path": "/assets/skins/gameplay/sailor/stand.webp",
-      "size": 15214,
-      "modified": 1788993603947
+      "hash": "cf9c5969ee18",
+      "size": 15214
     },
     {
       "fileName": "skins/gameplay/strawberry/jump.webp",
       "label": "Jump",
       "folder": "skins/gameplay/strawberry",
       "path": "/assets/skins/gameplay/strawberry/jump.webp",
-      "size": 14066,
-      "modified": 1788993603981
+      "hash": "12b13596ee64",
+      "size": 14066
     },
     {
       "fileName": "skins/gameplay/strawberry/run.webp",
       "label": "Run",
       "folder": "skins/gameplay/strawberry",
       "path": "/assets/skins/gameplay/strawberry/run.webp",
-      "size": 14968,
-      "modified": 1788993604559
+      "hash": "1a63d0d5d019",
+      "size": 14968
     },
     {
       "fileName": "skins/gameplay/strawberry/run1.webp",
       "label": "Run1",
       "folder": "skins/gameplay/strawberry",
       "path": "/assets/skins/gameplay/strawberry/run1.webp",
-      "size": 13904,
-      "modified": 1788993604753
+      "hash": "4761d1aeaffb",
+      "size": 13904
     },
     {
       "fileName": "skins/gameplay/strawberry/run2.webp",
       "label": "Run2",
       "folder": "skins/gameplay/strawberry",
       "path": "/assets/skins/gameplay/strawberry/run2.webp",
-      "size": 14462,
-      "modified": 1788993604859
+      "hash": "7e8102b3eea6",
+      "size": 14462
     },
     {
       "fileName": "skins/gameplay/strawberry/run3.webp",
       "label": "Run3",
       "folder": "skins/gameplay/strawberry",
       "path": "/assets/skins/gameplay/strawberry/run3.webp",
-      "size": 13904,
-      "modified": 1788993604895
+      "hash": "4761d1aeaffb",
+      "size": 13904
     },
     {
       "fileName": "skins/gameplay/strawberry/run4.webp",
       "label": "Run4",
       "folder": "skins/gameplay/strawberry",
       "path": "/assets/skins/gameplay/strawberry/run4.webp",
-      "size": 14424,
-      "modified": 1788993605471
+      "hash": "756ac35c7d9c",
+      "size": 14424
     },
     {
       "fileName": "skins/gameplay/strawberry/stand.webp",
       "label": "Stand",
       "folder": "skins/gameplay/strawberry",
       "path": "/assets/skins/gameplay/strawberry/stand.webp",
-      "size": 14792,
-      "modified": 1788993605688
+      "hash": "ded876432395",
+      "size": 14792
     },
     {
       "fileName": "skins/shop/alex.webp",
       "label": "Alex",
       "folder": "skins/shop",
       "path": "/assets/skins/shop/alex.webp",
-      "size": 296456,
-      "modified": 1788993609653
+      "hash": "7becab48fb5a",
+      "size": 296456
     },
     {
       "fileName": "skins/shop/angel.webp",
       "label": "Angel",
       "folder": "skins/shop",
       "path": "/assets/skins/shop/angel.webp",
-      "size": 46292,
-      "modified": 1788993606472
+      "hash": "fedd36d7715f",
+      "size": 46292
     },
     {
       "fileName": "skins/shop/backgrounds/epick_background_shop.webp",
       "label": "Epick background shop",
       "folder": "skins/shop/backgrounds",
       "path": "/assets/skins/shop/backgrounds/epick_background_shop.webp",
-      "size": 112954,
-      "modified": 1788993605639
+      "hash": "104fb108c40e",
+      "size": 112954
     },
     {
       "fileName": "skins/shop/backgrounds/legendary_background_shop.webp",
       "label": "Legendary background shop",
       "folder": "skins/shop/backgrounds",
       "path": "/assets/skins/shop/backgrounds/legendary_background_shop.webp",
-      "size": 123404,
-      "modified": 1788993605815
+      "hash": "91d43ed56cde",
+      "size": 123404
     },
     {
       "fileName": "skins/shop/backgrounds/mifik_background_shop.webp",
       "label": "Mifik background shop",
       "folder": "skins/shop/backgrounds",
       "path": "/assets/skins/shop/backgrounds/mifik_background_shop.webp",
-      "size": 103768,
-      "modified": 1788993605854
+      "hash": "ee5134cf3e38",
+      "size": 103768
     },
     {
       "fileName": "skins/shop/backgrounds/rare_background_shop.webp",
       "label": "Rare background shop",
       "folder": "skins/shop/backgrounds",
       "path": "/assets/skins/shop/backgrounds/rare_background_shop.webp",
-      "size": 76182,
-      "modified": 1788993605969
+      "hash": "0a94c7d7f657",
+      "size": 76182
     },
     {
       "fileName": "skins/shop/backgrounds/standart_background_shop.webp",
       "label": "Standart background shop",
       "folder": "skins/shop/backgrounds",
       "path": "/assets/skins/shop/backgrounds/standart_background_shop.webp",
-      "size": 59034,
-      "modified": 1788993605998
+      "hash": "44d5a54107de",
+      "size": 59034
     },
     {
       "fileName": "skins/shop/backgrounds/superrare_background_shop.webp",
       "label": "Superrare background shop",
       "folder": "skins/shop/backgrounds",
       "path": "/assets/skins/shop/backgrounds/superrare_background_shop.webp",
-      "size": 60550,
-      "modified": 1788993606114
+      "hash": "d95efa9b053f",
+      "size": 60550
     },
     {
       "fileName": "skins/shop/barista.webp",
       "label": "Barista",
       "folder": "skins/shop",
       "path": "/assets/skins/shop/barista.webp",
-      "size": 53084,
-      "modified": 1788993607551
+      "hash": "5e1a9ee3fae5",
+      "size": 53084
     },
     {
       "fileName": "skins/shop/bee.webp",
       "label": "Bee",
       "folder": "skins/shop",
       "path": "/assets/skins/shop/bee.webp",
-      "size": 60342,
-      "modified": 1788993607681
+      "hash": "121a74240ef6",
+      "size": 60342
     },
     {
       "fileName": "skins/shop/default.webp",
       "label": "Default",
       "folder": "skins/shop",
       "path": "/assets/skins/shop/default.webp",
-      "size": 52590,
-      "modified": 1788993608034
+      "hash": "403428d4f37f",
+      "size": 52590
     },
     {
       "fileName": "skins/shop/princess.webp",
       "label": "Princess",
       "folder": "skins/shop",
       "path": "/assets/skins/shop/princess.webp",
-      "size": 54610,
-      "modified": 1788993609080
+      "hash": "ab8e94db523b",
+      "size": 54610
     },
     {
       "fileName": "skins/shop/sailor.webp",
       "label": "Sailor",
       "folder": "skins/shop",
       "path": "/assets/skins/shop/sailor.webp",
-      "size": 53194,
-      "modified": 1788993609244
+      "hash": "b847624befe8",
+      "size": 53194
     },
     {
       "fileName": "skins/shop/strawberry.webp",
       "label": "Strawberry",
       "folder": "skins/shop",
       "path": "/assets/skins/shop/strawberry.webp",
-      "size": 51050,
-      "modified": 1788993609597
+      "hash": "73ca11dfe9d0",
+      "size": 51050
     },
     {
       "fileName": "sounds/covers/img_sound_s3.webp",
       "label": "Img sound s3",
       "folder": "sounds/covers",
       "path": "/assets/sounds/covers/img_sound_s3.webp",
-      "size": 251868,
-      "modified": 1788993609322
+      "hash": "15cf559fdb97",
+      "size": 251868
     },
     {
       "fileName": "sounds/covers/music_cafe_dash_1.webp",
       "label": "Music cafe dash 1",
       "folder": "sounds/covers",
       "path": "/assets/sounds/covers/music_cafe_dash_1.webp",
-      "size": 200470,
-      "modified": 1788993609469
+      "hash": "b441bb459ddd",
+      "size": 200470
     },
     {
       "fileName": "sounds/covers/music_cafe_dash_2.webp",
       "label": "Music cafe dash 2",
       "folder": "sounds/covers",
       "path": "/assets/sounds/covers/music_cafe_dash_2.webp",
-      "size": 197300,
-      "modified": 1788993609538
+      "hash": "3bbe5825f90f",
+      "size": 197300
     },
     {
       "fileName": "sounds/covers/music_legendary_cafe_run.webp",
       "label": "Music legendary cafe run",
       "folder": "sounds/covers",
       "path": "/assets/sounds/covers/music_legendary_cafe_run.webp",
-      "size": 200746,
-      "modified": 1788993609693
+      "hash": "e4218bf6f98e",
+      "size": 200746
     },
     {
       "fileName": "sounds/covers/music_marshmallow_dash_1.webp",
       "label": "Music marshmallow dash 1",
       "folder": "sounds/covers",
       "path": "/assets/sounds/covers/music_marshmallow_dash_1.webp",
-      "size": 225012,
-      "modified": 1788993609776
+      "hash": "1d52a4b03d70",
+      "size": 225012
     },
     {
       "fileName": "sounds/covers/music_marshmallow_dash_2.webp",
       "label": "Music marshmallow dash 2",
       "folder": "sounds/covers",
       "path": "/assets/sounds/covers/music_marshmallow_dash_2.webp",
-      "size": 203982,
-      "modified": 1788993609823
+      "hash": "e3de5a662b3b",
+      "size": 203982
     },
     {
       "fileName": "sounds/covers/music_marshmallow_dash_3.webp",
       "label": "Music marshmallow dash 3",
       "folder": "sounds/covers",
       "path": "/assets/sounds/covers/music_marshmallow_dash_3.webp",
-      "size": 241804,
-      "modified": 1788993609905
+      "hash": "faf079dcca54",
+      "size": 241804
     },
     {
       "fileName": "sounds/covers/music_marshmallow_dash_4.webp",
       "label": "Music marshmallow dash 4",
       "folder": "sounds/covers",
       "path": "/assets/sounds/covers/music_marshmallow_dash_4.webp",
-      "size": 212710,
-      "modified": 1788993609926
+      "hash": "4b51eb09ece2",
+      "size": 212710
     },
     {
       "fileName": "sounds/covers/season3_lunar_music.webp",
       "label": "Season3 lunar music",
       "folder": "sounds/covers",
       "path": "/assets/sounds/covers/season3_lunar_music.webp",
-      "size": 212428,
-      "modified": 1788993610003
+      "hash": "1bf1dcc6e09e",
+      "size": 212428
     },
     {
       "fileName": "ui/background_referals.webp",
       "label": "Background referals",
       "folder": "ui",
       "path": "/assets/ui/background_referals.webp",
-      "size": 25854,
-      "modified": 1788993609948
+      "hash": "6c9778cbac77",
+      "size": 25854
     },
     {
       "fileName": "ui/error404-no-icon.webp",
       "label": "Error404 no icon",
       "folder": "ui",
       "path": "/assets/ui/error404-no-icon.webp",
-      "size": 184434,
-      "modified": 1788993612472
+      "hash": "e30ece43b7c6",
+      "size": 184434
     },
     {
       "fileName": "ui/icon_albom.webp",
       "label": "Icon albom",
       "folder": "ui",
       "path": "/assets/ui/icon_albom.webp",
-      "size": 200206,
-      "modified": 1788993612650
+      "hash": "de51b46ded08",
+      "size": 200206
     },
     {
       "fileName": "ui/icon_background_albom.webp",
       "label": "Icon background albom",
       "folder": "ui",
       "path": "/assets/ui/icon_background_albom.webp",
-      "size": 18762,
-      "modified": 1788993610012
+      "hash": "9419cba21aae",
+      "size": 18762
     },
     {
       "fileName": "ui/icon_battlepass.webp",
       "label": "Icon battlepass",
       "folder": "ui",
       "path": "/assets/ui/icon_battlepass.webp",
-      "size": 28576,
-      "modified": 1788993612092
+      "hash": "b76958f5dab2",
+      "size": 28576
     },
     {
       "fileName": "ui/icon_busters.webp",
       "label": "Icon busters",
       "folder": "ui",
       "path": "/assets/ui/icon_busters.webp",
-      "size": 251328,
-      "modified": 1788993614447
+      "hash": "3c10b28d00d1",
+      "size": 251328
     },
     {
       "fileName": "ui/icon_closed.webp",
       "label": "Icon closed",
       "folder": "ui",
       "path": "/assets/ui/icon_closed.webp",
-      "size": 127434,
-      "modified": 1789152977002
+      "hash": "2bdce3b738ce",
+      "size": 127434
     },
     {
       "fileName": "ui/icon_documents.webp",
       "label": "Icon documents",
       "folder": "ui",
       "path": "/assets/ui/icon_documents.webp",
-      "size": 28942,
-      "modified": 1788993614083
+      "hash": "3ae5ca3ab8c1",
+      "size": 28942
     },
     {
       "fileName": "ui/icon_done_buy.webp",
       "label": "Icon done buy",
       "folder": "ui",
       "path": "/assets/ui/icon_done_buy.webp",
-      "size": 17498,
-      "modified": 1788993613542
+      "hash": "cf2fe89ee951",
+      "size": 17498
     },
     {
       "fileName": "ui/icon_end_zabeg.webp",
       "label": "Icon end zabeg",
       "folder": "ui",
       "path": "/assets/ui/icon_end_zabeg.webp",
-      "size": 124790,
-      "modified": 1788993615263
+      "hash": "3ab9a18eb28f",
+      "size": 124790
     },
     {
       "fileName": "ui/icon_game_button.webp",
       "label": "Icon game button",
       "folder": "ui",
       "path": "/assets/ui/icon_game_button.webp",
-      "size": 148312,
-      "modified": 1788993615788
+      "hash": "d80b7ccf5d92",
+      "size": 148312
     },
     {
       "fileName": "ui/icon_goal.webp",
       "label": "Icon goal",
       "folder": "ui",
       "path": "/assets/ui/icon_goal.webp",
-      "size": 161530,
-      "modified": 1789051694064
+      "hash": "423358ac3282",
+      "size": 161530
     },
     {
       "fileName": "ui/icon_maintenance_tools.webp",
       "label": "Icon maintenance tools",
       "folder": "ui",
       "path": "/assets/ui/icon_maintenance_tools.webp",
-      "size": 173206,
-      "modified": 1788993616965
+      "hash": "15ea3cc1eba6",
+      "size": 173206
     },
     {
       "fileName": "ui/icon_message_season.webp",
       "label": "Icon message season",
       "folder": "ui",
       "path": "/assets/ui/icon_message_season.webp",
-      "size": 200730,
-      "modified": 1788993617080
+      "hash": "81336173978d",
+      "size": 200730
     },
     {
       "fileName": "ui/icon_music.webp",
       "label": "Icon music",
       "folder": "ui",
       "path": "/assets/ui/icon_music.webp",
-      "size": 179172,
-      "modified": 1788993618067
+      "hash": "c6e8f295b9f9",
+      "size": 179172
     },
     {
       "fileName": "ui/icon_my_buy_button.webp",
       "label": "Icon my buy button",
       "folder": "ui",
       "path": "/assets/ui/icon_my_buy_button.webp",
-      "size": 234002,
-      "modified": 1788993618909
+      "hash": "01cb210e4cbd",
+      "size": 234002
     },
     {
       "fileName": "ui/icon_nagrady_buttom.webp",
       "label": "Icon nagrady buttom",
       "folder": "ui",
       "path": "/assets/ui/icon_nagrady_buttom.webp",
-      "size": 5260,
-      "modified": 1788993617138
+      "hash": "784a8d94b546",
+      "size": 5260
     },
     {
       "fileName": "ui/icon_o_profile.webp",
       "label": "Icon o profile",
       "folder": "ui",
       "path": "/assets/ui/icon_o_profile.webp",
-      "size": 31094,
-      "modified": 1788993619074
+      "hash": "8241b120814d",
+      "size": 31094
     },
     {
       "fileName": "ui/icon_oprosnik.webp",
       "label": "Icon oprosnik",
       "folder": "ui",
       "path": "/assets/ui/icon_oprosnik.webp",
-      "size": 49468,
-      "modified": 1788993620242
+      "hash": "9419dc4aa9c3",
+      "size": 49468
     },
     {
       "fileName": "ui/icon_pause_button.webp",
       "label": "Icon pause button",
       "folder": "ui",
       "path": "/assets/ui/icon_pause_button.webp",
-      "size": 23172,
-      "modified": 1788993619273
+      "hash": "615b3dd26454",
+      "size": 23172
     },
     {
       "fileName": "ui/icon_play_start_button.webp",
       "label": "Icon play start button",
       "folder": "ui",
       "path": "/assets/ui/icon_play_start_button.webp",
-      "size": 31990,
-      "modified": 1788993620480
+      "hash": "d952619901d9",
+      "size": 31990
     },
     {
       "fileName": "ui/icon_player_elit.webp",
       "label": "Icon player elit",
       "folder": "ui",
       "path": "/assets/ui/icon_player_elit.webp",
-      "size": 21746,
-      "modified": 1788993620139
+      "hash": "1ad0d9bc0c59",
+      "size": 21746
     },
     {
       "fileName": "ui/icon_player_elit+.webp",
       "label": "Icon player elit+",
       "folder": "ui",
       "path": "/assets/ui/icon_player_elit%2B.webp",
-      "size": 39336,
-      "modified": 1788993620845
+      "hash": "d5725402c05b",
+      "size": 39336
     },
     {
       "fileName": "ui/icon_profile_button.webp",
       "label": "Icon profile button",
       "folder": "ui",
       "path": "/assets/ui/icon_profile_button.webp",
-      "size": 152350,
-      "modified": 1788993623131
+      "hash": "61e694ea60e2",
+      "size": 152350
     },
     {
       "fileName": "ui/icon_referals.webp",
       "label": "Icon referals",
       "folder": "ui",
       "path": "/assets/ui/icon_referals.webp",
-      "size": 131412,
-      "modified": 1788993622536
+      "hash": "17944a6216b1",
+      "size": 131412
     },
     {
       "fileName": "ui/icon_reiting.webp",
       "label": "Icon reiting",
       "folder": "ui",
       "path": "/assets/ui/icon_reiting.webp",
-      "size": 38142,
-      "modified": 1788993622977
+      "hash": "557da24e9d0a",
+      "size": 38142
     },
     {
       "fileName": "ui/icon_score_acivment.webp",
       "label": "Icon score acivment",
       "folder": "ui",
       "path": "/assets/ui/icon_score_acivment.webp",
-      "size": 216854,
-      "modified": 1788993623587
+      "hash": "26b034dd96b5",
+      "size": 216854
     },
     {
       "fileName": "ui/icon_sepport.webp",
       "label": "Icon sepport",
       "folder": "ui",
       "path": "/assets/ui/icon_sepport.webp",
-      "size": 43156,
-      "modified": 1788993625074
+      "hash": "4705f4659839",
+      "size": 43156
     },
     {
       "fileName": "ui/icon_series_protection.webp",
       "label": "Icon series protection",
       "folder": "ui",
       "path": "/assets/ui/icon_series_protection.webp",
-      "size": 32210,
-      "modified": 1788993625268
+      "hash": "4d3f26ae0bb3",
+      "size": 32210
     },
     {
       "fileName": "ui/icon_setting_FAQ.webp",
       "label": "Icon setting FAQ",
       "folder": "ui",
       "path": "/assets/ui/icon_setting_FAQ.webp",
-      "size": 34948,
-      "modified": 1788993625369
+      "hash": "79f436aec96b",
+      "size": 34948
     },
     {
       "fileName": "ui/icon_shop_buttom.webp",
       "label": "Icon shop buttom",
       "folder": "ui",
       "path": "/assets/ui/icon_shop_buttom.webp",
-      "size": 92756,
-      "modified": 1788993626639
+      "hash": "ee430307f70b",
+      "size": 92756
     },
     {
       "fileName": "ui/icon_shopping.webp",
       "label": "Icon shopping",
       "folder": "ui",
       "path": "/assets/ui/icon_shopping.webp",
-      "size": 94836,
-      "modified": 1788993627369
+      "hash": "65dd04b58f50",
+      "size": 94836
     },
     {
       "fileName": "ui/icon_skins_buttom.webp",
       "label": "Icon skins buttom",
       "folder": "ui",
       "path": "/assets/ui/icon_skins_buttom.webp",
-      "size": 3940,
-      "modified": 1788993625395
+      "hash": "4cecee865fd8",
+      "size": 3940
     },
     {
       "fileName": "ui/icon_sound.webp",
       "label": "Icon sound",
       "folder": "ui",
       "path": "/assets/ui/icon_sound.webp",
-      "size": 126766,
-      "modified": 1788993627758
+      "hash": "13baa6eaeb9d",
+      "size": 126766
     },
     {
       "fileName": "ui/icon_sushet_season.webp",
       "label": "Icon sushet season",
       "folder": "ui",
       "path": "/assets/ui/icon_sushet_season.webp",
-      "size": 232012,
-      "modified": 1788993628048
+      "hash": "2f3a0389fa29",
+      "size": 232012
     },
     {
       "fileName": "ui/icon_timer.webp",
       "label": "Icon timer",
       "folder": "ui",
       "path": "/assets/ui/icon_timer.webp",
-      "size": 139508,
-      "modified": 1788993628892
+      "hash": "60a917fb9bd1",
+      "size": 139508
     },
     {
       "fileName": "ui/icon_vitrina.webp",
       "label": "Icon vitrina",
       "folder": "ui",
       "path": "/assets/ui/icon_vitrina.webp",
-      "size": 59774,
-      "modified": 1789051693748
+      "hash": "da38e760370b",
+      "size": 59774
     },
     {
       "fileName": "ui/icon_warning.webp",
       "label": "Icon warning",
       "folder": "ui",
       "path": "/assets/ui/icon_warning.webp",
-      "size": 89322,
-      "modified": 1789152976673
+      "hash": "c2d69304886a",
+      "size": 89322
     },
     {
       "fileName": "ui/icon_zanovo_button.webp",
       "label": "Icon zanovo button",
       "folder": "ui",
       "path": "/assets/ui/icon_zanovo_button.webp",
-      "size": 34716,
-      "modified": 1788993629088
+      "hash": "a46dc4fc9822",
+      "size": 34716
     },
     {
       "fileName": "ui/icone_cases.webp",
       "label": "Icone cases",
       "folder": "ui",
       "path": "/assets/ui/icone_cases.webp",
-      "size": 102086,
-      "modified": 1788993630084
+      "hash": "98aca943f0b9",
+      "size": 102086
     },
     {
       "fileName": "ui/icone_prize.webp",
       "label": "Icone prize",
       "folder": "ui",
       "path": "/assets/ui/icone_prize.webp",
-      "size": 52476,
-      "modified": 1788993630173
+      "hash": "ee15952afd0f",
+      "size": 52476
     },
     {
       "fileName": "ui/icone_return_player.webp",
       "label": "Icone return player",
       "folder": "ui",
       "path": "/assets/ui/icone_return_player.webp",
-      "size": 251150,
-      "modified": 1788993633312
+      "hash": "5d59afc02158",
+      "size": 251150
     },
     {
       "fileName": "ui/icone_reward.webp",
       "label": "Icone reward",
       "folder": "ui",
       "path": "/assets/ui/icone_reward.webp",
-      "size": 52476,
-      "modified": 1788993631215
+      "hash": "ee15952afd0f",
+      "size": 52476
     },
     {
       "fileName": "ui/new_avatars_game.webp",
       "label": "New avatars game",
       "folder": "ui",
       "path": "/assets/ui/new_avatars_game.webp",
-      "size": 54768,
-      "modified": 1788993633661
+      "hash": "8c2b85f7931f",
+      "size": 54768
     },
     {
       "fileName": "ui/shop_tab_rewards_icon.webp",
       "label": "Shop tab rewards icon",
       "folder": "ui",
       "path": "/assets/ui/shop_tab_rewards_icon.webp",
-      "size": 1268,
-      "modified": 1788993630263
+      "hash": "c138da66ff81",
+      "size": 1268
     },
     {
       "fileName": "ui/shop_tab_skins_icon.webp",
       "label": "Shop tab skins icon",
       "folder": "ui",
       "path": "/assets/ui/shop_tab_skins_icon.webp",
-      "size": 2754,
-      "modified": 1788993630395
+      "hash": "c4ac9d4156e4",
+      "size": 2754
     }
   ]
 }

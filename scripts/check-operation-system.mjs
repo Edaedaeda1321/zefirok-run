@@ -200,6 +200,31 @@ assert(battlePass.includes('operationCode === "FEATURE_TEMPORARILY_DISABLED"'), 
 assert(battlePass.includes('operationCode === "PRICE_CHANGED"'), 'battle-pass client does not require a new confirmation after price change');
 assert(battlePass.includes('activatePremiumTier(tier, expectedPrice)'), 'battle-pass confirmation does not pass the displayed quote');
 
+// P2 operational retention must archive before pruning detail and keep semantic
+// identities required by lifetime achievements / reward idempotency.
+assert(worker.includes('const OPERATIONAL_RETENTION_POLICIES = Object.freeze({'), 'operational retention policy catalog is missing');
+for (const policy of ['game_run_sessions','game_run_live_proofs','player_economy_run_ledger','admin_performance_samples','admin_performance_hourly_archive','server_analytics_hourly','content_analytics_events','player_timeline_events','player_notification_log','player_notification_queue','leaderboard_staff_notifications','reward_delivery_queue']) {
+  assert(worker.includes(`key:"${policy}"`), `retention policy missing: ${policy}`);
+}
+const retention = section(worker, 'async function processOperationalRetention', '\nasync function cancelStaleSeasonEndReminderQueues');
+for (const archive of ['game_run_session_daily_archive','game_run_proof_daily_archive','player_economy_run_daily_archive','player_economy_run_fact_archive','admin_performance_hourly_archive','admin_performance_daily_archive','server_analytics_daily_archive','content_analytics_daily_archive','player_timeline_daily_archive','notification_delivery_daily_archive','reward_delivery_archive']) {
+  assert(worker.includes(archive), `retention archive is not referenced: ${archive}`);
+}
+assert(retention.includes('runOperationalRetentionPolicy'), 'retention jobs are not wrapped by policy state tracking');
+assert(worker.includes("status IN ('finished','expired','superseded')"), 'run-session retention could prune non-terminal sessions');
+assert(worker.includes('ledger retention paused: LEADERBOARD_MIN_RUN_SECONDS='), 'ledger retention does not fail safe when the qualification threshold changes');
+assert(worker.includes('FROM player_economy_run_fact_archive WHERE telegram_id=? AND qualification_ms=? AND qualified=1'), 'lifetime achievements do not read compacted run facts');
+assert(worker.includes('SELECT 1 AS archived FROM reward_delivery_archive WHERE operation_id=? LIMIT 1'), 'reward enqueue does not consult compact idempotency archive');
+const dailyCleanup = section(worker, 'async function processDailyServerCleanup', '\nasync function executeServerCronJob');
+for (const table of ['admin_performance_samples','server_analytics_hourly','game_run_sessions','game_run_live_proofs','player_economy_run_ledger','content_analytics_events','player_timeline_events','player_notification_log','player_notification_queue','leaderboard_staff_notifications','reward_delivery_queue']) {
+  assert(!dailyCleanup.includes(`DELETE FROM ${table}`), `daily cleanup bypasses archive retention for ${table}`);
+}
+assert(worker.includes('["retention", () => processOperationalRetention(env)]'), 'hourly maintenance does not run bounded retention');
+assert(worker.includes('retention:(retention.results||[]).map'), 'Control Center system API does not expose retention state');
+assert(!worker.includes('DELETE FROM player_notification_log WHERE sent_at<?'), 'notification log still has a direct delete path outside retention');
+assert(worker.includes("(status IN ('sent','cancelled') OR (status='failed' AND attempts>=5))"), 'player notification retention can remove retryable failed deliveries');
+assert(worker.includes("(status IN ('delivered','claimed','cancelled') OR (status='failed' AND attempts>=5))"), 'reward retention can remove retryable failed deliveries');
+
 // Execute the actual Worker quote helpers in isolation. This keeps the build test
 // behavioral without importing or booting the production Worker.
 const helperSource = [

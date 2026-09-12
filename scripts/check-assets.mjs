@@ -7,7 +7,17 @@ import process from 'node:process';
 const root = process.cwd();
 const newOnly = process.argv.includes('--new-only');
 const newsManifestOnly = process.argv.includes('--news-manifest');
-const indexPath = path.join(root, 'index.html');
+const productionUiFiles = Object.freeze([
+  'index.html',
+  'battle-pass.html',
+  'rating.html',
+  'referrals.html',
+  'achievements.html',
+  'album.html',
+  'legal.html',
+  'owner.html',
+  'staff-qr.html'
+]);
 const newsRoot = path.join(root, 'assets', 'news');
 const newsManifestPath = path.join(newsRoot, 'manifest.json');
 const casesRoot = path.join(root, 'assets', 'cases');
@@ -154,14 +164,16 @@ async function collectProjectImages(directory, prefix = '') {
     if (!entry.isFile() || !newsExtensions.has(path.extname(entry.name).toLowerCase())) continue;
     const info = await stat(absolutePath);
     if (!info.size) continue;
+    const data = await readFile(absolutePath);
+    const hash = createHash('sha256').update(data).digest('hex').slice(0, 12);
     const folder = path.posix.dirname(relativePath) === '.' ? 'root' : path.posix.dirname(relativePath);
     images.push({
       fileName: relativePath,
       label: projectImageLabel(relativePath),
       folder,
       path: `/assets/${encodeAssetPath(relativePath)}`,
-      size: info.size,
-      modified: Math.floor(info.mtimeMs || 0)
+      hash,
+      size: info.size
     });
   }
   return images;
@@ -170,10 +182,10 @@ async function collectProjectImages(directory, prefix = '') {
 async function generateProjectImagesManifest() {
   const images = await collectProjectImages(assetsRoot);
   const catalogHash = createHash('sha256')
-    .update(images.map(item => `${item.path}:${item.size}:${item.modified}`).join('\n'))
+    .update(images.map(item => `${item.path}:${item.hash}`).join('\n'))
     .digest('hex')
     .slice(0, 16);
-  const payload = { version: 1, catalogHash, count: images.length, images };
+  const payload = { version: 2, hashAlgorithm: 'sha256', catalogHash, count: images.length, images };
   await writeFile(projectImagesManifestPath, `${JSON.stringify(payload, null, 2)}\n`, 'utf8');
   console.log(`Project image manifest generated: ${images.length} image(s).`);
   return payload;
@@ -227,6 +239,15 @@ function cleanAssetUrl(value) {
   const withoutEntities = String(value).replaceAll('&amp;', '&');
   const noQuery = withoutEntities.split(/[?#]/, 1)[0];
   return decodeURIComponent(noQuery.replace(/^\//, ''));
+}
+
+function isLiteralAssetReference(value) {
+  const text=String(value||'');
+  if (!text.startsWith('/assets/')) return false;
+  if (text.includes('${') || text.includes('{') || text.includes('}') || text.includes('...') || text.includes(':') || text.includes('*')) return false;
+  const clean=text.split(/[?#]/,1)[0];
+  if (clean.endsWith('/')) return false;
+  return /\.[A-Za-z0-9]{1,8}$/.test(clean);
 }
 
 async function exactPathExists(relativePath) {
@@ -286,10 +307,20 @@ async function validateContent(relativePath) {
 }
 
 const paths = new Set(requiredNew);
+const uiReferences = new Map();
 if (!newOnly) {
-  const html = await readFile(indexPath, 'utf8');
-  for (const match of html.matchAll(/\/assets\/[^\s"'<>\\&]+/g)) {
-    paths.add(cleanAssetUrl(match[0]));
+  for (const fileName of productionUiFiles) {
+    const html = await readFile(path.join(root, fileName), 'utf8');
+    let count = 0;
+    for (const match of html.matchAll(/\/assets\/[^\s"'<>\\&]+/g)) {
+      if (!isLiteralAssetReference(match[0])) continue;
+      const assetPath = cleanAssetUrl(match[0]);
+      paths.add(assetPath);
+      if (!uiReferences.has(assetPath)) uiReferences.set(assetPath, new Set());
+      uiReferences.get(assetPath).add(fileName);
+      count += 1;
+    }
+    console.log(`Asset references scanned: ${fileName} (${count}).`);
   }
 }
 
@@ -298,7 +329,8 @@ const invalid = [];
 for (const relativePath of [...paths].sort()) {
   const resolved = await resolvedAssetPath(relativePath);
   if (!resolved) {
-    missing.push(relativePath);
+    const refs = [...(uiReferences.get(relativePath) || [])];
+    missing.push(refs.length ? `${relativePath} [${refs.join(', ')}]` : relativePath);
     continue;
   }
   if (!(await validateContent(resolved))) invalid.push(`${relativePath}${resolved !== relativePath ? ` -> ${resolved}` : ''}`);

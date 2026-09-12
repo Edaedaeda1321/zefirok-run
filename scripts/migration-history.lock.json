@@ -87,6 +87,7 @@
     "0084_case_state_revision_guards.sql": "e804f14d1b8d3ce0c406b3e649777eb1d79743030122d2132aeb1bbce125bc8b",
     "0085_schema_contract_v1.sql": "7cca1bd9ba78a3d0690964a837f4de62f51d5eabea80c683c45c49e497f3d627",
     "0086_live_content_registry_authority.sql": "88b188aeef5dfe892ada6e877636d030d4cd9d626b13a0c9640ebcc23ddb44fd",
-    "0087_p1_platform_hardening.sql": "aad6ab8165e2a6087a659b051006320d5933c2e98a36d7dd0221cc43efa07504"
+    "0087_p1_platform_hardening.sql": "aad6ab8165e2a6087a659b051006320d5933c2e98a36d7dd0221cc43efa07504",
+    "0088_operational_retention.sql": "9a4015258bbcb0ca8b7669cf43f5ebbcd79f077684b984ae92b952fb64889fb9"
   }
 }
