@@ -1512,7 +1512,7 @@ body.zefirok-rating-open>iframe:not(.zefirok-rating-frame){visibility:hidden!imp
     legalFrame.className = "zefirok-legal-frame";
     legalFrame.referrerPolicy = "no-referrer";
     legalFrame.setAttribute("sandbox", "allow-scripts allow-same-origin");
-    legalFrame.src = `/legal_test.html?doc=${encodeURIComponent(key)}&lang=${encodeURIComponent(legalGateLanguage)}&embedded=1`;
+    legalFrame.src = `/dev-history/ui/legal_test.html?doc=${encodeURIComponent(key)}&lang=${encodeURIComponent(legalGateLanguage)}&embedded=1`;
     layer.append(toolbar, legalFrame);
     document.body.append(layer);
     legalLayer = layer;
@@ -2156,8 +2156,8 @@ body.zefirok-rating-open>iframe:not(.zefirok-rating-frame){visibility:hidden!imp
     const passOffer = normalizedOfferTier ? `&offer=${encodeURIComponent(normalizedOfferTier)}` : "";
     const passTest = TEST_PROJECT_MODE ? "&test_project=1" : "";
     passFrame.src = initData
-      ? `/battle-pass_test.html?v=1.0.9${passView}${passOffer}${passTest}#tgInitData=${encodeURIComponent(initData)}`
-      : `/battle-pass_test.html?v=1.0.9${passView}${passOffer}${passTest}`;
+      ? `/dev-history/ui/battle-pass_test.html?v=1.0.9${passView}${passOffer}${passTest}#tgInitData=${encodeURIComponent(initData)}`
+      : `/dev-history/ui/battle-pass_test.html?v=1.0.9${passView}${passOffer}${passTest}`;
     layer.append(passFrame);
     passFrame.addEventListener("load", () => {
       const snapshot = syncTelegramViewport();
@@ -2241,8 +2241,8 @@ body.zefirok-rating-open>iframe:not(.zefirok-rating-frame){visibility:hidden!imp
     referralFrame.allow = "clipboard-write";
     referralFrame.referrerPolicy = "same-origin";
     referralFrame.src = initData
-      ? `/referrals_test.html?v=1.0.9#tgInitData=${encodeURIComponent(initData)}`
-      : `/referrals_test.html?v=1.0.9`;
+      ? `/dev-history/ui/referrals_test.html?v=1.0.9#tgInitData=${encodeURIComponent(initData)}`
+      : `/dev-history/ui/referrals_test.html?v=1.0.9`;
     layer.append(referralFrame);
     referralFrame.addEventListener("load", () => {
       const snapshot = syncTelegramViewport();
@@ -2319,7 +2319,7 @@ body.zefirok-rating-open>iframe:not(.zefirok-rating-frame){visibility:hidden!imp
     if (retryToken) query.set("retry", retryToken);
     if (TEST_PROJECT_MODE) query.set("test_project", "1");
     const hash = initData ? `#tgInitData=${encodeURIComponent(initData)}` : "";
-    return `/rating_test.html?${query.toString()}${hash}`;
+    return `/dev-history/ui/rating_test.html?${query.toString()}${hash}`;
   }
 
   function armRatingReadyTimeout() {
@@ -23274,7 +23274,7 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
     event.preventDefault();
     button.disabled = true;
     try { window.parent.postMessage({ type:&quot;zefirok-open-referrals&quot; }, &quot;*&quot;); }
-    catch (error) { try { window.location.href = &quot;/referrals_test.html&quot;; } catch {} }
+    catch (error) { try { window.location.href = &quot;/dev-history/ui/referrals_test.html&quot;; } catch {} }
     window.setTimeout(() =&gt; { button.disabled = false; }, 900);
   });
   window.addEventListener(&quot;pageshow&quot;, () =&gt; {document.querySelectorAll(&quot;[data-referrals-open]&quot;).forEach((button) =&gt; { button.disabled = false; });refreshReferralSummary();});

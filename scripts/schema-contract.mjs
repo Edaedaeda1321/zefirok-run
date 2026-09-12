@@ -195,6 +195,7 @@ export const REQUIRED_SQL_FRAGMENTS = Object.freeze([
 
 export const FORBIDDEN_PUBLIC_ASSET_PATTERNS = Object.freeze([
   /(?:^|\/)node_modules(?:\/|$)/i,
+  /(?:^|\/)dev-history(?:\/|$)/i,
   /(?:^|\/)scripts(?:\/|$)/i,
   /(?:^|\/)src(?:\/|$)/i,
   /(?:^|\/)migrations(?:\/|$)/i,
@@ -205,5 +206,6 @@ export const FORBIDDEN_PUBLIC_ASSET_PATTERNS = Object.freeze([
   /(?:^|\/)worker\.js$/i,
   /(?:^|\/)wrangler\.jsonc$/i,
   /(?:^|\/)update\.sh$/i,
+  /(?:^|\/)package(?:-lock)?\.json$/i,
   /(?:^|\/)BASE_COMMIT\.txt$/i
 ]);

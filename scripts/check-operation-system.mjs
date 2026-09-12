@@ -200,6 +200,48 @@ assert(battlePass.includes('operationCode === "FEATURE_TEMPORARILY_DISABLED"'), 
 assert(battlePass.includes('operationCode === "PRICE_CHANGED"'), 'battle-pass client does not require a new confirmation after price change');
 assert(battlePass.includes('activatePremiumTier(tier, expectedPrice)'), 'battle-pass confirmation does not pass the displayed quote');
 
+// FullScreen run HUD must surface reward x2 state without relying on the legacy
+// bottom pill, and the settled result must state how many boosted runs remain.
+assert(index.includes('data-run-focus-booster'), 'fullscreen x2 booster HUD slot is missing');
+assert(index.includes('function runBoosterRemainingLabel(type)'), 'fullscreen x2 remaining-run label helper is missing');
+assert(index.includes('function runResultsBoosterStatusMarkup(settlement)'), 'run result booster continuation status is missing');
+assert(index.includes('const boosterStatusMarkup = runResultsBoosterStatusMarkup(settlement);'), 'settled run does not compute booster continuation status');
+assert(index.includes('${boosterStatusMarkup}'), 'settled run does not render booster continuation status');
+assert(index.includes('#zefirok-maltipoo-runner.is-game-expanded .run-booster-pill{display:none!important}'), 'legacy bottom booster pill is still visible in fullscreen');
+assert(index.includes('if (lastTwo &gt;= 11 &amp;&amp; lastTwo &lt;= 14) return &quot;забегов&quot;;'), 'booster run pluralization is not Russian-safe for 11-14');
+assert(index.includes('renderActiveRunBooster();\n        if (state.paused &amp;&amp; overlay.classList.contains'), 'fullscreen toggle does not refresh booster HUD immediately');
+
+// Losing first place is a server-authoritative, delayed Telegram event. The
+// queued message is materialized immediately before delivery so stale leaders
+// are cancelled and rapid leader changes collapse into one current notice.
+assert(worker.includes('const LEADERBOARD_DETHRONE_NOTIFICATION_PREFIX="rating_dethroned:";'), 'rating dethrone notification category is missing');
+assert(worker.includes('const LEADERBOARD_DETHRONE_DELAY_SECONDS=90;'), 'rating dethrone notification is not debounced');
+assert(worker.includes('const LEADERBOARD_DETHRONE_COOLDOWN_SECONDS=3600;'), 'rating dethrone notification cooldown is missing');
+assert(worker.includes('async function queueLeaderboardDethroneNotificationIfNeeded'), 'rating dethrone enqueue helper is missing');
+assert(worker.includes('async function materializeLeaderboardDethroneNotification'), 'rating dethrone send-time revalidation is missing');
+assert(worker.includes('previousSeasonLeader] = await Promise.all(['), 'run settlement does not capture the previous visible leader');
+assert(worker.includes('ORDER BY best_score DESC,achieved_at ASC,telegram_id ASC LIMIT 1'), 'rating dethrone logic does not use leaderboard tie-break ordering');
+assert(worker.includes('scheduleRunSettlementBackground(executionCtx, queueLeaderboardDethroneNotificationIfNeeded'), 'leader change is not queued after authoritative settlement');
+assert(worker.includes('if(String(leader.telegram_id||"")===telegramId)return {action:"cancel",reason:"rating-lead-restored"};'), 'rating notice is not cancelled after the old leader retakes first place');
+assert(worker.includes("status IN ('pending','failed') AND attempts<5"), 'rating dethrone debounce does not reuse a pending queue item');
+assert(worker.includes('🏃 Вернуть первое место'), 'rating dethrone Telegram CTA is missing');
+assert(worker.includes('Корона сменила владельца!'), 'rating dethrone Telegram copy is missing');
+assert(worker.includes('if(isLeaderboardDethroneNotificationCategory(row.category)){'), 'notification queue does not revalidate rating notices before delivery');
+
+const dethroneHelperSource = [
+  'const LEADERBOARD_DETHRONE_NOTIFICATION_PREFIX="rating_dethroned:";',
+  extractNamedFunction(worker, 'leaderboardDethroneSeasonId'),
+  extractNamedFunction(worker, 'leaderboardDethronePointsWord'),
+  'return { leaderboardDethroneSeasonId, leaderboardDethronePointsWord };'
+].join('\n');
+const dethroneHelpers = new Function(dethroneHelperSource)();
+assert(dethroneHelpers.leaderboardDethroneSeasonId('rating_dethroned:s2') === 's2', 'rating notification season parser is broken');
+assert(dethroneHelpers.leaderboardDethronePointsWord(1) === 'очко', 'rating gap plural: 1');
+assert(dethroneHelpers.leaderboardDethronePointsWord(2) === 'очка', 'rating gap plural: 2');
+assert(dethroneHelpers.leaderboardDethronePointsWord(5) === 'очков', 'rating gap plural: 5');
+assert(dethroneHelpers.leaderboardDethronePointsWord(11) === 'очков', 'rating gap plural: 11');
+assert(dethroneHelpers.leaderboardDethronePointsWord(21) === 'очко', 'rating gap plural: 21');
+
 // P2 operational retention must archive before pruning detail and keep semantic
 // identities required by lifetime achievements / reward idempotency.
 assert(worker.includes('const OPERATIONAL_RETENTION_POLICIES = Object.freeze({'), 'operational retention policy catalog is missing');

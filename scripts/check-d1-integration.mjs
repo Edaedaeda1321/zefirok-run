@@ -40,14 +40,14 @@ async function assertRequiredFiles(){
 
 function run(args){
   return new Promise((resolve,reject)=>{
-    const child=spawn('npx',['wrangler',...args],{cwd:root,env:process.env,stdio:['ignore','pipe','pipe']});
+    const child=spawn('npx',['--yes','wrangler@4.131.1',...args],{cwd:root,env:process.env,stdio:['ignore','pipe','pipe']});
     let out='',err='';
     child.stdout.on('data',c=>out+=String(c));
     child.stderr.on('data',c=>err+=String(c));
     child.once('error',reject);
     child.once('exit',code=>code===0
       ? resolve({out,err})
-      : reject(new Error(`npx wrangler ${args.join(' ')} failed (${code})\n${err||out}`)));
+      : reject(new Error(`npx --yes wrangler@4.131.1 ${args.join(' ')} failed (${code})\n${err||out}`)));
   });
 }
 

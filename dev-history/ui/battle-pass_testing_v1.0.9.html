@@ -15,7 +15,7 @@
   if(!testProjectActive)return;
   if(window.__ZEFIROK_TP_BRIDGE_INSTALLED_V109__===true)return;
   window.__ZEFIROK_TP_BRIDGE_INSTALLED_V109__=true;
-  const nativeFetch=window.fetch.bind(window),SESSION_KEY="zefirok-owner-session-v1",PROXY="/api/owner/test-project/game",STORAGE_PREFIX="zefirok-tp3:",TESTING_BUILD_VERSION="1.0.9",TESTING_BUILD_ENTRY="/battle-pass_testing_v1.0.9.html";
+  const nativeFetch=window.fetch.bind(window),SESSION_KEY="zefirok-owner-session-v1",PROXY="/api/owner/test-project/game",STORAGE_PREFIX="zefirok-tp3:",TESTING_BUILD_VERSION="1.0.9",TESTING_BUILD_ENTRY="/dev-history/ui/battle-pass_testing_v1.0.9.html";
   const baseUrl=(()=>{const direct=String(document.baseURI||"");if(/^https?:/i.test(direct))return direct;try{if(window.parent&&window.parent!==window&&/^https?:/i.test(String(window.parent.location.href||"")))return String(window.parent.location.href)}catch{}return String(location.href||direct)})(),sandboxOrigin=(()=>{try{return new URL(baseUrl).origin}catch{return location.origin}})(),proxyUrl=(()=>{try{return new URL(PROXY,baseUrl).toString()}catch{return PROXY}})();
   const sandboxBlockedResponse=(message,status=403)=>new Response(JSON.stringify({ok:false,testProject:true,productionWrites:false,error:message}),{status,headers:{"Content-Type":"application/json","Cache-Control":"no-store","X-Test-Project":"5.2"}});
   const isSameOriginApi=(value)=>{try{const parsed=new URL(String(value||""),baseUrl);return parsed.origin===sandboxOrigin&&parsed.pathname.startsWith("/api/")}catch{return false}};

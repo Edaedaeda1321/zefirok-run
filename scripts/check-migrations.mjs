@@ -150,7 +150,7 @@ function run(command, args, options = {}) {
 }
 
 export async function listPendingRemoteMigrations({ root = process.cwd(), database = D1_DATABASE_NAME } = {}) {
-  const { stdout, stderr } = await run('npx', ['wrangler', 'd1', 'migrations', 'list', database, '--remote'], { cwd: root });
+  const { stdout, stderr } = await run('npx', ['--yes', 'wrangler@4.131.1', 'd1', 'migrations', 'list', database, '--remote'], { cwd: root });
   const text = `${stdout}\n${stderr}`;
   const names = [...new Set(text.match(/\b\d{4}_[A-Za-z0-9][A-Za-z0-9_.-]*\.sql\b/g) || [])].sort();
   return { names, raw: text.trim() };
@@ -162,7 +162,7 @@ export async function assertNoPendingRemoteMigrations(options = {}) {
     const lines = pending.names.map(name => `  - ${name}`).join('\n');
     throw new Error(
       `Production D1 имеет непримененные migration:\n${lines}\n\n` +
-      `Сначала примените их:\n  npx wrangler d1 migrations apply ${options.database || D1_DATABASE_NAME} --remote\n` +
+      `Сначала примените их:\n  npx --yes wrangler@4.131.1 d1 migrations apply ${options.database || D1_DATABASE_NAME} --remote\n` +
       `Затем снова запустите ./update.sh.`
     );
   }

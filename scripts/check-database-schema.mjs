@@ -196,7 +196,7 @@ function collectResultRows(value, out = []) {
 }
 
 async function remoteSql(root, database, sql) {
-  const { stdout } = await run('npx', ['wrangler', 'd1', 'execute', database, '--remote', '--json', '--command', sql], { cwd: root });
+  const { stdout } = await run('npx', ['--yes', 'wrangler@4.131.1', 'd1', 'execute', database, '--remote', '--json', '--command', sql], { cwd: root });
   return collectResultRows(parseWranglerJson(stdout));
 }
 

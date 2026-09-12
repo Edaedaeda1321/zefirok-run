@@ -56,7 +56,7 @@ function collectResultRows(value, out = []) {
 }
 
 async function sql(command) {
-  const args = ['wrangler', 'd1', 'execute', database, remote ? '--remote' : '--local', '--json', '--command', command];
+  const args = ['--yes', 'wrangler@4.131.1', 'd1', 'execute', database, remote ? '--remote' : '--local', '--json', '--command', command];
   const { stdout } = await run('npx', args);
   return collectResultRows(parseWranglerJson(stdout));
 }

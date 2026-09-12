@@ -9650,6 +9650,12 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
     #zefirok-maltipoo-runner .run-credit-line { display:flex; justify-content:center; flex-wrap:wrap; gap:4px 8px; margin-top:6px; padding:6px 7px; border-radius:12px; background:#f7fbef; border:1px solid rgba(155,185,98,.28); color:#657640; font-size:8px; font-weight:950; }
     #zefirok-maltipoo-runner .run-skin-bonus { margin-top:5px; padding:5px 7px; border-radius:11px; background:#fff5fa; color:#9b5671; text-align:center; font-size:8px; font-weight:900; }
     #zefirok-maltipoo-runner .run-skin-bonus.is-alex { background:linear-gradient(135deg,#fff2c6,#eef7cf); color:#786125; }
+    #zefirok-maltipoo-runner .run-results-booster-status { display:grid; gap:4px; margin-top:6px; padding:5px; border:1px solid rgba(229,181,79,.38); border-radius:12px; background:linear-gradient(135deg,rgba(255,248,220,.96),rgba(255,239,246,.95)); box-shadow:0 4px 12px rgba(154,100,55,.07); }
+    #zefirok-maltipoo-runner .run-results-booster-item { display:grid; grid-template-columns:26px minmax(0,1fr); align-items:center; gap:6px; min-width:0; }
+    #zefirok-maltipoo-runner .run-results-booster-item img { width:26px; height:26px; object-fit:contain; filter:drop-shadow(0 2px 3px rgba(145,93,45,.14)); }
+    #zefirok-maltipoo-runner .run-results-booster-item span { min-width:0; display:grid; gap:1px; }
+    #zefirok-maltipoo-runner .run-results-booster-item strong { color:#86572f; font-size:8.5px; line-height:1.15; font-weight:950; }
+    #zefirok-maltipoo-runner .run-results-booster-item small { color:#a47760; font-size:7px; line-height:1.2; font-weight:800; }
     #zefirok-maltipoo-runner .run-results-events { display:grid; gap:4px; margin-top:6px; }
     #zefirok-maltipoo-runner .run-result-event { display:flex; align-items:center; gap:7px; min-width:0; padding:5px 7px; border-radius:11px; background:rgba(255,255,255,.78); border:1px solid rgba(230,202,211,.62); }
     #zefirok-maltipoo-runner .run-result-event i { width:22px; height:22px; display:grid; place-items:center; flex:0 0 22px; border-radius:8px; background:#fff2f7; font-style:normal; }
@@ -11818,6 +11824,7 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
       &lt;strong class=&quot;run-focus-score&quot; data-run-focus-score&gt;0&lt;/strong&gt;
       &lt;span class=&quot;run-focus-record&quot; data-run-focus-record&gt;&lt;/span&gt;
     &lt;/div&gt;
+    &lt;div class=&quot;run-focus-booster&quot; data-run-focus-booster aria-live=&quot;polite&quot; hidden&gt;&lt;/div&gt;
     &lt;button type=&quot;button&quot; class=&quot;run-focus-pause&quot; data-run-focus-pause aria-label=&quot;Пауза&quot; title=&quot;Пауза&quot; hidden&gt;&lt;svg viewBox=&quot;0 0 24 24&quot; aria-hidden=&quot;true&quot;&gt;&lt;path d=&quot;M8 5v14M16 5v14&quot;/&gt;&lt;/svg&gt;&lt;/button&gt;
   &lt;/div&gt;
   &lt;div class=&quot;run-focus-loot&quot; aria-label=&quot;Собрано за этот забег&quot;&gt;
@@ -13049,6 +13056,7 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
       const caseTrailsEl = root.querySelector(&quot;[data-case-trails]&quot;);
       const caseRefreshButton = root.querySelector(&quot;[data-case-refresh]&quot;);
       const activeRunBoosterEl = root.querySelector(&quot;[data-active-run-booster]&quot;);
+      const focusRunBoosterEl = root.querySelector(&quot;[data-run-focus-booster]&quot;);
       const profileLeaderboardSectionEl = root.querySelector(&quot;.profile-section--leaderboard&quot;);
       const leaderboardStatusEl = root.querySelector(&quot;[data-leaderboard-status]&quot;);
       const leaderboardSummaryEl = root.querySelector(&quot;[data-leaderboard-summary]&quot;);
@@ -17377,6 +17385,7 @@ function createTutorialDeck(layer, mount, options, words) {
         document.body.classList.toggle(&quot;zefirok-game-expanded&quot;, next);
         try { window.parent.postMessage({ type: &quot;zefirok-game-expanded&quot;, expanded: next }, &quot;*&quot;); } catch {}
         syncGameActionControls();
+        renderActiveRunBooster();
         if (state.paused &amp;&amp; overlay.classList.contains(&quot;is-pause-modal&quot;)) showPauseModal(visibilityPauseActive ? &quot;hidden&quot; : &quot;manual&quot;);
         if (gameExpandToggle) {
           gameExpandToggle.setAttribute(&quot;aria-pressed&quot;, String(next));
@@ -17792,6 +17801,29 @@ function createTutorialDeck(layer, mount, options, words) {
         if (settlement.acceptedToRating) events.push(runResultsEventMarkup(RUN_RESULT_ICONS.rating, &quot;\u0420\u0435\u0437\u0443\u043b\u044c\u0442\u0430\u0442 \u0432 \u0440\u0435\u0439\u0442\u0438\u043d\u0433\u0435&quot;, &quot;\u0421\u0435\u0440\u0432\u0435\u0440 \u043f\u0440\u0438\u043d\u044f\u043b \u0437\u0430\u0431\u0435\u0433&quot;));
         return events.slice(0, 3);
       }
+      function runResultsBoosterStatusMarkup(settlement) {
+        const applied = (Array.isArray(settlement?.boosterTypes) ? settlement.boosterTypes : [settlement?.boosterType])
+          .map((type) =&gt; String(type || &quot;&quot;))
+          .filter((type) =&gt; CASE_REWARD_BOOSTER_TYPES.includes(type));
+        const active = normalizeActiveCaseBoosters(settlement?.activeBoosters, settlement?.activeBooster);
+        const types = [...new Set([
+          ...applied,
+          ...CASE_REWARD_BOOSTER_TYPES.filter((type) =&gt; Number(active[type] || 0) &gt; 0)
+        ])];
+        if (!types.length) return &quot;&quot;;
+        const items = types.map((type) =&gt; {
+          const item = CASE_BOOSTER_CATALOG[type];
+          if (!item) return &quot;&quot;;
+          const left = Math.max(0, Number(active[type] || 0));
+          const wasApplied = applied.includes(type);
+          const status = left &gt; 0
+            ? `${wasApplied ? &quot;Сработал · &quot; : &quot;Активен · &quot;}ещё ${left} ${caseRunWord(left)}`
+            : (wasApplied ? &quot;Сработал · заряд закончился&quot; : &quot;Заряд закончился&quot;);
+          return `&lt;span class=&quot;run-results-booster-item&quot;&gt;&lt;img src=&quot;${item.src}&quot; alt=&quot;&quot; aria-hidden=&quot;true&quot; decoding=&quot;async&quot;&gt;&lt;span&gt;&lt;strong&gt;${runUiEscape(runBoosterDisplayTitle(type))}&lt;/strong&gt;&lt;small&gt;${runUiEscape(status)}&lt;/small&gt;&lt;/span&gt;&lt;/span&gt;`;
+        }).filter(Boolean);
+        return items.length ? `&lt;div class=&quot;run-results-booster-status&quot; aria-label=&quot;Статус усилителя&quot;&gt;${items.join(&quot;&quot;)}&lt;/div&gt;` : &quot;&quot;;
+      }
+
       function bindRunResultsActions(context) {
         overlay.querySelector(&quot;[data-run-results-again]&quot;)?.addEventListener(&quot;click&quot;, (event) =&gt; { event.stopPropagation(); overlay.onclick = null; reset(); }, { once:true });
         overlay.querySelector(&quot;[data-run-results-cafe]&quot;)?.addEventListener(&quot;click&quot;, (event) =&gt; { event.stopPropagation(); overlay.onclick = null; overlay.classList.remove(&quot;is-run-results-modal&quot;); overlay.style.display = &quot;none&quot;; if (gameExpanded) setGameExpanded(false); }, { once:true });
@@ -17823,7 +17855,8 @@ function createTutorialDeck(layer, mount, options, words) {
         const skinTitle = SKIN_CATALOG[skinId]?.title || character.name;
         const bonusMarkup = bonusParts.length ? `&lt;div class=&quot;run-skin-bonus${character.premium ? &quot; is-alex&quot; : &quot;&quot;}&quot;&gt;${character.premium ? `${runResultIconMarkup(RUN_RESULT_ICONS.character, &quot;is-bonus&quot;)} ` : &quot;&quot;}\u0411\u043e\u043d\u0443\u0441 \u00ab${runUiEscape(skinTitle)}\u00bb: ${runUiEscape(bonusParts.join(&quot; \u00b7 &quot;))}&lt;/div&gt;` : &quot;&quot;;
         const events = runResultsEvents(payload);
-        const body = `${runResultsHeader(context, newRecord ? &quot;\u041d\u043e\u0432\u044b\u0439 \u0440\u0435\u043a\u043e\u0440\u0434!&quot; : &quot;\u0417\u0430\u0431\u0435\u0433 \u0437\u0430\u0432\u0435\u0440\u0448\u0451\u043d!&quot;, phrase)}&lt;div class=&quot;run-results-score&quot;&gt;&lt;b&gt;${formatter.format(score)}&lt;/b&gt;&lt;span&gt;\u041e\u0427\u041a\u0410&lt;/span&gt;&lt;/div&gt;${recordLine}&lt;div class=&quot;run-results-metrics&quot;&gt;&lt;span class=&quot;run-result-metric&quot;&gt;&lt;span&gt;${runResultIconMarkup(RUN_RESULT_ICONS.zefir, &quot;is-metric&quot;)}\u0417\u0435\u0444\u0438\u0440&lt;/span&gt;&lt;b&gt;${formatter.format(Math.max(0, Number(settlement?.raw?.treats ?? context.treats)))}&lt;/b&gt;&lt;/span&gt;&lt;span class=&quot;run-result-metric&quot;&gt;&lt;span&gt;${runResultIconMarkup(RUN_RESULT_ICONS.coffee, &quot;is-metric&quot;)}\u041a\u043e\u0444\u0435&lt;/span&gt;&lt;b&gt;${formatter.format(Math.max(0, Number(settlement?.raw?.coffee ?? context.coffee)))}&lt;/b&gt;&lt;/span&gt;&lt;span class=&quot;run-result-metric&quot;&gt;&lt;span&gt;${runResultIconMarkup(RUN_RESULT_ICONS.time, &quot;is-metric&quot;)}\u0412\u0440\u0435\u043c\u044f&lt;/span&gt;&lt;b&gt;${runResultDurationLabel(settlement?.raw?.durationMs ?? context.durationMs)}&lt;/b&gt;&lt;/span&gt;&lt;/div&gt;&lt;div class=&quot;run-credit-line&quot;&gt;&lt;span&gt;+${formatter.format(Math.max(0, Number(credited.points || 0)))} \u043e\u0447\u043a\u043e\u0432&lt;/span&gt;&lt;span&gt;+${formatter.format(Math.max(0, Number(credited.treats || 0)))} \u0437\u0435\u0444\u0438\u0440\u0430&lt;/span&gt;&lt;span&gt;+${formatter.format(Math.max(0, Number(credited.coffee || 0)))} \u043a\u043e\u0444\u0435&lt;/span&gt;${Number(settlement.profileXpAwarded || 0) &gt; 0 ? `&lt;span&gt;+${formatter.format(Number(settlement.profileXpAwarded))} XP&lt;/span&gt;` : &quot;&quot;}&lt;/div&gt;${bonusMarkup}${events.length ? `&lt;div class=&quot;run-results-events&quot;&gt;${events.join(&quot;&quot;)}&lt;/div&gt;` : &quot;&quot;}&lt;div class=&quot;run-results-state&quot;&gt;${runResultIconMarkup(RUN_RESULT_ICONS.saved, &quot;is-state&quot;)}&lt;span&gt;\u0420\u0435\u0437\u0443\u043b\u044c\u0442\u0430\u0442 \u0441\u043e\u0445\u0440\u0430\u043d\u0451\u043d&lt;/span&gt;&lt;/div&gt;&lt;div class=&quot;run-results-actions&quot;&gt;&lt;button type=&quot;button&quot; class=&quot;run-overlay-primary&quot; data-run-results-again&gt;${runResultIconMarkup(RUN_RESULT_ICONS.replay, &quot;is-button&quot;)}&lt;span&gt;\u0415\u0449\u0451 \u0440\u0430\u0437&lt;/span&gt;&lt;/button&gt;&lt;button type=&quot;button&quot; class=&quot;run-overlay-secondary&quot; data-run-results-cafe&gt;${runResultIconMarkup(RUN_RESULT_ICONS.cafe, &quot;is-button&quot;)}&lt;span&gt;\u0412 \u043a\u0430\u0444\u0435&lt;/span&gt;&lt;/button&gt;&lt;/div&gt;`;
+        const boosterStatusMarkup = runResultsBoosterStatusMarkup(settlement);
+        const body = `${runResultsHeader(context, newRecord ? &quot;\u041d\u043e\u0432\u044b\u0439 \u0440\u0435\u043a\u043e\u0440\u0434!&quot; : &quot;\u0417\u0430\u0431\u0435\u0433 \u0437\u0430\u0432\u0435\u0440\u0448\u0451\u043d!&quot;, phrase)}&lt;div class=&quot;run-results-score&quot;&gt;&lt;b&gt;${formatter.format(score)}&lt;/b&gt;&lt;span&gt;\u041e\u0427\u041a\u0410&lt;/span&gt;&lt;/div&gt;${recordLine}&lt;div class=&quot;run-results-metrics&quot;&gt;&lt;span class=&quot;run-result-metric&quot;&gt;&lt;span&gt;${runResultIconMarkup(RUN_RESULT_ICONS.zefir, &quot;is-metric&quot;)}\u0417\u0435\u0444\u0438\u0440&lt;/span&gt;&lt;b&gt;${formatter.format(Math.max(0, Number(settlement?.raw?.treats ?? context.treats)))}&lt;/b&gt;&lt;/span&gt;&lt;span class=&quot;run-result-metric&quot;&gt;&lt;span&gt;${runResultIconMarkup(RUN_RESULT_ICONS.coffee, &quot;is-metric&quot;)}\u041a\u043e\u0444\u0435&lt;/span&gt;&lt;b&gt;${formatter.format(Math.max(0, Number(settlement?.raw?.coffee ?? context.coffee)))}&lt;/b&gt;&lt;/span&gt;&lt;span class=&quot;run-result-metric&quot;&gt;&lt;span&gt;${runResultIconMarkup(RUN_RESULT_ICONS.time, &quot;is-metric&quot;)}\u0412\u0440\u0435\u043c\u044f&lt;/span&gt;&lt;b&gt;${runResultDurationLabel(settlement?.raw?.durationMs ?? context.durationMs)}&lt;/b&gt;&lt;/span&gt;&lt;/div&gt;&lt;div class=&quot;run-credit-line&quot;&gt;&lt;span&gt;+${formatter.format(Math.max(0, Number(credited.points || 0)))} \u043e\u0447\u043a\u043e\u0432&lt;/span&gt;&lt;span&gt;+${formatter.format(Math.max(0, Number(credited.treats || 0)))} \u0437\u0435\u0444\u0438\u0440\u0430&lt;/span&gt;&lt;span&gt;+${formatter.format(Math.max(0, Number(credited.coffee || 0)))} \u043a\u043e\u0444\u0435&lt;/span&gt;${Number(settlement.profileXpAwarded || 0) &gt; 0 ? `&lt;span&gt;+${formatter.format(Number(settlement.profileXpAwarded))} XP&lt;/span&gt;` : &quot;&quot;}&lt;/div&gt;${bonusMarkup}${boosterStatusMarkup}${events.length ? `&lt;div class=&quot;run-results-events&quot;&gt;${events.join(&quot;&quot;)}&lt;/div&gt;` : &quot;&quot;}&lt;div class=&quot;run-results-state&quot;&gt;${runResultIconMarkup(RUN_RESULT_ICONS.saved, &quot;is-state&quot;)}&lt;span&gt;\u0420\u0435\u0437\u0443\u043b\u044c\u0442\u0430\u0442 \u0441\u043e\u0445\u0440\u0430\u043d\u0451\u043d&lt;/span&gt;&lt;/div&gt;&lt;div class=&quot;run-results-actions&quot;&gt;&lt;button type=&quot;button&quot; class=&quot;run-overlay-primary&quot; data-run-results-again&gt;${runResultIconMarkup(RUN_RESULT_ICONS.replay, &quot;is-button&quot;)}&lt;span&gt;\u0415\u0449\u0451 \u0440\u0430\u0437&lt;/span&gt;&lt;/button&gt;&lt;button type=&quot;button&quot; class=&quot;run-overlay-secondary&quot; data-run-results-cafe&gt;${runResultIconMarkup(RUN_RESULT_ICONS.cafe, &quot;is-button&quot;)}&lt;span&gt;\u0412 \u043a\u0430\u0444\u0435&lt;/span&gt;&lt;/button&gt;&lt;/div&gt;`;
         runResultsFrame(context, body);
         bindRunResultsActions(context);
       }
@@ -20685,7 +20718,13 @@ function createTutorialDeck(layer, mount, options, words) {
       }
 
       function caseRunWord(value) {
-        return Number(value || 0) === 1 ? &quot;забег&quot; : &quot;забега&quot;;
+        const amount = Math.abs(Math.floor(Number(value || 0)));
+        const lastTwo = amount % 100;
+        const last = amount % 10;
+        if (lastTwo &gt;= 11 &amp;&amp; lastTwo &lt;= 14) return &quot;забегов&quot;;
+        if (last === 1) return &quot;забег&quot;;
+        if (last &gt;= 2 &amp;&amp; last &lt;= 4) return &quot;забега&quot;;
+        return &quot;забегов&quot;;
       }
 
       function caseBoosterRunText(credited, summary) {
@@ -20715,13 +20754,49 @@ function createTutorialDeck(layer, mount, options, words) {
         return activeCaseBoosterTypes();
       }
 
+      function runBoosterRemainingRuns(type) {
+        if (!CASE_REWARD_BOOSTER_TYPES.includes(type)) return 0;
+        const active = normalizeActiveCaseBoosters(state.activeCaseBoosters, state.activeCaseBooster);
+        const run = normalizeRunCaseBoosters(state.runCaseBoosters);
+        const stored = Math.max(0, Number(active[type] || 0));
+        if ((state.running || state.paused) &amp;&amp; run[type] &amp;&amp; stored &lt;= 0) return 1;
+        return stored;
+      }
+
+      function runBoosterRemainingLabel(type) {
+        if (!CASE_REWARD_BOOSTER_TYPES.includes(type)) return &quot;В этом забеге&quot;;
+        const left = runBoosterRemainingRuns(type);
+        if (left === 1) return &quot;Последний забег&quot;;
+        return `Осталось ${left} ${caseRunWord(left)}`;
+      }
+
+      function focusRunBoosterMarkup(types) {
+        return types.map((type) =&gt; {
+          const item = CASE_BOOSTER_CATALOG[type];
+          if (!item) return &quot;&quot;;
+          const isReward = CASE_REWARD_BOOSTER_TYPES.includes(type);
+          return `&lt;span class=&quot;run-focus-booster-item${isReward ? &quot; is-x2&quot; : &quot;&quot;}&quot;&gt;&lt;img src=&quot;${item.src}&quot; alt=&quot;&quot; aria-hidden=&quot;true&quot; decoding=&quot;async&quot;&gt;&lt;span class=&quot;run-focus-booster-copy&quot;&gt;&lt;strong&gt;${runUiEscape(runBoosterDisplayTitle(type))}&lt;/strong&gt;&lt;small&gt;${runUiEscape(runBoosterRemainingLabel(type))}&lt;/small&gt;&lt;/span&gt;&lt;/span&gt;`;
+        }).join(&quot;&quot;);
+      }
+
       function renderActiveRunBooster() {
-        if (!activeRunBoosterEl) return;
         const types = currentRunBoosterTypes();
-        activeRunBoosterEl.hidden = !types.length;
-        if (!types.length) { activeRunBoosterEl.textContent = &quot;&quot;; return; }
-        const labels = types.map((type) =&gt; CASE_BOOSTER_CATALOG[type]?.title || type);
-        activeRunBoosterEl.textContent = labels.length &lt;= 2 ? labels.join(&quot; · &quot;) : `${labels.slice(0,2).join(&quot; · &quot;)} · +${labels.length - 2}`;
+        if (activeRunBoosterEl) {
+          activeRunBoosterEl.hidden = !types.length;
+          if (!types.length) activeRunBoosterEl.textContent = &quot;&quot;;
+          else {
+            const labels = types.map((type) =&gt; {
+              const title = runBoosterDisplayTitle(type);
+              return CASE_REWARD_BOOSTER_TYPES.includes(type) ? `${title} · ${runBoosterRemainingLabel(type)}` : title;
+            });
+            activeRunBoosterEl.textContent = labels.length &lt;= 2 ? labels.join(&quot; · &quot;) : `${labels.slice(0,2).join(&quot; · &quot;)} · +${labels.length - 2}`;
+          }
+        }
+        if (focusRunBoosterEl) {
+          focusRunBoosterEl.hidden = !types.length;
+          focusRunBoosterEl.innerHTML = types.length ? focusRunBoosterMarkup(types) : &quot;&quot;;
+          focusRunBoosterEl.classList.toggle(&quot;is-multiple&quot;, types.length &gt; 1);
+        }
       }
 
       function drawCaseTrailImage() {
@@ -29241,8 +29316,18 @@ html &gt; body.zefirok-game-expanded{height:var(--zefirok-visible-height,100dvh)
 #zefirok-maltipoo-runner.is-game-expanded .stage&gt;canvas{display:block;width:100%;height:100%;touch-action:none;outline:none}
 #zefirok-maltipoo-runner.is-game-expanded .stage-status{display:none!important}
 #zefirok-maltipoo-runner.is-game-expanded .run-focus-hud:not([hidden]){position:absolute;z-index:15;top:calc(max(0px,var(--zefirok-content-safe-top,0px),env(safe-area-inset-top,0px)) + 12px);left:max(14px,var(--zefirok-content-safe-left,0px),env(safe-area-inset-left,0px));right:max(14px,var(--zefirok-content-safe-right,0px),env(safe-area-inset-right,0px));display:grid;gap:9px;pointer-events:none;text-align:left;font-family:inherit;color:#634252;user-select:none;-webkit-user-select:none}
-#zefirok-maltipoo-runner .run-focus-top{display:flex;align-items:flex-start;justify-content:space-between;gap:14px}
-#zefirok-maltipoo-runner .run-focus-score-card{display:grid;grid-template-columns:auto 1fr;gap:0 9px;min-width:132px;max-width:calc(100% - 62px);padding:10px 14px;border:1px solid rgba(255,246,240,.78);border-radius:20px;background:rgba(255,248,244,.9);box-shadow:0 4px 16px rgba(79,44,65,.08)}
+#zefirok-maltipoo-runner .run-focus-top{display:grid;grid-template-columns:minmax(106px,1fr) minmax(96px,138px) 46px;align-items:start;gap:8px}
+#zefirok-maltipoo-runner .run-focus-score-card{display:grid;grid-template-columns:auto 1fr;gap:0 9px;min-width:0;max-width:none;padding:10px 14px;border:1px solid rgba(255,246,240,.78);border-radius:20px;background:rgba(255,248,244,.9);box-shadow:0 4px 16px rgba(79,44,65,.08)}
+#zefirok-maltipoo-runner .run-focus-booster{align-self:start;display:grid;gap:4px;min-width:0;padding:6px 7px;border:1px solid rgba(255,237,185,.88);border-radius:17px;background:linear-gradient(145deg,rgba(255,251,235,.96),rgba(255,235,244,.94));box-shadow:0 5px 18px rgba(93,54,67,.1);overflow:hidden;animation:run-focus-booster-enter .34s ease-out}
+#zefirok-maltipoo-runner .run-focus-booster[hidden]{display:none!important}
+#zefirok-maltipoo-runner .run-focus-booster-item{display:grid;grid-template-columns:28px minmax(0,1fr);align-items:center;gap:5px;min-width:0}
+#zefirok-maltipoo-runner .run-focus-booster-item+ .run-focus-booster-item{padding-top:4px;border-top:1px solid rgba(210,153,171,.22)}
+#zefirok-maltipoo-runner .run-focus-booster-item img{display:block;width:28px;height:28px;object-fit:contain;filter:drop-shadow(0 2px 4px rgba(144,92,49,.18))}
+#zefirok-maltipoo-runner .run-focus-booster-copy{min-width:0;display:grid;gap:1px}
+#zefirok-maltipoo-runner .run-focus-booster-copy strong{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#8f536c;font-size:9px;line-height:1.15;font-weight:950}
+#zefirok-maltipoo-runner .run-focus-booster-item.is-x2 .run-focus-booster-copy strong{color:#9a6625}
+#zefirok-maltipoo-runner .run-focus-booster-copy small{color:#8d7180;font-size:7.5px;line-height:1.15;font-weight:800;white-space:normal}
+@keyframes run-focus-booster-enter{0%{opacity:0;transform:translateY(-4px) scale(.96)}100%{opacity:1;transform:none}}
 #zefirok-maltipoo-runner .run-focus-caption{grid-column:1/-1;font-size:9px;line-height:1.25;font-weight:850;letter-spacing:1.4px;color:#a86781}
 #zefirok-maltipoo-runner .run-focus-score{grid-column:1/-1;font-size:30px;line-height:1.1;font-weight:850;letter-spacing:-.7px;font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
 #zefirok-maltipoo-runner .run-focus-record{grid-column:1/-1;font-size:11px;line-height:1.3;font-weight:700;color:#917483;margin-top:4px;font-variant-numeric:tabular-nums}
@@ -29265,8 +29350,7 @@ html &gt; body.zefirok-game-expanded{height:var(--zefirok-visible-height,100dvh)
 #zefirok-maltipoo-runner.is-game-expanded .actions.game-actions-v2{display:none!important}
 #zefirok-maltipoo-runner.is-game-expanded.is-focus-idle .actions.game-actions-v2{display:grid!important;position:absolute;z-index:16;bottom:max(16px,var(--zefirok-content-safe-bottom,0px),env(safe-area-inset-bottom,0px));left:50%;transform:translateX(-50%);width:min(300px,calc(100% - 48px));padding:0!important;margin:0!important}
 #zefirok-maltipoo-runner.is-game-expanded .liveops-run-banner{position:absolute;z-index:14;top:calc(max(0px,var(--zefirok-content-safe-top,0px)) + 166px);left:max(14px,var(--zefirok-content-safe-left,0px));right:max(14px,var(--zefirok-content-safe-right,0px));max-width:340px;max-height:58px;overflow:hidden;margin:0!important;padding:7px 10px!important;border-radius:13px;pointer-events:none;background:rgba(255,247,237,.87)}
-#zefirok-maltipoo-runner.is-game-expanded .run-booster-pill{position:absolute!important;z-index:16!important;top:auto!important;bottom:calc(max(12px,var(--zefirok-content-safe-bottom,0px),env(safe-area-inset-bottom,0px)) + 2px)!important;left:max(14px,var(--zefirok-content-safe-left,0px))!important;right:auto!important;max-width:calc(100% - 28px)!important;pointer-events:none}
-#zefirok-maltipoo-runner.is-game-expanded.is-focus-idle .run-booster-pill{bottom:calc(max(16px,var(--zefirok-content-safe-bottom,0px)) + 76px)!important}
+#zefirok-maltipoo-runner.is-game-expanded .run-booster-pill{display:none!important}
 #zefirok-maltipoo-runner.is-game-expanded .overlay{z-index:25;box-sizing:border-box;padding:calc(max(12px,var(--zefirok-content-safe-top,0px),env(safe-area-inset-top,0px)) + 68px) max(14px,var(--zefirok-content-safe-right,0px),env(safe-area-inset-right,0px)) calc(max(16px,var(--zefirok-content-safe-bottom,0px),env(safe-area-inset-bottom,0px)) + 12px) max(14px,var(--zefirok-content-safe-left,0px),env(safe-area-inset-left,0px));min-height:0;overflow:hidden}
 #zefirok-maltipoo-runner.is-game-expanded .overlay.is-pause-modal{padding-top:calc(max(12px,var(--zefirok-content-safe-top,0px),env(safe-area-inset-top,0px)) + 12px)}
 #zefirok-maltipoo-runner.is-game-expanded .run-pause-card,#zefirok-maltipoo-runner.is-game-expanded .run-results-card{width:min(100%,360px);max-height:100%;min-height:0;overscroll-behavior:contain;touch-action:pan-y}
@@ -29288,8 +29372,9 @@ html &gt; body.zefirok-game-expanded{height:var(--zefirok-visible-height,100dvh)
 #zefirok-maltipoo-runner.is-game-expanded .run-pause-confirm{order:7;padding:13px;font-size:12px;line-height:1.45;gap:9px;flex:none}
 #zefirok-maltipoo-runner.is-game-expanded .run-pause-card button{min-height:46px;flex-shrink:0;padding:11px 8px;font-size:13px;line-height:1.3;font-weight:750;text-transform:none;letter-spacing:normal}
 #zefirok-maltipoo-runner.is-game-expanded.is-focus-over:not(:has(.overlay.is-run-results-modal[style*=&quot;grid&quot;])) .actions.game-actions-v2{display:grid!important;position:absolute;z-index:16;bottom:max(16px,var(--zefirok-content-safe-bottom,0px));left:50%;transform:translateX(-50%);width:min(300px,calc(100% - 48px))}
+@media(max-width:340px){#zefirok-maltipoo-runner .run-focus-top{grid-template-columns:minmax(96px,1fr) minmax(88px,104px) 42px;gap:6px}#zefirok-maltipoo-runner .run-focus-pause{width:42px;height:42px;min-width:42px;min-height:42px}#zefirok-maltipoo-runner .run-focus-score-card{padding:8px 10px}#zefirok-maltipoo-runner .run-focus-score{font-size:25px}#zefirok-maltipoo-runner .run-focus-booster{padding:5px}#zefirok-maltipoo-runner .run-focus-booster-item{grid-template-columns:24px minmax(0,1fr)}#zefirok-maltipoo-runner .run-focus-booster-item img{width:24px;height:24px}}
 @media(max-height:600px){#zefirok-maltipoo-runner .run-focus-score-card{padding:7px 11px;border-radius:15px}#zefirok-maltipoo-runner .run-focus-score{font-size:23px}#zefirok-maltipoo-runner .run-focus-loot{padding:5px 9px}#zefirok-maltipoo-runner.is-game-expanded .liveops-run-banner{top:calc(max(0px,var(--zefirok-content-safe-top,0px)) + 144px)}#zefirok-maltipoo-runner.is-game-expanded .run-pause-card{padding:14px;gap:9px}#zefirok-maltipoo-runner.is-game-expanded .overlay{padding-top:calc(max(12px,var(--zefirok-content-safe-top,0px)) + 62px)}#zefirok-maltipoo-runner.is-game-expanded .overlay.is-pause-modal{padding-top:calc(max(8px,var(--zefirok-content-safe-top,0px)) + 8px)}}
-@media(prefers-reduced-motion:reduce){#zefirok-maltipoo-runner .run-focus-hud *,#zefirok-maltipoo-runner .run-focus-pause{transition:none!important}}
+@media(prefers-reduced-motion:reduce){#zefirok-maltipoo-runner .run-focus-hud *,#zefirok-maltipoo-runner .run-focus-pause,#zefirok-maltipoo-runner .run-focus-booster{transition:none!important;animation:none!important}}
 
 &lt;/style&gt;
 

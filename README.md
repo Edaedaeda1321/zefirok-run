@@ -33,6 +33,14 @@ zefirok-run/
 
 Не удаляйте существующую папку репозитория и `.git`.
 
+Зависимости для локальных build/asset-инструментов фиксируются через `package.json` + `package-lock.json`. После клонирования или обновления dependency metadata выполните:
+
+```bash
+npm ci
+```
+
+`node_modules/` является только локальным результатом установки и не хранится в Git. Wrangler в release-командах закреплён на версии `4.131.1`, чтобы случайное обновление CLI не меняло поведение production gate/deploy.
+
 Скопируйте из этого архива в действующую папку `zefirok-run`:
 
 - `index.html` — заменить старый;
@@ -49,8 +57,8 @@ zefirok-run/
 
 ```bash
 cd /путь/до/zefirok-run
-npx wrangler login
-npx wrangler d1 create zefirok-rewards
+npx --yes wrangler@4.131.1 login
+npx --yes wrangler@4.131.1 d1 create zefirok-rewards
 ```
 
 Команда покажет `database_id`. Вставьте его в `wrangler.jsonc` вместо:
@@ -64,7 +72,7 @@ REPLACE_WITH_D1_DATABASE_ID
 Примените таблицы:
 
 ```bash
-npx wrangler d1 migrations apply zefirok-rewards --remote
+npx --yes wrangler@4.131.1 d1 migrations apply zefirok-rewards --remote
 ```
 
 ## 3. Секреты
@@ -74,10 +82,10 @@ npx wrangler d1 migrations apply zefirok-rewards --remote
 Выполните команды по очереди. После каждой команды Терминал попросит ввести значение:
 
 ```bash
-npx wrangler secret put TELEGRAM_BOT_TOKEN
-npx wrangler secret put TELEGRAM_WEBHOOK_SECRET
-npx wrangler secret put BOT_SETUP_KEY
-npx wrangler secret put STAFF_SETUP_CODE
+npx --yes wrangler@4.131.1 secret put TELEGRAM_BOT_TOKEN
+npx --yes wrangler@4.131.1 secret put TELEGRAM_WEBHOOK_SECRET
+npx --yes wrangler@4.131.1 secret put BOT_SETUP_KEY
+npx --yes wrangler@4.131.1 secret put STAFF_SETUP_CODE
 ```
 
 Значения:
@@ -98,7 +106,7 @@ STAFF_SETUP_CODE = CAFE-4827
 ## 4. Развёртывание
 
 ```bash
-npx wrangler deploy
+npx --yes wrangler@4.131.1 deploy
 ```
 
 После команды скопируйте адрес Worker, например:

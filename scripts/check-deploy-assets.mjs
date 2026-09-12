@@ -9,7 +9,8 @@ const ignorePath = path.join(root, '.assetsignore');
 
 const REQUIRED_RULES = Object.freeze([
   '.git', '.github', '.wrangler', '.gitignore', '.assetsignore', '.DS_Store', '__MACOSX',
-  'node_modules', 'src', 'migrations', 'scripts', 'wrangler.jsonc', 'worker.js', 'update.sh',
+  'node_modules/', 'dev-history/', 'src', 'migrations', 'scripts', 'wrangler.jsonc', 'worker.js', 'update.sh',
+  'package.json', 'package-lock.json',
   '*.zip', '*.patch', '*.diff', '*_test.html', '*_testing*.html', '*New_Version*.html',
   'BASE_COMMIT.txt', 'CODEX_PROMPT.txt', 'PROMPT_FOR_CODEX.txt', 'DAILY_ACTIVITY_UPDATE.txt',
   'PATCH_NOTES.txt', 'CHANGELOG.md', 'README*', 'THIRD_PARTY_NOTICES.md'
@@ -68,6 +69,7 @@ const forbiddenPresent = rootEntries
 for (const name of forbiddenPresent) {
   const covered = (
     name === 'worker.js' || name === 'wrangler.jsonc' || name === 'update.sh' || name === 'BASE_COMMIT.txt' ||
+    name === 'package.json' || name === 'package-lock.json' ||
     /\.patch$/i.test(name) || /\.diff$/i.test(name) || /_test\.html$/i.test(name) ||
     /_testing.*\.html$/i.test(name) || /New_Version.*\.html$/i.test(name)
   );
