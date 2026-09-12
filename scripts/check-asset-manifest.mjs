@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 import { createHash } from 'node:crypto';
-import { readFile, stat } from 'node:fs/promises';
+import { readFile, stat, readdir } from 'node:fs/promises';
 import path from 'node:path';
 import process from 'node:process';
 
@@ -9,6 +9,29 @@ const manifestPath=path.join(root,'assets','images-manifest.json');
 const sha=(data,length)=>createHash('sha256').update(data).digest('hex').slice(0,length);
 
 function fail(message){throw new Error(message);}
+
+const directoryEntriesCache=new Map();
+async function resolveCanonicalAssetAbsolute(relative){
+  const parts=String(relative||'').split('/').filter(Boolean);
+  if(!parts.length||parts.some(part=>part==='.'||part==='..'))fail(`invalid relative asset path: ${relative}`);
+  let current=root;
+  for(const requested of parts){
+    let entries=directoryEntriesCache.get(current);
+    if(!entries){
+      entries=await readdir(current);
+      directoryEntriesCache.set(current,entries);
+    }
+    let actual=entries.includes(requested)?requested:'';
+    if(!actual){
+      const canonical=requested.normalize('NFC');
+      const matches=entries.filter(entry=>entry.normalize('NFC')===canonical);
+      if(matches.length!==1)fail(`asset path component not found uniquely: ${relative} (${requested})`);
+      actual=matches[0];
+    }
+    current=path.join(current,actual);
+  }
+  return current;
+}
 
 const manifest=JSON.parse(await readFile(manifestPath,'utf8'));
 if(Number(manifest.version)!==2)fail(`images-manifest version must be 2, got ${manifest.version}`);
@@ -24,7 +47,7 @@ for(const item of manifest.images){
   seen.add(assetPath);
   if(Object.hasOwn(item,'modified'))fail(`mtime field is forbidden in content manifest: ${assetPath}`);
   const relative=decodeURIComponent(assetPath.replace(/^\//,''));
-  const absolute=path.join(root,relative);
+  const absolute=await resolveCanonicalAssetAbsolute(relative);
   const data=await readFile(absolute);
   const info=await stat(absolute);
   const expectedHash=sha(data,12);

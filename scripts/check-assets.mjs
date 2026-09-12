@@ -26,6 +26,21 @@ const assetsRoot = path.join(root, 'assets');
 const projectImagesManifestPath = path.join(assetsRoot, 'images-manifest.json');
 const newsExtensions = new Set(['.png', '.jpg', '.jpeg', '.webp', '.gif', '.avif', '.svg']);
 
+function canonicalAssetText(value) {
+  return String(value || '').normalize('NFC');
+}
+
+function compareCanonicalAssetNames(left, right) {
+  const a = canonicalAssetText(left?.name ?? left);
+  const b = canonicalAssetText(right?.name ?? right);
+  const localized = a.localeCompare(b, 'ru');
+  return localized || (a < b ? -1 : a > b ? 1 : 0);
+}
+
+function canonicalAssetPath(value) {
+  return String(value || '').split('/').map(canonicalAssetText).join('/');
+}
+
 function newsLabel(relativePath) {
   const base = path.basename(relativePath, path.extname(relativePath));
   const aliases = new Map([
@@ -51,11 +66,12 @@ async function collectNewsImages(directory, prefix = '') {
     if (error?.code === 'ENOENT') return [];
     throw error;
   }
-  entries.sort((a, b) => a.name.localeCompare(b.name, 'ru'));
+  entries.sort(compareCanonicalAssetNames);
   const images = [];
   for (const entry of entries) {
     if (!entry.name || entry.name.startsWith('.') || entry.name.startsWith('._')) continue;
-    const relativePath = prefix ? `${prefix}/${entry.name}` : entry.name;
+    const entryName = canonicalAssetText(entry.name);
+    const relativePath = canonicalAssetPath(prefix ? `${prefix}/${entryName}` : entryName);
     const absolutePath = path.join(directory, entry.name);
     if (entry.isDirectory()) {
       images.push(...await collectNewsImages(absolutePath, relativePath));
@@ -78,7 +94,7 @@ async function collectNewsImages(directory, prefix = '') {
 }
 
 async function generateNewsManifest() {
-  const images = await collectNewsImages(newsRoot);
+  const images = (await collectNewsImages(newsRoot)).sort((a,b) => compareCanonicalAssetNames(a.fileName,b.fileName));
   const catalogHash = createHash('sha256')
     .update(images.map(item => `${item.path}:${item.hash}`).join('\n'))
     .digest('hex')
@@ -108,11 +124,12 @@ async function collectCaseImages(directory, prefix = '') {
     if (error?.code === 'ENOENT') return [];
     throw error;
   }
-  entries.sort((a, b) => a.name.localeCompare(b.name, 'ru'));
+  entries.sort(compareCanonicalAssetNames);
   const images = [];
   for (const entry of entries) {
     if (!entry.name || entry.name.startsWith('.') || entry.name.startsWith('._')) continue;
-    const relativePath = prefix ? `${prefix}/${entry.name}` : entry.name;
+    const entryName = canonicalAssetText(entry.name);
+    const relativePath = canonicalAssetPath(prefix ? `${prefix}/${entryName}` : entryName);
     const absolutePath = path.join(directory, entry.name);
     if (entry.isDirectory()) {
       images.push(...await collectCaseImages(absolutePath, relativePath));
@@ -151,11 +168,12 @@ async function collectProjectImages(directory, prefix = '') {
     if (error?.code === 'ENOENT') return [];
     throw error;
   }
-  entries.sort((a, b) => a.name.localeCompare(b.name, 'ru'));
+  entries.sort(compareCanonicalAssetNames);
   const images = [];
   for (const entry of entries) {
     if (!entry.name || entry.name.startsWith('.') || entry.name.startsWith('._') || entry.name === '__MACOSX') continue;
-    const relativePath = prefix ? `${prefix}/${entry.name}` : entry.name;
+    const entryName = canonicalAssetText(entry.name);
+    const relativePath = canonicalAssetPath(prefix ? `${prefix}/${entryName}` : entryName);
     const absolutePath = path.join(directory, entry.name);
     if (entry.isDirectory()) {
       images.push(...await collectProjectImages(absolutePath, relativePath));
@@ -180,7 +198,7 @@ async function collectProjectImages(directory, prefix = '') {
 }
 
 async function generateProjectImagesManifest() {
-  const images = await collectProjectImages(assetsRoot);
+  const images = (await collectProjectImages(assetsRoot)).sort((a,b) => compareCanonicalAssetNames(a.fileName,b.fileName));
   const catalogHash = createHash('sha256')
     .update(images.map(item => `${item.path}:${item.hash}`).join('\n'))
     .digest('hex')
@@ -192,7 +210,7 @@ async function generateProjectImagesManifest() {
 }
 
 async function generateCasesManifest() {
-  const images = await collectCaseImages(casesRoot);
+  const images = (await collectCaseImages(casesRoot)).sort((a,b) => compareCanonicalAssetNames(a.fileName,b.fileName));
   const catalogHash = createHash('sha256')
     .update(images.map(item => `${item.path}:${item.hash}`).join('\n'))
     .digest('hex')
@@ -256,8 +274,14 @@ async function exactPathExists(relativePath) {
   for (const part of normalized) {
     let entries;
     try { entries = await readdir(current); } catch { return false; }
-    if (!entries.includes(part)) return false;
-    current = path.join(current, part);
+    let actual = entries.includes(part) ? part : '';
+    if (!actual) {
+      const canonical = canonicalAssetText(part);
+      const matches = entries.filter((entry) => canonicalAssetText(entry) === canonical);
+      if (matches.length !== 1) return false;
+      actual = matches[0];
+    }
+    current = path.join(current, actual);
   }
   try {
     const info = await stat(current);

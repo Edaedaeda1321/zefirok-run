@@ -1,7 +1,7 @@
 {
   "version": 2,
   "hashAlgorithm": "sha256",
-  "catalogHash": "f930acf7ac250f22",
+  "catalogHash": "b6cbc4eca3613654",
   "count": 455,
   "images": [
     {
@@ -2309,38 +2309,6 @@
       "size": 139882
     },
     {
-      "fileName": "season/s2/minigame/currency/background_season2.webp",
-      "label": "Background season2",
-      "folder": "season/s2/minigame/currency",
-      "path": "/assets/season/s2/minigame/currency/background_season2.webp",
-      "hash": "c11200fc7c95",
-      "size": 126502
-    },
-    {
-      "fileName": "season/s2/minigame/currency/treats.webp",
-      "label": "Treats",
-      "folder": "season/s2/minigame/currency",
-      "path": "/assets/season/s2/minigame/currency/treats.webp",
-      "hash": "1c864e0ebd15",
-      "size": 176548
-    },
-    {
-      "fileName": "season/s3/minigame/currency/belkina_background_season3.webp",
-      "label": "Belkina background season3",
-      "folder": "season/s3/minigame/currency",
-      "path": "/assets/season/s3/minigame/currency/belkina_background_season3.webp",
-      "hash": "781e2e992cf1",
-      "size": 324782
-    },
-    {
-      "fileName": "season/s3/minigame/currency/coffe.webp",
-      "label": "Coffe",
-      "folder": "season/s3/minigame/currency",
-      "path": "/assets/season/s3/minigame/currency/coffe.webp",
-      "hash": "33d1e9e66940",
-      "size": 138946
-    },
-    {
       "fileName": "season-pass/avatars_season_pass3.webp",
       "label": "Avatars season pass3",
       "folder": "season-pass",
@@ -2525,6 +2493,38 @@
       "size": 4210
     },
     {
+      "fileName": "season/s2/minigame/currency/background_season2.webp",
+      "label": "Background season2",
+      "folder": "season/s2/minigame/currency",
+      "path": "/assets/season/s2/minigame/currency/background_season2.webp",
+      "hash": "c11200fc7c95",
+      "size": 126502
+    },
+    {
+      "fileName": "season/s2/minigame/currency/treats.webp",
+      "label": "Treats",
+      "folder": "season/s2/minigame/currency",
+      "path": "/assets/season/s2/minigame/currency/treats.webp",
+      "hash": "1c864e0ebd15",
+      "size": 176548
+    },
+    {
+      "fileName": "season/s3/minigame/currency/belkina_background_season3.webp",
+      "label": "Belkina background season3",
+      "folder": "season/s3/minigame/currency",
+      "path": "/assets/season/s3/minigame/currency/belkina_background_season3.webp",
+      "hash": "781e2e992cf1",
+      "size": 324782
+    },
+    {
+      "fileName": "season/s3/minigame/currency/coffe.webp",
+      "label": "Coffe",
+      "folder": "season/s3/minigame/currency",
+      "path": "/assets/season/s3/minigame/currency/coffe.webp",
+      "hash": "33d1e9e66940",
+      "size": 138946
+    },
+    {
       "fileName": "shop/currency_star_256x256.webp",
       "label": "Currency star 256x256",
       "folder": "shop",
@@ -2661,10 +2661,10 @@
       "size": 237584
     },
     {
-      "fileName": "skins/gameplay/alex/run1- запасной 2.webp",
-      "label": "Run1 запасной 2",
+      "fileName": "skins/gameplay/alex/run1- запасной 2.webp",
+      "label": "Run1 запасной 2",
       "folder": "skins/gameplay/alex",
-      "path": "/assets/skins/gameplay/alex/run1-%20%D0%B7%D0%B0%D0%BF%D0%B0%D1%81%D0%BD%D0%BE%D0%B8%CC%86%202.webp",
+      "path": "/assets/skins/gameplay/alex/run1-%20%D0%B7%D0%B0%D0%BF%D0%B0%D1%81%D0%BD%D0%BE%D0%B9%202.webp",
       "hash": "c976667ef1b1",
       "size": 234508
     },
