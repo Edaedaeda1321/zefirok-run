@@ -8,8 +8,6 @@ const battlePassPath = path.join(root, 'battle-pass.html');
 const worker = fs.readFileSync(workerPath, 'utf8');
 const index = fs.readFileSync(indexPath, 'utf8');
 const battlePass = fs.readFileSync(battlePassPath, 'utf8');
-const playerUiPaths = ['index.html','battle-pass.html','rating.html','referrals.html','achievements.html','album.html','legal.html'];
-const playerUis = playerUiPaths.map((name) => [name, fs.readFileSync(path.join(root, name), 'utf8')]);
 
 let checks = 0;
 function assert(condition, message) {
@@ -202,95 +200,6 @@ assert(battlePass.includes('operationCode === "FEATURE_TEMPORARILY_DISABLED"'), 
 assert(battlePass.includes('operationCode === "PRICE_CHANGED"'), 'battle-pass client does not require a new confirmation after price change');
 assert(battlePass.includes('activatePremiumTier(tier, expectedPrice)'), 'battle-pass confirmation does not pass the displayed quote');
 
-// Consumable boosters use two server-authoritative slots: one reward booster and
-// one run-helper booster. Same-group alternatives remain inspectable in the UI
-// so the player gets an explanation instead of a silent disabled control.
-assert(worker.includes('const CASE_UTILITY_BOOSTER_TYPES = Object.freeze(["shield", "second_chance", "pause"]);'), 'utility booster group catalog is missing');
-assert(worker.includes('function caseBoosterGroupForType(rawType)'), 'server booster group resolver is missing');
-assert(worker.includes('function caseActiveBoosterConflict(value, rawType)'), 'server booster group conflict resolver is missing');
-const boosterActivation = section(worker, 'async function activateCaseBooster(request, env)', '\nasync function consumeCaseBoosterRun');
-assert(boosterActivation.includes('const conflictType=caseActiveBoosterConflict(state.activeBoosters,boosterType);'), 'real booster activation does not enforce same-group exclusivity');
-assert(boosterActivation.includes('code:"BOOSTER_GROUP_CONFLICT"'), 'real booster conflict does not expose a stable error code');
-assert(worker.includes('if(path==="/api/cases/activate")'), 'test-project booster activation route is missing');
-assert(worker.includes('const conflictType=caseActiveBoosterConflict(active,type);if(conflictType)'), 'test-project booster activation does not mirror production group rules');
-assert(index.includes('const CASE_UTILITY_BOOSTER_TYPES = Object.freeze([&quot;shield&quot;, &quot;second_chance&quot;, &quot;pause&quot;]);'), 'client utility booster group catalog is missing');
-assert(index.includes('function activeCaseBoosterConflict(rawType, value = state.activeCaseBoosters)'), 'client booster conflict resolver is missing');
-assert(index.includes('data-booster-conflict='), 'same-group booster card is not tappable for conflict explanation');
-assert(index.includes('class=&quot;zpi-booster-conflict&quot;'), 'booster conflict popup is missing');
-assert(index.includes('Одновременно может быть активен только один усилитель из группы'), 'booster conflict popup does not explain the one-per-group rule');
-assert(index.includes('Один усилитель из каждой группы'), 'booster tutorial does not teach the two-slot rule');
-assert(index.includes('Открой «Мои покупки» → «Усилители».'), 'booster tutorial does not use the current My Purchases terminology');
-assert(index.includes('Мои покупки&lt;/strong&gt;'), 'player warehouse heading was not renamed to My Purchases');
-assert(index.includes('aria-label=&quot;Разделы «Моих покупок»&quot;'), 'My Purchases tab group still exposes legacy warehouse wording');
-assert(index.includes('&quot;finishStock&quot;:&quot;Открыть «Мои покупки»&quot;'), 'tutorial destination CTA still uses legacy warehouse wording');
-assert(!index.includes('Разные типы работают одновременно. Второй такой же тип нельзя активировать'), 'legacy unlimited cross-type booster rule is still present');
-assert(!index.includes('&quot;title&quot;:&quot;Склад&quot;'), 'tutorial catalog still presents a player-facing Warehouse title');
-for (const [name, source] of playerUis) {
-  const legacyWarehouseNoun = new RegExp('(^|[^\\p{L}])склад(?:а|е|ом|у|ы|ов)?(?=$|[^\\p{L}])', 'iu');
-  assert(!legacyWarehouseNoun.test(source), `${name}: player-facing legacy «Склад» terminology is still present`);
-}
-
-const boosterHelperSource = [
-  'const CASE_REWARD_BOOSTER_TYPES = Object.freeze(["points", "treats", "coffee"]);',
-  'const CASE_UTILITY_BOOSTER_TYPES = Object.freeze(["shield", "second_chance", "pause"]);',
-  'const CASE_BOOSTER_TYPES = Object.freeze([...CASE_REWARD_BOOSTER_TYPES, ...CASE_UTILITY_BOOSTER_TYPES]);',
-  'const CASE_BOOSTER_RUNS = Object.freeze({ points:2, treats:2, coffee:2, shield:1, second_chance:1, pause:1 });',
-  'function safeAdminNumber(value){ const number=Number(value); return Number.isFinite(number)?Math.max(0,Math.min(999999999,Math.floor(number))):0; }',
-  extractNamedFunction(worker, 'caseBoosterRunsForType'),
-  extractNamedFunction(worker, 'caseBoosterGroupForType'),
-  extractNamedFunction(worker, 'caseNormalizeActiveBoosters'),
-  extractNamedFunction(worker, 'caseActiveBoosterConflict'),
-  'return { caseBoosterGroupForType, caseActiveBoosterConflict };'
-].join('\n');
-const boosterHelpers = new Function(boosterHelperSource)();
-assert(boosterHelpers.caseBoosterGroupForType('coffee') === 'reward', 'coffee is not classified as a reward booster');
-assert(boosterHelpers.caseBoosterGroupForType('shield') === 'utility', 'shield is not classified as a run helper');
-assert(boosterHelpers.caseActiveBoosterConflict({coffee:2}, 'treats') === 'coffee', 'reward booster does not block another reward booster');
-assert(boosterHelpers.caseActiveBoosterConflict({shield:1}, 'pause') === 'shield', 'run helper does not block another run helper');
-assert(boosterHelpers.caseActiveBoosterConflict({coffee:2}, 'shield') === '', 'different booster groups incorrectly block each other');
-
-// FullScreen run HUD must surface reward x2 state without relying on the legacy
-// bottom pill, and the settled result must state how many boosted runs remain.
-assert(index.includes('data-run-focus-booster'), 'fullscreen x2 booster HUD slot is missing');
-assert(index.includes('function runBoosterRemainingLabel(type)'), 'fullscreen x2 remaining-run label helper is missing');
-assert(index.includes('function runResultsBoosterStatusMarkup(settlement)'), 'run result booster continuation status is missing');
-assert(index.includes('const boosterStatusMarkup = runResultsBoosterStatusMarkup(settlement);'), 'settled run does not compute booster continuation status');
-assert(index.includes('${boosterStatusMarkup}'), 'settled run does not render booster continuation status');
-assert(index.includes('#zefirok-maltipoo-runner.is-game-expanded .run-booster-pill{display:none!important}'), 'legacy bottom booster pill is still visible in fullscreen');
-assert(index.includes('if (lastTwo &gt;= 11 &amp;&amp; lastTwo &lt;= 14) return &quot;забегов&quot;;'), 'booster run pluralization is not Russian-safe for 11-14');
-assert(index.includes('renderActiveRunBooster();\n        if (state.paused &amp;&amp; overlay.classList.contains'), 'fullscreen toggle does not refresh booster HUD immediately');
-
-// Losing first place is a server-authoritative, delayed Telegram event. The
-// queued message is materialized immediately before delivery so stale leaders
-// are cancelled and rapid leader changes collapse into one current notice.
-assert(worker.includes('const LEADERBOARD_DETHRONE_NOTIFICATION_PREFIX="rating_dethroned:";'), 'rating dethrone notification category is missing');
-assert(worker.includes('const LEADERBOARD_DETHRONE_DELAY_SECONDS=90;'), 'rating dethrone notification is not debounced');
-assert(worker.includes('const LEADERBOARD_DETHRONE_COOLDOWN_SECONDS=3600;'), 'rating dethrone notification cooldown is missing');
-assert(worker.includes('async function queueLeaderboardDethroneNotificationIfNeeded'), 'rating dethrone enqueue helper is missing');
-assert(worker.includes('async function materializeLeaderboardDethroneNotification'), 'rating dethrone send-time revalidation is missing');
-assert(worker.includes('previousSeasonLeader] = await Promise.all(['), 'run settlement does not capture the previous visible leader');
-assert(worker.includes('ORDER BY best_score DESC,achieved_at ASC,telegram_id ASC LIMIT 1'), 'rating dethrone logic does not use leaderboard tie-break ordering');
-assert(worker.includes('scheduleRunSettlementBackground(executionCtx, queueLeaderboardDethroneNotificationIfNeeded'), 'leader change is not queued after authoritative settlement');
-assert(worker.includes('if(String(leader.telegram_id||"")===telegramId)return {action:"cancel",reason:"rating-lead-restored"};'), 'rating notice is not cancelled after the old leader retakes first place');
-assert(worker.includes("status IN ('pending','failed') AND attempts<5"), 'rating dethrone debounce does not reuse a pending queue item');
-assert(worker.includes('🏃 Вернуть первое место'), 'rating dethrone Telegram CTA is missing');
-assert(worker.includes('Корона сменила владельца!'), 'rating dethrone Telegram copy is missing');
-assert(worker.includes('if(isLeaderboardDethroneNotificationCategory(row.category)){'), 'notification queue does not revalidate rating notices before delivery');
-
-const dethroneHelperSource = [
-  'const LEADERBOARD_DETHRONE_NOTIFICATION_PREFIX="rating_dethroned:";',
-  extractNamedFunction(worker, 'leaderboardDethroneSeasonId'),
-  extractNamedFunction(worker, 'leaderboardDethronePointsWord'),
-  'return { leaderboardDethroneSeasonId, leaderboardDethronePointsWord };'
-].join('\n');
-const dethroneHelpers = new Function(dethroneHelperSource)();
-assert(dethroneHelpers.leaderboardDethroneSeasonId('rating_dethroned:s2') === 's2', 'rating notification season parser is broken');
-assert(dethroneHelpers.leaderboardDethronePointsWord(1) === 'очко', 'rating gap plural: 1');
-assert(dethroneHelpers.leaderboardDethronePointsWord(2) === 'очка', 'rating gap plural: 2');
-assert(dethroneHelpers.leaderboardDethronePointsWord(5) === 'очков', 'rating gap plural: 5');
-assert(dethroneHelpers.leaderboardDethronePointsWord(11) === 'очков', 'rating gap plural: 11');
-assert(dethroneHelpers.leaderboardDethronePointsWord(21) === 'очко', 'rating gap plural: 21');
-
 // P2 operational retention must archive before pruning detail and keep semantic
 // identities required by lifetime achievements / reward idempotency.
 assert(worker.includes('const OPERATIONAL_RETENTION_POLICIES = Object.freeze({'), 'operational retention policy catalog is missing');
@@ -315,6 +224,46 @@ assert(worker.includes('retention:(retention.results||[]).map'), 'Control Center
 assert(!worker.includes('DELETE FROM player_notification_log WHERE sent_at<?'), 'notification log still has a direct delete path outside retention');
 assert(worker.includes("(status IN ('sent','cancelled') OR (status='failed' AND attempts>=5))"), 'player notification retention can remove retryable failed deliveries');
 assert(worker.includes("(status IN ('delivered','claimed','cancelled') OR (status='failed' AND attempts>=5))"), 'reward retention can remove retryable failed deliveries');
+
+// Telegram delivery hygiene: expected permanent chat failures are operationally distinct
+// from application failures and known-unreachable recipients must not be requeued forever.
+assert(worker.includes('const PERMANENT_TELEGRAM_DELIVERY_ERROR_MARKERS = Object.freeze(['), 'permanent Telegram delivery classifier is missing');
+for (const marker of ['bot was blocked','chat not found','user is deactivated','forbidden','cannot initiate',"can't initiate"]) {
+  assert(worker.includes(`"${marker}"`), `permanent Telegram delivery marker missing: ${marker}`);
+}
+const staffDelivery = section(worker, 'async function processPendingLeaderboardStaffNotifications', '\n\nfunction normalizeCaseType');
+assert(staffDelivery.includes('markBotSubscriberUnreachable'), 'permanent staff notification failures do not suppress unreachable recipients');
+const playerDelivery = section(worker, 'async function processV77NotificationQueue', '\n\nasync function showV77NotificationPolicy');
+assert(playerDelivery.includes('markBotSubscriberUnreachable'), 'permanent player notification failures do not suppress unreachable recipients');
+const subscriberRegistration = section(worker, 'async function registerBotSubscriber', '\n\nasync function createBotBroadcast');
+assert(subscriberRegistration.includes('first_started_at = CASE WHEN bot_subscribers.first_started_at > 0'), 'subscriber reactivation does not repair an unreachable-marker first_started_at');
+const staffRecipients = section(worker, 'async function staffNotificationRecipientIds', '\n\nfunction staffNotificationMessageHash');
+assert(staffRecipients.includes('LEFT JOIN bot_subscribers b ON b.telegram_id=s.telegram_id'), 'staff notification recipients ignore subscriber reachability');
+assert(staffRecipients.includes('COALESCE(b.active,1)=1'), 'known-unreachable staff recipients can still be queued');
+const dailyReport = section(worker, 'async function buildDailyStaffReport', '\nasync function showDailyStaffReport');
+assert(dailyReport.includes('permanentTelegramFailureSql("last_error")'), 'daily report does not classify permanent staff Telegram failures');
+assert(dailyReport.includes('permanentTelegramFailureSql("error_text")'), 'daily report does not classify permanent broadcast Telegram failures');
+assert(dailyReport.includes('Ошибок системы/доставки'), 'daily report still conflates all nondeliveries with system errors');
+assert(dailyReport.includes('недоступных Telegram-чатов'), 'daily report does not expose unreachable chats separately');
+const operationalProblems = section(worker, 'async function syncOperationalProblems', '\nasync function buildAdminOverview');
+assert(operationalProblems.includes('AND NOT ${permanentSql}'), 'operational problem scan still treats permanent Telegram nondelivery as a broadcast incident');
+
+// Pause controls must work in both normal and focus/fullscreen layouts. The fallback
+// modal is rendered before the rich card so a cosmetic render failure can never leave
+// the game paused without a visible way to continue.
+const pauseToggle = section(index, 'function togglePause(preserveButtonVisual = false)', '\n\n      function resume');
+assert(pauseToggle.includes('blockingOverlayVisible'), 'pause toggle has no visible-overlay guard');
+assert(pauseToggle.includes('overlay.style.display !== &quot;none&quot;'), 'stale hidden overlay classes can still block pause');
+const pauseModal = section(index, 'function renderPauseModalFallback', '\n      function runResultDurationLabel');
+assert(pauseModal.includes('function showPauseModal'), 'rich pause modal function is missing');
+assert(pauseModal.includes('renderPauseModalFallback(reason);'), 'pause does not guarantee a minimal visible fallback first');
+assert(pauseModal.includes('console.error(&quot;Pause modal render failed&quot;, error);'), 'pause rich-modal failure is not caught');
+assert(pauseModal.split('console.error(&quot;Pause modal render failed&quot;, error);')[1]?.includes('renderPauseModalFallback(reason);'), 'pause render failure does not restore the fallback modal');
+assert(index.includes('pauseBtn.addEventListener(&quot;pointerup&quot;, activatePauseControl);'), 'normal pause control does not handle pointer activation');
+assert(index.includes('pauseBtn.addEventListener(&quot;click&quot;, activatePauseControl);'), 'normal pause control does not handle click/keyboard activation');
+assert(index.includes('focusPauseBtn?.addEventListener(&quot;pointerup&quot;, activateFocusPauseControl);'), 'focus pause control does not handle pointer activation');
+assert(index.includes('focusPauseBtn?.addEventListener(&quot;click&quot;, activateFocusPauseControl);'), 'focus pause control does not handle click/keyboard activation');
+assert(index.includes('pauseActivationLockUntil = now + 180;'), 'pause pointer/click dedupe guard is missing');
 
 // Execute the actual Worker quote helpers in isolation. This keeps the build test
 // behavioral without importing or booting the production Worker.

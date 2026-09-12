@@ -1,0 +1,38 @@
+name: Production Gate
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: production-gate-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  production-gate:
+    name: production-gate
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Install Wrangler for local D1 integration
+        run: npm install --no-save --no-package-lock wrangler@4
+
+      - name: Run production gate
+        run: node scripts/check-production-gate.mjs
+
+      - name: Verify generated manifests are committed
+        run: git diff --exit-code -- assets/news/manifest.json assets/cases/manifest.json assets/images-manifest.json

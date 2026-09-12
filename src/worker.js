@@ -418,8 +418,7 @@ const CASE_PHYSICAL_REWARDS = Object.freeze({
 });
 
 const CASE_REWARD_BOOSTER_TYPES = Object.freeze(["points", "treats", "coffee"]);
-const CASE_UTILITY_BOOSTER_TYPES = Object.freeze(["shield", "second_chance", "pause"]);
-const CASE_BOOSTER_TYPES = Object.freeze([...CASE_REWARD_BOOSTER_TYPES, ...CASE_UTILITY_BOOSTER_TYPES]);
+const CASE_BOOSTER_TYPES = Object.freeze([...CASE_REWARD_BOOSTER_TYPES, "shield", "second_chance", "pause"]);
 const CASE_BOOSTER_RUNS = Object.freeze({ points:2, treats:2, coffee:2, shield:1, second_chance:1, pause:1 });
 const CASE_DUPLICATE_COMPENSATION = Object.freeze({ skin: 150000, avatar: 500, frame: 1500, trail: 5000, music: 150000 });
 const CASE_RARITY_ORDER = Object.freeze({ common: 0, rare: 1, superrare: 2, epic: 3, mythic: 4, legendary: 5 });
@@ -10045,6 +10044,25 @@ async function finalizeSeason(env, season, now = Math.floor(Date.now() / 1000)) 
 }
 
 
+const PERMANENT_TELEGRAM_DELIVERY_ERROR_MARKERS = Object.freeze([
+  "bot was blocked",
+  "chat not found",
+  "user is deactivated",
+  "forbidden",
+  "cannot initiate",
+  "can't initiate"
+]);
+
+function isPermanentTelegramDeliveryErrorText(value) {
+  const text = String(value || "").toLowerCase();
+  return PERMANENT_TELEGRAM_DELIVERY_ERROR_MARKERS.some((marker) => text.includes(marker));
+}
+
+function permanentTelegramFailureSql(columnName) {
+  const column = ["last_error", "error_text"].includes(String(columnName)) ? String(columnName) : "error_text";
+  return `(${PERMANENT_TELEGRAM_DELIVERY_ERROR_MARKERS.map((marker) => `LOWER(COALESCE(${column},'')) LIKE '%${marker.replaceAll("'", "''")}%'`).join(" OR ")})`;
+}
+
 function leaderboardNotificationErrorReason(error) {
   const message = String(error?.message || error?.description || "Неизвестная ошибка.").trim();
   return message.slice(0, 500) || "Неизвестная ошибка.";
@@ -10237,12 +10255,17 @@ async function processPendingLeaderboardStaffNotifications(env, limitValue = 30)
       const permanent = isPermanentTelegramDeliveryError(error);
       const attempts = permanent ? 5 : Math.max(1, Number(row.attempts || 0) + 1);
       const delay = permanent ? 0 : Math.min(3600, SERVER_NOTIFICATION_RETRY_BASE_SECONDS * (2 ** Math.max(0, attempts - 1)));
+      const errorReason = leaderboardNotificationErrorReason(error);
       await env.DB.prepare(
         `UPDATE leaderboard_staff_notifications
          SET status='failed',attempts=?,last_error=?,updated_at=?,available_at=?,
              lease_token='',lease_until=0
          WHERE id=? AND lease_token=?`
-      ).bind(attempts, leaderboardNotificationErrorReason(error), finishedAt, finishedAt + delay, row.id, token).run();
+      ).bind(attempts, errorReason, finishedAt, finishedAt + delay, row.id, token).run();
+      if (permanent) {
+        try { await markBotSubscriberUnreachable(env, String(row.recipient_telegram_id || ""), errorReason, finishedAt); }
+        catch (markError) { console.warn("Failed to suppress unreachable staff recipient", markError); }
+      }
       failed += 1;
     }
   }
@@ -10552,32 +10575,6 @@ function caseCurrencyRange(caseType, kind, liveops = null) {
 function caseBoosterRunsForType(rawType) {
   const type=String(rawType || "");
   return CASE_BOOSTER_TYPES.includes(type) ? Math.max(1, safeAdminNumber(CASE_BOOSTER_RUNS[type] || 1)) : 0;
-}
-
-function caseBoosterGroupForType(rawType) {
-  const type=String(rawType || "");
-  if (CASE_REWARD_BOOSTER_TYPES.includes(type)) return "reward";
-  if (CASE_UTILITY_BOOSTER_TYPES.includes(type)) return "utility";
-  return "";
-}
-
-function caseBoosterGroupLabel(rawGroup) {
-  const group=String(rawGroup || "");
-  if (group === "reward") return "Бонус награды";
-  if (group === "utility") return "Помощник в забеге";
-  return "Усилитель";
-}
-
-function caseBoosterTitle(rawType) {
-  return ({ points:"×2 Очки", treats:"×2 Зефир", coffee:"×2 Кофе", shield:"Щит Зеффи", second_chance:"Второй шанс", pause:"Пауза Зеффи" })[String(rawType || "")] || "Усилитель";
-}
-
-function caseActiveBoosterConflict(value, rawType) {
-  const type=String(rawType || "");
-  const group=caseBoosterGroupForType(type);
-  if (!group) return "";
-  const active=caseNormalizeActiveBoosters(value);
-  return CASE_BOOSTER_TYPES.find((candidate) => candidate !== type && caseBoosterGroupForType(candidate) === group && safeAdminNumber(active[candidate]) > 0) || "";
 }
 
 function caseParseBoosterExtras(value) {
@@ -12023,24 +12020,13 @@ async function activateCaseBooster(request, env) {
       throw new ApiError(409, "Этот усилитель уже активен.");
     }
     if (safeAdminNumber(state.boosters[boosterType]) <= 0) throw new ApiError(409, "Такого усилителя нет в коллекции.");
-    const conflictType=caseActiveBoosterConflict(state.activeBoosters,boosterType);
-    if (conflictType) {
-      const group=caseBoosterGroupForType(boosterType);
-      throw new ApiError(409, `Сейчас уже активен «${caseBoosterTitle(conflictType)}». Одновременно можно использовать только один усилитель из группы «${caseBoosterGroupLabel(group)}».`, {
-        code:"BOOSTER_GROUP_CONFLICT",
-        group,
-        requestedType:boosterType,
-        activeType:conflictType,
-        activeRunsLeft:safeAdminNumber(state.activeBoosters[conflictType])
-      });
-    }
     state.boosters[boosterType] = safeAdminNumber(state.boosters[boosterType] - 1);
     state.activeBoosters[boosterType] = caseBoosterRunsForType(boosterType);
     state.activeBooster = caseLegacyActiveBooster(state.activeBoosters);
     await caseStateUpdateStatement(env, telegramId, state, Math.floor(Date.now() / 1000)).run();
     return jsonResponse(await buildCasePayload(env, telegramId, body.current || {}));
   } catch (error) {
-    if (error instanceof ApiError) return jsonResponse({ ok: false, error: error.message, ...(error.details ? { details:error.details } : {}) }, error.status);
+    if (error instanceof ApiError) return jsonResponse({ ok: false, error: error.message }, error.status);
     console.error("activateCaseBooster failed", error);
     return jsonResponse({ ok: false, error: "Не удалось активировать усилитель." }, 500);
   }
@@ -12692,7 +12678,7 @@ async function submitLeaderboardRun(request, env, executionCtx = null) {
     const qualifies = rewardEligible && metrics.score >= minScore;
     const acceptedToRating = ratingEntryEnabled && String(season.status || "") === "active" && qualifies;
     const profileBeforePromise = ensureAuthoritativeProfileRow(env, telegramId, `run:${runId}:prepare`);
-    const [ensured, profileBefore, consumed, fastSeasonPass, testerRow, liveOpsRunEvent, runAchievementContext, reservedCaseDrop, previousSeasonLeader] = await Promise.all([
+    const [ensured, profileBefore, consumed, fastSeasonPass, testerRow, liveOpsRunEvent, runAchievementContext, reservedCaseDrop] = await Promise.all([
       ensureCasePlayerState(env, telegramId, {}, { profilePromise: profileBeforePromise }),
       profileBeforePromise,
       env.DB.prepare(`SELECT booster_type,booster_types_json,telegram_id FROM case_booster_run_consumptions WHERE run_id=? LIMIT 1`).bind(runId).first(),
@@ -12703,8 +12689,7 @@ async function submitLeaderboardRun(request, env, executionCtx = null) {
       acceptedToRating ? getTesterAccountSafe(telegramId, env) : Promise.resolve(null),
       activeRunLiveOpsEvent(env).catch(()=>({active:false,multipliers:{pointsMultiplier:1,treatsMultiplier:1,coffeeMultiplier:1}})),
       rewardEligible ? prepareRunAchievementUnlockContext(env,telegramId,minSeconds*1000) : Promise.resolve(null),
-      env.DB.prepare(`SELECT * FROM game_run_case_drops WHERE run_id=? AND telegram_id=? LIMIT 1`).bind(runId,telegramId).first().catch(()=>null),
-      acceptedToRating ? env.DB.prepare(`SELECT telegram_id,display_name,username,best_score,achieved_at FROM leaderboard_entries WHERE season_id=? AND hidden=0 ORDER BY best_score DESC,achieved_at ASC,telegram_id ASC LIMIT 1`).bind(String(season.id || "")).first() : Promise.resolve(null)
+      env.DB.prepare(`SELECT * FROM game_run_case_drops WHERE run_id=? AND telegram_id=? LIMIT 1`).bind(runId,telegramId).first().catch(()=>null)
     ]);
     if (consumed && String(consumed.telegram_id || "") !== telegramId) throw new ApiError(409, "Этот идентификатор забега уже использован.");
 
@@ -12860,13 +12845,6 @@ async function submitLeaderboardRun(request, env, executionCtx = null) {
       throw batchError;
     }
 
-    if (acceptedToRating && !ratingHidden && previousSeasonLeader?.telegram_id && String(previousSeasonLeader.telegram_id) !== telegramId) {
-      scheduleRunSettlementBackground(executionCtx, queueLeaderboardDethroneNotificationIfNeeded(env, {
-        seasonId: String(season.id || ""),
-        previousLeaderId: String(previousSeasonLeader.telegram_id),
-        expectedLeaderId: telegramId
-      }), "leaderboard dethrone notification enqueue failed");
-    }
     if (acceptedToRating) {
       scheduleRunSettlementBackground(executionCtx, syncLeaderboardAllTimeFromSeasonEntries(env, {
         telegramId, displayName, username, photoUrl, level: nextLevel, hidden: ratingHidden,
@@ -18481,6 +18459,20 @@ async function ensureBotSubscriberSchema(env) {
   await env.DB.prepare(BOT_SUBSCRIBERS_SCHEMA_SQL).run();
 }
 
+async function markBotSubscriberUnreachable(env, telegramId, errorText = "", nowValue = 0) {
+  const id = String(telegramId || "").trim();
+  if (!/^\d{4,20}$/.test(id)) return false;
+  await ensureBotSubscriberSchema(env);
+  const now = Math.max(1, Math.floor(Number(nowValue) || Date.now() / 1000));
+  const error = String(errorText || "Telegram delivery unavailable").slice(0, 500);
+  await env.DB.prepare(
+    `INSERT INTO bot_subscribers(telegram_id,chat_id,username,display_name,first_started_at,last_started_at,active,last_error,last_delivery_at)
+     VALUES(?,?, '', '',0,0,0,?,0)
+     ON CONFLICT(telegram_id) DO UPDATE SET active=0,last_error=excluded.last_error`
+  ).bind(id, id, error).run();
+  return true;
+}
+
 let botBroadcastSchemaReady = false;
 let botBroadcastSchemaPromise = null;
 async function ensureBotBroadcastSchema(env) {
@@ -18521,6 +18513,7 @@ async function registerBotSubscriber(message, env) {
        chat_id = excluded.chat_id,
        username = excluded.username,
        display_name = excluded.display_name,
+       first_started_at = CASE WHEN bot_subscribers.first_started_at > 0 THEN bot_subscribers.first_started_at ELSE excluded.first_started_at END,
        last_started_at = excluded.last_started_at,
        active = 1,
        last_error = ''`
@@ -18749,12 +18742,7 @@ async function processBotBroadcastJob(env, broadcastId) {
 
 function isPermanentTelegramDeliveryError(error) {
   const status = Number(error?.status || 0);
-  const text = String(error?.message || "").toLowerCase();
-  return status === 403
-    || text.includes("bot was blocked")
-    || text.includes("chat not found")
-    || text.includes("user is deactivated")
-    || text.includes("forbidden");
+  return status === 403 || isPermanentTelegramDeliveryErrorText(error?.message || error?.description || error);
 }
 
 function sleep(milliseconds) {
@@ -21691,9 +21679,10 @@ async function syncOperationalProblems(env, options = {}) {
   } catch {}
 
   try {
-    const failedBroadcasts = await env.DB.prepare(`SELECT COUNT(*) AS count FROM bot_broadcast_deliveries WHERE status = 'failed' AND attempted_at >= ?`).bind(now - 3600).first();
+    const permanentSql=permanentTelegramFailureSql("error_text");
+    const failedBroadcasts = await env.DB.prepare(`SELECT COUNT(*) AS count FROM bot_broadcast_deliveries WHERE status='failed' AND attempted_at>=? AND NOT ${permanentSql}`).bind(now - 3600).first();
     if (Number(failedBroadcasts?.count || 0) > 0) {
-      add({ fingerprint: "broadcast:failed_hour", issueType: "broadcast", severity: "warning", title: `Ошибок рассылки за час: ${Number(failedBroadcasts.count)}`, details: { count: Number(failedBroadcasts.count) }, sourceType: "broadcast", sourceId: "last_hour" });
+      add({ fingerprint: "broadcast:failed_hour", issueType: "broadcast", severity: "warning", title: `Технических ошибок рассылки за час: ${Number(failedBroadcasts.count)}`, details: { count: Number(failedBroadcasts.count) }, sourceType: "broadcast", sourceId: "last_hour" });
     }
   } catch {}
 
@@ -22129,7 +22118,8 @@ async function checkLowStockAlerts(env) {
 }
 
 async function buildDailyStaffReport(env, startAt, dateKey) {
-  const [players, runs, openedLevel, openedGranted, rewardsCreated, rewardsUsed, casePurchases, skinPurchases, physicalPurchases, staffActive, staffActors, actionErrors, notificationErrors, broadcastErrors, tickets] = await Promise.all([
+  const staffPermanentSql=permanentTelegramFailureSql("last_error"),broadcastPermanentSql=permanentTelegramFailureSql("error_text");
+  const [players, runs, openedLevel, openedGranted, rewardsCreated, rewardsUsed, casePurchases, skinPurchases, physicalPurchases, staffActive, staffActors, actionErrors, notificationDelivery, broadcastDelivery, tickets] = await Promise.all([
     env.DB.prepare(`SELECT COUNT(*) AS count FROM admin_profile_state WHERE created_at >= ?`).bind(startAt).first(),
     env.DB.prepare(`SELECT COUNT(*) AS total, SUM(CASE WHEN accepted = 1 THEN 1 ELSE 0 END) AS accepted FROM leaderboard_runs WHERE created_at >= ?`).bind(startAt).first(),
     env.DB.prepare(`SELECT COUNT(*) AS count FROM level_case_openings WHERE opened_at >= ?`).bind(startAt).first(),
@@ -22142,8 +22132,8 @@ async function buildDailyStaffReport(env, startAt, dateKey) {
     env.DB.prepare(`SELECT COUNT(*) AS count FROM staff_users WHERE active = 1`).first(),
     env.DB.prepare(`SELECT COUNT(DISTINCT actor_telegram_id) AS count FROM staff_action_log WHERE created_at >= ?`).bind(startAt).first(),
     env.DB.prepare(`SELECT COUNT(*) AS count FROM staff_action_log WHERE created_at >= ? AND success = 0`).bind(startAt).first(),
-    env.DB.prepare(`SELECT COUNT(*) AS count FROM leaderboard_staff_notifications WHERE status = 'failed' AND updated_at >= ?`).bind(startAt).first(),
-    env.DB.prepare(`SELECT COUNT(*) AS count FROM bot_broadcast_deliveries WHERE status = 'failed' AND attempted_at >= ?`).bind(startAt).first(),
+    env.DB.prepare(`SELECT COUNT(*) AS total,SUM(CASE WHEN ${staffPermanentSql} THEN 1 ELSE 0 END) AS unreachable FROM leaderboard_staff_notifications WHERE status='failed' AND updated_at>=?`).bind(startAt).first(),
+    env.DB.prepare(`SELECT COUNT(*) AS total,SUM(CASE WHEN ${broadcastPermanentSql} THEN 1 ELSE 0 END) AS unreachable FROM bot_broadcast_deliveries WHERE status='failed' AND attempted_at>=?`).bind(startAt).first(),
     env.DB.prepare(`SELECT
        SUM(CASE WHEN created_at >= ? THEN 1 ELSE 0 END) AS created,
        SUM(CASE WHEN status IN ('new','working') THEN 1 ELSE 0 END) AS open_count
@@ -22156,7 +22146,10 @@ async function buildDailyStaffReport(env, startAt, dateKey) {
   }).join(" · ");
   const openedCases = Number(openedLevel?.count || 0) + Number(openedGranted?.count || 0);
   const purchases = Number(casePurchases?.count || 0) + Number(skinPurchases?.count || 0) + Number(physicalPurchases?.count || 0);
-  const errors = Number(actionErrors?.count || 0) + Number(notificationErrors?.count || 0) + Number(broadcastErrors?.count || 0);
+  const unreachableChats = Number(notificationDelivery?.unreachable || 0) + Number(broadcastDelivery?.unreachable || 0);
+  const deliveryErrors = Math.max(0, Number(notificationDelivery?.total || 0) - Number(notificationDelivery?.unreachable || 0))
+    + Math.max(0, Number(broadcastDelivery?.total || 0) - Number(broadcastDelivery?.unreachable || 0));
+  const errors = Number(actionErrors?.count || 0) + deliveryErrors;
   return `<b>📊 Итоги за ${escapeHtml(dateKey)}</b>\n\n` +
     `Новых игроков: <b>${Number(players?.count || 0)}</b>\n` +
     `Забегов: <b>${Number(runs?.total || 0)}</b> · зачтено ${Number(runs?.accepted || 0)}\n` +
@@ -22166,7 +22159,7 @@ async function buildDailyStaffReport(env, startAt, dateKey) {
     `Погашено кодов: <b>${Number(rewardsUsed?.count || 0)}</b>\n` +
     `Активных сотрудников: <b>${Number(staffActive?.count || 0)}</b> · работали сегодня ${Number(staffActors?.count || 0)}\n` +
     `Новых обращений: <b>${Number(tickets?.created || 0)}</b> · открыто сейчас ${Number(tickets?.open_count || 0)}\n` +
-    `Ошибок и недоставок: <b>${errors}</b>\n\n` +
+    `Ошибок системы/доставки: <b>${errors}</b>${unreachableChats ? ` · недоступных Telegram-чатов ${unreachableChats}` : ""}\n\n` +
     `<b>Остатки</b>\n${escapeHtml(stockLine)}`;
 }
 
@@ -29795,13 +29788,22 @@ async function setNotificationPreference(chatId,user,key,enabled,env){
 
 async function staffNotificationRecipientIds(env,category){
   await ensureOperationsSecuritySchema(env);
+  await ensureBotSubscriberSchema(env);
   if(!NOTIFICATION_KEYS.includes(String(category)))category="bot_errors";
-  const ownerIds=new Set([...botOwnerTelegramIds(env),...botAdminTelegramIds(env)].map(String));
-  const recipients=new Set(ownerIds);
+  const ownerIds=new Set([...botOwnerTelegramIds(env),...botAdminTelegramIds(env)].map(String).filter(Boolean));
+  const recipients=new Set();
+  const explicitlyInactive=new Set();
+  if(ownerIds.size){
+    const ids=[...ownerIds],placeholders=ids.map(()=>'?').join(',');
+    const rows=(await env.DB.prepare(`SELECT telegram_id FROM bot_subscribers WHERE active=0 AND telegram_id IN (${placeholders})`).bind(...ids).all()).results||[];
+    for(const row of rows)explicitlyInactive.add(String(row.telegram_id||''));
+  }
+  for(const id of ownerIds)if(!explicitlyInactive.has(id))recipients.add(id);
   const rows=(await env.DB.prepare(`SELECT s.telegram_id,s.role,p.${category} AS preference
     FROM staff_users s
     LEFT JOIN staff_notification_preferences p ON p.telegram_id=s.telegram_id
-    WHERE s.active=1`).all()).results||[];
+    LEFT JOIN bot_subscribers b ON b.telegram_id=s.telegram_id
+    WHERE s.active=1 AND COALESCE(b.active,1)=1`).all()).results||[];
   for(const row of rows){
     const id=String(row.telegram_id||"");if(!id)continue;
     const enabled=row.preference==null
@@ -36581,76 +36583,6 @@ async function showV77Feedback(chatId,user,filter="new",page=0,env){
   const access=await requireV77OperationsAccess(chatId,user,env);if(!access)return;await ensureV74PollSchema(env);await ensureV77Schema(env);const offset=Math.max(0,Number(page)||0)*6;let where="TRIM(COALESCE(r.comment_text,''))<>''";const binds=[];if(filter!=="all"){where+=` AND COALESCE(m.status,'new')=?`;binds.push(filter);}const sql=`SELECT r.poll_id,r.telegram_id,r.comment_text,r.submitted_at,p.question,COALESCE(m.status,'new') AS moderation_status,b.display_name,b.username FROM player_poll_responses r JOIN player_polls p ON p.poll_id=r.poll_id LEFT JOIN poll_comment_moderation m ON m.poll_id=r.poll_id AND m.telegram_id=r.telegram_id LEFT JOIN bot_subscribers b ON b.telegram_id=r.telegram_id WHERE ${where} ORDER BY r.submitted_at DESC LIMIT 7 OFFSET ?`;binds.push(offset);const rows=(await env.DB.prepare(sql).bind(...binds).all()).results||[];const visible=rows.slice(0,6);const lines=visible.map((r,i)=>`<b>${offset+i+1}. ${escapeHtml(r.question).slice(0,90)}</b>\n${escapeHtml(r.display_name||r.username||r.telegram_id)} · ${escapeHtml(formatUtcDate(r.submitted_at))}\n${escapeHtml(String(r.comment_text).slice(0,500))}\nСтатус: <b>${escapeHtml(r.moderation_status)}</b>`);const buttons=[];for(const r of visible){buttons.push([{text:"⭐ Важное",callback_data:`v77_fb_set:${r.poll_id}:${r.telegram_id}:important`},{text:"🐞 Ошибка",callback_data:`v77_fb_set:${r.poll_id}:${r.telegram_id}:bug`},{text:"✅ Решено",callback_data:`v77_fb_set:${r.poll_id}:${r.telegram_id}:resolved`}]);}buttons.push([{text:"🆕 Новые",callback_data:"v77_feedback:new:0"},{text:"⭐ Важные",callback_data:"v77_feedback:important:0"},{text:"📚 Все",callback_data:"v77_feedback:all:0"}]);const nav=[];if(page>0)nav.push({text:"←",callback_data:`v77_feedback:${filter}:${page-1}`});if(rows.length>6)nav.push({text:"→",callback_data:`v77_feedback:${filter}:${page+1}`});if(nav.length)buttons.push(nav);buttons.push([{text:"⬅️ Центр",callback_data:"v77_home"}]);await sendTelegramMessage(env,chatId,`<b>💬 Обратная связь</b>\n\n${lines.join("\n\n")||"Комментариев по фильтру нет."}`,{inline_keyboard:buttons});
 }
 
-const LEADERBOARD_DETHRONE_NOTIFICATION_PREFIX="rating_dethroned:";
-const LEADERBOARD_DETHRONE_DELAY_SECONDS=90;
-const LEADERBOARD_DETHRONE_COOLDOWN_SECONDS=3600;
-
-function leaderboardDethroneCategory(seasonId){return `${LEADERBOARD_DETHRONE_NOTIFICATION_PREFIX}${String(seasonId||"").trim().slice(0,120)}`;}
-function leaderboardDethroneSeasonId(category){const value=String(category||"");return value.startsWith(LEADERBOARD_DETHRONE_NOTIFICATION_PREFIX)?value.slice(LEADERBOARD_DETHRONE_NOTIFICATION_PREFIX.length).trim():"";}
-function isLeaderboardDethroneNotificationCategory(category){return Boolean(leaderboardDethroneSeasonId(category));}
-function leaderboardDethronePointsWord(value){const amount=Math.abs(Math.floor(Number(value)||0)),lastTwo=amount%100,last=amount%10;if(lastTwo>=11&&lastTwo<=14)return "очков";if(last===1)return "очко";if(last>=2&&last<=4)return "очка";return "очков";}
-async function leaderboardCurrentVisibleLeader(env,seasonId){return env.DB.prepare(`SELECT telegram_id,display_name,username,best_score,achieved_at FROM leaderboard_entries WHERE season_id=? AND hidden=0 ORDER BY best_score DESC,achieved_at ASC,telegram_id ASC LIMIT 1`).bind(String(seasonId||"")).first();}
-
-async function queueLeaderboardDethroneNotificationIfNeeded(env,{seasonId,previousLeaderId,expectedLeaderId}={}){
-  const sid=String(seasonId||"").trim(),previousId=String(previousLeaderId||"").trim(),expectedId=String(expectedLeaderId||"").trim();
-  if(!sid||!previousId||!expectedId||previousId===expectedId)return {queued:false,reason:"invalid"};
-  await ensureV77Schema(env);
-  const [season,leader,subscriber]=await Promise.all([
-    env.DB.prepare(`SELECT id,status,ends_at FROM leaderboard_seasons WHERE id=? LIMIT 1`).bind(sid).first(),
-    leaderboardCurrentVisibleLeader(env,sid),
-    env.DB.prepare(`SELECT chat_id,active FROM bot_subscribers WHERE telegram_id=? LIMIT 1`).bind(previousId).first()
-  ]);
-  const now=Math.floor(Date.now()/1000);
-  if(!season||String(season.status||"")!=="active"||(Number(season.ends_at||0)>0&&Number(season.ends_at)<=now))return {queued:false,reason:"season_inactive"};
-  if(String(leader?.telegram_id||"")!==expectedId)return {queued:false,reason:"leader_changed"};
-  if(!subscriber||Number(subscriber.active||0)!==1||!String(subscriber.chat_id||"").trim())return {queued:false,reason:"no_bot_chat"};
-  const category=leaderboardDethroneCategory(sid),availableAt=now+LEADERBOARD_DETHRONE_DELAY_SECONDS;
-  const placeholder="Проверяем актуального лидера рейтинга перед отправкой уведомления.";
-  const replyMarkup={inline_keyboard:[[{text:"🏃 Вернуть первое место",web_app:{url:configuredGameOpenUrl(env,"rating")}}]]};
-  const existing=await env.DB.prepare(`SELECT id FROM player_notification_queue WHERE telegram_id=? AND category=? AND status IN ('pending','failed') AND attempts<5 ORDER BY id DESC LIMIT 1`).bind(previousId,category).first();
-  if(existing?.id){
-    await env.DB.prepare(`UPDATE player_notification_queue SET chat_id=?,message_html=?,reply_markup_json=?,status='pending',last_error='',available_at=?,updated_at=?,lease_token='',lease_until=0 WHERE id=? AND attempts<5`).bind(String(subscriber.chat_id),placeholder,JSON.stringify(replyMarkup),availableAt,now,existing.id).run();
-    return {queued:true,queueId:Number(existing.id||0),updated:true};
-  }
-  const result=await env.DB.prepare(`INSERT INTO player_notification_queue(telegram_id,chat_id,category,message_html,reply_markup_json,status,attempts,last_error,available_at,created_at,updated_at,lease_token,lease_until) VALUES(?,?,?,?,?,'pending',0,'',?,?,?,'',0)`).bind(previousId,String(subscriber.chat_id),category,placeholder,JSON.stringify(replyMarkup),availableAt,now,now).run();
-  return {queued:true,queueId:Number(result.meta?.last_row_id||0),updated:false};
-}
-
-async function materializeLeaderboardDethroneNotification(env,row,now=Math.floor(Date.now()/1000)){
-  const seasonId=leaderboardDethroneSeasonId(row?.category),telegramId=String(row?.telegram_id||"").trim();
-  if(!seasonId||!telegramId)return {action:"cancel",reason:"rating-dethrone-invalid"};
-  const [season,leader,player,subscriber,lastNotice]=await Promise.all([
-    env.DB.prepare(`SELECT id,status,ends_at FROM leaderboard_seasons WHERE id=? LIMIT 1`).bind(seasonId).first(),
-    leaderboardCurrentVisibleLeader(env,seasonId),
-    env.DB.prepare(`SELECT telegram_id,best_score,achieved_at FROM leaderboard_entries WHERE season_id=? AND telegram_id=? AND hidden=0 LIMIT 1`).bind(seasonId,telegramId).first(),
-    env.DB.prepare(`SELECT chat_id,active FROM bot_subscribers WHERE telegram_id=? LIMIT 1`).bind(telegramId).first(),
-    env.DB.prepare(`SELECT MAX(sent_at) AS last_at FROM player_notification_log WHERE telegram_id=? AND substr(category,1,?)=? AND sent_at>?`).bind(telegramId,LEADERBOARD_DETHRONE_NOTIFICATION_PREFIX.length,LEADERBOARD_DETHRONE_NOTIFICATION_PREFIX,now-LEADERBOARD_DETHRONE_COOLDOWN_SECONDS).first()
-  ]);
-  if(!season||String(season.status||"")!=="active"||(Number(season.ends_at||0)>0&&Number(season.ends_at)<=now))return {action:"cancel",reason:"rating-season-inactive"};
-  if(!subscriber||Number(subscriber.active||0)!==1||!String(subscriber.chat_id||"").trim())return {action:"cancel",reason:"rating-bot-unavailable"};
-  if(!leader||!player)return {action:"cancel",reason:"rating-entry-missing"};
-  if(String(leader.telegram_id||"")===telegramId)return {action:"cancel",reason:"rating-lead-restored"};
-  const lastAt=Math.max(0,Number(lastNotice?.last_at||0));
-  if(lastAt&&now-lastAt<LEADERBOARD_DETHRONE_COOLDOWN_SECONDS)return {action:"defer",reason:"rating-dethrone-cooldown",availableAt:lastAt+LEADERBOARD_DETHRONE_COOLDOWN_SECONDS+5};
-  const playerScore=Math.max(0,Number(player.best_score||0)),playerAchievedAt=Math.max(0,Number(player.achieved_at||0));
-  const rankRow=await env.DB.prepare(`SELECT COUNT(*)+1 AS place FROM leaderboard_entries WHERE season_id=? AND hidden=0 AND (best_score>? OR (best_score=? AND achieved_at<?) OR (best_score=? AND achieved_at=? AND telegram_id<?))`).bind(seasonId,playerScore,playerScore,playerAchievedAt,playerScore,playerAchievedAt,telegramId).first();
-  const place=Math.max(2,Number(rankRow?.place||2));
-  const leaderScore=Math.max(0,Number(leader.best_score||0)),gap=Math.max(0,leaderScore-playerScore);
-  const leaderName=String(leader.display_name||"").trim()||(String(leader.username||"").trim()?`@${String(leader.username).trim()}`:"Другой игрок");
-  const leadLine=gap>0
-    ? `<b>${escapeHtml(leaderName)}</b> теперь на первом месте и опережает вас на <b>${gap.toLocaleString("ru-RU")} ${leaderboardDethronePointsWord(gap)}</b>.`
-    : `<b>${escapeHtml(leaderName)}</b> теперь на первом месте по правилам рейтинга.`;
-  const messageHtml=`👑 <b>Корона сменила владельца!</b>
-
-${leadLine}
-
-Сейчас вы на <b>${place}-м месте</b>. Зеффи уже готова к реваншу 🐾✨
-
-Возвращайтесь в «Сладкий Забег» и верните лидерство!`;
-  const replyMarkup={inline_keyboard:[[{text:"🏃 Вернуть первое место",web_app:{url:configuredGameOpenUrl(env,"rating")}}]]};
-  return {action:"send",chatId:String(subscriber.chat_id),messageHtml,replyMarkup,place,gap,leaderId:String(leader.telegram_id||"")};
-}
-
 function v77MoscowHour(now){return new Date((Number(now)+3*3600)*1000).getUTCHours();}
 function isTransactionalPlayerNotificationCategory(category){const value=String(category||"");return value==="player_mail"||value.startsWith("player_mail:")||value.startsWith("campaign_mail:");}
 function v77QuietDelaySeconds(policy,now){const start=Number(policy.quiet_start_hour),end=Number(policy.quiet_end_hour),hour=v77MoscowHour(now);const quiet=start===end?false:start<end?(hour>=start&&hour<end):(hour>=start||hour<end);if(!quiet)return 0;let hours=(end-hour+24)%24;if(hours===0)hours=24;return hours*3600+60;}
@@ -36694,21 +36626,6 @@ async function processV77NotificationQueue(env,limit=24){
         await env.DB.prepare(`UPDATE player_notification_queue SET status='cancelled',last_error='realtime-season-task-superseded',updated_at=?,lease_token='',lease_until=0 WHERE id=? AND lease_token=?`).bind(claimAt,row.id,token).run();
         skipped+=1;continue;
       }
-      let deliveryChatId=String(row.chat_id||""),deliveryMessageHtml=String(row.message_html||""),deliveryReplyMarkup=safeJson(row.reply_markup_json,{});
-      if(isLeaderboardDethroneNotificationCategory(row.category)){
-        const materialized=await materializeLeaderboardDethroneNotification(env,row,claimAt);
-        if(materialized.action==="cancel"){
-          await env.DB.prepare(`UPDATE player_notification_queue SET status='cancelled',last_error=?,updated_at=?,lease_token='',lease_until=0 WHERE id=? AND lease_token=?`).bind(String(materialized.reason||"rating-dethrone-stale").slice(0,120),claimAt,row.id,token).run();
-          skipped+=1;continue;
-        }
-        if(materialized.action==="defer"){
-          await env.DB.prepare(`UPDATE player_notification_queue SET available_at=?,last_error=?,updated_at=?,lease_token='',lease_until=0 WHERE id=? AND lease_token=?`).bind(Math.max(claimAt+60,Number(materialized.availableAt||0)),String(materialized.reason||"rating-dethrone-deferred").slice(0,120),claimAt,row.id,token).run();
-          deferred+=1;continue;
-        }
-        deliveryChatId=String(materialized.chatId||deliveryChatId);
-        deliveryMessageHtml=String(materialized.messageHtml||deliveryMessageHtml);
-        deliveryReplyMarkup=materialized.replyMarkup||deliveryReplyMarkup;
-      }
       const transactional=isTransactionalPlayerNotificationCategory(row.category);
       const decision=transactional?{allowed:true,delay:0,reason:"transactional"}:await v77NotificationDecision(env,row.telegram_id,claimAt);
       if(!decision.allowed){
@@ -36716,10 +36633,10 @@ async function processV77NotificationQueue(env,limit=24){
         deferred+=1;continue;
       }
       if(transactional){
-        const attempted=await sendPlayerTransactionalNotificationNow(env,row.telegram_id,deliveryChatId,deliveryMessageHtml,deliveryReplyMarkup,{category:row.category});
+        const attempted=await sendPlayerTransactionalNotificationNow(env,row.telegram_id,row.chat_id,row.message_html,safeJson(row.reply_markup_json,{}),{category:row.category});
         if(!attempted.ok){const error=new Error(attempted.errorText||"Telegram недоступен");error.status=Number(attempted.error?.status||0);error.retryAfter=Number(attempted.error?.retryAfter||0);error.transactionalRetryable=attempted.retryable;throw error;}
       }else{
-        await sendTelegramMessage(env,deliveryChatId,deliveryMessageHtml,deliveryReplyMarkup);
+        await sendTelegramMessage(env,row.chat_id,row.message_html,safeJson(row.reply_markup_json,{}));
       }
       const finishedAt=Math.floor(Date.now()/1000);
       const successStatements=[env.DB.prepare(`UPDATE player_notification_queue SET status='sent',attempts=attempts+1,last_error='',updated_at=?,lease_token='',lease_until=0 WHERE id=? AND lease_token=?`).bind(finishedAt,row.id,token)];
@@ -36732,7 +36649,12 @@ async function processV77NotificationQueue(env,limit=24){
       const attempts=retryable?Math.max(1,Number(row.attempts||0)+1):5;
       const retryAfter=Math.max(0,Math.floor(Number(error?.retryAfter||0)));
       const delay=retryAfter>0?Math.min(3600,retryAfter):Math.min(3600,SERVER_NOTIFICATION_RETRY_BASE_SECONDS*(2**Math.max(0,attempts-1)));
-      await env.DB.prepare(`UPDATE player_notification_queue SET status='failed',attempts=?,last_error=?,available_at=?,updated_at=?,lease_token='',lease_until=0 WHERE id=? AND lease_token=?`).bind(attempts,String(error?.message||error).slice(0,300),finishedAt+delay,finishedAt,row.id,token).run();
+      const errorReason=String(error?.message||error).slice(0,300);
+      await env.DB.prepare(`UPDATE player_notification_queue SET status='failed',attempts=?,last_error=?,available_at=?,updated_at=?,lease_token='',lease_until=0 WHERE id=? AND lease_token=?`).bind(attempts,errorReason,finishedAt+delay,finishedAt,row.id,token).run();
+      if(!retryable){
+        try{await markBotSubscriberUnreachable(env,String(row.telegram_id||''),errorReason,finishedAt);}
+        catch(markError){console.warn('Failed to suppress unreachable player recipient',markError);}
+      }
       failed+=1;
     }
   }
@@ -42649,7 +42571,7 @@ async function testProjectSandboxGameData(env, ctx) {
     const caseType=normalizeCaseType(payload?.caseType);if(!caseType)throw new ApiError(400,"Выберите тестовый кейс.");const result=await ownerPanelTestProjectAction(env,{...ctx,body:{action:"case_buy",caseType}});await reload();return response(testProjectSandboxCasePayload(state,snapshot,{purchase:{caseType,cost:result.result?.price||{}}}));
   }
   if(path==="/api/cases/activate"){
-    const type=CASE_BOOSTER_TYPES.includes(String(payload?.type||payload?.boosterType||""))?String(payload?.type||payload?.boosterType):"";if(!type)throw new ApiError(400,"Неизвестный усилитель.");if(Number(state.caseState?.boosters?.[type]||0)<1)throw new ApiError(409,"Усилителя нет в тестовом инвентаре.");const before=testProjectClone(state),active=caseNormalizeActiveBoosters(state.caseState?.activeBoosters,state.caseState?.activeBooster?.type,state.caseState?.activeBooster?.runsLeft);if(Number(active[type]||0)>0)throw new ApiError(409,"Этот усилитель уже активен.");const conflictType=caseActiveBoosterConflict(active,type);if(conflictType)throw new ApiError(409,`Сейчас уже активен «${caseBoosterTitle(conflictType)}». Одновременно можно использовать только один усилитель из группы «${caseBoosterGroupLabel(caseBoosterGroupForType(type))}».`,{code:"BOOSTER_GROUP_CONFLICT",group:caseBoosterGroupForType(type),requestedType:type,activeType:conflictType,activeRunsLeft:safeAdminNumber(active[conflictType])});state.caseState.boosters[type]-=1;active[type]=caseBoosterRunsForType(type);state.caseState.activeBoosters=active;state.caseState.activeBooster=caseLegacyActiveBooster(active);await testProjectSandboxSave(env,ownerId,state,snapshot,before,"game_booster_activate",`Игра · активирован ${type}`);await reload();return response(testProjectSandboxCasePayload(state,snapshot));
+    const type=CASE_BOOSTER_TYPES.includes(String(payload?.type||payload?.boosterType||""))?String(payload?.type||payload?.boosterType):"";if(!type)throw new ApiError(400,"Неизвестный усилитель.");if(Number(state.caseState?.boosters?.[type]||0)<1)throw new ApiError(409,"Усилителя нет в тестовом инвентаре.");const before=testProjectClone(state),active=caseNormalizeActiveBoosters(state.caseState?.activeBoosters,state.caseState?.activeBooster?.type,state.caseState?.activeBooster?.runsLeft);if(Number(active[type]||0)>0)throw new ApiError(409,"Этот усилитель уже активен.");state.caseState.boosters[type]-=1;active[type]=caseBoosterRunsForType(type);state.caseState.activeBoosters=active;state.caseState.activeBooster=caseLegacyActiveBooster(active);await testProjectSandboxSave(env,ownerId,state,snapshot,before,"game_booster_activate",`Игра · активирован ${type}`);await reload();return response(testProjectSandboxCasePayload(state,snapshot));
   }
   if(path==="/api/cases/consume-run"){
     const before=testProjectClone(state),active=caseNormalizeActiveBoosters(state.caseState?.activeBoosters,state.caseState?.activeBooster?.type,state.caseState?.activeBooster?.runsLeft),types=caseActiveBoosterTypes(active);if(types.length){for(const type of types)active[type]=Math.max(0,Number(active[type]||0)-1);state.caseState.activeBoosters=active;state.caseState.activeBooster=caseLegacyActiveBooster(active);await testProjectSandboxSave(env,ownerId,state,snapshot,before,"game_booster_consume","Игра · расход усилителей");await reload();}return response(testProjectSandboxCasePayload(state,snapshot));

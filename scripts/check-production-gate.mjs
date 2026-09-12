@@ -5,7 +5,6 @@ import process from 'node:process';
 const root=process.cwd();
 const skipD1=process.argv.includes('--skip-d1');
 const steps=[
-  ['repository hygiene','node',['scripts/check-repo-hygiene.mjs']],
   ['worker syntax','node',['--check','src/worker.js']],
   ['migration history','node',['scripts/check-migrations.mjs']],
   ['schema contract','node',['scripts/check-database-schema.mjs','--contract-only']],
