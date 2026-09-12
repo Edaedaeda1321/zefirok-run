@@ -273,6 +273,29 @@ assert(index.includes('pauseBtn.addEventListener(&quot;pointerup&quot;, activate
 assert(index.includes('focusPauseBtn?.addEventListener(&quot;pointerup&quot;'), 'fullscreen pause control does not handle pointerup');
 assert(index.includes('const blockingOverlayVisible = overlay &amp;&amp; overlay.style.display !== &quot;none&quot;'), 'pause is still blocked by stale hidden overlay classes');
 
+// First-run gameplay onboarding is action-driven rather than a passive slide deck.
+// It may create temporary obstacle/pickup visuals, but those practice objects must
+// never spend boosters, end the run, or grant score/resources.
+assert(index.includes('id=&quot;zefirok-gameplay-coach-v1&quot;'), 'interactive gameplay coach stylesheet is missing');
+assert(index.includes('data-gameplay-coach'), 'interactive gameplay coach layer is missing');
+assert(index.includes('const GAMEPLAY_COACH_COPY = Object.freeze({'), 'interactive gameplay coach copy/state machine is missing');
+assert(index.includes('title:&quot;Играй на весь экран&quot;'), 'gameplay coach does not teach fullscreen first');
+assert(index.includes('title:&quot;Сделай прыжок&quot;'), 'gameplay coach does not teach a real jump');
+assert(index.includes('title:&quot;Перепрыгни препятствие&quot;'), 'gameplay coach does not require a training obstacle');
+assert(index.includes('title:&quot;Собирай награды&quot;'), 'gameplay coach does not teach pickups');
+assert(index.includes('function openGameplayCoach(automatic = false, startIndex = 0)'), 'gameplay coach launcher is missing');
+assert(index.includes('if (openGameplayCoach(automatic, startIndex)) return;'), 'main How to Play entry does not launch the interactive coach');
+assert(index.includes('tutorialCoach:true, tutorialCoachPassed:false'), 'safe tutorial obstacle is missing');
+assert(index.includes('gameplayCoachRetryObstacle(item);\n          return false;'), 'tutorial obstacle collision can still fall through to normal death/booster handling');
+assert(index.includes('if (!state.running || state.rafId || gameplayCoachFrozen) return;'), 'tutorial freeze does not stop the game loop');
+assert(index.includes('Этот учебный зефир ничего не начисляет.'), 'tutorial pickup does not explain its practice-only reward behavior');
+const tutorialPickupBranch = section(index, 'if (item.tutorialCoach) {', '} else {\n                if (item.kind === &quot;coffee&quot;)');
+assert(!tutorialPickupBranch.includes('state.runTreats += 1'), 'tutorial pickup grants real treats');
+assert(!tutorialPickupBranch.includes('state.runCoffee += 1'), 'tutorial pickup grants real coffee');
+assert(!tutorialPickupBranch.includes('state.score += 35'), 'tutorial pickup grants real score');
+assert(index.includes('gameplayCoachSkipBtn?.addEventListener'), 'gameplay coach cannot be skipped');
+assert(index.includes('gameplayCoachActionBtn?.addEventListener'), 'gameplay coach completion cannot resume the run');
+
 // Delivery monitoring must separate terminal application failures from Telegram
 // recipients who permanently blocked/deactivated the bot, and reward retries must
 // not become a red critical signal until their retry budget is exhausted.

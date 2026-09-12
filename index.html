@@ -12538,6 +12538,46 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
 
 
 
+&lt;style id=&quot;zefirok-gameplay-coach-v1&quot;&gt;
+#zefirok-maltipoo-runner .gameplay-coach-layer{position:fixed;inset:0;z-index:420;pointer-events:none;font-family:-apple-system,BlinkMacSystemFont,&quot;Segoe UI&quot;,sans-serif;color:#6f3d51;isolation:isolate}
+#zefirok-maltipoo-runner .gameplay-coach-layer[hidden]{display:none!important}
+#zefirok-maltipoo-runner .gameplay-coach-spotlight{position:fixed;z-index:1;border:3px solid rgba(255,247,219,.98);border-radius:20px;background:rgba(255,255,255,.04);box-shadow:0 0 0 9999px rgba(43,24,34,.67),0 0 0 7px rgba(237,112,158,.34),0 12px 34px rgba(39,18,28,.24);pointer-events:none;transition:left .18s ease,top .18s ease,width .18s ease,height .18s ease,border-radius .18s ease}
+#zefirok-maltipoo-runner .gameplay-coach-spotlight::after{content:&quot;&quot;;position:absolute;inset:-9px;border:2px solid rgba(255,230,149,.76);border-radius:inherit;animation:gameplay-coach-pulse 1.25s ease-in-out infinite}
+#zefirok-maltipoo-runner .gameplay-coach-card{position:fixed;z-index:3;width:min(330px,calc(100vw - 28px));box-sizing:border-box;padding:16px 16px 14px;border:1px solid rgba(242,198,212,.95);border-radius:22px;background:linear-gradient(180deg,rgba(255,253,249,.99),rgba(255,244,248,.99));box-shadow:0 20px 58px rgba(49,24,35,.30),inset 0 1px 0 rgba(255,255,255,.95);pointer-events:auto;text-align:left;transition:left .18s ease,top .18s ease,transform .18s ease}
+#zefirok-maltipoo-runner .gameplay-coach-step{display:inline-flex;align-items:center;min-height:23px;padding:4px 8px;border-radius:999px;background:#ffe4ee;color:#b74f78;font-size:9px;font-weight:950;letter-spacing:.08em;text-transform:uppercase}
+#zefirok-maltipoo-runner .gameplay-coach-card h3{margin:8px 0 5px;color:#74354f;font-size:19px;line-height:1.08;font-weight:950;letter-spacing:-.02em}
+#zefirok-maltipoo-runner .gameplay-coach-card p{margin:0;color:#846b76;font-size:12px;line-height:1.45;font-weight:650}
+#zefirok-maltipoo-runner .gameplay-coach-actions{display:flex;align-items:center;justify-content:space-between;gap:9px;margin-top:12px}
+#zefirok-maltipoo-runner .gameplay-coach-skip{min-height:38px;padding:9px 11px;border:1px solid rgba(226,202,211,.9);border-radius:13px;background:#fff;color:#98717f;font:850 11px/1 inherit;cursor:pointer}
+#zefirok-maltipoo-runner .gameplay-coach-action{min-height:40px;margin-left:auto;padding:10px 15px;border:0;border-radius:13px;background:linear-gradient(145deg,#ef75a2,#d85085);color:#fff;font:900 11px/1 inherit;box-shadow:0 8px 18px rgba(197,68,116,.22);cursor:pointer}
+#zefirok-maltipoo-runner .gameplay-coach-action[hidden]{display:none!important}
+#zefirok-maltipoo-runner .gameplay-coach-tap{position:absolute;z-index:2;width:42px;height:42px;margin:-21px 0 0 -21px;border:3px solid rgba(255,255,255,.96);border-radius:50%;background:rgba(235,103,151,.30);box-shadow:0 0 0 8px rgba(238,127,166,.20);pointer-events:none;animation:gameplay-coach-tap 1.08s ease-out infinite}
+#zefirok-maltipoo-runner .gameplay-coach-tap[hidden]{display:none!important}
+#zefirok-maltipoo-runner .gameplay-coach-card.is-done .gameplay-coach-step{background:#edf7df;color:#668b3e}
+#zefirok-maltipoo-runner .gameplay-coach-card.is-done h3{color:#5f7f3a}
+#zefirok-maltipoo-runner .gameplay-coach-card.is-waiting .gameplay-coach-step{background:#fff2cf;color:#987128}
+#zefirok-maltipoo-runner .gameplay-coach-card.is-waiting::after{content:&quot;&quot;;display:block;width:28px;height:28px;margin:12px auto 0;border:3px solid #f4dbe4;border-top-color:#da6390;border-radius:50%;animation:gameplay-coach-spin .75s linear infinite}
+#zefirok-maltipoo-runner.gameplay-coach-active .tutorial-help{pointer-events:none}
+@keyframes gameplay-coach-pulse{0%,100%{opacity:.45;transform:scale(.98)}50%{opacity:1;transform:scale(1.04)}}
+@keyframes gameplay-coach-tap{0%{opacity:0;transform:scale(.72)}25%{opacity:1}100%{opacity:0;transform:scale(1.55)}}
+@keyframes gameplay-coach-spin{to{transform:rotate(360deg)}}
+@media(max-width:360px){#zefirok-maltipoo-runner .gameplay-coach-card{padding:14px;width:min(304px,calc(100vw - 22px))}#zefirok-maltipoo-runner .gameplay-coach-card h3{font-size:17px}#zefirok-maltipoo-runner .gameplay-coach-card p{font-size:11px}}
+@media(prefers-reduced-motion:reduce){#zefirok-maltipoo-runner .gameplay-coach-spotlight,#zefirok-maltipoo-runner .gameplay-coach-card,#zefirok-maltipoo-runner .gameplay-coach-spotlight::after,#zefirok-maltipoo-runner .gameplay-coach-tap{transition:none!important;animation:none!important}}
+&lt;/style&gt;
+&lt;div class=&quot;gameplay-coach-layer&quot; data-gameplay-coach hidden aria-hidden=&quot;true&quot;&gt;
+  &lt;div class=&quot;gameplay-coach-spotlight&quot; data-gameplay-coach-spotlight&gt;&lt;/div&gt;
+  &lt;div class=&quot;gameplay-coach-tap&quot; data-gameplay-coach-tap hidden aria-hidden=&quot;true&quot;&gt;&lt;/div&gt;
+  &lt;section class=&quot;gameplay-coach-card&quot; data-gameplay-coach-card role=&quot;dialog&quot; aria-modal=&quot;false&quot; aria-live=&quot;polite&quot; aria-labelledby=&quot;gameplay-coach-title&quot;&gt;
+    &lt;span class=&quot;gameplay-coach-step&quot; data-gameplay-coach-step&gt;Обучение&lt;/span&gt;
+    &lt;h3 id=&quot;gameplay-coach-title&quot; data-gameplay-coach-title&gt;Как играть&lt;/h3&gt;
+    &lt;p data-gameplay-coach-copy&gt;&lt;/p&gt;
+    &lt;div class=&quot;gameplay-coach-actions&quot;&gt;
+      &lt;button class=&quot;gameplay-coach-skip&quot; data-gameplay-coach-skip type=&quot;button&quot;&gt;Пропустить&lt;/button&gt;
+      &lt;button class=&quot;gameplay-coach-action&quot; data-gameplay-coach-action type=&quot;button&quot; hidden&gt;Продолжить забег&lt;/button&gt;
+    &lt;/div&gt;
+  &lt;/section&gt;
+&lt;/div&gt;
+
 
 &lt;div class=&quot;zms-layer&quot; data-my-style-layer hidden aria-hidden=&quot;true&quot;&gt;
   &lt;section class=&quot;zms-panel&quot; role=&quot;dialog&quot; aria-modal=&quot;true&quot; aria-labelledby=&quot;zms-title&quot;&gt;
@@ -12818,6 +12858,7 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
           }
         }
 
+        gameplayCoachStartRequested();
         reset(true);
         startVisualTimer = window.setTimeout(() =&gt; {
           setStartButtonVisual(&quot;restart&quot;, false);
@@ -12960,6 +13001,15 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
       const tutorialLayer = root.querySelector(&quot;[data-tutorial-layer]&quot;);
       const tutorialContent = root.querySelector(&quot;[data-tutorial-content]&quot;);
       const tutorialOpenButton = root.querySelector(&quot;[data-tutorial-open]&quot;);
+      const gameplayCoachLayer = root.querySelector(&quot;[data-gameplay-coach]&quot;);
+      const gameplayCoachSpotlight = root.querySelector(&quot;[data-gameplay-coach-spotlight]&quot;);
+      const gameplayCoachCard = root.querySelector(&quot;[data-gameplay-coach-card]&quot;);
+      const gameplayCoachStepEl = root.querySelector(&quot;[data-gameplay-coach-step]&quot;);
+      const gameplayCoachTitleEl = root.querySelector(&quot;[data-gameplay-coach-title]&quot;);
+      const gameplayCoachCopyEl = root.querySelector(&quot;[data-gameplay-coach-copy]&quot;);
+      const gameplayCoachTapEl = root.querySelector(&quot;[data-gameplay-coach-tap]&quot;);
+      const gameplayCoachSkipBtn = root.querySelector(&quot;[data-gameplay-coach-skip]&quot;);
+      const gameplayCoachActionBtn = root.querySelector(&quot;[data-gameplay-coach-action]&quot;);
       const stockTutorialButton = root.querySelector(&quot;[data-stock-tutorial]&quot;);
       const warehouseListEl = root.querySelector(&quot;[data-warehouse-list]&quot;);
       const warehouseActiveEl = root.querySelector(&quot;[data-warehouse-active]&quot;);
@@ -16173,6 +16223,288 @@ function installProgressInfo(){
       let tutorialMode = &quot;main&quot;;
       let tutorialScrollLock = null;
 
+      const GAMEPLAY_COACH_ORDER = Object.freeze([&quot;fullscreen&quot;, &quot;start&quot;, &quot;jump&quot;, &quot;obstacle&quot;, &quot;pickup&quot;, &quot;done&quot;]);
+      const GAMEPLAY_COACH_COPY = Object.freeze({
+        fullscreen: { kicker:&quot;Шаг 1 из 5&quot;, title:&quot;Играй на весь экран&quot;, copy:&quot;Нажми подсвеченную кнопку. В полноэкранном режиме проще следить за дорожкой и препятствиями.&quot;, target:&quot;[data-game-expand-toggle]&quot;, tap:false },
+        start: { kicker:&quot;Шаг 2 из 5&quot;, title:&quot;Начни забег&quot;, copy:&quot;Нажми «СТАРТ». Зеффи побежит сама — тебе останется вовремя прыгать и собирать награды.&quot;, target:&quot;[data-start]&quot;, tap:false },
+        waiting: { kicker:&quot;Подготовка&quot;, title:&quot;Готовим забег&quot;, copy:&quot;Проверяем защищённую игровую сессию. Обучение продолжится автоматически.&quot;, target:&quot;[data-stage]&quot;, tap:false },
+        jump: { kicker:&quot;Шаг 3 из 5&quot;, title:&quot;Сделай прыжок&quot;, copy:&quot;Коснись игрового поля. Один тап — один прыжок. Следующий прыжок доступен после приземления.&quot;, target:&quot;[data-stage]&quot;, tap:true },
+        obstacle: { kicker:&quot;Шаг 4 из 5&quot;, title:&quot;Перепрыгни препятствие&quot;, copy:&quot;Следи за дорожкой и нажми, когда Зеффи приблизится к пуфику. В обучении ошибка не завершит забег.&quot;, target:&quot;[data-stage]&quot;, tap:true },
+        retry: { kicker:&quot;Попробуй ещё раз&quot;, title:&quot;Чуть ближе к препятствию&quot;, copy:&quot;Столкновение в обучении безопасно. Дождись, когда пуфик приблизится, и снова коснись игрового поля.&quot;, target:&quot;[data-stage]&quot;, tap:true },
+        pickup: { kicker:&quot;Шаг 5 из 5&quot;, title:&quot;Собирай награды&quot;, copy:&quot;Зефир и кофе встречаются прямо на дорожке. Пробегай через них, чтобы собирать ресурсы. Этот учебный зефир ничего не начисляет.&quot;, target:&quot;[data-stage]&quot;, tap:false },
+        done: { kicker:&quot;Готово&quot;, title:&quot;Теперь ты знаешь главное&quot;, copy:&quot;Полный экран, старт, прыжок и сбор наград. Продолжай этот забег и попробуй поставить новый рекорд.&quot;, target:&quot;[data-stage]&quot;, tap:false }
+      });
+      let gameplayCoachActive = false;
+      let gameplayCoachStep = &quot;&quot;;
+      let gameplayCoachFrozen = false;
+      let gameplayCoachAwaitingRun = false;
+      let gameplayCoachRunId = &quot;&quot;;
+      let gameplayCoachLayoutFrame = 0;
+      let gameplayCoachRetryTimer = 0;
+
+      function gameplayCoachIsFieldStep(step = gameplayCoachStep) {
+        return [&quot;jump&quot;, &quot;obstacle&quot;, &quot;retry&quot;, &quot;pickup&quot;, &quot;done&quot;, &quot;waiting&quot;].includes(String(step || &quot;&quot;));
+      }
+
+      function gameplayCoachTarget(step = gameplayCoachStep) {
+        const copy = GAMEPLAY_COACH_COPY[step] || GAMEPLAY_COACH_COPY.fullscreen;
+        return root.querySelector(copy.target || &quot;[data-stage]&quot;);
+      }
+
+      function gameplayCoachLayout() {
+        if (!gameplayCoachActive || !gameplayCoachLayer || gameplayCoachLayer.hidden) return;
+        const target = gameplayCoachTarget();
+        if (!target || !gameplayCoachSpotlight || !gameplayCoachCard) return;
+        const rect = target.getBoundingClientRect();
+        const vw = Math.max(1, window.innerWidth || document.documentElement.clientWidth || 1);
+        const vh = Math.max(1, window.innerHeight || document.documentElement.clientHeight || 1);
+        const fieldStep = gameplayCoachIsFieldStep();
+        const pad = fieldStep ? 8 : 7;
+        let left = Math.max(7, rect.left - pad);
+        let top = Math.max(7, rect.top - pad);
+        let width = Math.max(36, Math.min(vw - left - 7, rect.width + pad * 2));
+        let height = Math.max(36, Math.min(vh - top - 7, rect.height + pad * 2));
+        if (fieldStep &amp;&amp; gameExpanded) {
+          const safeTop = Math.max(92, Math.min(vh * .24, 150));
+          const safeBottom = Math.max(82, Math.min(vh * .18, 125));
+          left = 10;
+          top = safeTop;
+          width = Math.max(36, vw - 20);
+          height = Math.max(90, vh - safeTop - safeBottom);
+        }
+        Object.assign(gameplayCoachSpotlight.style, { left:`${left}px`, top:`${top}px`, width:`${width}px`, height:`${height}px`, borderRadius:fieldStep ? &quot;24px&quot; : &quot;17px&quot; });
+        const cardRect = gameplayCoachCard.getBoundingClientRect();
+        const cardW = Math.min(Math.max(260, cardRect.width || 310), vw - 20);
+        const cardH = Math.max(120, cardRect.height || 160);
+        const targetCenter = left + width / 2;
+        let cardLeft = Math.max(10, Math.min(vw - cardW - 10, targetCenter - cardW / 2));
+        let cardTop;
+        if (fieldStep) {
+          cardTop = Math.max(12, top + 12);
+        } else if (top + height + cardH + 16 &lt; vh) {
+          cardTop = top + height + 12;
+        } else {
+          cardTop = Math.max(12, top - cardH - 12);
+        }
+        Object.assign(gameplayCoachCard.style, { left:`${cardLeft}px`, top:`${Math.max(10, Math.min(vh - cardH - 10, cardTop))}px` });
+        if (gameplayCoachTapEl) {
+          const showTap = Boolean((GAMEPLAY_COACH_COPY[gameplayCoachStep] || {}).tap);
+          gameplayCoachTapEl.hidden = !showTap;
+          if (showTap) {
+            const tapX = fieldStep ? Math.min(vw - 48, Math.max(48, left + width * .36)) : targetCenter;
+            const tapY = fieldStep ? Math.min(vh - 120, Math.max(120, top + height * .60)) : top + height / 2;
+            Object.assign(gameplayCoachTapEl.style, { left:`${tapX}px`, top:`${tapY}px` });
+          }
+        }
+      }
+
+      function scheduleGameplayCoachLayout() {
+        if (!gameplayCoachActive) return;
+        if (gameplayCoachLayoutFrame) cancelAnimationFrame(gameplayCoachLayoutFrame);
+        gameplayCoachLayoutFrame = requestAnimationFrame(() =&gt; { gameplayCoachLayoutFrame = 0; gameplayCoachLayout(); });
+      }
+
+      function gameplayCoachRender(step, copyOverride = &quot;&quot;) {
+        if (!gameplayCoachLayer || !gameplayCoachCard) return;
+        const copy = GAMEPLAY_COACH_COPY[step] || GAMEPLAY_COACH_COPY.fullscreen;
+        gameplayCoachStep = step;
+        gameplayCoachStepEl.textContent = copy.kicker;
+        gameplayCoachTitleEl.textContent = copy.title;
+        gameplayCoachCopyEl.textContent = copyOverride || copy.copy;
+        gameplayCoachCard.classList.toggle(&quot;is-done&quot;, step === &quot;done&quot;);
+        gameplayCoachCard.classList.toggle(&quot;is-waiting&quot;, step === &quot;waiting&quot;);
+        gameplayCoachActionBtn.hidden = step !== &quot;done&quot;;
+        gameplayCoachSkipBtn.hidden = step === &quot;done&quot;;
+        gameplayCoachLayer.hidden = false;
+        gameplayCoachLayer.setAttribute(&quot;aria-hidden&quot;, &quot;false&quot;);
+        root.classList.add(&quot;gameplay-coach-active&quot;);
+        scheduleGameplayCoachLayout();
+      }
+
+      function gameplayCoachRestoreSpawns() {
+        if (!state.running || state.over) return;
+        state.obstacles = state.obstacles.filter(item =&gt; !item?.tutorialCoach);
+        state.pickups = state.pickups.filter(item =&gt; !item?.tutorialCoach);
+        if (!Number.isFinite(Number(state.spawn)) || Number(state.spawn) &gt; 30) state.spawn = nextObstacleDelay();
+        if (!Number.isFinite(Number(state.treatSpawn)) || Number(state.treatSpawn) &gt; 30) state.treatSpawn = nextTreatDelay();
+      }
+
+      function closeGameplayCoach(markCompleted = true, { resume = true } = {}) {
+        if (!gameplayCoachLayer) return;
+        window.clearTimeout(gameplayCoachRetryTimer);
+        gameplayCoachRetryTimer = 0;
+        if (gameplayCoachLayoutFrame) cancelAnimationFrame(gameplayCoachLayoutFrame);
+        gameplayCoachLayoutFrame = 0;
+        const wasFrozen = gameplayCoachFrozen;
+        gameplayCoachActive = false;
+        gameplayCoachFrozen = false;
+        gameplayCoachAwaitingRun = false;
+        gameplayCoachRunId = &quot;&quot;;
+        gameplayCoachStep = &quot;&quot;;
+        gameplayCoachLayer.hidden = true;
+        gameplayCoachLayer.setAttribute(&quot;aria-hidden&quot;, &quot;true&quot;);
+        root.classList.remove(&quot;gameplay-coach-active&quot;);
+        gameplayCoachRestoreSpawns();
+        if (markCompleted) {
+          state.tutorialCompleted = true;
+          saveProgress();
+        }
+        tutorialOpenedAutomatically = false;
+        if (resume &amp;&amp; wasFrozen &amp;&amp; state.running &amp;&amp; !state.paused &amp;&amp; !state.over) {
+          state.last = performance.now();
+          syncSimulationRenderHistory();
+          scheduleGameLoop();
+        }
+      }
+
+      function gameplayCoachSetStep(step, copyOverride = &quot;&quot;) {
+        if (!gameplayCoachActive) return;
+        if (step === &quot;fullscreen&quot; &amp;&amp; gameExpanded) step = &quot;start&quot;;
+        gameplayCoachRender(step, copyOverride);
+      }
+
+      function openGameplayCoach(automatic = false, startIndex = 0) {
+        if (!gameplayCoachLayer) {
+          tutorialMode = &quot;main&quot;;
+          openTutorialMode(automatic, startIndex);
+          return false;
+        }
+        if (automatic &amp;&amp; (progressInfoIsOpen() || pendingReleaseNotice || (releaseLayer &amp;&amp; !releaseLayer.hidden))) return false;
+        if (state.running || state.paused || state.over) {
+          if (!automatic) showProfileToast(&quot;Заверши текущий забег, чтобы пройти обучение заново.&quot;, &quot;warning&quot;, 2200);
+          return false;
+        }
+        window.clearTimeout(tutorialAutoTimer);
+        window.clearTimeout(profileTutorialAutoTimer);
+        closeProgressInfo(false);
+        closeProfileControl(false);
+        if (tutorialLayer &amp;&amp; !tutorialLayer.hidden) closeTutorial(false);
+        if (purchaseLayer &amp;&amp; !purchaseLayer.hidden) closePurchaseLayer();
+        switchScreen(&quot;game&quot;);
+        tutorialOpenedAutomatically = Boolean(automatic);
+        gameplayCoachActive = true;
+        gameplayCoachFrozen = false;
+        gameplayCoachAwaitingRun = false;
+        gameplayCoachRunId = &quot;&quot;;
+        const requested = Math.max(0, Math.min(1, Math.floor(Number(startIndex) || 0)));
+        gameplayCoachSetStep(requested === 1 ? &quot;start&quot; : (gameExpanded ? &quot;start&quot; : &quot;fullscreen&quot;));
+        return true;
+      }
+
+      function gameplayCoachExpandedChanged(expanded) {
+        if (!gameplayCoachActive) return;
+        scheduleGameplayCoachLayout();
+        if (gameplayCoachStep === &quot;fullscreen&quot; &amp;&amp; expanded) {
+          window.setTimeout(() =&gt; gameplayCoachSetStep(&quot;start&quot;), 130);
+        }
+      }
+
+      function gameplayCoachStartRequested() {
+        if (!gameplayCoachActive || gameplayCoachStep !== &quot;start&quot;) return;
+        gameplayCoachAwaitingRun = true;
+        gameplayCoachRender(&quot;waiting&quot;);
+      }
+
+      function gameplayCoachRunStartFailed(message = &quot;&quot;) {
+        if (!gameplayCoachActive || !gameplayCoachAwaitingRun) return;
+        gameplayCoachAwaitingRun = false;
+        gameplayCoachSetStep(&quot;start&quot;, message || &quot;Не удалось начать забег. Проверь соединение и нажми «СТАРТ» ещё раз.&quot;);
+      }
+
+      function gameplayCoachRunReady(runId) {
+        if (!gameplayCoachActive || !gameplayCoachAwaitingRun) return false;
+        if (String(state.caseRunId || &quot;&quot;) !== String(runId || &quot;&quot;)) return false;
+        gameplayCoachAwaitingRun = false;
+        gameplayCoachRunId = String(runId || &quot;&quot;);
+        gameplayCoachFrozen = true;
+        state.obstacles = [];
+        state.pickups = [];
+        state.spawn = 9999;
+        state.treatSpawn = 9999;
+        cancelGameLoop();
+        draw();
+        gameplayCoachSetStep(&quot;jump&quot;);
+        return true;
+      }
+
+      function gameplayCoachAfterJump() {
+        if (!gameplayCoachActive || gameplayCoachStep !== &quot;jump&quot; || !state.running || state.over) return;
+        gameplayCoachFrozen = false;
+        state.obstacles = [];
+        state.pickups = [];
+        state.spawn = 9999;
+        state.treatSpawn = 9999;
+        const w = 58, h = 40;
+        const x = canvasViewWidth + Math.max(150, canvasViewWidth * .42);
+        state.obstacles.push({ type:&quot;pouf&quot;, x, previousX:x, y:ground.y - h, w, h, tutorialCoach:true, tutorialCoachPassed:false });
+        gameplayCoachSetStep(&quot;obstacle&quot;);
+        state.last = performance.now();
+        syncSimulationRenderHistory();
+        scheduleGameLoop();
+      }
+
+      function gameplayCoachRetryObstacle(item) {
+        if (!gameplayCoachActive || !item?.tutorialCoach) return false;
+        playGameSound(&quot;hitPouf&quot;);
+        hapticImpact(&quot;heavy&quot;, 80);
+        dog.y = ground.y - dog.h;
+        dog.previousY = dog.y;
+        dog.vy = 0;
+        dog.grounded = true;
+        item.x = canvasViewWidth + Math.max(150, canvasViewWidth * .42);
+        item.previousX = item.x;
+        item.tutorialCoachPassed = false;
+        state.collisionGraceUntil = Number(state.time || 0) + .35;
+        gameplayCoachSetStep(&quot;retry&quot;);
+        window.clearTimeout(gameplayCoachRetryTimer);
+        gameplayCoachRetryTimer = window.setTimeout(() =&gt; {
+          if (gameplayCoachActive &amp;&amp; gameplayCoachStep === &quot;retry&quot;) gameplayCoachSetStep(&quot;obstacle&quot;);
+        }, 1800);
+        return true;
+      }
+
+      function gameplayCoachObstaclePassed(item) {
+        if (!gameplayCoachActive || ![&quot;obstacle&quot;, &quot;retry&quot;].includes(gameplayCoachStep) || !item?.tutorialCoach || item.tutorialCoachPassed) return;
+        item.tutorialCoachPassed = true;
+        state.obstacles = state.obstacles.filter(entry =&gt; entry !== item &amp;&amp; !entry?.tutorialCoach);
+        state.pickups = [];
+        state.spawn = 9999;
+        state.treatSpawn = 9999;
+        const size = 38;
+        const x = canvasViewWidth + Math.max(165, canvasViewWidth * .48);
+        const y = Math.max(42, ground.y - dog.h * .58);
+        state.pickups.push({ kind:&quot;treat&quot;, x, previousX:x, y, size, float:0, previousFloat:0, got:false, tutorialCoach:true });
+        gameplayCoachSetStep(&quot;pickup&quot;);
+      }
+
+      function gameplayCoachPickupCollected(item) {
+        if (!gameplayCoachActive || gameplayCoachStep !== &quot;pickup&quot; || !item?.tutorialCoach) return;
+        gameplayCoachFrozen = true;
+        cancelGameLoop();
+        state.obstacles = state.obstacles.filter(entry =&gt; !entry?.tutorialCoach);
+        state.pickups = state.pickups.filter(entry =&gt; entry !== item &amp;&amp; !entry?.tutorialCoach);
+        gameplayCoachSetStep(&quot;done&quot;);
+        draw();
+      }
+
+      function gameplayCoachAllowedElement() {
+        if (!gameplayCoachActive) return null;
+        if (gameplayCoachStep === &quot;fullscreen&quot;) return gameExpandToggle;
+        if (gameplayCoachStep === &quot;start&quot;) return startBtn;
+        if ([&quot;jump&quot;, &quot;obstacle&quot;, &quot;retry&quot;].includes(gameplayCoachStep)) return stage;
+        return null;
+      }
+
+      function gameplayCoachGuardEvent(event) {
+        if (!gameplayCoachActive) return;
+        const target = event.target instanceof Element ? event.target : null;
+        if (target?.closest(&quot;[data-gameplay-coach-skip], [data-gameplay-coach-action]&quot;)) return;
+        const allowed = gameplayCoachAllowedElement();
+        if (allowed &amp;&amp; (target === allowed || allowed.contains(target))) return;
+        event.preventDefault();
+        event.stopImmediatePropagation();
+      }
+
       // Updated guides for every active game system; examples never mutate the account.
       const ZGT_WORDS = {&quot;close&quot;:&quot;Закрыть обучение&quot;,&quot;pull&quot;:&quot;Потяни вниз, чтобы закрыть&quot;,&quot;topics&quot;:&quot;Темы&quot;,&quot;steps&quot;:&quot;Шаги обучения&quot;,&quot;back&quot;:&quot;Назад&quot;,&quot;next&quot;:&quot;Дальше&quot;,&quot;example&quot;:&quot;Пример&quot;,&quot;tap&quot;:&quot;Тап по игровому полю&quot;,&quot;step&quot;:&quot;Шаг&quot;,&quot;of&quot;:&quot;из&quot;,&quot;done&quot;:&quot;Понятно&quot;,&quot;directory&quot;:&quot;Гиды по игре&quot;,&quot;directoryCopy&quot;:&quot;Выбери нужную тему. Все примеры учебные: они не запускают покупки и не выдают награды.&quot;,&quot;empty&quot;:&quot;Сейчас этот гид недоступен. Закрой окно и открой его снова.&quot;,&quot;allGuides&quot;:&quot;Все игровые гиды&quot;,&quot;helpLabel&quot;:&quot;Как работает этот раздел&quot;,&quot;finishMain&quot;:&quot;В игру&quot;,&quot;finishStock&quot;:&quot;Открыть «Мои покупки»&quot;,&quot;finishRating&quot;:&quot;Открыть рейтинг&quot;,&quot;finishFriends&quot;:&quot;Открыть подарки&quot;,&quot;profileXpText&quot;:&quot;За зачтённый забег — +{run} XP, за подходящую успешную покупку — +{purchase} XP. Нажми на уровень или звание, чтобы открыть лестницу уровней и награды.&quot;};
       const ZGT_TOPIC_CATALOG = {&quot;main&quot;:{&quot;id&quot;:&quot;main&quot;,&quot;title&quot;:&quot;Как играть&quot;,&quot;summary&quot;:&quot;Прыжок, результат и пауза&quot;,&quot;icon&quot;:&quot;/assets/ui/new_avatars_game.webp&quot;,&quot;steps&quot;:[{&quot;title&quot;:&quot;Один тап — один прыжок&quot;,&quot;text&quot;:&quot;Зеффи бежит сама. Нажми на игровое поле, когда приблизится препятствие. Следующий прыжок доступен после приземления.&quot;,&quot;tip&quot;:&quot;На компьютере работают пробел и Enter. Начинай прыжок немного заранее.&quot;,&quot;scene&quot;:{&quot;kind&quot;:&quot;jump&quot;,&quot;title&quot;:&quot;Прыжок через препятствие&quot;,&quot;items&quot;:[],&quot;imageKey&quot;:&quot;dog&quot;,&quot;obstacleKey&quot;:&quot;pouf&quot;}},{&quot;title&quot;:&quot;Ошибка не всегда означает конец&quot;,&quot;text&quot;:&quot;Без защиты столкновение завершает попытку. Заранее активированный щит поглощает одну ошибку, а «Второй шанс» позволяет один раз продолжить тот же забег.&quot;,&quot;tip&quot;:&quot;Предложение продолжить появляется только при активном «Втором шансе».&quot;,&quot;scene&quot;:{&quot;kind&quot;:&quot;cards&quot;,&quot;title&quot;:&quot;Помощь в забеге&quot;,&quot;items&quot;:[{&quot;title&quot;:&quot;Щит&quot;,&quot;subtitle&quot;:&quot;Одно столкновение&quot;,&quot;image&quot;:&quot;/assets/cases/boosters/icon_buster_shit_zeffi.webp&quot;},{&quot;title&quot;:&quot;Второй шанс&quot;,&quot;subtitle&quot;:&quot;Продолжение попытки&quot;,&quot;image&quot;:&quot;/assets/cases/boosters/icon_2shans.webp&quot;}]}},{&quot;title&quot;:&quot;Результат и кошелёк — не одно и то же&quot;,&quot;text&quot;:&quot;В забеге растёт счёт, а на дорожке встречаются зефир и кофе. После финиша дождись подтверждения: сервер сохраняет результат и начисляет ресурсы.&quot;,&quot;tip&quot;:&quot;Бонус к очкам в кошельке не означает автоматического удвоения рекорда в рейтинге.&quot;,&quot;scene&quot;:{&quot;kind&quot;:&quot;cards&quot;,&quot;title&quot;:&quot;Что ты собираешь&quot;,&quot;items&quot;:[{&quot;title&quot;:&quot;Очки&quot;,&quot;subtitle&quot;:&quot;Результат забега&quot;,&quot;image&quot;:&quot;/assets/shop/currency_star_256x256.webp&quot;},{&quot;title&quot;:&quot;Зефир&quot;,&quot;subtitle&quot;:&quot;Игровой ресурс&quot;,&quot;image&quot;:&quot;/assets/season-pass/zefir_currency.webp&quot;},{&quot;title&quot;:&quot;Кофе&quot;,&quot;subtitle&quot;:&quot;Игровой ресурс&quot;,&quot;image&quot;:&quot;/assets/optimized/v0.79.5/iconCoffee.webp&quot;}]}},{&quot;title&quot;:&quot;Пауза сохраняет текущую попытку&quot;,&quot;text&quot;:&quot;Кнопка паузы останавливает забег. После сворачивания игры вернись и продолжи через окно паузы. Просмотр обучения не запускает новый забег. В полноэкранном режиме пауза находится справа вверху; перезапуск и возврат к обычному экрану — в меню паузы.&quot;,&quot;tip&quot;:&quot;Активированная «Пауза Зеффи» даёт отсчёт перед первым продолжением после возврата из фона.&quot;,&quot;scene&quot;:{&quot;kind&quot;:&quot;route&quot;,&quot;title&quot;:&quot;Вернуться без спешки&quot;,&quot;items&quot;:[{&quot;title&quot;:&quot;Пауза&quot;,&quot;subtitle&quot;:&quot;Игра остановлена&quot;},{&quot;title&quot;:&quot;Продолжить&quot;,&quot;subtitle&quot;:&quot;Тот же забег&quot;},{&quot;title&quot;:&quot;В путь&quot;,&quot;subtitle&quot;:&quot;После готовности&quot;}]}},{&quot;title&quot;:&quot;Всё остальное — в профиле&quot;,&quot;text&quot;:&quot;Профиль связывает сезон, рейтинг, друзей, коллекции и «Мои покупки». В «Настройки и обучение» доступны все игровые гиды — их можно открыть повторно.&quot;,&quot;tip&quot;:&quot;В этом окне кнопка «Темы» переключает раздел обучения. Ничего покупать или получать для этого не нужно.&quot;,&quot;scene&quot;:{&quot;kind&quot;:&quot;cards&quot;,&quot;title&quot;:&quot;Разделы игры&quot;,&quot;items&quot;:[{&quot;title&quot;:&quot;Сезон&quot;,&quot;subtitle&quot;:&quot;Задания и награды&quot;,&quot;image&quot;:&quot;/assets/ui/icon_battlepass.webp&quot;},{&quot;title&quot;:&quot;Друзья&quot;,&quot;subtitle&quot;:&quot;Совместные подарки&quot;,&quot;image&quot;:&quot;/assets/ui/icon_referals.webp&quot;},{&quot;title&quot;:&quot;Мои покупки&quot;,&quot;subtitle&quot;:&quot;Полученные предметы&quot;,&quot;image&quot;:&quot;/assets/ui/icon_shopping.webp&quot;}]}}]},&quot;shop&quot;:{&quot;id&quot;:&quot;shop&quot;,&quot;title&quot;:&quot;Магазин&quot;,&quot;summary&quot;:&quot;Ассортимент, цена и получение&quot;,&quot;icon&quot;:&quot;/assets/ui/icon_shopping.webp&quot;,&quot;steps&quot;:[{&quot;title&quot;:&quot;Выбирай нужную витрину&quot;,&quot;text&quot;:&quot;В «Наградах» есть фильтры «Все», «В кафе» и «Кейсы». Скины находятся в своей вкладке. Нажатие на карточку показывает подробности до покупки.&quot;,&quot;tip&quot;:&quot;Ассортимент, наличие и доступность предметов могут меняться. Ориентируйся на текущую карточку.&quot;,&quot;scene&quot;:{&quot;kind&quot;:&quot;tabs&quot;,&quot;title&quot;:&quot;Витрина наград&quot;,&quot;items&quot;:[{&quot;title&quot;:&quot;Все&quot;,&quot;subtitle&quot;:&quot;&quot;},{&quot;title&quot;:&quot;В кафе&quot;,&quot;subtitle&quot;:&quot;&quot;},{&quot;title&quot;:&quot;Кейсы&quot;,&quot;subtitle&quot;:&quot;&quot;}],&quot;rows&quot;:[{&quot;title&quot;:&quot;Подробности товара&quot;,&quot;subtitle&quot;:&quot;Сначала изучи карточку&quot;,&quot;image&quot;:&quot;/assets/ui/icon_shopping.webp&quot;}]}},{&quot;title&quot;:&quot;В цене могут быть несколько ресурсов&quot;,&quot;text&quot;:&quot;Цена товара может включать очки, зефир и кофе одновременно. Все показанные части цены нужны вместе, если карточка не предлагает отдельный способ оплаты.&quot;,&quot;tip&quot;:&quot;Проверь состав цены и баланс в окне подтверждения. Старые цены из обучения не используются.&quot;,&quot;scene&quot;:{&quot;kind&quot;:&quot;cards&quot;,&quot;title&quot;:&quot;Пример составной цены&quot;,&quot;items&quot;:[{&quot;title&quot;:&quot;Очки&quot;,&quot;subtitle&quot;:&quot;Часть цены&quot;,&quot;image&quot;:&quot;/assets/shop/currency_star_256x256.webp&quot;},{&quot;title&quot;:&quot;+ зефир&quot;,&quot;subtitle&quot;:&quot;Часть цены&quot;,&quot;image&quot;:&quot;/assets/season-pass/zefir_currency.webp&quot;},{&quot;title&quot;:&quot;+ кофе&quot;,&quot;subtitle&quot;:&quot;Часть цены&quot;,&quot;image&quot;:&quot;/assets/optimized/v0.79.5/iconCoffee.webp&quot;}]}},{&quot;title&quot;:&quot;Куплено — ищи в нужном разделе&quot;,&quot;text&quot;:&quot;Кейс появится в «Мои покупки» → «Кейсы», физическая награда — в «Покупках» с кодом, а оформление — в коллекции. У скина отдельно смотри описание бонуса и возможность выбора.&quot;,&quot;tip&quot;:&quot;После потери связи сначала проверь состояние покупки. Не подтверждай новую покупку вслепую.&quot;,&quot;scene&quot;:{&quot;kind&quot;:&quot;route&quot;,&quot;title&quot;:&quot;Путь покупки&quot;,&quot;items&quot;:[{&quot;title&quot;:&quot;Карточка&quot;,&quot;subtitle&quot;:&quot;Цена и условия&quot;},{&quot;title&quot;:&quot;Подтверждение&quot;,&quot;subtitle&quot;:&quot;Решение о покупке&quot;},{&quot;title&quot;:&quot;Мои покупки / коллекция&quot;,&quot;subtitle&quot;:&quot;После выдачи&quot;}]}}]},&quot;stock&quot;:{&quot;id&quot;:&quot;stock&quot;,&quot;title&quot;:&quot;Мои покупки&quot;,&quot;summary&quot;:&quot;Покупки, усилители, кейсы и почта&quot;,&quot;icon&quot;:&quot;/assets/ui/icon_shopping.webp&quot;,&quot;steps&quot;:[{&quot;title&quot;:&quot;Четыре вкладки вместо общего списка&quot;,&quot;text&quot;:&quot;«Покупки» хранят коды, «Усилители» — запас бонусов, «Кейсы» — доступные открытия, а «Почта» — письма и вложения. Счётчики подсказывают, куда заглянуть.&quot;,&quot;tip&quot;:&quot;«Обновить» проверяет состояние раздела «Мои покупки» и не сбрасывает прогресс.&quot;,&quot;scene&quot;:{&quot;kind&quot;:&quot;cards&quot;,&quot;title&quot;:&quot;Мои покупки&quot;,&quot;items&quot;:[{&quot;title&quot;:&quot;Покупки&quot;,&quot;subtitle&quot;:&quot;Коды наград&quot;,&quot;image&quot;:&quot;/assets/ui/icon_shopping.webp&quot;},{&quot;title&quot;:&quot;Усилители&quot;,&quot;subtitle&quot;:&quot;Запас и активация&quot;,&quot;image&quot;:&quot;/assets/ui/icon_busters.webp&quot;},{&quot;title&quot;:&quot;Кейсы&quot;,&quot;subtitle&quot;:&quot;Открытие&quot;,&quot;image&quot;:&quot;/assets/ui/icone_cases.webp&quot;},{&quot;title&quot;:&quot;Почта&quot;,&quot;subtitle&quot;:&quot;Письма и вложения&quot;,&quot;image&quot;:&quot;/assets/ui/icone_reward.webp&quot;}]}},{&quot;title&quot;:&quot;Физическая награда хранится как код&quot;,&quot;text&quot;:&quot;Открой полученную покупку и посмотри её код, срок действия и статус. При получении награды в кафе используй действующий код из этой карточки.&quot;,&quot;tip&quot;:&quot;Погашенный или истёкший код нельзя использовать снова. Проверяй именно статус записи.&quot;,&quot;scene&quot;:{&quot;kind&quot;:&quot;states&quot;,&quot;title&quot;:&quot;Статусы кода&quot;,&quot;items&quot;:[{&quot;title&quot;:&quot;Активен&quot;,&quot;subtitle&quot;:&quot;Можно использовать&quot;},{&quot;title&quot;:&quot;Погашен&quot;,&quot;subtitle&quot;:&quot;Уже использован&quot;},{&quot;title&quot;:&quot;Истёк&quot;,&quot;subtitle&quot;:&quot;Срок закончился&quot;}]}},{&quot;title&quot;:&quot;Обычные и сезонные кейсы разделены&quot;,&quot;text&quot;:&quot;Обычные кейсы открываются в «Мои покупки» → «Кейсы». Тематические кейсы сезона и их открытие находятся внутри сезонного пропуска.&quot;,&quot;tip&quot;:&quot;Коллекционные награды после выдачи выбираются в профиле, а не остаются кнопкой активации кейса.&quot;,&quot;scene&quot;:{&quot;kind&quot;:&quot;cards&quot;,&quot;title&quot;:&quot;Где открыть&quot;,&quot;items&quot;:[{&quot;title&quot;:&quot;Мои покупки → Кейсы&quot;,&quot;subtitle&quot;:&quot;Выданные кейсы&quot;,&quot;image&quot;:&quot;/assets/ui/icone_cases.webp&quot;},{&quot;title&quot;:&quot;Сезон → Кейсы&quot;,&quot;subtitle&quot;:&quot;Сезонный запас&quot;,&quot;image&quot;:&quot;/assets/ui/icon_battlepass.webp&quot;}]}},{&quot;title&quot;:&quot;Предмет в запасе ещё не активирован&quot;,&quot;text&quot;:&quot;Для бонуса к забегу выбери усилитель и нажми «Активировать». В письме сначала прочитай содержимое и проверь, есть ли отдельная награда к получению.&quot;,&quot;tip&quot;:&quot;Подробные правила доступны в темах «Усилители» и «Почта Зеффи».&quot;,&quot;scene&quot;:{&quot;kind&quot;:&quot;route&quot;,&quot;title&quot;:&quot;От запаса к действию&quot;,&quot;items&quot;:[{&quot;title&quot;:&quot;Есть в запасе&quot;,&quot;subtitle&quot;:&quot;Предмет сохранён&quot;},{&quot;title&quot;:&quot;Активировать&quot;,&quot;subtitle&quot;:&quot;Подтверждение&quot;},{&quot;title&quot;:&quot;Следующий забег&quot;,&quot;subtitle&quot;:&quot;Бонус применяется&quot;}]}}]},&quot;boosters&quot;:{&quot;id&quot;:&quot;boosters&quot;,&quot;title&quot;:&quot;Усилители&quot;,&quot;summary&quot;:&quot;Сочетания и защитные бонусы&quot;,&quot;icon&quot;:&quot;/assets/ui/icon_busters.webp&quot;,&quot;steps&quot;:[{&quot;title&quot;:&quot;Один усилитель из каждой группы&quot;,&quot;text&quot;:&quot;Открой «Мои покупки» → «Усилители». Одновременно можно активировать один «Бонус награды» и один «Помощник в забеге». Два усилителя одной группы вместе не работают.&quot;,&quot;tip&quot;:&quot;Например, ×2 Кофе можно сочетать со Щитом Зеффи, но нельзя одновременно включить ×2 Кофе и ×2 Зефир. Недоступный усилитель можно нажать — игра объяснит, какой активный бонус занимает его группу.&quot;,&quot;scene&quot;:{&quot;kind&quot;:&quot;cards&quot;,&quot;title&quot;:&quot;Пример сочетания&quot;,&quot;items&quot;:[{&quot;title&quot;:&quot;×2 Кофе&quot;,&quot;subtitle&quot;:&quot;Бонус ресурса&quot;,&quot;image&quot;:&quot;/assets/optimized/v0.79.5/iconCoffee.webp&quot;},{&quot;title&quot;:&quot;Щит&quot;,&quot;subtitle&quot;:&quot;Защита&quot;,&quot;image&quot;:&quot;/assets/cases/boosters/icon_buster_shit_zeffi.webp&quot;},{&quot;title&quot;:&quot;Второй шанс&quot;,&quot;subtitle&quot;:&quot;Продолжение&quot;,&quot;image&quot;:&quot;/assets/cases/boosters/icon_2shans.webp&quot;}]}},{&quot;title&quot;:&quot;×2 усиливает свой ресурс&quot;,&quot;text&quot;:&quot;×2 Очки, ×2 Зефир и ×2 Кофе входят в группу «Бонус награды» и усиливают только свой ресурс. Пока один из них активен, два других недоступны.&quot;,&quot;tip&quot;:&quot;Очки в кошелёк, рекорд и бонусы скина считаются отдельно. ×2 не удваивает всё подряд.&quot;,&quot;scene&quot;:{&quot;kind&quot;:&quot;cards&quot;,&quot;title&quot;:&quot;Три независимых бонуса&quot;,&quot;items&quot;:[{&quot;title&quot;:&quot;×2 Очки&quot;,&quot;subtitle&quot;:&quot;В кошелёк&quot;,&quot;image&quot;:&quot;/assets/shop/currency_star_256x256.webp&quot;},{&quot;title&quot;:&quot;×2 Зефир&quot;,&quot;subtitle&quot;:&quot;Доход забега&quot;,&quot;image&quot;:&quot;/assets/season-pass/zefir_currency.webp&quot;},{&quot;title&quot;:&quot;×2 Кофе&quot;,&quot;subtitle&quot;:&quot;Доход забега&quot;,&quot;image&quot;:&quot;/assets/optimized/v0.79.5/iconCoffee.webp&quot;}]}},{&quot;title&quot;:&quot;Щит и второй шанс помогают по-разному&quot;,&quot;text&quot;:&quot;Щит, «Второй шанс» и «Пауза Зеффи» входят в группу «Помощник в забеге». Одновременно можно выбрать только один из них; активный бонус награды при этом не мешает.&quot;,&quot;tip&quot;:&quot;Помощник закрепляется за следующим забегом. После его окончания или расходования можно активировать другой усилитель этой группы.&quot;,&quot;scene&quot;:{&quot;kind&quot;:&quot;cards&quot;,&quot;title&quot;:&quot;Защита на попытку&quot;,&quot;items&quot;:[{&quot;title&quot;:&quot;Щит&quot;,&quot;subtitle&quot;:&quot;Одна ошибка без финиша&quot;,&quot;image&quot;:&quot;/assets/cases/boosters/icon_buster_shit_zeffi.webp&quot;},{&quot;title&quot;:&quot;Второй шанс&quot;,&quot;subtitle&quot;:&quot;Выбор после ошибки&quot;,&quot;image&quot;:&quot;/assets/cases/boosters/icon_2shans.webp&quot;}]}},{&quot;title&quot;:&quot;Пауза и сезонный ×2 XP — разные бонусы&quot;,&quot;text&quot;:&quot;«Пауза Зеффи» один раз даёт время подготовиться после возврата из фона. Сезонный ×2 XP от «Элитного+» действует автоматически, пока действует его сезонное право.&quot;,&quot;tip&quot;:&quot;×2 XP не нужно активировать как расходуемый усилитель. Он не увеличивает очки рекорда.&quot;,&quot;scene&quot;:{&quot;kind&quot;:&quot;cards&quot;,&quot;title&quot;:&quot;Разные задачи&quot;,&quot;items&quot;:[{&quot;title&quot;:&quot;Пауза Зеффи&quot;,&quot;subtitle&quot;:&quot;Подготовка к продолжению&quot;,&quot;image&quot;:&quot;/assets/cases/boosters/icon_pause_zeffi.webp&quot;},{&quot;title&quot;:&quot;×2 XP&quot;,&quot;subtitle&quot;:&quot;Прогресс профиля и сезона&quot;,&quot;image&quot;:&quot;/assets/season-pass/xp_x2.webp&quot;}]}}]},&quot;profile&quot;:{&quot;id&quot;:&quot;profile&quot;,&quot;title&quot;:&quot;Профиль и прогресс&quot;,&quot;summary&quot;:&quot;XP, оформление и быстрые переходы&quot;,&quot;icon&quot;:&quot;/assets/ui/icon_o_profile.webp&quot;,&quot;steps&quot;:[{&quot;title&quot;:&quot;Профиль — твой центр аккаунта&quot;,&quot;text&quot;:&quot;Здесь собраны Telegram-данные, рекорд, статистика забегов, уровень и быстрые переходы в остальные разделы. Имя и аватар аккаунта не заменяют игровой прогресс.&quot;,&quot;tip&quot;:&quot;«Обновить данные Telegram» обновляет сведения Telegram, а не сбрасывает покупки и коллекцию.&quot;,&quot;scene&quot;:{&quot;kind&quot;:&quot;profile&quot;,&quot;title&quot;:&quot;Карточка игрока&quot;,&quot;items&quot;:[{&quot;title&quot;:&quot;Уровень&quot;,&quot;subtitle&quot;:&quot;Текущий прогресс&quot;},{&quot;title&quot;:&quot;Рекорд&quot;,&quot;subtitle&quot;:&quot;Лучший результат&quot;},{&quot;title&quot;:&quot;Витрина&quot;,&quot;subtitle&quot;:&quot;Избранные достижения&quot;}],&quot;image&quot;:&quot;/assets/ui/icon_o_profile.webp&quot;}},{&quot;title&quot;:&quot;XP двигает уровни и звания&quot;,&quot;text&quot;:&quot;XP начисляется за зачтённые забеги и подходящие успешные покупки. Нажми на уровень или звание: в обзоре видны текущий прогресс и ближайший кейс. Все уровни и способы получения XP открываются отдельно.&quot;,&quot;tip&quot;:&quot;У забега есть минимальные условия зачёта. Точные требования и XP показаны в окне «Уровни и звания».&quot;,&quot;scene&quot;:{&quot;kind&quot;:&quot;progress&quot;,&quot;title&quot;:&quot;Путь до следующего уровня&quot;,&quot;items&quot;:[{&quot;title&quot;:&quot;XP&quot;,&quot;subtitle&quot;:&quot;Прогресс уровня&quot;,&quot;value&quot;:62},{&quot;title&quot;:&quot;Звание&quot;,&quot;subtitle&quot;:&quot;Меняется с уровнем&quot;},{&quot;title&quot;:&quot;Кейс&quot;,&quot;subtitle&quot;:&quot;По лестнице наград&quot;}]}},{&quot;title&quot;:&quot;Оформление выбирается из коллекции&quot;,&quot;text&quot;:&quot;В профиле открой «Мой стиль»: выбери аватарку, рамку, след или музыку. Нажатие на предмет запускает только примерку; кнопка «Использовать» сохраняет выбор. Скины персонажа выбираются отдельно.&quot;,&quot;tip&quot;:&quot;Закрытые предметы можно рассмотреть и узнать источник получения. Прослушивание мелодии не меняет выбранную музыку или настройку звука.&quot;,&quot;scene&quot;:{&quot;kind&quot;:&quot;cards&quot;,&quot;title&quot;:&quot;Твой стиль&quot;,&quot;items&quot;:[{&quot;title&quot;:&quot;Аватар и рамка&quot;,&quot;subtitle&quot;:&quot;Вид аккаунта&quot;,&quot;image&quot;:&quot;/assets/ui/icon_o_profile.webp&quot;},{&quot;title&quot;:&quot;След и музыка&quot;,&quot;subtitle&quot;:&quot;Атмосфера забега&quot;,&quot;image&quot;:&quot;/assets/ui/icon_albom.webp&quot;},{&quot;title&quot;:&quot;Скин&quot;,&quot;subtitle&quot;:&quot;Персонаж и его бонус&quot;,&quot;image&quot;:&quot;/assets/ui/new_avatars_game.webp&quot;}]}},{&quot;title&quot;:&quot;Престиж — не игровая валюта&quot;,&quot;text&quot;:&quot;Достижения приносят очки престижа и открывают оформление витрины. Выбранные трофеи видны другим игрокам в мини-профиле рейтинга.&quot;,&quot;tip&quot;:&quot;Очки достижений не тратятся в магазине и не заменяют XP профиля или сезонного пропуска.&quot;,&quot;scene&quot;:{&quot;kind&quot;:&quot;cards&quot;,&quot;title&quot;:&quot;Три разных вида прогресса&quot;,&quot;items&quot;:[{&quot;title&quot;:&quot;XP&quot;,&quot;subtitle&quot;:&quot;Уровень&quot;,&quot;image&quot;:&quot;/assets/season-pass/xp_x2.webp&quot;},{&quot;title&quot;:&quot;Очки&quot;,&quot;subtitle&quot;:&quot;Игровой баланс&quot;,&quot;image&quot;:&quot;/assets/shop/currency_star_256x256.webp&quot;},{&quot;title&quot;:&quot;Престиж&quot;,&quot;subtitle&quot;:&quot;Достижения&quot;,&quot;image&quot;:&quot;/assets/ui/icon_score_acivment.webp&quot;}]}}]},&quot;cases&quot;:{&quot;id&quot;:&quot;cases&quot;,&quot;title&quot;:&quot;Кейсы и награды&quot;,&quot;summary&quot;:&quot;Состав, открытие и восстановление&quot;,&quot;icon&quot;:&quot;/assets/ui/icone_cases.webp&quot;,&quot;steps&quot;:[{&quot;title&quot;:&quot;Сначала выбери сам кейс&quot;,&quot;text&quot;:&quot;В «Содержимом» видны ресурсы и предметы кейса. Нажми на награду, чтобы посмотреть редкость и правило повторов. В «Шансах и правилах» — проценты категорий, отдельных предметов и условия гаранта.&quot;,&quot;tip&quot;:&quot;«В наличии» показывает запас. Кнопка «Открыть 1 кейс» расходует только один кейс; просмотр ничего не списывает.&quot;,&quot;scene&quot;:{&quot;kind&quot;:&quot;cards&quot;,&quot;title&quot;:&quot;Примеры типов&quot;,&quot;items&quot;:[{&quot;title&quot;:&quot;Обычный&quot;,&quot;subtitle&quot;:&quot;Свой набор наград&quot;,&quot;image&quot;:&quot;/assets/cases/standart_closed.webp&quot;},{&quot;title&quot;:&quot;Серебряный&quot;,&quot;subtitle&quot;:&quot;Свой набор наград&quot;,&quot;image&quot;:&quot;/assets/cases/Bronze_close.webp&quot;},{&quot;title&quot;:&quot;Золотой&quot;,&quot;subtitle&quot;:&quot;Свой набор наград&quot;,&quot;image&quot;:&quot;/assets/cases/gold_closed.webp&quot;}]}},{&quot;title&quot;:&quot;Состав и шансы — до открытия&quot;,&quot;text&quot;:&quot;Нажми на карточку кейса, чтобы посмотреть актуальные награды, вероятности и диапазоны ресурсов. Если предусмотрен гарант, его условия и прогресс указаны там же.&quot;,&quot;tip&quot;:&quot;Не у каждого кейса есть гарант. Фиксированные проценты и цены из старых подсказок не используются.&quot;,&quot;scene&quot;:{&quot;kind&quot;:&quot;route&quot;,&quot;title&quot;:&quot;Сначала ознакомься&quot;,&quot;items&quot;:[{&quot;title&quot;:&quot;Карточка кейса&quot;,&quot;subtitle&quot;:&quot;Нажми на изображение&quot;},{&quot;title&quot;:&quot;Состав и шансы&quot;,&quot;subtitle&quot;:&quot;Изучи условия&quot;},{&quot;title&quot;:&quot;Открыть&quot;,&quot;subtitle&quot;:&quot;Только после решения&quot;}]}},{&quot;title&quot;:&quot;Анимация показывает подтверждённый итог&quot;,&quot;text&quot;:&quot;Награду определяет сервер, а не движение карточек или момент нажатия. Ресурсы идут на баланс, усилители — в запас, оформление — в коллекцию.&quot;,&quot;tip&quot;:&quot;Компенсация за повтор и физические награды зависят от правил выбранного кейса.&quot;,&quot;scene&quot;:{&quot;kind&quot;:&quot;cards&quot;,&quot;title&quot;:&quot;Куда приходит выигрыш&quot;,&quot;items&quot;:[{&quot;title&quot;:&quot;Баланс&quot;,&quot;subtitle&quot;:&quot;Ресурсы&quot;,&quot;image&quot;:&quot;/assets/shop/currency_star_256x256.webp&quot;},{&quot;title&quot;:&quot;Мои покупки&quot;,&quot;subtitle&quot;:&quot;Бонусы и коды&quot;,&quot;image&quot;:&quot;/assets/ui/icon_shopping.webp&quot;},{&quot;title&quot;:&quot;Коллекция&quot;,&quot;subtitle&quot;:&quot;Оформление&quot;,&quot;image&quot;:&quot;/assets/ui/icon_albom.webp&quot;}]}},{&quot;title&quot;:&quot;Связь пропала? Сначала проверь попытку&quot;,&quot;text&quot;:&quot;Если кейс уже списан, не начинай другое открытие. Используй проверку или повтор в этом же окне: игра сверяет состояние уже начатой операции с сервером.&quot;,&quot;tip&quot;:&quot;Нет подтверждения — это ещё не новая награда. Дождись результата проверки; анимация сама по себе ничего не начисляет.&quot;,&quot;scene&quot;:{&quot;kind&quot;:&quot;states&quot;,&quot;title&quot;:&quot;Без второго списания&quot;,&quot;items&quot;:[{&quot;title&quot;:&quot;Открытие&quot;,&quot;subtitle&quot;:&quot;Одна попытка&quot;},{&quot;title&quot;:&quot;Проверка&quot;,&quot;subtitle&quot;:&quot;Тот же результат&quot;},{&quot;title&quot;:&quot;Подтверждено&quot;,&quot;subtitle&quot;:&quot;Показана награда&quot;}]}}]},&quot;rating&quot;:{&quot;id&quot;:&quot;rating&quot;,&quot;title&quot;:&quot;Рейтинг игроков&quot;,&quot;summary&quot;:&quot;Рекорды, мини-профили и итоги&quot;,&quot;icon&quot;:&quot;/assets/ui/icon_reiting.webp&quot;,&quot;steps&quot;:[{&quot;title&quot;:&quot;В рейтинг идут зачтённые результаты&quot;,&quot;text&quot;:&quot;Играй из своего Telegram-аккаунта и заверши полноценный забег. Сервер проверяет длительность, результат и данные попытки перед обновлением рейтинга.&quot;,&quot;tip&quot;:&quot;Бонус к кошельку не подменяет рекорд. Короткая незачтённая попытка не обязана менять место.&quot;,&quot;scene&quot;:{&quot;kind&quot;:&quot;route&quot;,&quot;title&quot;:&quot;От забега к месту&quot;,&quot;items&quot;:[{&quot;title&quot;:&quot;Завершить&quot;,&quot;subtitle&quot;:&quot;Реальный забег&quot;},{&quot;title&quot;:&quot;Проверка&quot;,&quot;subtitle&quot;:&quot;Подтверждение сервера&quot;},{&quot;title&quot;:&quot;Рекорд&quot;,&quot;subtitle&quot;:&quot;Лучший зачтённый результат&quot;}]}},{&quot;title&quot;:&quot;Сезон и всё время — разные таблицы&quot;,&quot;text&quot;:&quot;В «Сезоне» сравниваются результаты текущего сезона. «Всё время» показывает лучший сохранённый рекорд игрока за все сезоны, а не сумму всех очков.&quot;,&quot;tip&quot;:&quot;Верхняя карточка показывает действующий сезон и его сроки. Новый забег улучшает запись, только если его результат лучше.&quot;,&quot;scene&quot;:{&quot;kind&quot;:&quot;cards&quot;,&quot;title&quot;:&quot;Два режима&quot;,&quot;items&quot;:[{&quot;title&quot;:&quot;Сезон&quot;,&quot;subtitle&quot;:&quot;Рекорд в текущем сезоне&quot;,&quot;image&quot;:&quot;/assets/ui/icon_battlepass.webp&quot;},{&quot;title&quot;:&quot;Всё время&quot;,&quot;subtitle&quot;:&quot;Личный рекорд за всё время&quot;,&quot;image&quot;:&quot;/assets/ui/icon_reiting.webp&quot;}]}},{&quot;title&quot;:&quot;На игрока можно нажать&quot;,&quot;text&quot;:&quot;Открой строку игрока или карточку лидера: появится мини-профиль со статистикой, витриной и сравнением доступных показателей.&quot;,&quot;tip&quot;:&quot;Потяни мини-профиль вниз, чтобы закрыть. Просмотр чужой карточки не меняет твой аккаунт.&quot;,&quot;scene&quot;:{&quot;kind&quot;:&quot;profile&quot;,&quot;title&quot;:&quot;Мини-профиль&quot;,&quot;items&quot;:[{&quot;title&quot;:&quot;Рекорд&quot;,&quot;subtitle&quot;:&quot;Лучший результат&quot;},{&quot;title&quot;:&quot;Статистика&quot;,&quot;subtitle&quot;:&quot;Сравнение показателей&quot;},{&quot;title&quot;:&quot;Трофеи&quot;,&quot;subtitle&quot;:&quot;Витрина игрока&quot;}],&quot;image&quot;:&quot;/assets/ui/icon_reiting.webp&quot;}},{&quot;title&quot;:&quot;Награда зависит от итогов сезона&quot;,&quot;text&quot;:&quot;Предпросмотр показывает награду, а получить её можно только после того, как сервер закрепит за тобой право по итогам сезона. Тогда появится действие получения.&quot;,&quot;tip&quot;:&quot;Текущее первое место ещё не гарантирует победу. После сбоя проверь статус той же награды.&quot;,&quot;scene&quot;:{&quot;kind&quot;:&quot;states&quot;,&quot;title&quot;:&quot;Итоги и получение&quot;,&quot;items&quot;:[{&quot;title&quot;:&quot;Сезон идёт&quot;,&quot;subtitle&quot;:&quot;Места ещё меняются&quot;},{&quot;title&quot;:&quot;Итоги&quot;,&quot;subtitle&quot;:&quot;Право назначено&quot;},{&quot;title&quot;:&quot;Получение&quot;,&quot;subtitle&quot;:&quot;После подтверждения&quot;}]}}]},&quot;daily&quot;:{&quot;id&quot;:&quot;daily&quot;,&quot;title&quot;:&quot;Ежедневная активность&quot;,&quot;summary&quot;:&quot;Дни, серия, защита и возвращение&quot;,&quot;icon&quot;:&quot;/assets/ui/icone_return_player.webp&quot;,&quot;steps&quot;:[{&quot;title&quot;:&quot;Вход проверяется автоматически&quot;,&quot;text&quot;:&quot;В профиле открой «Ежедневная активность»: наверху — подтверждённая награда дня, текущая неделя и следующий подарок. Вход учитывается автоматически один раз за игровой день.&quot;,&quot;tip&quot;:&quot;Уже начисленное не нужно забирать повторно. Если связь пропала, «Проверить» сверит тот же игровой день.&quot;,&quot;scene&quot;:{&quot;kind&quot;:&quot;route&quot;,&quot;title&quot;:&quot;Один игровой день&quot;,&quot;items&quot;:[{&quot;title&quot;:&quot;Войти&quot;,&quot;subtitle&quot;:&quot;Открыть игру&quot;},{&quot;title&quot;:&quot;Проверить&quot;,&quot;subtitle&quot;:&quot;Вход и награду&quot;},{&quot;title&quot;:&quot;Учесть день&quot;,&quot;subtitle&quot;:&quot;Один раз&quot;}]}},{&quot;title&quot;:&quot;Карточка дней и серия — разные счётчики&quot;,&quot;text&quot;:&quot;Неделя показывает общий прогресс входов. Нажми на день, чтобы увидеть условия награды. Серия и защита, большие этапы и история открываются отдельно в этом же окне.&quot;,&quot;tip&quot;:&quot;Дни карточки — дни активности, а не даты календаря. В истории показаны подтверждённые выдачи; текущие условия могут меняться.&quot;,&quot;scene&quot;:{&quot;kind&quot;:&quot;week&quot;,&quot;title&quot;:&quot;Пример недельной карточки&quot;,&quot;items&quot;:[{&quot;title&quot;:&quot;День 1&quot;,&quot;subtitle&quot;:&quot;&quot;},{&quot;title&quot;:&quot;2&quot;,&quot;subtitle&quot;:&quot;&quot;},{&quot;title&quot;:&quot;3&quot;,&quot;subtitle&quot;:&quot;&quot;},{&quot;title&quot;:&quot;4&quot;,&quot;subtitle&quot;:&quot;&quot;},{&quot;title&quot;:&quot;5&quot;,&quot;subtitle&quot;:&quot;&quot;},{&quot;title&quot;:&quot;6&quot;,&quot;subtitle&quot;:&quot;&quot;},{&quot;title&quot;:&quot;7-й&quot;,&quot;subtitle&quot;:&quot;Большой день&quot;}],&quot;image&quot;:&quot;/assets/ui/icone_return_player.webp&quot;}},{&quot;title&quot;:&quot;Защита спасает серию, а не выдаёт дни&quot;,&quot;text&quot;:&quot;При пропуске сервер может автоматически использовать запас защиты. Для сохранения серии защиты должно хватать на пропущенные дни.&quot;,&quot;tip&quot;:&quot;Защита не начисляет пропущенные ежедневные подарки. Если запаса недостаточно, непрерывная серия начинается заново.&quot;,&quot;scene&quot;:{&quot;kind&quot;:&quot;cards&quot;,&quot;title&quot;:&quot;Два разных результата&quot;,&quot;items&quot;:[{&quot;title&quot;:&quot;Защита серии&quot;,&quot;subtitle&quot;:&quot;Сохраняет непрерывность&quot;,&quot;image&quot;:&quot;/assets/ui/icon_series_protection.webp&quot;},{&quot;title&quot;:&quot;Награда дня&quot;,&quot;subtitle&quot;:&quot;Только за учтённый вход&quot;,&quot;image&quot;:&quot;/assets/ui/icone_return_player.webp&quot;}]}},{&quot;title&quot;:&quot;Подарок за возвращение — отдельный&quot;,&quot;text&quot;:&quot;После подходящего перерыва может появиться подарок за возвращение. Условия, размер и доступность определяет сервер с учётом действующей программы.&quot;,&quot;tip&quot;:&quot;Не каждый перерыв даёт подарок. Уже начисленное видно в итоговом окне и истории; закрытие окна не выдаёт его ещё раз.&quot;,&quot;scene&quot;:{&quot;kind&quot;:&quot;states&quot;,&quot;title&quot;:&quot;Возвращение в игру&quot;,&quot;items&quot;:[{&quot;title&quot;:&quot;Перерыв&quot;,&quot;subtitle&quot;:&quot;Учитывает сервер&quot;},{&quot;title&quot;:&quot;Проверка условий&quot;,&quot;subtitle&quot;:&quot;Персональное право&quot;},{&quot;title&quot;:&quot;Подарок&quot;,&quot;subtitle&quot;:&quot;Только при назначении&quot;}]}}]},&quot;season&quot;:{&quot;id&quot;:&quot;season&quot;,&quot;title&quot;:&quot;Сезонный пропуск&quot;,&quot;summary&quot;:&quot;Задания, тарифы, история и 50+&quot;,&quot;icon&quot;:&quot;/assets/ui/icon_battlepass.webp&quot;,&quot;steps&quot;:[{&quot;title&quot;:&quot;У сезона свой прогресс&quot;,&quot;text&quot;:&quot;В пропуске есть дорожка наград и задания. XP сезона открывает уровни, но не заменяет XP профиля. Сроки и доступность текущего сезона указаны на его странице.&quot;,&quot;tip&quot;:&quot;Достигнутый уровень и полученная награда — разные состояния. Проверь доступные кнопки получения на дорожке.&quot;,&quot;scene&quot;:{&quot;kind&quot;:&quot;progress&quot;,&quot;title&quot;:&quot;Дорожка сезона&quot;,&quot;items&quot;:[{&quot;title&quot;:&quot;XP сезона&quot;,&quot;subtitle&quot;:&quot;Открывает уровни&quot;,&quot;value&quot;:58},{&quot;title&quot;:&quot;Уровень&quot;,&quot;subtitle&quot;:&quot;Доступ к награде&quot;},{&quot;title&quot;:&quot;Получение&quot;,&quot;subtitle&quot;:&quot;Подтверждённая выдача&quot;}]}},{&quot;title&quot;:&quot;Выполнил задание — забери его XP&quot;,&quot;text&quot;:&quot;Ежедневные и недельные задания показывают условие и прогресс. После выполнения получи XP задания: это двигает дорожку сезонного пропуска.&quot;,&quot;tip&quot;:&quot;Открытые награды дорожки забираются отдельно. Статусы заданий и наград подтверждает сервер.&quot;,&quot;scene&quot;:{&quot;kind&quot;:&quot;route&quot;,&quot;title&quot;:&quot;Два отдельных действия&quot;,&quot;items&quot;:[{&quot;title&quot;:&quot;Задание&quot;,&quot;subtitle&quot;:&quot;Выполнить условие&quot;},{&quot;title&quot;:&quot;Забрать XP&quot;,&quot;subtitle&quot;:&quot;Продвинуть уровень&quot;},{&quot;title&quot;:&quot;Награда уровня&quot;,&quot;subtitle&quot;:&quot;Получить отдельно&quot;}]}},{&quot;title&quot;:&quot;Тариф открывает свою дорожку&quot;,&quot;text&quot;:&quot;«Элитный» и «Элитный+» дают сезонные права и бонусы, указанные в карточках тарифов. «Элитный+» также включает сезонный ×2 XP.&quot;,&quot;tip&quot;:&quot;Перед покупкой изучи актуальную цену, срок и состав. Просмотр обучения и карточки тарифа ничего не покупает.&quot;,&quot;scene&quot;:{&quot;kind&quot;:&quot;cards&quot;,&quot;title&quot;:&quot;Дорожки пропуска&quot;,&quot;items&quot;:[{&quot;title&quot;:&quot;Бесплатная&quot;,&quot;subtitle&quot;:&quot;Базовые награды&quot;,&quot;image&quot;:&quot;/assets/ui/icon_battlepass.webp&quot;},{&quot;title&quot;:&quot;Элитный&quot;,&quot;subtitle&quot;:&quot;Дополнительные права&quot;,&quot;image&quot;:&quot;/assets/ui/icon_o_profile.webp&quot;},{&quot;title&quot;:&quot;Элитный+&quot;,&quot;subtitle&quot;:&quot;Включая ×2 XP&quot;,&quot;image&quot;:&quot;/assets/season-pass/xp_x2.webp&quot;}]}},{&quot;title&quot;:&quot;Кейсы и сюжет находятся в сезоне&quot;,&quot;text&quot;:&quot;Тематические кейсы открываются в сезонном разделе кейсов. Главы истории и письма становятся доступны по правилам текущего сезона; прочитанное можно посмотреть в доступном архиве.&quot;,&quot;tip&quot;:&quot;Сезонный кейс и кейс в «Моих покупках» → «Кейсы» — разные запасы. Шансы и набор наград проверяй для нужного кейса.&quot;,&quot;scene&quot;:{&quot;kind&quot;:&quot;cards&quot;,&quot;title&quot;:&quot;Сезонные разделы&quot;,&quot;items&quot;:[{&quot;title&quot;:&quot;Кейсы&quot;,&quot;subtitle&quot;:&quot;Тематический запас&quot;,&quot;image&quot;:&quot;/assets/ui/icone_cases.webp&quot;},{&quot;title&quot;:&quot;Сюжет&quot;,&quot;subtitle&quot;:&quot;Главы приключения&quot;,&quot;image&quot;:&quot;/assets/ui/icon_albom.webp&quot;},{&quot;title&quot;:&quot;Письмо&quot;,&quot;subtitle&quot;:&quot;Новости сезона&quot;,&quot;image&quot;:&quot;/assets/ui/icone_reward.webp&quot;}]}},{&quot;title&quot;:&quot;Максимальный уровень — не всегда финал&quot;,&quot;text&quot;:&quot;После открытия последнего уровня нужно заполнить его шкалу XP, чтобы завершить финал. Дальнейшие награды 50+ доступны по правилам бесконечной дорожки.&quot;,&quot;tip&quot;:&quot;Догоняющий бонус действует только при выполнении его условий и не складывается с ×2 от «Элитного+». Смотри активную подсказку сезона.&quot;,&quot;scene&quot;:{&quot;kind&quot;:&quot;route&quot;,&quot;title&quot;:&quot;От уровня к финалу&quot;,&quot;items&quot;:[{&quot;title&quot;:&quot;Последний уровень&quot;,&quot;subtitle&quot;:&quot;Открыт&quot;},{&quot;title&quot;:&quot;Заполнить шкалу&quot;,&quot;subtitle&quot;:&quot;Завершить финал&quot;},{&quot;title&quot;:&quot;50+&quot;,&quot;subtitle&quot;:&quot;Дальнейшая дорожка&quot;}]}}]},&quot;achievements&quot;:{&quot;id&quot;:&quot;achievements&quot;,&quot;title&quot;:&quot;Достижения&quot;,&quot;summary&quot;:&quot;Цели, престиж и моя витрина&quot;,&quot;icon&quot;:&quot;/assets/ui/icon_score_acivment.webp&quot;,&quot;steps&quot;:[{&quot;title&quot;:&quot;Цели и витрина — отдельно&quot;,&quot;text&quot;:&quot;Во вкладке «Цели» сначала видны доступные награды и ближайшие достижения. Фильтры помогают найти нужное; нажатие открывает условие и приз.&quot;,&quot;tip&quot;:&quot;Секретные трофеи видны серыми карточками с «?». Название и условия откроются после выполнения.&quot;,&quot;scene&quot;:{&quot;kind&quot;:&quot;tabs&quot;,&quot;title&quot;:&quot;Достижения&quot;,&quot;items&quot;:[{&quot;title&quot;:&quot;Цели&quot;},{&quot;title&quot;:&quot;Моя витрина&quot;}],&quot;rows&quot;:[{&quot;title&quot;:&quot;Ближайшие цели&quot;,&quot;subtitle&quot;:&quot;Как получить&quot;,&quot;image&quot;:&quot;/assets/ui/icon_score_acivment.webp&quot;}]}},{&quot;title&quot;:&quot;Престиж и приз — не одно и то же&quot;,&quot;text&quot;:&quot;Очки достижений показывают постоянный престиж аккаунта. У некоторых достижений дополнительно есть награда с отдельным действием получения.&quot;,&quot;tip&quot;:&quot;Очки достижений не тратятся. Они повышают ранг и открывают только те оформления, у которых указано это условие.&quot;,&quot;scene&quot;:{&quot;kind&quot;:&quot;cards&quot;,&quot;title&quot;:&quot;Что даёт достижение&quot;,&quot;items&quot;:[{&quot;title&quot;:&quot;Престиж&quot;,&quot;subtitle&quot;:&quot;Постоянный прогресс&quot;,&quot;image&quot;:&quot;/assets/ui/icon_score_acivment.webp&quot;},{&quot;title&quot;:&quot;Награда&quot;,&quot;subtitle&quot;:&quot;Если предусмотрена&quot;,&quot;image&quot;:&quot;/assets/ui/icone_reward.webp&quot;}]}},{&quot;title&quot;:&quot;Изменить трофеи&quot;,&quot;text&quot;:&quot;В «Моей витрине» нажми «Изменить трофеи». Выбирай, заменяй и меняй порядок полученных трофеев. Затем нажми «Сохранить».&quot;,&quot;tip&quot;:&quot;Предпросмотр. Изменения появятся в профиле после сохранения.&quot;,&quot;scene&quot;:{&quot;kind&quot;:&quot;cards&quot;,&quot;title&quot;:&quot;Пример витрины&quot;,&quot;items&quot;:[{&quot;title&quot;:&quot;Трофей 1&quot;,&quot;subtitle&quot;:&quot;Выбранный&quot;},{&quot;title&quot;:&quot;Трофей 2&quot;,&quot;subtitle&quot;:&quot;Выбранный&quot;},{&quot;title&quot;:&quot;Место 3&quot;,&quot;subtitle&quot;:&quot;Свободное&quot;}],&quot;image&quot;:&quot;/assets/ui/icon_score_acivment.webp&quot;}},{&quot;title&quot;:&quot;Оформление открывается по условиям&quot;,&quot;text&quot;:&quot;Открой «Оформление»: предпросмотр покажет витрину с твоими трофеями. У закрытой витрины есть условие получения. Доступную можно применить кнопкой «Использовать».&quot;,&quot;tip&quot;:&quot;Нельзя выбрать закрытый стиль только через предпросмотр. Условия подтверждаются сервером.&quot;,&quot;scene&quot;:{&quot;kind&quot;:&quot;states&quot;,&quot;title&quot;:&quot;Статусы оформления&quot;,&quot;items&quot;:[{&quot;title&quot;:&quot;Закрыто&quot;,&quot;subtitle&quot;:&quot;Условия ещё впереди&quot;},{&quot;title&quot;:&quot;Открыто&quot;,&quot;subtitle&quot;:&quot;Можно выбрать&quot;},{&quot;title&quot;:&quot;Выбрано&quot;,&quot;subtitle&quot;:&quot;Видно в профиле&quot;}]}}]},&quot;album&quot;:{&quot;id&quot;:&quot;album&quot;,&quot;title&quot;:&quot;Альбом Зеффи&quot;,&quot;summary&quot;:&quot;Недостающие предметы, коллекции и награды&quot;,&quot;icon&quot;:&quot;/assets/ui/icon_albom.webp&quot;,&quot;steps&quot;:[{&quot;title&quot;:&quot;Следующая награда — рядом с коллекцией&quot;,&quot;text&quot;:&quot;В списке альбомов видны обязательный прогресс и ближайший этап. Открой коллекцию, чтобы посмотреть недостающие предметы и награды.&quot;,&quot;tip&quot;:&quot;«Коллекция собрана» и «Награда получена» — разные состояния. Бонусные предметы не увеличивают процент обязательной сборки.&quot;,&quot;scene&quot;:{&quot;kind&quot;:&quot;route&quot;,&quot;title&quot;:&quot;Путь коллекционера&quot;,&quot;items&quot;:[{&quot;title&quot;:&quot;Альбом&quot;,&quot;subtitle&quot;:&quot;Выбрать историю&quot;},{&quot;title&quot;:&quot;Предметы&quot;,&quot;subtitle&quot;:&quot;Найти недостающее&quot;},{&quot;title&quot;:&quot;Этап&quot;,&quot;subtitle&quot;:&quot;Проверить награду&quot;}]}},{&quot;title&quot;:&quot;Покажи только то, чего не хватает&quot;,&quot;text&quot;:&quot;Переключай «Все», «Не хватает» и «Собрано». Тип предмета и фильтр «Только обязательные» помогают найти ближайшую цель. Нажми на предмет, чтобы рассмотреть его.&quot;,&quot;tip&quot;:&quot;Фильтры меняют только список. Секретный предмет остаётся под вопросительным знаком до получения.&quot;,&quot;scene&quot;:{&quot;kind&quot;:&quot;tabs&quot;,&quot;title&quot;:&quot;Предметы коллекции&quot;,&quot;items&quot;:[{&quot;title&quot;:&quot;Все&quot;},{&quot;title&quot;:&quot;Не хватает&quot;},{&quot;title&quot;:&quot;Собрано&quot;}],&quot;rows&quot;:[{&quot;title&quot;:&quot;Только обязательные&quot;,&quot;subtitle&quot;:&quot;Участвуют в прогрессе этапов&quot;,&quot;image&quot;:&quot;/assets/ui/icon_albom.webp&quot;}]}},{&quot;title&quot;:&quot;Где получить — без случайных обещаний&quot;,&quot;text&quot;:&quot;В подробностях видны владение, редкость и роль предмета в альбоме. Источник получения показывается только тогда, когда он указан в доступных данных.&quot;,&quot;tip&quot;:&quot;Предпросмотр не выдаёт предмет и не меняет оформление. Если точный источник не указан, Альбом сообщает об этом.&quot;,&quot;scene&quot;:{&quot;kind&quot;:&quot;cards&quot;,&quot;title&quot;:&quot;Подробности предмета&quot;,&quot;items&quot;:[{&quot;title&quot;:&quot;Владение&quot;,&quot;subtitle&quot;:&quot;Есть или не получено&quot;},{&quot;title&quot;:&quot;Условие&quot;,&quot;subtitle&quot;:&quot;Нужно или бонус&quot;},{&quot;title&quot;:&quot;Источник&quot;,&quot;subtitle&quot;:&quot;Если известен&quot;}],&quot;image&quot;:&quot;/assets/ui/icon_albom.webp&quot;}},{&quot;title&quot;:&quot;Получи подтверждённую награду этапа&quot;,&quot;text&quot;:&quot;Ближайшая награда показана внутри коллекции, а полная дорожка — в «Все награды». После получения дождись статуса «Получено».&quot;,&quot;tip&quot;:&quot;«В доставке» — это ещё не итог. После обрыва связи сначала проверь состояние этой же награды. При остановленной доставке обратись в поддержку.&quot;,&quot;scene&quot;:{&quot;kind&quot;:&quot;states&quot;,&quot;title&quot;:&quot;Одна выдача на этап&quot;,&quot;items&quot;:[{&quot;title&quot;:&quot;Доступно&quot;,&quot;subtitle&quot;:&quot;Можно забрать&quot;},{&quot;title&quot;:&quot;В доставке&quot;,&quot;subtitle&quot;:&quot;Проверяем итог&quot;},{&quot;title&quot;:&quot;Получено&quot;,&quot;subtitle&quot;:&quot;Есть подтверждение&quot;}]}}]},&quot;friends&quot;:{&quot;id&quot;:&quot;friends&quot;,&quot;title&quot;:&quot;Друзья кафе&quot;,&quot;summary&quot;:&quot;Обзор, друзья и подарки&quot;,&quot;icon&quot;:&quot;/assets/ui/icon_referals.webp&quot;,&quot;steps&quot;:[{&quot;title&quot;:&quot;Обзор подсказывает ближайшее действие&quot;,&quot;text&quot;:&quot;Готовые подарки, недельная цель и следующая веха компании собраны в «Обзоре». Вкладки «Друзья» и «Подарки» открывают детали без длинного общего списка.&quot;,&quot;tip&quot;:&quot;Код приглашения встроен в ссылку. Поделиться или скопировать её можно в окне «Пригласить».&quot;,&quot;scene&quot;:{&quot;kind&quot;:&quot;tabs&quot;,&quot;title&quot;:&quot;Три вкладки&quot;,&quot;items&quot;:[{&quot;title&quot;:&quot;Обзор&quot;,&quot;subtitle&quot;:&quot;&quot;},{&quot;title&quot;:&quot;Друзья&quot;,&quot;subtitle&quot;:&quot;&quot;},{&quot;title&quot;:&quot;Подарки&quot;,&quot;subtitle&quot;:&quot;&quot;}],&quot;rows&quot;:[{&quot;title&quot;:&quot;Ближайшая цель&quot;,&quot;subtitle&quot;:&quot;Что осталось сделать&quot;,&quot;image&quot;:&quot;/assets/ui/icon_referals.webp&quot;}]}},{&quot;title&quot;:&quot;Приглашение — для нового игрока&quot;,&quot;text&quot;:&quot;Отправь личную ссылку новому игроку. После допустимой привязки он появится среди приглашённых; совместные награды активируются после стартового этапа.&quot;,&quot;tip&quot;:&quot;«Дружба активирована» не означает «сейчас онлайн». Время привязки и условия стартового этапа смотри в справке.&quot;,&quot;scene&quot;:{&quot;kind&quot;:&quot;route&quot;,&quot;title&quot;:&quot;От ссылки к дружбе&quot;,&quot;items&quot;:[{&quot;title&quot;:&quot;Пригласить&quot;,&quot;subtitle&quot;:&quot;Личная ссылка&quot;},{&quot;title&quot;:&quot;Новый игрок&quot;,&quot;subtitle&quot;:&quot;Допустимая привязка&quot;},{&quot;title&quot;:&quot;Стартовый этап&quot;,&quot;subtitle&quot;:&quot;Активация дружбы&quot;}]}},{&quot;title&quot;:&quot;Недельная цель — у обоих игроков&quot;,&quot;text&quot;:&quot;Для совместного подарка ты и активный друг должны выполнить недельное условие. В обзоре показан лучший подходящий прогресс, а не заранее выбранный навсегда напарник.&quot;,&quot;tip&quot;:&quot;У пригласившего одна недельная коробка: с первым другом, с которым выполнено условие. Текущие требования и призы — в «Условиях».&quot;,&quot;scene&quot;:{&quot;kind&quot;:&quot;pair&quot;,&quot;title&quot;:&quot;Пример совместного прогресса&quot;,&quot;items&quot;:[{&quot;title&quot;:&quot;Ты&quot;,&quot;subtitle&quot;:&quot;Условие выполнено&quot;,&quot;value&quot;:100},{&quot;title&quot;:&quot;Друг&quot;,&quot;subtitle&quot;:&quot;В процессе&quot;,&quot;value&quot;:65}],&quot;image&quot;:&quot;/assets/ui/icon_referals.webp&quot;}},{&quot;title&quot;:&quot;Порадовать друга можно бесплатно&quot;,&quot;text&quot;:&quot;В «Друзьях» открой выбор получателя системного подарка. Отправить его можно одному подходящему активному приглашённому другу, без списания твоего баланса.&quot;,&quot;tip&quot;:&quot;Перерыв после отправки общий для всех друзей. Доступность и время следующего подарка определяет сервер.&quot;,&quot;scene&quot;:{&quot;kind&quot;:&quot;route&quot;,&quot;title&quot;:&quot;Один подарок за период&quot;,&quot;items&quot;:[{&quot;title&quot;:&quot;Выбрать&quot;,&quot;subtitle&quot;:&quot;Подходящий друг&quot;},{&quot;title&quot;:&quot;Отправить&quot;,&quot;subtitle&quot;:&quot;Бесплатно&quot;},{&quot;title&quot;:&quot;Общий перерыв&quot;,&quot;subtitle&quot;:&quot;До следующей отправки&quot;}]}},{&quot;title&quot;:&quot;Все выдачи — во вкладке «Подарки»&quot;,&quot;text&quot;:&quot;Забирай готовые награды по одной или вместе. Подарок с выбором остаётся отдельным: сначала выбери один вариант, затем получи его.&quot;,&quot;tip&quot;:&quot;«Проверяем выдачу» не равно «Получено». После ошибки обнови состояние той же награды; историю смотри в «Полученных подарках».&quot;,&quot;scene&quot;:{&quot;kind&quot;:&quot;states&quot;,&quot;title&quot;:&quot;Пример получения&quot;,&quot;items&quot;:[{&quot;title&quot;:&quot;Можно забрать&quot;,&quot;subtitle&quot;:&quot;Награда доступна&quot;},{&quot;title&quot;:&quot;Проверяем&quot;,&quot;subtitle&quot;:&quot;Ожидаем сервер&quot;},{&quot;title&quot;:&quot;Получено&quot;,&quot;subtitle&quot;:&quot;Есть подтверждение&quot;}]}}]},&quot;mail&quot;:{&quot;id&quot;:&quot;mail&quot;,&quot;title&quot;:&quot;Почта Зеффи&quot;,&quot;summary&quot;:&quot;Письма, вложения и история&quot;,&quot;icon&quot;:&quot;/assets/ui/icone_reward.webp&quot;,&quot;steps&quot;:[{&quot;title&quot;:&quot;Письмо — это не только подарок&quot;,&quot;text&quot;:&quot;Открой «Мои покупки» → «Почта», чтобы прочитать письма, новости, подарки и компенсации. В карточке письма видны текст и доступные действия.&quot;,&quot;tip&quot;:&quot;Не у каждого письма есть вложение. Прочтение и получение награды — разные события.&quot;,&quot;scene&quot;:{&quot;kind&quot;:&quot;cards&quot;,&quot;title&quot;:&quot;Содержимое письма&quot;,&quot;items&quot;:[{&quot;title&quot;:&quot;Текст&quot;,&quot;subtitle&quot;:&quot;Новости и сообщение&quot;,&quot;image&quot;:&quot;/assets/ui/icone_reward.webp&quot;},{&quot;title&quot;:&quot;Вложение&quot;,&quot;subtitle&quot;:&quot;Если предусмотрено&quot;,&quot;image&quot;:&quot;/assets/ui/icone_cases.webp&quot;}]}},{&quot;title&quot;:&quot;Забирай только доступное вложение&quot;,&quot;text&quot;:&quot;Если письмо предлагает награду, нажми кнопку получения и дождись подтверждения. После выдачи письмо остаётся в истории с обновлённым статусом.&quot;,&quot;tip&quot;:&quot;При потере связи сначала обнови состояние. Повторный просмотр не создаёт вторую награду.&quot;,&quot;scene&quot;:{&quot;kind&quot;:&quot;states&quot;,&quot;title&quot;:&quot;Письмо с наградой&quot;,&quot;items&quot;:[{&quot;title&quot;:&quot;Новое&quot;,&quot;subtitle&quot;:&quot;Прочитать&quot;},{&quot;title&quot;:&quot;Получение&quot;,&quot;subtitle&quot;:&quot;Подтвердить выдачу&quot;},{&quot;title&quot;:&quot;История&quot;,&quot;subtitle&quot;:&quot;Сохранённый итог&quot;}]}},{&quot;title&quot;:&quot;Полученное уходит по назначению&quot;,&quot;text&quot;:&quot;Ресурсы добавляются к балансу, кейсы и усилители — в соответствующие вкладки «Моих покупок», а оформление — в коллекцию. Физические награды ищи во вкладке «Покупки».&quot;,&quot;tip&quot;:&quot;Сезонное письмо и главы истории также доступны в самом сезонном пропуске, когда их открыл сезон.&quot;,&quot;scene&quot;:{&quot;kind&quot;:&quot;cards&quot;,&quot;title&quot;:&quot;Где искать вложение&quot;,&quot;items&quot;:[{&quot;title&quot;:&quot;Баланс&quot;,&quot;subtitle&quot;:&quot;Ресурсы&quot;,&quot;image&quot;:&quot;/assets/shop/currency_star_256x256.webp&quot;},{&quot;title&quot;:&quot;Мои покупки&quot;,&quot;subtitle&quot;:&quot;Кейсы и бонусы&quot;,&quot;image&quot;:&quot;/assets/ui/icon_shopping.webp&quot;},{&quot;title&quot;:&quot;Коллекция&quot;,&quot;subtitle&quot;:&quot;Оформление&quot;,&quot;image&quot;:&quot;/assets/ui/icon_albom.webp&quot;}]}}]}};
@@ -16891,7 +17223,8 @@ function createTutorialDeck(layer, mount, options, words) {
 
       function openTutorial(automatic = false, startIndex = 0) {
         tutorialMode = &quot;main&quot;;
-        openTutorialMode(automatic, startIndex);
+        if (openGameplayCoach(automatic, startIndex)) return;
+        if (!automatic) openTutorialMode(false, startIndex);
       }
 
       function openProfileTutorial(automatic = false, startIndex = 0) {
@@ -16933,6 +17266,7 @@ function createTutorialDeck(layer, mount, options, words) {
           else if (mode === &quot;profile&quot;) openProfileTutorial(false, step);
           else if (mode === &quot;cases&quot;) openCaseTutorial(false, step);
           else if (mode === &quot;rating&quot;) openRatingTutorial(false, step);
+          else if (mode === &quot;main&quot;) openTutorial(false, Math.min(step, 1));
           else openGameGuideTopic(mode, step);
         }, 60);
       }
@@ -17077,7 +17411,7 @@ function createTutorialDeck(layer, mount, options, words) {
         window.clearTimeout(tutorialAutoTimer);
         if (state.tutorialCompleted || pendingReleaseNotice || (releaseLayer &amp;&amp; !releaseLayer.hidden)) return;
         tutorialAutoTimer = window.setTimeout(() =&gt; {
-          if (!state.tutorialCompleted &amp;&amp; tutorialLayer?.hidden) openTutorial(true);
+          if (!state.tutorialCompleted &amp;&amp; tutorialLayer?.hidden &amp;&amp; (!gameplayCoachLayer || gameplayCoachLayer.hidden)) openTutorial(true);
         }, delay);
       }
 
@@ -17087,7 +17421,7 @@ function createTutorialDeck(layer, mount, options, words) {
         if ((!caseTutorialPending &amp;&amp; state.profileTutorialCompleted) || pendingReleaseNotice || (releaseLayer &amp;&amp; !releaseLayer.hidden)) return;
         profileTutorialAutoTimer = window.setTimeout(() =&gt; {
           const profileScreen = root.querySelector(&#x27;[data-screen=&quot;profile&quot;]&#x27;);
-          if (!profileScreen || profileScreen.hidden || !tutorialLayer?.hidden) return;
+          if (!profileScreen || profileScreen.hidden || !tutorialLayer?.hidden || (gameplayCoachLayer &amp;&amp; !gameplayCoachLayer.hidden)) return;
           if (String(state.caseTutorialSeenKey || &quot;&quot;) !== CASE_TUTORIAL_KEY) {
             openCaseTutorial(true);
             return;
@@ -17410,6 +17744,7 @@ function createTutorialDeck(layer, mount, options, words) {
           expandedLogicalWidth = Math.max(220, canvasViewWidth);
         }
         gameExpanded = next;
+        gameplayCoachExpandedChanged(next);
         focusResizeUntil = performance.now() + 400;
         root.classList.toggle(&quot;is-game-expanded&quot;, next);
         document.body.classList.toggle(&quot;zefirok-game-expanded&quot;, next);
@@ -17509,13 +17844,14 @@ function createTutorialDeck(layer, mount, options, words) {
             setPauseButtonVisual(false);
             statusEl.textContent = &quot;нет связи&quot;;
             showModal(&quot;Не удалось начать забег&quot;, &quot;Защищённая сессия не создана. Проверь интернет и нажми «Старт» ещё раз.&quot;);
+            gameplayCoachRunStartFailed(&quot;Защищённая сессия не создана. Проверь интернет и нажми «СТАРТ» ещё раз.&quot;);
             return;
           }
           state.last = performance.now();
           statusEl.textContent = &quot;бежим&quot;;
           syncGameActionControls();
           playGameSound(&quot;startRun&quot;);
-          scheduleGameLoop();
+          if (!gameplayCoachRunReady(protectedRunId)) scheduleGameLoop();
         });
       }
 
@@ -17587,6 +17923,7 @@ function createTutorialDeck(layer, mount, options, words) {
           dog.vy = jumpVelocity;
           dog.grounded = false;
           puff(dog.x + 18, ground.y - 6, 7);
+          gameplayCoachAfterJump();
         }
       }
 
@@ -17948,6 +18285,7 @@ function createTutorialDeck(layer, mount, options, words) {
       }
 
       function endGame() {
+        if (gameplayCoachActive) closeGameplayCoach(true, { resume:false });
         flushDeferredAntiCheatGuard();
         return antiCheatWithTrustedChange(&quot;completed-run&quot;, () =&gt; {
           cancelZeffiPauseCountdown();
@@ -18054,6 +18392,10 @@ function createTutorialDeck(layer, mount, options, words) {
       }
 
       function handleRunCollision(item) {
+        if (gameplayCoachActive &amp;&amp; item?.tutorialCoach &amp;&amp; [&quot;obstacle&quot;, &quot;retry&quot;].includes(gameplayCoachStep)) {
+          gameplayCoachRetryObstacle(item);
+          return false;
+        }
         if (Number(state.time || 0) &lt; Number(state.collisionGraceUntil || 0)) return false;
         const runBoosters = normalizeRunCaseBoosters(state.runCaseBoosters);
         if (runBoosters.shield &amp;&amp; !state.runShieldUsed) {
@@ -18090,7 +18432,7 @@ function createTutorialDeck(layer, mount, options, words) {
       }
 
       function scheduleGameLoop() {
-        if (!state.running || state.rafId) return;
+        if (!state.running || state.rafId || gameplayCoachFrozen) return;
         state.rafId = window.requestAnimationFrame(loop);
       }
 
@@ -18344,6 +18686,10 @@ function createTutorialDeck(layer, mount, options, words) {
           crumb.life -= dt;
         }
 
+        if (gameplayCoachActive &amp;&amp; [&quot;obstacle&quot;, &quot;retry&quot;].includes(gameplayCoachStep)) {
+          const trainingObstacle = state.obstacles.find((item) =&gt; item?.tutorialCoach &amp;&amp; !item.tutorialCoachPassed);
+          if (trainingObstacle &amp;&amp; trainingObstacle.x + trainingObstacle.w &lt; dog.x) gameplayCoachObstaclePassed(trainingObstacle);
+        }
         compactArrayInPlace(state.obstacles, (item) =&gt; item.x &gt; -120);
         compactArrayInPlace(state.pickups, (item) =&gt; item.x &gt; -70 &amp;&amp; !item.got);
         compactCrumbsInPlace();
@@ -18371,17 +18717,24 @@ function createTutorialDeck(layer, mount, options, words) {
               puff(item.x+item.size/2,item.y+item.size/2,18);
               void sendAuthoritativeRunCheckpoint(true);
             } else {
-              if (item.kind === &quot;coffee&quot;) {
-                state.runCoffee += 1;
-                playGameSound(&quot;collectCoffee&quot;);
-                hapticImpact(&quot;medium&quot;, 120);
+              if (item.tutorialCoach) {
+                playGameSound(item.kind === &quot;coffee&quot; ? &quot;collectCoffee&quot; : &quot;collectMarshmallow&quot;);
+                hapticImpact(item.kind === &quot;coffee&quot; ? &quot;medium&quot; : &quot;light&quot;, 120);
+                puff(item.x + item.size / 2, item.y + item.size / 2, 10);
+                gameplayCoachPickupCollected(item);
               } else {
-                state.runTreats += 1;
-                playGameSound(&quot;collectMarshmallow&quot;);
-                hapticImpact(&quot;light&quot;, 120);
+                if (item.kind === &quot;coffee&quot;) {
+                  state.runCoffee += 1;
+                  playGameSound(&quot;collectCoffee&quot;);
+                  hapticImpact(&quot;medium&quot;, 120);
+                } else {
+                  state.runTreats += 1;
+                  playGameSound(&quot;collectMarshmallow&quot;);
+                  hapticImpact(&quot;light&quot;, 120);
+                }
+                state.score += 35;
+                puff(item.x + item.size / 2, item.y + item.size / 2, 10);
               }
-              state.score += 35;
-              puff(item.x + item.size / 2, item.y + item.size / 2, 10);
             }
           }
         }
@@ -19167,6 +19520,7 @@ function createTutorialDeck(layer, mount, options, words) {
         if (pendingReleaseNotice) {
           scheduleReleaseNotice(180);
         } else if (state.tutorialCompleted &amp;&amp; tutorialOpenedAutomatically) {
+          closeGameplayCoach(false, { resume:false });
           closeTutorial(false);
         } else {
           scheduleTutorialAutoOpen(450);
@@ -27918,6 +28272,9 @@ function createTutorialDeck(layer, mount, options, words) {
         if (trigger &amp;&amp; !trigger.disabled) openGameGuideTopic(String(trigger.dataset.gameGuideTopic || &quot;topics&quot;));
       });
 
+      root.addEventListener(&quot;pointerdown&quot;, gameplayCoachGuardEvent, true);
+      root.addEventListener(&quot;click&quot;, gameplayCoachGuardEvent, true);
+
       root.addEventListener(&quot;click&quot;, (event) =&gt; {
         const target = event.target instanceof Element ? event.target.closest(&quot;button, [role=&#x27;button&#x27;]&quot;) : null;
         if (!target || target.disabled || target.getAttribute(&quot;aria-disabled&quot;) === &quot;true&quot;) return;
@@ -28036,7 +28393,13 @@ function createTutorialDeck(layer, mount, options, words) {
           }
         });
       }
+      gameplayCoachSkipBtn?.addEventListener(&quot;click&quot;, (event) =&gt; { event.preventDefault(); event.stopPropagation(); closeGameplayCoach(true); });
+      gameplayCoachActionBtn?.addEventListener(&quot;click&quot;, (event) =&gt; { event.preventDefault(); event.stopPropagation(); closeGameplayCoach(true); });
+      window.addEventListener(&quot;resize&quot;, scheduleGameplayCoachLayout, { passive:true });
+      window.visualViewport?.addEventListener?.(&quot;resize&quot;, scheduleGameplayCoachLayout, { passive:true });
+
       document.addEventListener(&quot;keydown&quot;, (event) =&gt; {
+        if (gameplayCoachActive &amp;&amp; event.key === &quot;Escape&quot;) { event.preventDefault(); closeGameplayCoach(true); return; }
         if (event.key !== &quot;Escape&quot;) return;
         if (releaseLayer &amp;&amp; !releaseLayer.hidden) {
           event.preventDefault();
@@ -28139,6 +28502,11 @@ function createTutorialDeck(layer, mount, options, words) {
       stage.addEventListener(&quot;pointerdown&quot;, jump);
       root.addEventListener(&quot;keydown&quot;, (event) =&gt; {
         const keyTarget = event.target instanceof Element ? event.target : null;
+        if (gameplayCoachActive &amp;&amp; (event.code === &quot;Space&quot; || event.code === &quot;Enter&quot;) &amp;&amp; [&quot;jump&quot;, &quot;obstacle&quot;, &quot;retry&quot;].includes(gameplayCoachStep)) {
+          event.preventDefault();
+          jump();
+          return;
+        }
         if (keyTarget?.closest(&quot;[data-game-expand-toggle], [data-run-focus-pause]&quot;)) return;
         if (gameExpanded &amp;&amp; keyTarget?.closest(&quot;.run-pause-card button, .run-results-card button&quot;)) return;
         if (keyTarget?.closest(&quot;input, textarea, select, [contenteditable=&#x27;true&#x27;], [contenteditable=&#x27;&#x27;]&quot;)) return;
