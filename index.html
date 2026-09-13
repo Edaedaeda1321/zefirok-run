@@ -1647,16 +1647,21 @@ body.zefirok-run-expanded>iframe[data-run-expanded="true"]{width:100%!important;
   async function readHostAccountRevision() {
     const initData = String(window.Telegram?.WebApp?.initData || "");
     if (!initData || TEST_PROJECT_MODE) return 0;
-    const response = await fetch("/api/account/revision", {
-      method:"POST",
-      headers:{"Content-Type":"application/json"},
-      body:JSON.stringify({initData}),
-      cache:"no-store",
-      credentials:"same-origin"
-    });
-    const data = await response.json().catch(() => ({}));
-    if (!response.ok || data?.ok === false) throw new Error(data?.error || "account revision unavailable");
-    return Math.max(0, Number(data.accountRevision || 0));
+    const controller = new AbortController();
+    const timer = window.setTimeout(() => controller.abort(), 4000);
+    try {
+      const response = await fetch("/api/account/revision", {
+        method:"POST",
+        headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({initData}),
+        cache:"no-store",
+        credentials:"same-origin",
+        signal:controller.signal
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok || data?.ok === false) throw new Error(data?.error || "account revision unavailable");
+      return Math.max(0, Number(data.accountRevision || 0));
+    } finally { window.clearTimeout(timer); }
   }
 
   function syncHostAccountRevision(reason = "account-change", force = false) {
@@ -18281,6 +18286,11 @@ function createTutorialDeck(layer, mount, options, words) {
       function endGame() {
         if (gameplayCoachActive) closeGameplayCoach(true, { resume:false });
         flushDeferredAntiCheatGuard();
+        // Persist the last server checkpoint before any finish/result UI runs.
+        // If rendering crashes, the Production D1 run proof still contains the
+        // latest score/duration and can be recovered into rating server-side.
+        try { void sendAuthoritativeRunCheckpoint(true); }
+        catch (checkpointError) { console.warn(&quot;Final protected run checkpoint failed to start&quot;, checkpointError); }
         return antiCheatWithTrustedChange(&quot;completed-run&quot;, () =&gt; {
           cancelZeffiPauseCountdown();
           visibilityPauseActive = false;
@@ -29362,13 +29372,16 @@ function createTutorialDeck(layer, mount, options, words) {
 #zefirok-maltipoo-runner .album-profile-copy{min-width:0}#zefirok-maltipoo-runner .album-profile-copy strong{display:block;font-size:12px;font-weight:950}#zefirok-maltipoo-runner .album-profile-copy span{display:block;margin-top:4px;color:#8c707b;font-size:9px;font-weight:750;line-height:1.4}
 #zefirok-maltipoo-runner .album-profile-card .profile-action{grid-column:1/-1;width:100%}
 &lt;/style&gt;
+&lt;script id=&quot;zefirok-profile-overview-client-v1&quot;&gt;
+(()=&gt;{let value=null,loadedAt=0,inflight=null;window.zefirokProfileOverview=async(force=false)=&gt;{if(!force&amp;&amp;value&amp;&amp;Date.now()-loadedAt&lt;15000)return value;if(inflight)return inflight;let initData=&quot;&quot;;try{initData=String(window.Telegram?.WebApp?.initData||sessionStorage.getItem(&quot;zefirok-telegram-init-data&quot;)||&quot;&quot;);}catch{}if(!initData)return null;const controller=new AbortController(),timer=setTimeout(()=&gt;controller.abort(),4500);inflight=fetch(&quot;/api/profile/overview&quot;,{method:&quot;POST&quot;,headers:{&quot;Content-Type&quot;:&quot;application/json&quot;},body:JSON.stringify({initData}),cache:&quot;no-store&quot;,credentials:&quot;same-origin&quot;,signal:controller.signal}).then(async r=&gt;{const d=await r.json();if(!r.ok||!d?.ok)throw new Error(d?.error||&quot;profile-overview&quot;);value=d;loadedAt=Date.now();return d;}).finally(()=&gt;{clearTimeout(timer);inflight=null;});return inflight;};})();
+&lt;/script&gt;
 &lt;script id=&quot;zefirok-album-profile-entry-v2&quot;&gt;
 (() =&gt; {
   const albumScreen=document.querySelector(&#x27;[data-screen=&quot;profile&quot;]&#x27;),status=document.querySelector(&#x27;[data-profile-v2-album-status]&#x27;),meta=document.querySelector(&#x27;[data-profile-v2-album-meta]&#x27;);
   let loadedAt=0,loading=false;
   const initData=()=&gt;{let value=&quot;&quot;;try{value=String(window.Telegram?.WebApp?.initData||sessionStorage.getItem(&quot;zefirok-telegram-init-data&quot;)||&quot;&quot;);}catch{}return value;};
   const fallback=()=&gt;{if(status)status.textContent=&quot;Альбом&quot;;if(meta)meta.textContent=&quot;Коллекции и воспоминания&quot;;};
-  const refreshAlbumQuick=async(force=false)=&gt;{if(loading||(!force&amp;&amp;Date.now()-loadedAt&lt;120000))return;if(albumScreen?.hidden)return;const auth=initData();if(!auth){fallback();return;}loading=true;const controller=new AbortController(),timer=window.setTimeout(()=&gt;controller.abort(),6500);try{const response=await fetch(&quot;/api/album/state&quot;,{method:&quot;POST&quot;,headers:{&quot;Content-Type&quot;:&quot;application/json&quot;},body:JSON.stringify({initData:auth}),cache:&quot;no-store&quot;,credentials:&quot;same-origin&quot;,signal:controller.signal});const data=await response.json();if(!response.ok||data?.ok===false)throw new Error(&quot;album-summary&quot;);const summary=data?.summary||{},owned=Math.max(0,Number(summary.ownedRequired||0)),total=Math.max(0,Number(summary.requiredTotal||0)),percent=Math.max(0,Math.min(100,Math.round(Number(summary.progressPercent||0))));if(status)status.textContent=total?`${percent}%`:&quot;Новый&quot;;if(meta)meta.textContent=total?`${owned} из ${total} собрано`:&quot;Коллекции и воспоминания&quot;;loadedAt=Date.now();}catch{fallback();}finally{window.clearTimeout(timer);loading=false;}};
+  const refreshAlbumQuick=async(force=false)=&gt;{if(loading||(!force&amp;&amp;Date.now()-loadedAt&lt;120000))return;if(albumScreen?.hidden)return;const auth=initData();if(!auth){fallback();return;}loading=true;const controller=new AbortController(),timer=window.setTimeout(()=&gt;controller.abort(),6500);try{const data=await window.zefirokProfileOverview?.(force);if(!data?.ok)throw new Error(&quot;album-summary&quot;);const summary=data?.album||{},owned=Math.max(0,Number(summary.ownedRequired||0)),total=Math.max(0,Number(summary.requiredTotal||0)),percent=Math.max(0,Math.min(100,Math.round(Number(summary.progressPercent||0))));if(status)status.textContent=total?`${percent}%`:&quot;Новый&quot;;if(meta)meta.textContent=total?`${owned} из ${total} собрано`:&quot;Коллекции и воспоминания&quot;;loadedAt=Date.now();}catch{fallback();}finally{window.clearTimeout(timer);loading=false;}};
   const observer=albumScreen?new MutationObserver(()=&gt;{if(!albumScreen.hidden)window.setTimeout(()=&gt;refreshAlbumQuick(),120);}):null;if(observer)observer.observe(albumScreen,{attributes:true,attributeFilter:[&quot;hidden&quot;]});if(albumScreen&amp;&amp;!albumScreen.hidden)window.setTimeout(()=&gt;refreshAlbumQuick(),350);
   document.addEventListener(&quot;click&quot;, (event) =&gt; {
     const button=event.target?.closest?.(&quot;[data-album-open]&quot;);if(!button)return;event.preventDefault();button.disabled=true;
@@ -29382,7 +29395,7 @@ function createTutorialDeck(layer, mount, options, words) {
 &lt;script id=&quot;zefirok-referrals-profile-entry-v2&quot;&gt;
 (() =&gt; {
   const referralInitData=()=&gt;{let value=&quot;&quot;;try{value=String(window.Telegram?.WebApp?.initData||sessionStorage.getItem(&quot;zefirok-telegram-init-data&quot;)||&quot;&quot;);}catch{}return value;};
-  const refreshReferralSummary=async()=&gt;{const badge=document.querySelector(&quot;[data-referrals-badge]&quot;),meta=document.querySelector(&quot;[data-profile-v2-friends-meta]&quot;);if(!badge)return;const setMeta=(value)=&gt;{if(meta)meta.textContent=value;};const friendWord=(count)=&gt;{const n=Math.abs(Number(count||0)),m100=n%100,m10=n%10;return m100&gt;=11&amp;&amp;m100&lt;=14?&quot;друзей&quot;:m10===1?&quot;друг&quot;:(m10&gt;=2&amp;&amp;m10&lt;=4)?&quot;друга&quot;:&quot;друзей&quot;;};const giftWord=(count)=&gt;{const n=Math.abs(Number(count||0)),m100=n%100,m10=n%10;return m100&gt;=11&amp;&amp;m100&lt;=14?&quot;подарков&quot;:m10===1?&quot;подарок&quot;:(m10&gt;=2&amp;&amp;m10&lt;=4)?&quot;подарка&quot;:&quot;подарков&quot;;};const initData=referralInitData();if(!initData){badge.textContent=&quot;—&quot;;badge.classList.remove(&quot;is-boost&quot;);badge.hidden=false;setMeta(&quot;Играть вместе&quot;);return;}const controller=new AbortController();const timer=window.setTimeout(()=&gt;controller.abort(),6500);try{const response=await fetch(&quot;/api/referrals/summary&quot;,{method:&quot;POST&quot;,headers:{&quot;Content-Type&quot;:&quot;application/json&quot;},body:JSON.stringify({initData}),cache:&quot;no-store&quot;,credentials:&quot;same-origin&quot;,signal:controller.signal});const data=await response.json();if(!response.ok||!data?.ok)throw new Error(&quot;summary&quot;);const pending=Math.max(0,Number(data.pendingCount||0)),friends=Math.max(0,Number(data.activeFriends||0));badge.textContent=friends?`${friends} ${friendWord(friends)}`:&quot;Нет друзей&quot;;badge.classList.toggle(&quot;is-boost&quot;,Boolean(data?.boost?.active&amp;&amp;pending===0));badge.hidden=false;if(pending&gt;0)setMeta(`${pending} ${giftWord(pending)} ${pending===1?&quot;ждёт&quot;:&quot;ждут&quot;}`);else if(data?.boost?.active){const multiplier=Number(data.boost.multiplier||2);setMeta(`Совместный XP ×${multiplier} активен`);}else setMeta(friends?&quot;Играть и получать награды вместе&quot;:&quot;Пригласи друга в кафе&quot;);}catch{badge.textContent=&quot;—&quot;;badge.classList.remove(&quot;is-boost&quot;);badge.hidden=false;setMeta(&quot;Играть вместе&quot;);}finally{window.clearTimeout(timer);}};
+  const refreshReferralSummary=async()=&gt;{const badge=document.querySelector(&quot;[data-referrals-badge]&quot;),meta=document.querySelector(&quot;[data-profile-v2-friends-meta]&quot;);if(!badge)return;const setMeta=(value)=&gt;{if(meta)meta.textContent=value;};const friendWord=(count)=&gt;{const n=Math.abs(Number(count||0)),m100=n%100,m10=n%10;return m100&gt;=11&amp;&amp;m100&lt;=14?&quot;друзей&quot;:m10===1?&quot;друг&quot;:(m10&gt;=2&amp;&amp;m10&lt;=4)?&quot;друга&quot;:&quot;друзей&quot;;};const giftWord=(count)=&gt;{const n=Math.abs(Number(count||0)),m100=n%100,m10=n%10;return m100&gt;=11&amp;&amp;m100&lt;=14?&quot;подарков&quot;:m10===1?&quot;подарок&quot;:(m10&gt;=2&amp;&amp;m10&lt;=4)?&quot;подарка&quot;:&quot;подарков&quot;;};const initData=referralInitData();if(!initData){badge.textContent=&quot;—&quot;;badge.classList.remove(&quot;is-boost&quot;);badge.hidden=false;setMeta(&quot;Играть вместе&quot;);return;}const controller=new AbortController();const timer=window.setTimeout(()=&gt;controller.abort(),6500);try{const overview=await window.zefirokProfileOverview?.();const data=overview?.referrals;if(!overview?.ok||!data)throw new Error(&quot;summary&quot;);const pending=Math.max(0,Number(data.pendingCount||0)),friends=Math.max(0,Number(data.activeFriends||0));badge.textContent=friends?`${friends} ${friendWord(friends)}`:&quot;Нет друзей&quot;;badge.classList.toggle(&quot;is-boost&quot;,Boolean(data?.boost?.active&amp;&amp;pending===0));badge.hidden=false;if(pending&gt;0)setMeta(`${pending} ${giftWord(pending)} ${pending===1?&quot;ждёт&quot;:&quot;ждут&quot;}`);else if(data?.boost?.active){const multiplier=Number(data.boost.multiplier||2);setMeta(`Совместный XP ×${multiplier} активен`);}else setMeta(friends?&quot;Играть и получать награды вместе&quot;:&quot;Пригласи друга в кафе&quot;);}catch{badge.textContent=&quot;—&quot;;badge.classList.remove(&quot;is-boost&quot;);badge.hidden=false;setMeta(&quot;Играть вместе&quot;);}finally{window.clearTimeout(timer);}};
   document.addEventListener(&quot;click&quot;, (event) =&gt; {
     const button = event.target?.closest?.(&quot;[data-referrals-open]&quot;);
     if (!button) return;
@@ -29444,7 +29457,7 @@ function createTutorialDeck(layer, mount, options, words) {
   let inflight=null,initialRefreshTimer=0,hasServerState=false,lastFreshAt=0;
   const bootstrapState=()=&gt;{try{return window.__ZEFIROK_ACHIEVEMENT_PROFILE_STATE__&amp;&amp;typeof window.__ZEFIROK_ACHIEVEMENT_PROFILE_STATE__===&quot;object&quot;?window.__ZEFIROK_ACHIEVEMENT_PROFILE_STATE__:null;}catch{return null;}};
   const applyServerState=(data)=&gt;{if(!data||typeof data!==&quot;object&quot;)return;window.__ZEFIROK_ACHIEVEMENT_PROFILE_STATE__=data;render(data);hasServerState=true;lastFreshAt=Date.now();};
-  const refresh=async(force=false)=&gt;{if(!force&amp;&amp;!profileVisible())return;if(!force&amp;&amp;hasServerState&amp;&amp;Date.now()-lastFreshAt&lt;15000)return;if(inflight)return inflight;const auth=initData();if(!auth)return;const controller=new AbortController(),timer=window.setTimeout(()=&gt;controller.abort(),4500);inflight=(async()=&gt;{try{const response=await fetch(&quot;/api/achievements&quot;,{method:&quot;POST&quot;,headers:{&quot;Content-Type&quot;:&quot;application/json&quot;},body:JSON.stringify({initData:auth,scope:&quot;showcase&quot;}),cache:&quot;no-store&quot;,credentials:&quot;same-origin&quot;,signal:controller.signal});const data=await response.json();if(!response.ok||!data?.ok)throw new Error(&quot;achievements-showcase&quot;);applyServerState(data);}catch{}finally{window.clearTimeout(timer);inflight=null;}})();return inflight;};
+  const refresh=async(force=false)=&gt;{if(!force&amp;&amp;!profileVisible())return;if(!force&amp;&amp;hasServerState&amp;&amp;Date.now()-lastFreshAt&lt;15000)return;if(inflight)return inflight;const auth=initData();if(!auth)return;const controller=new AbortController(),timer=window.setTimeout(()=&gt;controller.abort(),4500);inflight=(async()=&gt;{try{const overview=await window.zefirokProfileOverview?.(force);const data=overview?.achievements;if(!data?.ok)throw new Error(&quot;achievements-showcase&quot;);applyServerState(data);}catch{}finally{window.clearTimeout(timer);inflight=null;}})();return inflight;};
   const refreshVisibleProfile=(attempt=0,force=false)=&gt;{window.clearTimeout(initialRefreshTimer);if(!profileVisible())return;const cached=bootstrapState();if(cached&amp;&amp;!hasServerState)applyServerState(cached);if(!force&amp;&amp;hasServerState&amp;&amp;Date.now()-lastFreshAt&lt;15000)return;if(initData()){void refresh(force);return;}if(attempt&gt;=16)return;initialRefreshTimer=window.setTimeout(()=&gt;refreshVisibleProfile(attempt+1,force),250);};
   document.addEventListener(&quot;click&quot;,(event)=&gt;{const openButton=event.target?.closest?.(&quot;[data-achievements-open]&quot;);if(openButton){event.preventDefault();openButton.disabled=true;try{window.parent.postMessage({type:&quot;zefirok-open-achievements&quot;,view:openButton.dataset.achievementsView===&quot;showcase&quot;?&quot;showcase&quot;:&quot;goals&quot;},&quot;*&quot;);}catch{try{window.location.href=&quot;/achievements.html?view=&quot;+(openButton.dataset.achievementsView===&quot;showcase&quot;?&quot;showcase&quot;:&quot;goals&quot;);}catch{}}window.setTimeout(()=&gt;{openButton.disabled=false;},900);return;}if(event.target?.closest?.(&#x27;[data-tab=&quot;profile&quot;]&#x27;))window.setTimeout(()=&gt;refreshVisibleProfile(),80);});
   window.addEventListener(&quot;zefirok-achievement-showcase-ready&quot;,(event)=&gt;applyServerState(event?.detail));

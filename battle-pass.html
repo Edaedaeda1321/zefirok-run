@@ -1380,7 +1380,7 @@ button{-webkit-tap-highlight-color:transparent}
   transition:.22s
 }
 .toast.show{transform:translate(-50%,0);opacity:1}
-.inline-prize-icon{display:inline-block;width:1.15em;height:1.15em;object-fit:contain;vertical-align:-.2em;flex:0 0 auto}.toast.has-prize-icon{display:flex;align-items:center;justify-content:center;gap:7px}
+.inline-prize-icon{display:inline-block;width:1em!important;height:1em!important;max-width:18px!important;max-height:18px!important;object-fit:contain!important;vertical-align:-.14em;flex:0 0 auto;background:transparent!important;border:0!important;border-radius:0!important;box-shadow:none!important}.toast.has-prize-icon{display:flex;align-items:center;justify-content:center;gap:7px}
 
 .tier-celebration{
   position:fixed;
@@ -4010,7 +4010,7 @@ img[src$="/xp.webp"]{
 
 <section class="season-letter-overlay" id="seasonLetterOverlay" hidden aria-modal="true" role="dialog" aria-labelledby="seasonLetterTitle"><div class="season-letter-sheet"><img class="season-letter-art" id="seasonLetterArt" hidden alt=""><div class="season-letter-envelope" id="seasonLetterEnvelope"><img src="/assets/ui/icon_message_season.webp" alt=""></div><h2 id="seasonLetterTitle">Вам письмо</h2><p class="letter-preview" id="seasonLetterPreview"></p><span class="season-letter-target" id="seasonLetterTarget"></span><div class="season-letter-body" id="seasonLetterBody" hidden></div><div class="season-letter-actions"><button class="secondary" id="seasonLetterClose" type="button">Закрыть</button><button class="primary" id="seasonLetterReveal" type="button">Открыть письмо</button></div></div></section>
 <section class="season-story-overlay" id="seasonStoryOverlay" hidden aria-modal="true" role="dialog" aria-labelledby="seasonStoryTitle"><div class="season-story-sheet"><img class="season-story-art" id="seasonStoryArt" hidden alt=""><span class="season-story-kicker">История сезона</span><h2 id="seasonStoryTitle">Сюжет</h2><div class="season-story-meta" id="seasonStoryMeta"></div><div class="season-story-body" id="seasonStoryBody"></div><div class="season-story-reward" id="seasonStoryReward" hidden><img id="seasonStoryRewardImage" src="/assets/season-pass/season.webp" alt=""><div><b id="seasonStoryRewardTitle">Награда за завершение</b><span>Будет выдана один раз после последней страницы.</span></div></div><div class="season-story-footer"><button class="secondary" id="seasonStoryBack" type="button">Назад</button><button class="secondary" id="seasonStoryClose" type="button">Закрыть</button><button class="primary" id="seasonStoryComplete" type="button">Продолжить</button></div></div></section>
-<section class="season-story-archive-overlay" id="seasonStoryArchiveOverlay" hidden aria-modal="true" role="dialog"><div class="season-story-archive-sheet"><div class="season-story-archive-head"><h2>История сезона</h2><button class="season-story-archive-close" id="seasonStoryArchiveClose" type="button">×</button></div><div class="season-story-archive-list" id="seasonStoryArchiveList"></div></div></section>
+<section class="season-story-archive-overlay" id="seasonStoryArchiveOverlay" hidden aria-modal="true" role="dialog"><div class="season-story-archive-sheet"><div class="season-story-archive-head"><div class="season-story-archive-heading"><span>СЮЖЕТ СЕЗОНА</span><h2>История сезона</h2><p id="seasonStoryArchiveSummary">Прочитанные главы</p></div><button class="season-story-archive-close" id="seasonStoryArchiveClose" type="button" aria-label="Закрыть">×</button></div><div class="season-story-archive-list" id="seasonStoryArchiveList"></div></div></section>
 
 <section class="seasonal-case-info-overlay" id="seasonalCaseInfoOverlay" hidden aria-modal="true" role="dialog" aria-labelledby="seasonalCaseInfoTitle">
   <div class="seasonal-case-info-sheet" id="seasonalCaseInfoSheet">
@@ -5206,14 +5206,15 @@ img[src$="/xp.webp"]{
     localStorage.setItem(PASS_KEY,JSON.stringify(pass));
   }
 
+  function storyEscapeHtml(value){return String(value??"").replace(/[&<>"']/g,ch=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[ch]));}
   function prizeIconMarkup(cls="inline-prize-icon") {
-    return `<img class="${cls}" src="/assets/ui/icon_prize.png" alt="" aria-hidden="true">`;
+    return `<img class="${cls}" src="/assets/ui/icon_prize.webp" alt="" aria-hidden="true">`;
   }
 
   function showToast(text,{prize=false}={}) {
     const toast = el("toast");
     toast.classList.toggle("has-prize-icon",Boolean(prize));
-    if(prize){const img=document.createElement("img");img.className="inline-prize-icon";img.src="/assets/ui/icon_prize.png";img.alt="";img.setAttribute("aria-hidden","true");toast.replaceChildren(img,document.createTextNode(String(text||"")));}
+    if(prize){const img=document.createElement("img");img.className="inline-prize-icon";img.src="/assets/ui/icon_prize.webp";img.alt="";img.setAttribute("aria-hidden","true");toast.replaceChildren(img,document.createTextNode(String(text||"")));}
     else toast.textContent = text;
     toast.classList.add("show");
     clearTimeout(toastTimer);
@@ -6311,8 +6312,26 @@ img[src$="/xp.webp"]{
   async function completeSeasonStory(){const button=el("seasonStoryComplete"),eventId=String(button.dataset.eventId||"");if(!eventId)return;const old=button.textContent;button.disabled=true;button.textContent="Сохраняем…";try{const data=await seasonPassApi(STORY_COMPLETE_PATH,{eventId});if(data?.story)serverPass={...(serverPass||{}),story:data.story};if(Array.isArray(data?.seasonalCases))serverPass={...(serverPass||{}),seasonalCases:data.seasonalCases};closeSeasonStory();renderSeasonStory();renderSeasonalCases();passNotifyHaptic("success");if(data?.reward){notifyAccountChanged();if(data.rewardStatus==="delivered")openRewardSummary([{premium:false,icon:"",image:data.reward.imageUrl||"",name:data.reward.title||"Награда за историю",source:"Сюжет сезона"}]);else showToast(`${data.reward.title||"Награда"} поставлена в очередь`,{prize:true});}if(serverPass?.story?.pending)setTimeout(()=>{void showPendingSeasonStory();},data?.reward&&data.rewardStatus==="delivered"?700:220);}catch(error){passNotifyHaptic("error");showToast(error.message||"Не удалось продолжить историю");}finally{button.disabled=false;button.textContent=old;}}
   async function advanceSeasonStory(){if(!seasonStoryView)return;const pages=storyPages(seasonStoryView.item);if(Number(seasonStoryView.index)<pages.length-1){seasonStoryView.index+=1;renderSeasonStoryPage();passSelectHaptic();return;}if(seasonStoryView.pending){await completeSeasonStory();return;}closeSeasonStory();}
   function previousSeasonStoryPage(){if(!seasonStoryView||Number(seasonStoryView.index)<=0)return;seasonStoryView.index-=1;renderSeasonStoryPage();passSelectHaptic();}
-  function showSeasonStoryArchive(){const archive=Array.isArray(seasonStoryData()?.archive)?seasonStoryData().archive:[];if(!archive.length)return showToast("Прочитанных сюжетных событий пока нет");el("seasonStoryArchiveList").innerHTML=archive.map(item=>{const pages=storyPages(item);return `<article class="season-story-archive-item"><img src="${String(item.imageUrl||pages[0]?.imageUrl||IMAGE_ERROR_FALLBACK).replace(/"/g,'&quot;')}" alt=""><div><b>${String(item.title||'История сезона').replace(/</g,'&lt;')}</b><span>Уровень ${Number(item.unlockLevel||1)} · ${pages.length} стр. · прочитано${item.reward?` · ${prizeIconMarkup()} ${String(item.reward.title||'награда').replace(/</g,'&lt;')}`:''}</span></div><button type="button" data-story-archive-event="${String(item.eventId||'').replace(/"/g,'&quot;')}">Открыть</button></article>`;}).join("");el("seasonStoryArchiveList").querySelectorAll("[data-story-archive-event]").forEach(button=>button.addEventListener("click",()=>{const item=archive.find(x=>String(x.eventId)===String(button.dataset.storyArchiveEvent));closeSeasonStoryArchive();showSeasonStoryEvent(item,{pending:false});}));el("seasonStoryArchiveOverlay").hidden=false;document.body.style.overflow="hidden";passSelectHaptic();}
-  function renderSeasonStory(){const story=seasonStoryData(),pending=story?.pending||null,archive=Array.isArray(story?.archive)?story.archive:[],card=el("seasonStoryCard");if(!card)return;const visible=Boolean(pending||archive.length);card.hidden=!visible;if(!visible)return;el("seasonStoryCardTitle").textContent=pending?(pending.title||"Новая часть истории"):"История сезона";el("seasonStoryCardPreview").innerHTML=pending?`Открылась новая часть сюжета · уровень ${Number(pending.unlockLevel||1)} · ${storyPages(pending).length} стр.${pending.reward?` · ${prizeIconMarkup()} ${String(pending.reward.title||"Награда").replace(/</g,'&lt;')}`:''}`:`Прочитано событий: ${archive.length}`;el("seasonStoryOpen").hidden=!pending;el("seasonStoryArchive").hidden=!archive.length;}
+  function showSeasonStoryArchive(){
+    const archive=Array.isArray(seasonStoryData()?.archive)?seasonStoryData().archive:[];
+    if(!archive.length)return showToast("Прочитанных глав пока нет");
+    const summary=el("seasonStoryArchiveSummary");
+    if(summary)summary.textContent=`Прочитано глав: ${archive.length}`;
+    el("seasonStoryArchiveList").innerHTML=archive.map((item,index)=>{
+      const pages=storyPages(item),image=storyEscapeHtml(item.imageUrl||pages[0]?.imageUrl||IMAGE_ERROR_FALLBACK),title=storyEscapeHtml(item.title||`Глава ${index+1}`),eventId=storyEscapeHtml(item.eventId||"");
+      const reward=item.reward?`<span class="season-story-reward-chip">${prizeIconMarkup()}<span>${storyEscapeHtml(item.reward.title||"Награда")}</span></span>`:"";
+      return `<article class="season-story-archive-item"><img class="season-story-archive-thumb" src="${image}" alt=""><div class="season-story-archive-copy"><span class="season-story-archive-number">ГЛАВА ${index+1}</span><b>${title}</b><div class="season-story-archive-meta"><span>Уровень ${Number(item.unlockLevel||1)}</span><span>${pages.length} стр.</span><span class="is-read">✓ Прочитано</span></div>${reward}</div><button type="button" data-story-archive-event="${eventId}">Читать</button></article>`;
+    }).join("");
+    el("seasonStoryArchiveList").querySelectorAll("[data-story-archive-event]").forEach(button=>button.addEventListener("click",()=>{const item=archive.find(x=>String(x.eventId)===String(button.dataset.storyArchiveEvent));closeSeasonStoryArchive();showSeasonStoryEvent(item,{pending:false});}));
+    el("seasonStoryArchiveOverlay").hidden=false;document.body.style.overflow="hidden";passSelectHaptic();
+  }
+  function renderSeasonStory(){
+    const story=seasonStoryData(),pending=story?.pending||null,archive=Array.isArray(story?.archive)?story.archive:[],card=el("seasonStoryCard");if(!card)return;
+    const visible=Boolean(pending||archive.length);card.hidden=!visible;if(!visible)return;
+    el("seasonStoryCardTitle").textContent=pending?(pending.title||"Новая глава доступна"):"История сезона";
+    el("seasonStoryCardPreview").innerHTML=pending?`Доступна сейчас · уровень ${Number(pending.unlockLevel||1)} · ${storyPages(pending).length} стр.${pending.reward?` <span class="season-story-card-reward">${prizeIconMarkup()} ${storyEscapeHtml(pending.reward.title||"Награда")}</span>`:""}`:`Прочитано глав: ${archive.length}`;
+    el("seasonStoryOpen").hidden=!pending;el("seasonStoryArchive").hidden=!archive.length;
+  }
 
   function isSeasonalCaseRetryableError(error){const status=Number(error?.status||0);if(error?.pending||error?.timeout||error?.code==="REQUEST_TIMEOUT"||!status||status>=500)return true;if(status!==409)return false;return /состояние кейса изменилось|открытие было восстановлено|уже открывается|повторите открытие/i.test(String(error?.message||""));}
   function seasonalCaseOpenImageFallback(closedUrl=""){
@@ -8642,17 +8661,41 @@ let taskInfoMotion = null;
 .topbar>.title{grid-column:2!important;min-width:0!important}
 .topbar>.zgt-launch{grid-column:3!important;justify-self:end!important;margin:0!important}
 
-/* Mobile season story card is intentionally centered; hidden actions no longer leave a half-width button. */
-@media(max-width:520px){
-  .season-story-card{grid-template-columns:1fr!important;justify-items:center!important;text-align:center!important;padding:15px 14px!important}
-  .season-story-icon{width:56px!important;height:56px!important}
-  .season-story-copy{width:100%!important;min-width:0!important;text-align:center!important}
-  .season-story-copy b{font-size:14px!important}
-  .season-story-copy span{max-width:330px!important;margin:4px auto 0!important}
-  .season-story-actions{grid-column:1!important;display:flex!important;justify-content:center!important;width:100%!important;gap:8px!important}
-  .season-story-actions button:not([hidden]){display:flex!important;align-items:center!important;justify-content:center!important;width:min(100%,330px)!important;min-height:42px!important}
-  .season-story-actions button[hidden]{display:none!important}
-}
+/* Season story: artwork stays on the left, copy owns the center, actions live below. */
+.season-story-card{grid-template-columns:64px minmax(0,1fr)!important;grid-template-areas:"story-icon story-copy" "story-actions story-actions"!important;align-items:center!important;gap:12px 14px!important;padding:15px!important;border-radius:22px!important;background:radial-gradient(circle at 10% 15%,rgba(255,255,255,.98),rgba(255,255,255,0) 32%),linear-gradient(145deg,#fffafd 0,#f7efff 55%,#fff8fb 100%)!important;box-shadow:0 10px 28px rgba(95,62,120,.09)!important}
+.season-story-icon{grid-area:story-icon!important;width:64px!important;height:64px!important;border-radius:19px!important;background:linear-gradient(145deg,#fff,#eee2ff)!important;box-shadow:inset 0 0 0 1px rgba(141,91,177,.08)!important}
+.season-story-icon img{display:block!important;width:56px!important;height:56px!important;object-fit:contain!important}
+.season-story-copy{grid-area:story-copy!important;min-width:0!important;width:100%!important;text-align:center!important;padding-right:4px!important}
+.season-story-copy b{font-size:15px!important;line-height:1.22!important}
+.season-story-copy span{max-width:360px!important;margin:5px auto 0!important;font-size:10px!important;line-height:1.42!important}
+.season-story-card-reward{display:inline-flex!important;align-items:center!important;gap:4px!important;white-space:normal!important}
+.season-story-actions{grid-area:story-actions!important;display:flex!important;justify-content:center!important;flex-wrap:wrap!important;width:100%!important;gap:8px!important;margin-top:1px!important}
+.season-story-actions button:not([hidden]){display:flex!important;align-items:center!important;justify-content:center!important;flex:1 1 145px!important;min-height:42px!important;max-width:100%!important;border-radius:13px!important;font-size:10px!important}
+.season-story-actions button[hidden]{display:none!important}
+
+.season-story-archive-overlay{align-items:end!important;padding:0!important;background:rgba(47,31,55,.42)!important;backdrop-filter:blur(10px)!important}
+.season-story-archive-sheet{width:min(520px,100%)!important;max-height:min(82dvh,760px)!important;border-radius:30px 30px 0 0!important;padding:8px 16px max(18px,env(safe-area-inset-bottom))!important;background:linear-gradient(180deg,#fffdfd 0,#faf4ff 100%)!important;box-shadow:0 -18px 60px rgba(53,30,64,.22)!important}
+.season-story-archive-sheet:before{content:"";display:block;width:38px;height:4px;margin:2px auto 14px;border-radius:999px;background:#dec8d7}
+.season-story-archive-head{align-items:flex-start!important;margin-bottom:14px!important}
+.season-story-archive-heading{min-width:0}
+.season-story-archive-heading>span{display:block;color:#aa7ab6;font-size:9px;font-weight:950;letter-spacing:.1em}
+.season-story-archive-heading h2{margin:3px 0 0!important;font-size:24px!important;line-height:1.08!important}
+.season-story-archive-heading p{margin:6px 0 0;color:#9c849f;font-size:10px;font-weight:800}
+.season-story-archive-close{width:42px!important;height:42px!important;border-radius:14px!important;font-size:21px!important;flex:0 0 auto}
+.season-story-archive-list{gap:10px!important}
+.season-story-archive-item{display:grid!important;grid-template-columns:70px minmax(0,1fr)!important;grid-template-areas:"archive-thumb archive-copy" "archive-button archive-button"!important;gap:10px 12px!important;align-items:center!important;padding:11px!important;border:1px solid rgba(151,111,190,.19)!important;border-radius:20px!important;background:rgba(255,255,255,.94)!important;box-shadow:0 7px 20px rgba(90,58,105,.06)!important}
+.season-story-archive-thumb{grid-area:archive-thumb!important;width:70px!important;height:70px!important;object-fit:cover!important;border-radius:16px!important;background:#f3ebf7!important}
+.season-story-archive-copy{grid-area:archive-copy!important;min-width:0!important}
+.season-story-archive-number{margin:0 0 3px!important;color:#b17fbd!important;font-size:8px!important;font-weight:950!important;letter-spacing:.08em!important}
+.season-story-archive-copy>b{display:block!important;color:#67496d!important;font-size:12px!important;line-height:1.25!important}
+.season-story-archive-meta{display:flex!important;flex-wrap:wrap!important;gap:5px!important;margin-top:7px!important}
+.season-story-archive-meta>span{display:inline-flex!important;align-items:center!important;margin:0!important;padding:4px 7px!important;border-radius:999px!important;background:#f6eff8!important;color:#8b718f!important;font-size:8px!important;font-weight:850!important;line-height:1!important}
+.season-story-archive-meta>span.is-read{background:#eef8f0!important;color:#65906d!important}
+.season-story-reward-chip{display:inline-flex!important;align-items:center!important;gap:5px!important;width:max-content!important;max-width:100%!important;margin-top:7px!important;padding:5px 8px!important;border-radius:10px!important;background:#fff8e9!important;color:#8e6a38!important;font-size:8px!important;font-weight:850!important;line-height:1.2!important}
+.season-story-reward-chip .inline-prize-icon{width:1em!important;height:1em!important;max-width:14px!important;max-height:14px!important}
+.season-story-archive-item>button{grid-area:archive-button!important;width:100%!important;min-height:40px!important;border-radius:12px!important;background:linear-gradient(145deg,#efe2f5,#e6d5ee)!important;color:#6d4f79!important;font-size:10px!important;font-weight:950!important}
+@media(min-width:521px){.season-story-archive-item{grid-template-columns:72px minmax(0,1fr) 92px!important;grid-template-areas:"archive-thumb archive-copy archive-button"!important}.season-story-archive-item>button{align-self:stretch!important}}
+@media(max-width:520px){.season-story-card{grid-template-columns:58px minmax(0,1fr)!important;padding:14px!important;gap:10px 12px!important}.season-story-icon{width:58px!important;height:58px!important}.season-story-icon img{width:52px!important;height:52px!important}.season-story-copy b{font-size:14px!important}.season-story-copy span{font-size:9px!important}.season-story-actions button:not([hidden]){min-height:42px!important}}
 /* v5 reward rail: a clipped transform viewport, not a native scroll area.
    This preserves smooth touch momentum while making blank-space overscroll
    structurally impossible in iOS Telegram WebView. */

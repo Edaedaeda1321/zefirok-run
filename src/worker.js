@@ -7424,8 +7424,11 @@ async function getGameStartupPackage(request, env, ctx = null) {
     const flags = flagsResult.status === "fulfilled" ? flagsResult.value : null;
     const news = newsResult.status === "fulfilled" ? newsResult.value : null;
     const gifts = giftsResult.status === "fulfilled" ? giftsResult.value : null;
-    const miniGameVisuals = miniGameVisualResult.status === "fulfilled" ? miniGameVisualResult.value : seasonPassResolveMiniGameVisuals([], '');
-    const miniGameVisual = miniGameVisuals.treats;
+    // Mini-game story visuals are optional at startup. A timeout must never be
+    // interpreted as an authoritative reset to the default Zeffi collectible.
+    // Only send the fields when the authoritative read actually completed.
+    const miniGameVisuals = miniGameVisualResult.status === "fulfilled" ? miniGameVisualResult.value : null;
+    const miniGameVisual = miniGameVisuals?.treats || null;
     const accountRevision = accountRevisionResult?.status === "fulfilled" ? Math.max(0, Number(accountRevisionResult.value || 0)) : 0;
     const liveOpsEvent = liveOpsEventResult?.status === "fulfilled" ? liveOpsEventResult.value : {active:false,multipliers:{pointsMultiplier:1,treatsMultiplier:1,coffeeMultiplier:1}};
     const newcomerPath = newcomerPathResult?.status === "fulfilled" ? newcomerPathResult.value : {available:false,dayNumber:0,runs:0,steps:[]};
@@ -7458,8 +7461,7 @@ async function getGameStartupPackage(request, env, ctx = null) {
       seasonPassTaskNotice,
       news,
       gifts,
-      miniGameVisual,
-      miniGameVisuals,
+      ...(miniGameVisuals ? { miniGameVisual, miniGameVisuals } : {}),
       accountRevision,
       liveOpsEvent,
       newcomerPath,
@@ -15401,6 +15403,94 @@ function storySeasonMenuMarkup() {
   ] };
 }
 
+function botSeasonTwoStoryChapterName(title, chapterNumber) {
+  const cleaned = String(title || '')
+    .replace(/^\s*(?:ГЛАВА\s+[IVXLCDM]+|ФИНАЛ\s+СЕЗОНА)\s*[—–-]*\s*/iu, '')
+    .replace(/[«»]/g, '')
+    .trim();
+  return cleaned || `Глава ${chapterNumber}`;
+}
+
+async function botSeasonTwoStoryState(env, telegramId) {
+  requireDatabase(env);
+  const playerId = String(telegramId || '').trim();
+  if (!playerId) return { seasonId:'', title:'Ночь сладких чудес', chapters:[], all:[], nextLocked:null };
+
+  const preset = await env.DB.prepare(`SELECT p.season_id,s.title
+    FROM season_pass_story_presets p
+    LEFT JOIN season_pass_seasons s ON s.season_id=p.season_id
+    WHERE p.preset_id=? LIMIT 1`).bind(SEASON2_STORY_PRESET.id).first();
+  const seasonId = String(preset?.season_id || '');
+  if (!seasonId) return { seasonId:'', title:'Ночь сладких чудес', chapters:[], all:[], nextLocked:null };
+
+  const rows = (await env.DB.prepare(`SELECT e.*,COALESCE(p.seen_at,0) AS seen_at,COALESCE(p.completed_at,0) AS completed_at
+    FROM season_pass_story_events e
+    LEFT JOIN season_pass_story_progress p ON p.event_id=e.event_id AND p.telegram_id=?
+    WHERE e.season_id=?
+    ORDER BY e.unlock_level,e.sort_order,e.created_at,e.event_id`).bind(playerId,seasonId).all()).results || [];
+  // Keep already opened chapters in the bot even if an operator later disables
+  // the event. Unseen disabled drafts remain invisible and do not affect numbering.
+  const visibleRows=rows.filter(row=>Number(row.enabled||0)===1||Number(row.seen_at||0)>0||Number(row.completed_at||0)>0);
+  const all = visibleRows.map((row,index) => {
+    const event = seasonPassStoryEventView(row);
+    return { ...event, chapterNumber:index + 1, opened:Number(row.seen_at || 0) > 0 || Number(row.completed_at || 0) > 0 };
+  });
+  return {
+    seasonId,
+    title:String(preset?.title || 'Ночь сладких чудес'),
+    all,
+    chapters:all.filter(item => item.opened),
+    nextLocked:all.find(item => item.enabled && !item.opened) || null
+  };
+}
+
+function storySeasonTwoMenuMarkup(state) {
+  const rows = (Array.isArray(state?.chapters) ? state.chapters : []).map(item => [{
+    text:`🌙 Глава ${item.chapterNumber} · ${botSeasonTwoStoryChapterName(item.title,item.chapterNumber)}`.slice(0,60),
+    callback_data:`story:s2:${item.chapterNumber}:1`
+  }]);
+  rows.push([{ text:'← Все сезоны', callback_data:'menu:story' }]);
+  rows.push([{ text:'🏠 Главное меню', callback_data:'menu:home' }]);
+  return { inline_keyboard:rows };
+}
+
+function storySeasonTwoChapterMarkup(state, chapterNumber, pageNumber) {
+  const chapter = state?.all?.[Math.max(0,Number(chapterNumber || 1) - 1)] || null;
+  const pages = Array.isArray(chapter?.pages) && chapter.pages.length ? chapter.pages : [{title:'',bodyText:''}];
+  const page = Math.max(1,Math.min(pages.length,Number(pageNumber || 1)));
+  const nav = [];
+  if (page > 1) nav.push({ text:'⬅️', callback_data:`story:s2:${chapterNumber}:${page - 1}` });
+  if (page < pages.length) nav.push({ text:'➡️', callback_data:`story:s2:${chapterNumber}:${page + 1}` });
+  const rows=[];
+  if(nav.length)rows.push(nav);
+  rows.push([{ text:'📚 Главы Сезона II', callback_data:'story:2' }]);
+  rows.push([{ text:'← Все сезоны', callback_data:'menu:story' },{ text:'🏠 Главное меню', callback_data:'menu:home' }]);
+  return { inline_keyboard:rows };
+}
+
+async function showBotSeasonTwoStory(chatId,user,env) {
+  const telegramId=String(user?.id || '');
+  const state=await botSeasonTwoStoryState(env,telegramId);
+  const opened=state.chapters.length;
+  const next=state.nextLocked;
+  const status = opened
+    ? `\n\n<b>Открыто в игре:</b> ${opened} ${opened===1?'глава':opened>=2&&opened<=4?'главы':'глав'}. Выберите главу ниже — здесь сохраняются только главы, которые вы уже открывали в сезонном пропуске.`
+    : `\n\nПока здесь нет открытых глав. Откройте первую доступную главу в сезонном пропуске — после этого она появится в боте.`;
+  const nextLine = next ? `\n\n<i>Следующая глава откроется в игре на уровне ${Number(next.unlockLevel || 1)}.</i>` : '';
+  await sendTelegramMessage(env,chatId,`${botStorySeasonText('2')}${status}${nextLine}`,storySeasonTwoMenuMarkup(state));
+}
+
+async function showBotSeasonTwoStoryChapter(chatId,user,env,chapterNumber,pageNumber) {
+  const state=await botSeasonTwoStoryState(env,String(user?.id || ''));
+  const index=Math.max(0,Number(chapterNumber || 1)-1),chapter=state.all[index];
+  if(!chapter || !chapter.opened)throw new ApiError(409,'Эта глава ещё не открыта в сезонном пропуске.');
+  const pages=Array.isArray(chapter.pages)&&chapter.pages.length?chapter.pages:[{title:'',bodyText:chapter.bodyText||''}];
+  const pageNumberSafe=Math.max(1,Math.min(pages.length,Number(pageNumber || 1))),page=pages[pageNumberSafe-1]||{};
+  const title=String(page.title||chapter.title||`Глава ${chapter.chapterNumber}`),rawBody=String(page.bodyText||chapter.bodyText||''),body=rawBody.length>3200?`${rawBody.slice(0,3200)}…`:rawBody;
+  const text=`<b>🌙 Глава ${chapter.chapterNumber} · ${escapeHtml(botSeasonTwoStoryChapterName(chapter.title,chapter.chapterNumber))}</b>\n\n${page.title?`<b>${escapeHtml(title)}</b>\n\n`:''}${escapeHtml(body)}\n\n<i>Сезон II · страница ${pageNumberSafe}/${pages.length}</i>`;
+  await sendTelegramMessage(env,chatId,text,storySeasonTwoChapterMarkup(state,chapter.chapterNumber,pageNumberSafe));
+}
+
 function botFaqText() {
   return `<b>❓ FAQ — Сладкий Забег ${escapeHtml(GAME_VERSION)}</b>\n\nЗдесь собраны актуальные правила основных систем игры: прогресс, ежедневная активность, сезоны, рейтинг, награды, коллекции и друзья.\n\nДаты сезонов, цены, состав наград, лимиты и отдельные условия событий могут меняться. <b>Актуальные значения всегда показывает сама игра.</b>\n\nВыберите тему ниже.`;
 }
@@ -15654,6 +15744,22 @@ async function handleMenuCallback(query, env) {
     return true;
   }
 
+  const seasonTwoChapterMatch = String(query.data || "").match(/^story:s2:(\d{1,2})(?::(\d{1,2}))?$/);
+  if (seasonTwoChapterMatch) {
+    const message=query.message;
+    if(!message?.chat?.id){await answerCallback(env,query.id,'Откройте сюжет командой /story.');return true;}
+    const chapter=Math.max(1,Number(seasonTwoChapterMatch[1]||1)),page=Math.max(1,Number(seasonTwoChapterMatch[2]||1));
+    try{
+      await answerCallback(env,query.id,`Открываю главу ${chapter}`);
+      await showBotSeasonTwoStoryChapter(message.chat.id,query.from,env,chapter,page);
+    }catch(error){
+      const text=error instanceof ApiError?error.message:'Не удалось открыть главу.';
+      await answerCallback(env,query.id,text,true).catch(()=>{});
+      await showBotSeasonTwoStory(message.chat.id,query.from,env).catch(()=>{});
+    }
+    return true;
+  }
+
   const storyMatch = String(query.data || "").match(/^story:(1|2)$/);
   if (storyMatch) {
     const message = query.message;
@@ -15664,7 +15770,7 @@ async function handleMenuCallback(query, env) {
       return true;
     }
     await answerCallback(env, query.id, "Открываю Сезон II");
-    await sendTelegramMessage(env, message.chat.id, botStorySeasonText("2"), storySeasonMenuMarkup());
+    await showBotSeasonTwoStory(message.chat.id, query.from, env);
     return true;
   }
 
@@ -32781,7 +32887,7 @@ function seasonPassResolveMiniGameVisual(rows,seasonId,target='treats',seenEvent
 function seasonPassResolveMiniGameTreatVisual(rows,seasonId,seenEventIds=null){return seasonPassResolveMiniGameVisual(rows,seasonId,'treats',seenEventIds);}
 function seasonPassResolveMiniGameVisuals(rows,seasonId,seenEventIds=null){return {treats:seasonPassResolveMiniGameVisual(rows,seasonId,'treats',seenEventIds),coffee:seasonPassResolveMiniGameVisual(rows,seasonId,'coffee',seenEventIds)};}
 async function seasonPassMiniGameVisualsForPlayer(env,telegramId,nowMs=Date.now()){
-  requireDatabase(env);await ensureSeasonPassSchema(env);
+  requireDatabase(env);
   const row=await selectSeasonPassSeasonRow(env,nowMs);
   if(!row)return seasonPassResolveMiniGameVisuals([],'');
   const fallback=configuredSeasonPassState(env,nowMs),season=seasonPassSeasonFromRow(row,fallback,nowMs),seasonId=String(season?.id||row?.season_id||'');
@@ -44905,6 +45011,31 @@ function albumOwnedSet(raw,defaults=[]){
   return set;
 }
 
+const ALBUM_CATALOG_TIMEOUT_MS = 1100;
+function albumCatalogFallbackSnapshot(){
+  const map=new Map();
+  for(const kind of ALBUM_ITEM_KINDS){
+    const catalog=seasonPassAnyCosmeticCatalog(kind)||{};
+    for(const [itemId,item] of Object.entries(catalog)){
+      const future=Boolean(futureSeasonContentItem(kind,itemId));
+      map.set(albumItemKey(kind,itemId),{
+        kind,itemId,title:String(item?.title||itemId),rarity:String(item?.rarity||'common'),imageUrl:seasonPassCosmeticImage(kind,itemId),
+        enabled:!future,future,released:!future,deliverable:true,audioUrl:String(item?.audioUrl||item?.src||'')
+      });
+    }
+  }
+  return map;
+}
+function withAlbumCatalogTimeout(promise,timeoutMs=ALBUM_CATALOG_TIMEOUT_MS){
+  return Promise.race([
+    promise,
+    new Promise(resolve=>setTimeout(()=>resolve(albumCatalogFallbackSnapshot()),timeoutMs))
+  ]).catch(error=>{
+    console.error('album catalog metadata unavailable',error?.message||error);
+    return albumCatalogFallbackSnapshot();
+  });
+}
+
 async function albumCatalogSnapshot(env) {
   // The public Album must not pay the cost of the full admin schema ensure on each isolate.
   // Production normally already has this table; only fall back to the legacy ensure if it is missing.
@@ -45126,15 +45257,16 @@ async function albumAcquisitionSources(env) {
 }
 
 async function albumPlayerState(env,telegramId){
-  await ensureAlbumSchema(env);await ensureCasePlayerState(env,String(telegramId),{}, { skipProfile:true, allowLegacyRecovery:false });
+  requireDatabase(env);await ensureCasePlayerState(env,String(telegramId),{}, { skipProfile:true, allowLegacyRecovery:false });
   const acquisitionPromise=withAlbumAcquisitionTimeout(albumAcquisitionSources(env));
+  const catalogPromise=withAlbumCatalogTimeout(albumCatalogSnapshot(env));
   const [collectionsRes,itemsRes,milestonesRes,claimsRes,caseState,catalog,acquisition]=await Promise.all([
     env.DB.prepare(`SELECT * FROM album_collections WHERE status='published' ORDER BY sort_order ASC,published_at ASC,collection_id ASC`).all(),
     env.DB.prepare(`SELECT i.* FROM album_collection_items i JOIN album_collections c ON c.collection_id=i.collection_id WHERE c.status='published' ORDER BY i.collection_id,i.sort_order,i.item_kind,i.item_id`).all(),
     env.DB.prepare(`SELECT m.* FROM album_milestones m JOIN album_collections c ON c.collection_id=m.collection_id WHERE c.status='published' AND m.enabled=1 ORDER BY m.collection_id,m.threshold_percent,m.sort_order,m.milestone_id`).all(),
     env.DB.prepare(`SELECT * FROM album_milestone_claims WHERE telegram_id=?`).bind(String(telegramId)).all(),
     env.DB.prepare(`SELECT owned_avatars_json,owned_frames_json,owned_trails_json,owned_skins_json,owned_music_json FROM case_player_state WHERE telegram_id=? LIMIT 1`).bind(String(telegramId)).first(),
-    albumCatalogSnapshot(env),acquisitionPromise
+    catalogPromise,acquisitionPromise
   ]);
   const owned={
     avatar:albumOwnedSet(caseState?.owned_avatars_json),frame:albumOwnedSet(caseState?.owned_frames_json),trail:albumOwnedSet(caseState?.owned_trails_json),
