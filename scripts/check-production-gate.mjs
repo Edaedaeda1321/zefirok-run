@@ -7,6 +7,7 @@ const skipD1=process.argv.includes('--skip-d1');
 const steps=[
   ['repository hygiene','node',['scripts/check-repo-hygiene.mjs']],
   ['worker syntax','node',['--check','src/worker.js']],
+  ['index srcdoc integrity','node',['scripts/check-index-srcdoc.mjs']],
   ['migration history','node',['scripts/check-migrations.mjs']],
   ['schema contract','node',['scripts/check-database-schema.mjs','--contract-only']],
   ['deploy assets','node',['scripts/check-deploy-assets.mjs']],
