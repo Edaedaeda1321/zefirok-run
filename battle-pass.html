@@ -5444,18 +5444,26 @@ img[src$="/xp.webp"]{
         ${rewardCellMarkup(itemLevel,"premium",reward.premium)}
       </section>`;
     }).join("");
-    el("rewardTrack").innerHTML = levelColumns + overflowRewardColumnMarkup() + '<div class="reward-track-end-spacer" aria-hidden="true"></div>';
-    syncRewardTrackEndSpacer();
+    el("rewardTrack").innerHTML = levelColumns + overflowRewardColumnMarkup();
+    requestAnimationFrame(()=>clampRewardScroll());
   }
 
-  function syncRewardTrackEndSpacer() {
-    const scroll=el("rewardScroll"),spacer=el("rewardTrack")?.querySelector?.(".reward-track-end-spacer");
-    if(!scroll||!spacer)return;
-    const overflowColumn=el("rewardTrack")?.querySelector?.(".overflow-reward-column");
-    const columnWidth=Math.max(0,Number(overflowColumn?.offsetWidth)||124);
-    spacer.style.flex=`0 0 ${Math.max(0,Math.round((scroll.clientWidth-columnWidth)/2))}px`;
+  function rewardScrollMaxLeft(scroll=el("rewardScroll")) {
+    if (!scroll) return 0;
+    return Math.max(0, scroll.scrollWidth - scroll.clientWidth);
   }
-  window.addEventListener("resize",syncRewardTrackEndSpacer,{passive:true});
+
+  function clampRewardScroll(nextLeft = null) {
+    const scroll = el("rewardScroll");
+    if (!scroll) return 0;
+    const maxLeft = rewardScrollMaxLeft(scroll);
+    const raw = nextLeft == null ? Number(scroll.scrollLeft)||0 : Number(nextLeft)||0;
+    const clamped = Math.max(0, Math.min(maxLeft, raw));
+    if (Math.abs((Number(scroll.scrollLeft)||0) - clamped) > 0.5) scroll.scrollLeft = clamped;
+    return clamped;
+  }
+
+  window.addEventListener("resize",()=>requestAnimationFrame(()=>clampRewardScroll()),{passive:true});
 
   function updateNavigator(level) {
     selectedLevel = Math.max(1,Math.min(MAX_LEVEL+1,Number(level)||1));
@@ -5479,8 +5487,8 @@ img[src$="/xp.webp"]{
     const target = document.querySelector(`[data-level-column="${targetLevel}"]`);
     if (!target) return;
     const scroll = el("rewardScroll");
-    syncRewardTrackEndSpacer();
-    const left = Math.max(0,target.offsetLeft - Math.max(0,(scroll.clientWidth-target.offsetWidth)/2));
+    const desiredLeft = Math.max(0,target.offsetLeft - Math.max(0,(scroll.clientWidth-target.offsetWidth)/2));
+    const left = Math.min(rewardScrollMaxLeft(scroll), desiredLeft);
     suppressScrollSync = true;
     updateNavigator(targetLevel);
     scroll.scrollTo({left,behavior});
@@ -6929,7 +6937,36 @@ img[src$="/xp.webp"]{
   el("levelSlider").addEventListener("touchend",finishSliderInteraction,{passive:true});
   el("levelSlider").addEventListener("blur",finishSliderInteraction);
 
-  el("rewardScroll").addEventListener("scroll",()=>{
+  const rewardScroll = el("rewardScroll");
+  let rewardTouchStartX = 0;
+  let rewardTouchStartY = 0;
+  rewardScroll.addEventListener("touchstart",event=>{
+    const touch=event.touches?.[0];
+    rewardTouchStartX=Number(touch?.clientX)||0;
+    rewardTouchStartY=Number(touch?.clientY)||0;
+    clampRewardScroll();
+  },{passive:true});
+  rewardScroll.addEventListener("touchmove",event=>{
+    const touch=event.touches?.[0];
+    if(!touch)return;
+    const dx=(Number(touch.clientX)||0)-rewardTouchStartX;
+    const dy=(Number(touch.clientY)||0)-rewardTouchStartY;
+    if(Math.abs(dx)<=Math.abs(dy))return;
+    const maxLeft=rewardScrollMaxLeft(rewardScroll);
+    const current=Math.max(0,Math.min(maxLeft,Number(rewardScroll.scrollLeft)||0));
+    const pullingPastStart=current<=0.5&&dx>0;
+    const pullingPastEnd=current>=maxLeft-0.5&&dx<0;
+    if(pullingPastStart||pullingPastEnd){
+      event.preventDefault();
+      if(Math.abs((Number(rewardScroll.scrollLeft)||0)-current)>0.5)rewardScroll.scrollLeft=current;
+    }
+  },{passive:false});
+  rewardScroll.addEventListener("touchend",()=>clampRewardScroll(),{passive:true});
+  rewardScroll.addEventListener("touchcancel",()=>clampRewardScroll(),{passive:true});
+  rewardScroll.addEventListener("scroll",()=>{
+    const maxLeft=rewardScrollMaxLeft(rewardScroll);
+    const raw=Number(rewardScroll.scrollLeft)||0;
+    if(raw<0||raw>maxLeft){clampRewardScroll(raw);return;}
     if (suppressScrollSync || sliderInteracting) return;
     cancelAnimationFrame(scrollFrame);
     scrollFrame = requestAnimationFrame(()=>{
@@ -7954,7 +7991,7 @@ let taskInfoMotion = null;
   .season-story-actions button:not([hidden]){display:flex!important;align-items:center!important;justify-content:center!important;width:min(100%,330px)!important;min-height:42px!important}
   .season-story-actions button[hidden]{display:none!important}
 }
-.reward-track-end-spacer{display:block;height:1px;pointer-events:none;flex:none}
+.reward-scroll{overscroll-behavior-x:none!important}
 </style>
 
 
