@@ -18166,6 +18166,7 @@ function createTutorialDeck(layer, mount, options, words) {
 
       function runResultsFrame(context, bodyMarkup, className = &quot;&quot;) {
         const skinId = normalizeRunSkinId(context?.skinId || state.runSkinId);
+        const character = runCharacterProfile(skinId);
         overlay.classList.remove(&quot;is-finish-modal&quot;, &quot;is-second-chance-modal&quot;, &quot;is-pause-modal&quot;);
         overlay.classList.add(&quot;is-run-results-modal&quot;);
         overlay.onclick = (event) =&gt; event.stopPropagation();
@@ -18178,6 +18179,7 @@ function createTutorialDeck(layer, mount, options, words) {
       }
       function runResultsHeader(context, title, phrase, kicker = &quot;\u0420\u0435\u0437\u0443\u043b\u044c\u0442\u0430\u0442 \u0437\u0430\u0431\u0435\u0433\u0430&quot;) {
         const skinId = normalizeRunSkinId(context?.skinId || state.runSkinId);
+        const character = runCharacterProfile(skinId);
         const chip = character.premium ? `&lt;span class=&quot;run-overlay-chip is-premium&quot;&gt;${runResultIconMarkup(RUN_RESULT_ICONS.character, &quot;is-chip&quot;)}\u041e\u0441\u043e\u0431\u044b\u0439 \u043f\u0435\u0440\u0441\u043e\u043d\u0430\u0436 \u00b7 ${character.name}&lt;/span&gt;` : `&lt;span class=&quot;run-overlay-chip&quot;&gt;${runUiEscape(kicker)}&lt;/span&gt;`;
         return `&lt;div class=&quot;run-results-head&quot;&gt;&lt;div class=&quot;run-character-portrait&quot;&gt;${runDogPortraitMarkup(skinId)}&lt;/div&gt;&lt;div class=&quot;run-results-copy&quot;&gt;&lt;div class=&quot;run-overlay-kicker&quot;&gt;${chip}&lt;/div&gt;&lt;strong&gt;${runUiEscape(title)}&lt;/strong&gt;&lt;p&gt;${runUiEscape(phrase)}&lt;/p&gt;&lt;/div&gt;&lt;/div&gt;`;
       }
@@ -18230,6 +18232,7 @@ function createTutorialDeck(layer, mount, options, words) {
       function renderRunResultsSettled(payload, context) {
         const settlement = payload?.runSettlement || {};
         const skinId = normalizeRunSkinId(settlement.skinId || context.skinId);
+        const character = runCharacterProfile(skinId);
         context.skinId = skinId;
         state.runSkinId = skinId;
         const score = Math.max(0, Number(settlement?.raw?.score ?? context.score));
@@ -18318,15 +18321,25 @@ function createTutorialDeck(layer, mount, options, words) {
           setStartButtonVisual(&quot;restart&quot;, false);
           updateHud();
           saveProgress();
-          showRunResultsPending(resultContext);
+          // Result UI must never block the authoritative settlement. A rendering
+          // regression previously threw here before submitLeaderboardRun() was
+          // reached, which simultaneously hid the finish window and dropped the
+          // run from rating/profile persistence.
+          try { showRunResultsPending(resultContext); }
+          catch (resultUiError) { console.error(&quot;Run result pending UI failed&quot;, resultUiError); }
           void submitLeaderboardRun(earned, state.time, null, { treats: earnedTreats, coffee: earnedCoffee, newRecord: isNewRecord, profileXpAwarded: runXpEarned }, {
             silent:true,
             onSettled:(payload, error) =&gt; {
               if (String(resultContext.runId || &quot;&quot;) !== String(state.caseRunId || &quot;&quot;)) return;
-              if (payload?.runSettlement?.accepted) {
-                if (payload.runSettlement.newRecord) { window.setTimeout(() =&gt; hapticNotify(&quot;success&quot;), 80); playGameSound(&quot;newRecord&quot;, 80); }
-                renderRunResultsSettled(payload, resultContext);
-              } else renderRunResultsSyncError(resultContext, error);
+              try {
+                if (payload?.runSettlement?.accepted) {
+                  if (payload.runSettlement.newRecord) { window.setTimeout(() =&gt; hapticNotify(&quot;success&quot;), 80); playGameSound(&quot;newRecord&quot;, 80); }
+                  renderRunResultsSettled(payload, resultContext);
+                } else renderRunResultsSyncError(resultContext, error);
+              } catch (resultUiError) {
+                console.error(&quot;Run result settled UI failed&quot;, resultUiError);
+                showModal(&quot;Забег окончен&quot;, payload?.runSettlement?.accepted ? `Результат сохранён: ${formatter.format(resultContext.score)} очков.` : &quot;Результат сохранён локально и будет синхронизирован повторно.&quot;);
+              }
             }
           });
           if (reachedNewLevel) { playGameSound(&quot;levelUp&quot;, 430); void loadCaseState(true); }
