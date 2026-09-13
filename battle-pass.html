@@ -2180,6 +2180,9 @@ button{-webkit-tap-highlight-color:transparent}
   filter:drop-shadow(0 4px 7px rgba(111,62,53,.15))
 }
 .main-tab span{min-width:0}
+.main-tab-count{display:inline-grid;place-items:center;flex:0 0 auto;min-width:20px;height:20px;padding:0 6px;border-radius:999px;background:#e85b91;color:#fff;font-size:10px;font-weight:1000;line-height:1;box-shadow:0 3px 8px rgba(196,67,117,.18)}
+.main-tab-count[hidden]{display:none!important}
+.main-tab:not(.active) .main-tab-count{background:#f2d9e1;color:#9a5f76;box-shadow:none}
 .section-title-art{
   display:inline-flex;
   align-items:center;
@@ -3644,7 +3647,7 @@ img[src$="/xp.webp"]{
       <img class="preseason-art" src="/assets/season-pass/zaglyshka_season.webp?v=07939" alt="Новый сезон скоро в игре">
     </div>
     <div class="preseason-details">
-      <h2 id="preseasonTitle">Сезон I: Открытие Кафе</h2>
+      <h2 id="preseasonTitle">Новый сезон</h2>
       <p id="preseasonDescription">Сезонный пропуск откроется автоматически в день старта. Возвращайся за первыми наградами!</p>
       <div class="preseason-countdown" aria-label="До начала сезона">
         <div class="preseason-time"><strong id="preDays">00</strong><span>дней</span></div>
@@ -3665,14 +3668,14 @@ img[src$="/xp.webp"]{
 <main class="page" id="seasonPassPage">
   <header class="topbar">
     <button class="back" id="backButton" aria-label="Назад в профиль">←</button>
-    <div class="title"><strong>Сезонный пропуск</strong><span><b class="season-index-mini">Сезон I:</b> <em class="season-name-mini">Открытие Кафе</em></span></div>
+    <div class="title"><strong>Сезонный пропуск</strong><span><b class="season-index-mini">Сезон:</b> <em class="season-name-mini">Загрузка…</em></span></div>
     <button type="button" class="zgt-launch" data-zgt-help aria-label="Как работает этот раздел">?</button>
   </header>
 
   <section class="pass-shell">
     <div class="season-state-banner" id="seasonStateBanner" hidden></div>
     <section class="hero">
-      <h1><span class="season-index">Сезон I:</span> <span class="season-name">Открытие Кафе</span></h1>
+      <h1><span class="season-index">Сезон:</span> <span class="season-name">Загрузка…</span></h1>
       <p>Получай награды, проходи 50 уровней сезона, а после финала продолжай бесконечную дорожку 50+ за золотые кейсы.</p>
       <section class="hero-progress">
         <div class="level-badge-wrap">
@@ -3696,8 +3699,8 @@ img[src$="/xp.webp"]{
 
     <div class="content">
       <nav class="main-tabs" aria-label="Разделы сезонного пропуска">
-        <button class="main-tab active" data-view-tab="rewards" type="button"><img class="main-tab-art" src="/assets/season-pass/season.webp?v=07939" alt=""><span id="rewardsTabLabel">Сезон</span></button>
-        <button class="main-tab" data-view-tab="tasks" type="button"><img class="main-tab-art" src="/assets/season-pass/quest.webp?v=07939" alt=""><span id="tasksTabLabel">Задания</span></button>
+        <button class="main-tab active" data-view-tab="rewards" type="button"><img class="main-tab-art" src="/assets/season-pass/season.webp?v=07939" alt=""><span id="rewardsTabLabel">Сезон</span><b class="main-tab-count" id="rewardsTabCount" hidden>0</b></button>
+        <button class="main-tab" data-view-tab="tasks" type="button"><img class="main-tab-art" src="/assets/season-pass/quest.webp?v=07939" alt=""><span id="tasksTabLabel">Задания</span><b class="main-tab-count" id="tasksTabCount" hidden>0</b></button>
       </nav>
 
       <section class="catchup-card" id="catchUpCard" hidden>
@@ -4335,6 +4338,37 @@ img[src$="/xp.webp"]{
   let serverLoading = false;
   let hostTelegramInitData = "";
 
+  function romanSeasonNumber(value){
+    const roman=String(value||"").trim().toUpperCase();
+    if(!roman||!/^[IVXLCDM]+$/.test(roman))return 0;
+    const map={I:1,V:5,X:10,L:50,C:100,D:500,M:1000};let total=0,prev=0;
+    for(let i=roman.length-1;i>=0;i--){const current=map[roman[i]]||0;if(current<prev)total-=current;else{total+=current;prev=current;}}
+    return total;
+  }
+  function seasonIdentity(){
+    const season=serverPass?.season||{};
+    const raw=String(season.title||"").trim();
+    const id=String(season.id||"").trim();
+    let number=0,name=raw;
+    const titleMatch=raw.match(/(?:сезон|season)\s*([0-9]+|[ivxlcdm]+)/i);
+    if(titleMatch){number=/^\d+$/.test(titleMatch[1])?Number(titleMatch[1]):romanSeasonNumber(titleMatch[1]);name=raw.slice((titleMatch.index||0)+titleMatch[0].length);}
+    if(!number){const idMatch=id.match(/(?:season|сезон)[-_\s]*([0-9]+)/i);if(idMatch)number=Number(idMatch[1])||0;}
+    const lower=`${raw} ${id}`.toLocaleLowerCase("ru-RU");
+    if(!number&&lower.includes("ночь сладких чудес"))number=2;
+    if(!number&&lower.includes("открытие кафе"))number=1;
+    if(!number&&lower.includes("тайны белкино"))number=3;
+    name=String(name||"").replace(/^[\s:·—–-]+/,"").replace(/^[«“"]|[»”"]$/g,"").trim();
+    if(!name){if(number===2)name="Ночь сладких чудес";else if(number===1)name="Открытие Кафе";else name=raw||"Сезонный пропуск";}
+    return {number,name,indexLabel:number?`Сезон ${number}:`:"Сезон:",tabLabel:number?`Сезон ${number}`:"Сезон"};
+  }
+  function applySeasonIdentity(){
+    const identity=seasonIdentity();
+    document.querySelectorAll(".season-index,.season-index-mini").forEach(node=>{node.textContent=identity.indexLabel;});
+    document.querySelectorAll(".season-name,.season-name-mini").forEach(node=>{node.textContent=identity.name;});
+    document.title=`${identity.tabLabel} — ${identity.name} · Сладкий Забег`;
+    return identity;
+  }
+
   function reportSeasonPassNetworkDiagnostic(path, code, reason, durationMs = 0, timeoutMs = 0, serverMs = 0) {
     if (TEST_PROJECT_MODE || !window.parent || window.parent === window) return;
     let endpoint = "";
@@ -4425,11 +4459,31 @@ img[src$="/xp.webp"]{
     } finally { clearTimeout(timer); }
   }
 
+  function canonicalRewardAsset(typeValue,itemIdValue,titleValue="") {
+    const type=String(typeValue||"").trim().toLowerCase();
+    const itemId=String(itemIdValue||"").trim().toLowerCase();
+    if(type==="points")return REWARD_ASSETS.points;
+    if(type==="treats"||type==="zefir")return REWARD_ASSETS.marshmallow;
+    if(type==="coffee")return REWARD_ASSETS.coffee;
+    if(type==="streak_protection")return "/assets/ui/icon_series_protection.webp";
+    if(type==="case"){
+      if(itemId==="legendary")return REWARD_ASSETS.legendaryCase;
+      if(itemId==="mythic")return REWARD_ASSETS.mythicCase;
+      if(itemId==="gold")return REWARD_ASSETS.goldCase;
+      if(itemId==="sweet"||itemId==="silver"||itemId==="bronze")return REWARD_ASSETS.silverCase;
+      if(itemId==="small"||itemId==="standard")return REWARD_ASSETS.standardCase;
+    }
+    return rewardAssetFor(titleValue);
+  }
+
   function rewardTupleFromServer(item) {
     const title = String(item?.title || "Награда");
     const icon = String(item?.rewardType || "");
     const description = item?.lane === "premium" ? "Премиальная линия" : "Бесплатная линия";
-    return [icon,title,description,String(item?.imageUrl || "")];
+    const direct=String(item?.imageUrl||"").trim();
+    const canonical=canonicalRewardAsset(icon,item?.itemId,title);
+    const preferCanonical=["points","treats","zefir","coffee","case","streak_protection"].includes(icon.toLowerCase());
+    return [icon,title,description,preferCanonical?(canonical||direct):(direct||canonical)];
   }
 
   const PASS_LIVEOPS_VISUAL_FALLBACKS=Object.freeze({
@@ -4489,6 +4543,7 @@ img[src$="/xp.webp"]{
       balance:{...(previous.balance||{}),...(data.balance||{})}
     };
     if(data.season?.id&&String(data.season.id)!==String(previous.season?.id)&&!("nextSeason" in data))serverPass.nextSeason=null;
+    applySeasonIdentity();
     applySeasonPassLiveOpsVisuals();
     if (!("rewards" in data) && Array.isArray(previous.rewards)) serverPass.rewards = previous.rewards;
     if (!("tasks" in data) && Array.isArray(previous.tasks)) serverPass.tasks = previous.tasks;
@@ -5289,8 +5344,13 @@ img[src$="/xp.webp"]{
     const taskCount = claimableTasks().length;
     const rewardsLabel = el("rewardsTabLabel");
     const tasksLabel = el("tasksTabLabel");
-    if (rewardsLabel) rewardsLabel.textContent = rewardCount > 0 ? `Сезон · ${rewardCount}` : "Сезон";
-    if (tasksLabel) tasksLabel.textContent = taskCount > 0 ? `Задания · ${taskCount}` : "Задания";
+    const rewardsCount = el("rewardsTabCount");
+    const tasksCount = el("tasksTabCount");
+    const identity=seasonIdentity();
+    if (rewardsLabel) rewardsLabel.textContent = identity.tabLabel;
+    if (tasksLabel) tasksLabel.textContent = "Задания";
+    if (rewardsCount) { rewardsCount.hidden=rewardCount<=0; rewardsCount.textContent=String(rewardCount); rewardsCount.setAttribute("aria-label",`Доступно наград: ${rewardCount}`); }
+    if (tasksCount) { tasksCount.hidden=taskCount<=0; tasksCount.textContent=String(taskCount); tasksCount.setAttribute("aria-label",`Готово заданий: ${taskCount}`); }
     const dailyReset = el("dailyTaskReset");
     const weeklyReset = el("weeklyTaskReset");
     if (dailyReset) dailyReset.textContent = timeUntilLabel(serverPass?.taskPeriods?.daily?.resetAt);
@@ -5315,7 +5375,7 @@ img[src$="/xp.webp"]{
     const label = levelLocked ? "Закрыто" : tierLocked ? "Нужен Элитный" : "Получить";
     const state = claimed ? "✓ Получено" : claimable ? "Можно забрать" : tierLocked ? "Элитный" : `Уровень ${level}`;
     const availability = claimed ? "Награда уже забрана" : claimable ? "Награда открыта" : tierLocked ? "Откроется с премиумом" : `Откроется на ${level} уровне`;
-    const mark = claimed ? "✓" : locked ? `<img class="reward-lock-icon" src="/assets/ui/icon_closed.png" alt="" aria-hidden="true">` : "";
+    const mark = claimed ? "✓" : locked ? `<img class="reward-lock-icon" src="/assets/ui/icon_closed.webp" alt="" aria-hidden="true">` : "";
     return `<article class="reward-cell ${premium?"premium":""} ${unlocked?"unlocked":""} ${claimable?"claimable":""} ${claimed?"claimed":""} ${locked?"locked":""} ${levelLocked?"level-locked":""} ${tierLocked?"tier-locked":""} ${goldReward?"gold-reward":""} ${silverReward?"silver-reward":""}" data-reward-preview="${id}" data-reward-level="${level}" data-reward-lane="${type}" aria-label="${rewardName}. ${availability}">
       <span class="reward-state">${state}</span>
       <div class="reward-icon">
@@ -5870,7 +5930,7 @@ img[src$="/xp.webp"]{
           const overlay = document.createElement("span");
           overlay.className = "reward-unlock-animation";
           overlay.setAttribute("aria-hidden","true");
-          overlay.innerHTML = '<span><img class="reward-unlock-lock" src="/assets/ui/icon_closed.png" alt="" aria-hidden="true"></span>';
+          overlay.innerHTML = '<span><img class="reward-unlock-lock" src="/assets/ui/icon_closed.webp" alt="" aria-hidden="true"></span>';
           cell.append(overlay);
           window.setTimeout(()=>overlay.remove(),940);
         });
@@ -5896,7 +5956,7 @@ img[src$="/xp.webp"]{
   function closeSeasonStory(){stopSeasonStoryMusic();el("seasonStoryOverlay").hidden=true;seasonStoryView=null;if(el("seasonStoryArchiveOverlay").hidden&&el("seasonLetterOverlay").hidden&&el("rewardSummary").hidden&&el("purchaseConfirm").hidden)document.body.style.overflow="";}
   function closeSeasonStoryArchive(){el("seasonStoryArchiveOverlay").hidden=true;if(el("seasonStoryOverlay").hidden&&el("seasonLetterOverlay").hidden&&el("rewardSummary").hidden&&el("purchaseConfirm").hidden)document.body.style.overflow="";}
   function storyPages(item){const pages=Array.isArray(item?.pages)?item.pages:[];if(pages.length)return pages;return [{title:"",bodyText:String(item?.bodyText||""),imageUrl:String(item?.imageUrl||""),buttonText:String(item?.buttonText||"Продолжить"),musicId:"",musicUrl:"",musicTitle:""}];}
-  function renderSeasonStoryPage(){if(!seasonStoryView)return;const item=seasonStoryView.item,pages=storyPages(item),index=Math.max(0,Math.min(pages.length-1,Number(seasonStoryView.index)||0)),page=pages[index];seasonStoryView.index=index;const art=el("seasonStoryArt");if(page.imageUrl){art.src=page.imageUrl;art.hidden=false;}else{art.hidden=true;art.removeAttribute("src");}playSeasonStoryMusic(page.musicUrl||"");el("seasonStoryTitle").textContent=page.title||item.title||"История сезона";const unlockDate=Number(item.unlockAt||0)>0?new Intl.DateTimeFormat("ru-RU",{day:"2-digit",month:"2-digit",year:"numeric",hour:"2-digit",minute:"2-digit",timeZone:"Europe/Moscow"}).format(new Date(Number(item.unlockAt)*1000)):"";el("seasonStoryMeta").textContent=`${item.testMode?"ТЕСТ · ":""}Уровень ${Number(item.unlockLevel||1)}${unlockDate?` · с ${unlockDate}`:""} · страница ${index+1} из ${pages.length}${page.musicTitle?` · 🎵 ${page.musicTitle}`:""}`;el("seasonStoryBody").textContent=String(page.bodyText||"");const rewardBox=el("seasonStoryReward"),reward=item.reward||null,isLast=index===pages.length-1;rewardBox.hidden=!(reward&&isLast);if(reward&&isLast){el("seasonStoryRewardImage").src=reward.imageUrl||IMAGE_ERROR_FALLBACK;el("seasonStoryRewardTitle").textContent=`🎁 ${reward.title||"Награда за завершение"}`;}el("seasonStoryBack").disabled=index===0;el("seasonStoryComplete").hidden=false;el("seasonStoryComplete").textContent=page.buttonText||(index===pages.length-1?(seasonStoryView.pending?"Завершить":"Закрыть"):"Далее");el("seasonStoryComplete").dataset.eventId=seasonStoryView.pending?String(item.eventId||""):"";}
+  function renderSeasonStoryPage(){if(!seasonStoryView)return;const item=seasonStoryView.item,pages=storyPages(item),index=Math.max(0,Math.min(pages.length-1,Number(seasonStoryView.index)||0)),page=pages[index];seasonStoryView.index=index;const art=el("seasonStoryArt");if(page.imageUrl){art.src=page.imageUrl;art.hidden=false;}else{art.hidden=true;art.removeAttribute("src");}playSeasonStoryMusic(page.musicUrl||"");el("seasonStoryTitle").textContent=page.title||item.title||"История сезона";const unlockDate=Number(item.unlockAt||0)>0?new Intl.DateTimeFormat("ru-RU",{day:"2-digit",month:"2-digit",year:"numeric",hour:"2-digit",minute:"2-digit",timeZone:"Europe/Moscow"}).format(new Date(Number(item.unlockAt)*1000)):"";el("seasonStoryMeta").textContent=`${item.testMode?"ТЕСТ · ":""}Уровень ${Number(item.unlockLevel||1)}${unlockDate?` · с ${unlockDate}`:""} · страница ${index+1} из ${pages.length}${page.musicTitle?` · 🎵 ${page.musicTitle}`:""}`;el("seasonStoryBody").textContent=String(page.bodyText||"");const rewardBox=el("seasonStoryReward"),reward=item.reward||null,isLast=index===pages.length-1;rewardBox.hidden=!(reward&&isLast);if(reward&&isLast){const canonical=canonicalRewardAsset(reward.kind,reward.itemId,reward.title);const direct=String(reward.imageUrl||"").trim();const preferCanonical=["points","treats","zefir","coffee","case","streak_protection"].includes(String(reward.kind||"").toLowerCase());el("seasonStoryRewardImage").src=(preferCanonical?(canonical||direct):(direct||canonical))||IMAGE_ERROR_FALLBACK;el("seasonStoryRewardTitle").textContent=`🎁 ${reward.title||"Награда за завершение"}`;}el("seasonStoryBack").disabled=index===0;el("seasonStoryComplete").hidden=false;el("seasonStoryComplete").textContent=page.buttonText||(index===pages.length-1?(seasonStoryView.pending?"Завершить":"Закрыть"):"Далее");el("seasonStoryComplete").dataset.eventId=seasonStoryView.pending?String(item.eventId||""):"";}
   function showSeasonStoryEvent(item,{pending=false}={}){if(!item)return;seasonStoryView={item,pending:Boolean(pending),index:0};renderSeasonStoryPage();el("seasonStoryOverlay").hidden=false;document.body.style.overflow="hidden";passSelectHaptic();}
   async function showPendingSeasonStory(){const pending=seasonStoryData()?.pending;if(!pending)return;try{const data=await seasonPassApi(STORY_OPEN_PATH,{eventId:String(pending.eventId||"")});if(data?.story)serverPass={...(serverPass||{}),story:data.story};if(data?.miniGameVisuals||data?.minigameVisual){try{window.parent?.postMessage?.({type:"zefirok-minigame-visual",visual:data.minigameVisual||data?.miniGameVisuals?.treats||null,visuals:data.miniGameVisuals||null},"*");}catch(error){}}renderSeasonStory();showSeasonStoryEvent(serverPass?.story?.pending||pending,{pending:true});}catch(error){passNotifyHaptic("error");showToast(error.message||"Не удалось открыть историю");}}
   async function loadRequestedStoryTest(){const query=new URLSearchParams(location.search);if(query.get("storyTest")!=="1")return false;const token=String(query.get("storyTestToken")||"").trim();if(!token)return false;try{const data=await seasonPassApi(STORY_TEST_OPEN_PATH,{token});if(!data?.event)throw new Error("Тестовое событие не найдено");showSeasonStoryEvent({...data.event,testMode:true},{pending:false});return true;}catch(error){passNotifyHaptic("error");showToast(error.message||"Не удалось открыть тест сюжета");return false;}}
@@ -5934,6 +5994,7 @@ img[src$="/xp.webp"]{
   async function loadRequestedSeasonLetter(){const query=new URLSearchParams(location.search);if(query.get("letter")!=="1")return false;const requested=String(query.get("letterSeason")||"").trim();if(!requested){if(serverPass?.letter?.available){showSeasonLetter();return true;}return false;}if(String(serverPass?.letter?.seasonId||"")!==requested){try{const data=await seasonPassApi(LETTER_STATE_PATH,{seasonId:requested});if(data?.letter)serverPass={...(serverPass||{}),letter:data.letter};renderSeasonLetter();}catch(error){showToast(error.message||"Не удалось загрузить письмо");return false;}}if(serverPass?.letter?.available){showSeasonLetter();return true;}return false;}
 
   function render() {
+    applySeasonIdentity();
     const real = realRunXp();
     const xp = totalXp();
     const level = currentLevel();

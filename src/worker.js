@@ -30998,7 +30998,9 @@ function seasonPassRewardImage(rowOrType, imageUrlValue = '', itemIdValue = '') 
   const resourceAsset = seasonPassResourceRewardAsset(rewardType);
   if (resourceAsset) return resourceAsset;
   if (rewardType === 'case') {
-    return String(imageUrlValue || row?.image_url || ({small:'/assets/cases/standart_closed.webp',sweet:'/assets/cases/Bronze_close.webp',gold:'/assets/cases/gold_closed.webp',mythic:'/assets/cases/Mifik_case_closed.webp',legendary:'/assets/cases/legendary_closed.webp',alex:'/assets/cases/alex/alex_case_close.webp'})[normalizeCaseType(itemId) || 'small'] || '/assets/cases/standart_closed.webp');
+    const normalizedCase=normalizeCaseType(itemId);
+    const canonical=({small:'/assets/cases/standart_closed.webp',sweet:'/assets/cases/Bronze_close.webp',gold:'/assets/cases/gold_closed.webp',mythic:'/assets/cases/Mifik_case_closed.webp',legendary:'/assets/cases/legendary_closed.webp',alex:'/assets/cases/alex/alex_case_close.webp'})[normalizedCase||''];
+    return String(canonical || imageUrlValue || row?.image_url || '/assets/cases/standart_closed.webp');
   }
   const showcaseStyle = row ? seasonPassShowcaseStyleRewardDefinition(row) : null;
   if(showcaseStyle?.imageUrl)return showcaseStyle.imageUrl;
@@ -32136,6 +32138,12 @@ function seasonPassStoryRewardView(row){
     const future=Boolean(futureSeasonContentItem(reward.kind,reward.itemId));
     if(future&&!liveContentRouteAllowedCached(reward.kind,reward.itemId,'story'))return {kind:'secret',itemId:'',amount:1,title:'Секретная награда сезона',imageUrl:'/assets/season-pass/season.webp?v=07939',future:true};
     return {...reward,title:reward.title||String(item.title||reward.itemId),imageUrl:reward.imageUrl||seasonPassCosmeticImage(reward.kind,reward.itemId)};
+  }
+  if(['points','treats','coffee','case'].includes(reward.kind)){
+    try{
+      const presentation=ownerPanelSeasonPassRewardPresentation(reward.kind,reward.amount,reward.itemId);
+      return {...reward,title:reward.title||String(presentation.title||'Награда'),imageUrl:String(presentation.imageUrl||reward.imageUrl||'')};
+    }catch{}
   }
   return reward;
 }
