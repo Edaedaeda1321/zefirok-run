@@ -12307,9 +12307,36 @@ async function leaderboardRatingRecoveryPolicy(env){
   };
 }
 
+async function leaderboardRecoveryWindow(env,season){
+  const leaderboardStart=Math.max(0,Number(season?.starts_at||0));
+  const leaderboardEnd=Math.max(leaderboardStart+1,Number(season?.ends_at||0));
+  let start=leaderboardStart,end=leaderboardEnd,gameSeasonId=String(season?.game_season_id||'').trim(),gameSeason=null;
+  if(String(season?.rating_kind||'primary')==='primary'){
+    try{
+      await ensureSeasonPassSchema(env);
+      if(gameSeasonId){
+        gameSeason=await env.DB.prepare(`SELECT season_id,title,starts_at,ends_at,manual_status FROM season_pass_seasons WHERE season_id=? LIMIT 1`).bind(gameSeasonId).first();
+      }else{
+        const now=Math.floor(Date.now()/1000);
+        gameSeason=await env.DB.prepare(`SELECT season_id,title,starts_at,ends_at,manual_status FROM season_pass_seasons WHERE starts_at<=? AND ends_at>=? AND manual_status<>'ended' ORDER BY CASE WHEN manual_status='active' THEN 0 ELSE 1 END,starts_at DESC LIMIT 1`).bind(now,now).first();
+        if(gameSeason?.season_id)gameSeasonId=String(gameSeason.season_id);
+      }
+      if(gameSeason){
+        const gs=Math.max(0,Number(gameSeason.starts_at||0)),ge=Math.max(gs+1,Number(gameSeason.ends_at||0));
+        if(gs>0)start=Math.min(start||gs,gs);
+        if(ge>0)end=Math.max(end,ge);
+      }
+    }catch(error){console.error('rating recovery game-season window lookup failed',error);}
+  }
+  return {start,end,leaderboardStart,leaderboardEnd,gameSeasonId,gameSeasonTitle:String(gameSeason?.title||'')};
+}
+
 async function leaderboardRatingFallbackCandidates(env,season,options={}){
   if(!season?.id)return [];
-  const sid=String(season.id),start=Math.max(0,Number(season.starts_at||0)),end=Math.max(start+1,Number(season.ends_at||0));
+  const sid=String(season.id);
+  const fallbackStart=Math.max(0,Number(season.starts_at||0)),fallbackEnd=Math.max(fallbackStart+1,Number(season.ends_at||0));
+  const start=Math.max(0,Number(options.start??fallbackStart)),end=Math.max(start+1,Number(options.end??fallbackEnd));
+  const gameSeasonId=String(options.gameSeasonId||season.game_season_id||'').trim();
   const minSeconds=Number(options.minSeconds??positiveInt(env.LEADERBOARD_MIN_RUN_SECONDS,DEFAULT_LEADERBOARD_MIN_RUN_SECONDS));
   const minScore=Number(options.minScore??positiveInt(env.LEADERBOARD_MIN_SCORE,DEFAULT_LEADERBOARD_MIN_SCORE));
   const recoverTransient=Boolean(options.recoverTransient);
@@ -12318,7 +12345,7 @@ async function leaderboardRatingFallbackCandidates(env,season,options={}){
   const includeStaleStarted=Boolean(options.includeStaleStarted)&&includeProofs;
   const staleStartedMs=Math.max(30000,positiveInt(env.LEADERBOARD_ORPHAN_PROOF_STALE_MS,60000));
   const staleBeforeMs=Date.now()-staleStartedMs;
-  const limit=Math.min(2000,Math.max(20,Number(options.limit||1000)));
+  const limit=Math.min(5000,Math.max(50,Number(options.limit||2500)));
   const rows=(await env.DB.prepare(`WITH fallback_runs AS (
       SELECT r.run_id,r.telegram_id,r.score,r.duration_ms,r.created_at,
              'leaderboard_run' AS source_kind,1 AS source_priority,
@@ -12335,9 +12362,40 @@ async function leaderboardRatingFallbackCandidates(env,season,options={}){
           (?=1 AND (COALESCE(r.rejection_reason,'')='rating_disabled' OR COALESCE(r.rejection_reason,'') LIKE 'season_%'))
         )
       UNION ALL
+      SELECT a.run_id,a.telegram_id,a.score,a.duration_ms,a.created_at,
+             'season_pass_run' AS source_kind,2 AS source_priority,
+             1 AS accepted,'' AS rejection_reason,COALESCE(s.status,'') AS session_status
+      FROM season_pass_activity_runs a
+      LEFT JOIN player_economy_run_ledger l ON l.run_id=a.run_id
+      LEFT JOIN leaderboard_runs r ON r.run_id=a.run_id
+      LEFT JOIN tester_accounts t ON t.telegram_id=a.telegram_id
+      LEFT JOIN game_run_sessions s ON s.run_id=a.run_id
+      WHERE l.run_id IS NULL AND r.run_id IS NULL
+        AND a.created_at>=? AND a.created_at<=?
+        AND (?='' OR a.season_id=?)
+        AND a.duration_ms>=? AND a.score>=? AND COALESCE(t.exclude_from_rating,0)=0
+      UNION ALL
+      SELECT SUBSTR(e.source_id,5) AS run_id,e.telegram_id,
+             CAST(COALESCE(json_extract(e.details_json,'$.score'),0) AS INTEGER) AS score,
+             CAST(COALESCE(json_extract(e.details_json,'$.durationMs'),0) AS INTEGER) AS duration_ms,
+             e.created_at,'timeline_run' AS source_kind,3 AS source_priority,
+             CASE WHEN COALESCE(json_extract(e.details_json,'$.accepted'),0) IN (1,'true') THEN 1 ELSE 0 END AS accepted,
+             '' AS rejection_reason,COALESCE(s.status,'') AS session_status
+      FROM player_timeline_events e
+      LEFT JOIN player_economy_run_ledger l ON l.run_id=SUBSTR(e.source_id,5)
+      LEFT JOIN leaderboard_runs r ON r.run_id=SUBSTR(e.source_id,5)
+      LEFT JOIN tester_accounts t ON t.telegram_id=e.telegram_id
+      LEFT JOIN game_run_sessions s ON s.run_id=SUBSTR(e.source_id,5)
+      WHERE e.event_type='run' AND e.source_id LIKE 'run_%' AND json_valid(e.details_json)
+        AND l.run_id IS NULL AND r.run_id IS NULL
+        AND e.created_at>=? AND e.created_at<=?
+        AND CAST(COALESCE(json_extract(e.details_json,'$.durationMs'),0) AS INTEGER)>=?
+        AND CAST(COALESCE(json_extract(e.details_json,'$.score'),0) AS INTEGER)>=?
+        AND COALESCE(t.exclude_from_rating,0)=0
+      UNION ALL
       SELECT s.run_id,s.telegram_id,s.score,s.duration_ms,
              CASE WHEN s.finished_at_ms>0 THEN CAST(s.finished_at_ms/1000 AS INTEGER) ELSE s.created_at END AS created_at,
-             'finished_session' AS source_kind,2 AS source_priority,
+             'finished_session' AS source_kind,4 AS source_priority,
              COALESCE(s.accepted_rating,0) AS accepted,'' AS rejection_reason,s.status AS session_status
       FROM game_run_sessions s
       LEFT JOIN player_economy_run_ledger l ON l.run_id=s.run_id
@@ -12347,18 +12405,21 @@ async function leaderboardRatingFallbackCandidates(env,season,options={}){
         AND s.created_at>=? AND s.created_at<=? AND s.duration_ms>=? AND s.score>=?
         AND COALESCE(t.exclude_from_rating,0)=0 AND (COALESCE(s.accepted_rating,0)=1 OR ?=1)
       UNION ALL
-      SELECT p.run_id,p.telegram_id,p.score,p.duration_ms,p.updated_at AS created_at,
-             'live_proof' AS source_kind,3 AS source_priority,0 AS accepted,'' AS rejection_reason,s.status AS session_status
+      SELECT p.run_id,p.telegram_id,p.score,p.duration_ms,
+             COALESCE(NULLIF(s.created_at,0),NULLIF(p.created_at,0),p.updated_at) AS created_at,
+             'live_proof' AS source_kind,5 AS source_priority,0 AS accepted,'' AS rejection_reason,
+             CASE WHEN s.run_id IS NULL THEN 'missing_session' ELSE COALESCE(s.status,'') END AS session_status
       FROM game_run_live_proofs p
-      JOIN game_run_sessions s ON s.run_id=p.run_id AND s.telegram_id=p.telegram_id
+      LEFT JOIN game_run_sessions s ON s.run_id=p.run_id AND s.telegram_id=p.telegram_id
       LEFT JOIN player_economy_run_ledger l ON l.run_id=p.run_id
       LEFT JOIN leaderboard_runs r ON r.run_id=p.run_id
       LEFT JOIN tester_accounts t ON t.telegram_id=p.telegram_id
       WHERE l.run_id IS NULL AND r.run_id IS NULL AND ?=1
-        AND s.created_at>=? AND s.created_at<=? AND p.seq>=1
-        AND p.duration_ms>=? AND p.score>=? AND COALESCE(t.exclude_from_rating,0)=0
+        AND COALESCE(NULLIF(s.created_at,0),NULLIF(p.created_at,0),p.updated_at)>=?
+        AND COALESCE(NULLIF(s.created_at,0),NULLIF(p.created_at,0),p.updated_at)<=?
+        AND p.seq>=1 AND p.duration_ms>=? AND p.score>=? AND COALESCE(t.exclude_from_rating,0)=0
         AND (
-          s.status IN ('superseded','expired') OR
+          s.run_id IS NULL OR s.status IN ('finished','superseded','expired') OR
           (?=1 AND s.status='started' AND p.last_server_at_ms<=?)
         )
     ), ranked AS (
@@ -12382,6 +12443,8 @@ async function leaderboardRatingFallbackCandidates(env,season,options={}){
     ORDER BY c.score DESC,c.created_at ASC,c.telegram_id ASC
     LIMIT ?`).bind(
       start,end,minSeconds*1000,minScore,recoverAllQualifying?1:0,recoverTransient?1:0,
+      start,end,gameSeasonId,gameSeasonId,minSeconds*1000,minScore,
+      start,end,minSeconds*1000,minScore,
       start,end,minSeconds*1000,minScore,(recoverTransient||recoverAllQualifying)?1:0,
       includeProofs?1:0,start,end,minSeconds*1000,minScore,includeStaleStarted?1:0,staleBeforeMs,
       limit
@@ -12431,16 +12494,17 @@ async function leaderboardIntegritySnapshot(env,season,{minSeconds=null,minScore
 
 async function repairLeaderboardSeasonFromAuthoritativeRuns(env,season,options={}){
   if(!season?.id)return {ok:true,skipped:true,reason:'no_season'};
-  await Promise.all([ensureRuntimeCompatibilitySchema(env),ensureAuthoritativeEconomySchema(env)]);
-  const now=Math.floor(Date.now()/1000),sid=String(season.id),start=Math.max(0,Number(season.starts_at||0)),end=Math.max(start+1,Number(season.ends_at||0));
+  await Promise.all([ensureRuntimeCompatibilitySchema(env),ensureAuthoritativeEconomySchema(env),ensureSeasonPassSchema(env),ensureOperationsSecuritySchema(env)]);
+  const now=Math.floor(Date.now()/1000),sid=String(season.id);
+  const recoveryWindow=await leaderboardRecoveryWindow(env,season);
+  const start=recoveryWindow.start,end=recoveryWindow.end;
   const recoverByWindow=String(season.rating_kind||'primary')==='primary';
   const minSeconds=positiveInt(env.LEADERBOARD_MIN_RUN_SECONDS,DEFAULT_LEADERBOARD_MIN_RUN_SECONDS),minScore=positiveInt(env.LEADERBOARD_MIN_SCORE,DEFAULT_LEADERBOARD_MIN_SCORE);
   const policy=await leaderboardRatingRecoveryPolicy(env);
   const recoverTransient=Boolean(options.recoverTransient)&&policy.canRecoverTransient;
   const recoverAllQualifying=Boolean(options.recoverAllQualifying)&&policy.globallyEnabled;
-  // Exact authoritative fallbacks (leaderboard_runs / finished sessions) are safe
-  // during normal self-heal. Live proofs, including stale "started" proofs, are
-  // included only by the explicit owner emergency repair.
+  // Closed authoritative sessions/proofs are safe to use during normal self-heal.
+  // Stale "started" proofs are included only by the explicit owner emergency
   // repair: this recovers runs lost by the broken Game Over client without
   // inventing an unverified final score or awarding economy twice.
   const recoverOrphanProofs=Boolean(options.recoverOrphanProofs)&&policy.canRecoverTransient;
@@ -12476,13 +12540,14 @@ async function repairLeaderboardSeasonFromAuthoritativeRuns(env,season,options={
     WHERE c.rn=1
     ORDER BY c.score DESC,c.created_at ASC,c.telegram_id ASC`).bind(start,end,recoverByWindow?1:0,sid,minSeconds*1000,minScore,recoverAllQualifying?1:0,recoverTransient?1:0).all()).results||[];
   const fallbackCandidates=await leaderboardRatingFallbackCandidates(env,season,{
-    minSeconds,minScore,recoverTransient,recoverAllQualifying,
-    includeProofs:recoverOrphanProofs,includeStaleStarted:recoverOrphanProofs,limit:1500
+    minSeconds,minScore,recoverTransient,recoverAllQualifying,start,end,gameSeasonId:recoveryWindow.gameSeasonId,
+    includeProofs:recoverOrphanProofs,includeStaleStarted:recoverOrphanProofs,limit:4000
   });
   const candidates=leaderboardBestCandidateRows([...ledgerCandidates,...fallbackCandidates]);
+  const sourceCounts=candidates.reduce((acc,row)=>{const key=String(row?.source_kind||'unknown');acc[key]=(acc[key]||0)+1;return acc;},{});
   if(!candidates.length){
     const after=await leaderboardIntegritySnapshot(env,season,{minSeconds,minScore});
-    const result={ok:true,seasonId:sid,seasonTitle:String(season.title||''),repairedPlayers:0,recoveredRuns:0,recoveredProofPlayers:0,recoveredFallbackRuns:0,leaderChanged:false,before,after,policy,recoverTransient,recoverAllQualifying,recoverOrphanProofs};
+    const result={ok:true,seasonId:sid,seasonTitle:String(season.title||''),repairedPlayers:0,recoveredRuns:0,recoveredProofPlayers:0,recoveredFallbackRuns:0,sourceCounts,recoveryWindow,leaderChanged:false,before,after,policy,recoverTransient,recoverAllQualifying,recoverOrphanProofs};
     leaderboardIntegrityRepairMemory.last=result;return result;
   }
   const existingRows=(await env.DB.prepare(`SELECT telegram_id,best_score,achieved_at,hidden FROM leaderboard_entries WHERE season_id=?`).bind(sid).all()).results||[];
@@ -12534,7 +12599,18 @@ async function repairLeaderboardSeasonFromAuthoritativeRuns(env,season,options={
         env.DB.prepare(`UPDATE game_run_sessions SET accepted_rating=1,season_id=? WHERE run_id IN (${q})`).bind(sid,...chunk),
         env.DB.prepare(`INSERT OR IGNORE INTO leaderboard_runs(run_id,season_id,telegram_id,score,duration_ms,run_treats,run_coffee,accepted,rejection_reason,created_at)
           SELECT s.run_id,?,s.telegram_id,s.score,s.duration_ms,s.run_treats,s.run_coffee,1,'',CASE WHEN s.finished_at_ms>0 THEN CAST(s.finished_at_ms/1000 AS INTEGER) ELSE s.created_at END
-          FROM game_run_sessions s WHERE s.status='finished' AND s.run_id IN (${q})`).bind(sid,...chunk)
+          FROM game_run_sessions s WHERE s.status='finished' AND s.run_id IN (${q})`).bind(sid,...chunk),
+        env.DB.prepare(`INSERT OR IGNORE INTO leaderboard_runs(run_id,season_id,telegram_id,score,duration_ms,run_treats,run_coffee,accepted,rejection_reason,created_at)
+          SELECT a.run_id,?,a.telegram_id,a.score,a.duration_ms,a.run_treats,a.run_coffee,1,'',a.created_at
+          FROM season_pass_activity_runs a WHERE a.run_id IN (${q})`).bind(sid,...chunk),
+        env.DB.prepare(`INSERT OR IGNORE INTO leaderboard_runs(run_id,season_id,telegram_id,score,duration_ms,run_treats,run_coffee,accepted,rejection_reason,created_at)
+          SELECT SUBSTR(e.source_id,5),?,e.telegram_id,
+                 CAST(COALESCE(json_extract(e.details_json,'$.score'),0) AS INTEGER),
+                 CAST(COALESCE(json_extract(e.details_json,'$.durationMs'),0) AS INTEGER),
+                 CAST(COALESCE(json_extract(e.details_json,'$.runTreats'),0) AS INTEGER),
+                 CAST(COALESCE(json_extract(e.details_json,'$.runCoffee'),0) AS INTEGER),1,'',e.created_at
+          FROM player_timeline_events e
+          WHERE e.event_type='run' AND e.source_id LIKE 'run_%' AND json_valid(e.details_json) AND SUBSTR(e.source_id,5) IN (${q})`).bind(sid,...chunk)
       ]);
     }
   }
@@ -12567,7 +12643,7 @@ async function repairLeaderboardSeasonFromAuthoritativeRuns(env,season,options={
     try{await queueLeaderboardDethroneNotificationIfNeeded(env,{seasonId:sid,previousLeaderId:String(oldLeader.telegram_id),expectedLeaderId:String(newLeader.telegram_id)});}catch(error){console.error('rating recovery dethrone notification failed',error);}
   }
   const after=await leaderboardIntegritySnapshot(env,season,{minSeconds,minScore});
-  const result={ok:true,seasonId:sid,seasonTitle:String(season.title||''),repairedPlayers,recoveredRuns,recoveredFallbackRuns,recoveredProofPlayers,recoveredProofDetails,restoredNotifications,candidatePlayers:candidates.length,fallbackCandidatePlayers:fallbackCandidates.length,leaderChanged,previousLeaderId:String(oldLeader?.telegram_id||''),leaderId:String(newLeader?.telegram_id||''),before,after,policy,recoverTransient,recoverAllQualifying,recoverOrphanProofs,repairedAt:now};
+  const result={ok:true,seasonId:sid,seasonTitle:String(season.title||''),repairedPlayers,recoveredRuns,recoveredFallbackRuns,recoveredProofPlayers,recoveredProofDetails,restoredNotifications,candidatePlayers:candidates.length,fallbackCandidatePlayers:fallbackCandidates.length,sourceCounts,recoveryWindow,leaderChanged,previousLeaderId:String(oldLeader?.telegram_id||''),leaderId:String(newLeader?.telegram_id||''),before,after,policy,recoverTransient,recoverAllQualifying,recoverOrphanProofs,repairedAt:now};
   leaderboardIntegrityRepairMemory.last=result;
   return result;
 }
@@ -46206,7 +46282,8 @@ async function ownerPanelRepairRating(env,ctx){
   leaderboardIntegrityResetMemory();
   const availabilityAfter=await leaderboardRatingRecoveryPolicy(env);
   await logStaffAction(env,ctx.user,ctx.access,'owner_panel_rating_integrity_repair',null,'rating',null,null,{seasonId:String(season.id),before,result,recoverAllQualifying:Boolean(ctx.body?.recoverAllQualifying),recoverOrphanProofs:Boolean(ctx.body?.recoverOrphanProofs||ctx.body?.recoverAllQualifying),restoreAvailability,availabilityBefore,availabilityAfter});
-  return {...result,availabilityBefore,availabilityAfter,message:`Рейтинг восстановлен: игроков ${Number(result?.candidatePlayers||0)}, исправлено мест ${Number(result?.repairedPlayers||0)}, восстановлено забегов ${Number(result?.recoveredRuns||0)+Number(result?.recoveredFallbackRuns||0)}, из потерянных server-proof ${Number(result?.recoveredProofPlayers||0)}, уведомлений ${Number(result?.restoredNotifications||0)}.${restoreAvailability?' Доступ рейтинга возвращён для всех игроков.':''}`};
+  const sources=result?.sourceCounts||{};
+  return {...result,availabilityBefore,availabilityAfter,message:`Рейтинг восстановлен: игроков ${Number(result?.candidatePlayers||0)}, исправлено мест ${Number(result?.repairedPlayers||0)}, восстановлено забегов ${Number(result?.recoveredRuns||0)+Number(result?.recoveredFallbackRuns||0)}, proof ${Number(result?.recoveredProofPlayers||0)}, Season Pass ${Number(sources.season_pass_run||0)}, timeline ${Number(sources.timeline_run||0)}, уведомлений ${Number(result?.restoredNotifications||0)}.${restoreAvailability?' Доступ рейтинга возвращён для всех игроков.':''}`};
 }
 
 async function ownerPanelRating(env, ctx) {
