@@ -1,9 +1,9 @@
-SweetRun Season 2 UI Hotfix
-
-Копировать с сохранением путей от корня проекта:
-- index.html
-- battle-pass.html
-- achievements.html
-- src/worker.js
-
-PATCH_NOTES_SEASON2_UI_HOTFIX.md — описание изменений и проверок.
+SweetRun Season 2 UI Hotfix v2 (cumulative)
+Base: current Game.zip from conversation
+Files to replace:
+  index.html
+  achievements.html
+  battle-pass.html
+  src/worker.js
+No new assets.
+No D1 migration.
