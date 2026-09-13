@@ -1971,6 +1971,9 @@ export default {
       if (url.pathname === "/api/battle-pass/seasonal-case/open" && request.method === "POST") {
         return await withPlayerApiPerformance(env, ctx, "season_case_open", () => openSeasonPassSeasonalCase(request, env, ctx), request);
       }
+      if (url.pathname === "/api/battle-pass/seasonal-case/status" && request.method === "POST") {
+        return await withPlayerApiPerformance(env, ctx, "season_case_status", () => getSeasonPassSeasonalCaseStatus(request, env), request);
+      }
 
       if (url.pathname === "/api/mail/state" && request.method === "POST") {
         return await getPlayerMailV3(request, env);
@@ -30646,6 +30649,18 @@ async function markSeasonPassSchemaReady(env) {
 
 let seasonPassSchemaReady = false;
 let seasonPassSchemaPromise = null;
+let seasonPassCaseOperationSchemaReady = false;
+let seasonPassCaseOperationSchemaPromise = null;
+async function ensureSeasonPassCaseOperationSchema(env){
+  if(seasonPassCaseOperationSchemaReady)return;
+  if(seasonPassCaseOperationSchemaPromise)return seasonPassCaseOperationSchemaPromise;
+  const promise=(async()=>{
+    await addRuntimeColumnIfMissing(env,'season_pass_case_grants','open_request_id',"TEXT NOT NULL DEFAULT ''");
+    await env.DB.prepare(`CREATE INDEX IF NOT EXISTS idx_season_pass_case_grants_request ON season_pass_case_grants(telegram_id,case_id,open_request_id)`).run();
+  })();
+  seasonPassCaseOperationSchemaPromise=promise;
+  try{await promise;seasonPassCaseOperationSchemaReady=true;}finally{if(seasonPassCaseOperationSchemaPromise===promise)seasonPassCaseOperationSchemaPromise=null;}
+}
 async function ensureSeasonPassSchema(env) {
   requireDatabase(env);
   if (seasonPassSchemaReady) return;
@@ -30811,14 +30826,14 @@ async function ensureSeasonPassSchema(env) {
       env.DB.prepare(`CREATE TABLE IF NOT EXISTS season_pass_case_grants (
         grant_id TEXT PRIMARY KEY, case_id TEXT NOT NULL, source_season_id TEXT NOT NULL DEFAULT '', telegram_id TEXT NOT NULL,
         status TEXT NOT NULL DEFAULT 'pending' CHECK(status IN ('pending','opening','opened')), rewards_json TEXT NOT NULL DEFAULT '[]', snapshot_json TEXT NOT NULL DEFAULT '{}',
-        opening_started_at INTEGER NOT NULL DEFAULT 0, opening_token TEXT NOT NULL DEFAULT '', granted_by TEXT NOT NULL DEFAULT '', created_at INTEGER NOT NULL, opened_at INTEGER NOT NULL DEFAULT 0
+        opening_started_at INTEGER NOT NULL DEFAULT 0, opening_token TEXT NOT NULL DEFAULT '', open_request_id TEXT NOT NULL DEFAULT '', granted_by TEXT NOT NULL DEFAULT '', created_at INTEGER NOT NULL, opened_at INTEGER NOT NULL DEFAULT 0
       )`),
       env.DB.prepare(`CREATE INDEX IF NOT EXISTS idx_season_pass_case_grants_player ON season_pass_case_grants(telegram_id,status,created_at,case_id)`),
       env.DB.prepare(`CREATE TABLE IF NOT EXISTS season_pass_case_opening_guards (guard_id TEXT PRIMARY KEY,ok INTEGER NOT NULL CONSTRAINT season_pass_case_opening_guard_ok CHECK(ok=1))`)
     ]);
     await addRuntimeColumnIfMissing(env, 'season_pass_run_xp', 'applied_at', 'INTEGER NOT NULL DEFAULT 1');
     await addRuntimeColumnIfMissing(env, 'season_pass_case_grants', 'snapshot_json', "TEXT NOT NULL DEFAULT '{}'");
-    await addRuntimeColumnIfMissing(env, 'season_pass_case_grants', 'open_request_id', "TEXT NOT NULL DEFAULT ''");
+    await ensureSeasonPassCaseOperationSchema(env);
     await addRuntimeColumnIfMissing(env, 'season_pass_case_definitions', 'reward_groups_json', "TEXT NOT NULL DEFAULT '{}'");
     await env.DB.prepare(`UPDATE season_pass_case_resource_items SET image_url='${SEASON_PASS_TREATS_CURRENCY_IMAGE}' WHERE reward_kind='treats' AND image_url<>'${SEASON_PASS_TREATS_CURRENCY_IMAGE}'`).run();
     await env.DB.prepare(`UPDATE season_pass_rewards SET image_url='${SEASON_PASS_TREATS_CURRENCY_IMAGE}' WHERE reward_type='treats' AND image_url<>'${SEASON_PASS_TREATS_CURRENCY_IMAGE}'`).run();
@@ -32245,16 +32260,32 @@ async function openSeasonPassStoryTest(request,env){
 }
 
 async function seasonPassSeasonalCaseInventory(env,telegramId){
-  const rows=(await env.DB.prepare(`SELECT g.case_id,g.status,COUNT(*) AS count,d.title,d.description,d.closed_image_url,d.open_image_url,d.release_at,d.enabled,s.title AS season_title,s.ends_at
+  const rows=(await env.DB.prepare(`SELECT g.case_id,g.status,COUNT(*) AS count,MAX(CASE WHEN g.status='opening' THEN g.open_request_id ELSE '' END) AS opening_request_id,MAX(CASE WHEN g.status='opening' THEN g.opening_started_at ELSE 0 END) AS opening_started_at,d.title,d.description,d.closed_image_url,d.open_image_url,d.release_at,d.enabled,s.title AS season_title,s.ends_at
     FROM season_pass_case_grants g JOIN season_pass_case_definitions d ON d.case_id=g.case_id LEFT JOIN season_pass_seasons s ON s.season_id=d.season_id
     WHERE g.telegram_id=? AND d.enabled=1 GROUP BY g.case_id,g.status ORDER BY MAX(g.created_at) DESC`).bind(String(telegramId)).all()).results||[];
   const byCase=new Map();
   const now=Math.floor(Date.now()/1000);
   for(const row of rows){
     const id=String(row.case_id);let item=byCase.get(id);if(!item){item={caseId:id,title:String(row.title||'Сезонный кейс'),description:String(row.description||''),imageUrl:String(row.closed_image_url||''),openImageUrl:String(row.open_image_url||''),seasonTitle:String(row.season_title||''),released:Number(row.release_at||0)<=now,pending:0,opening:0,opened:0};byCase.set(id,item);}
-    const status=String(row.status||'pending');if(status in item)item[status]=Number(row.count||0);
+    const status=String(row.status||'pending');if(status in item)item[status]=Number(row.count||0);if(status==='opening'&&String(row.opening_request_id||'')){item.openRequestId=String(row.opening_request_id);item.openingStartedAt=Math.max(0,Number(row.opening_started_at||0))*1000;}
   }
   return [...byCase.values()];
+}
+
+async function getSeasonPassSeasonalCaseStatus(request,env){
+  try{
+    requireDatabase(env);requireBotToken(env);await ensureSeasonPassSchema(env);await ensureSeasonPassCaseOperationSchema(env);
+    const body=await readJson(request),initData=String(body.initData||body.init_data||''),caseId=String(body.caseId||'').trim(),requestId=String(body.requestId||'').trim();
+    if(!caseId)throw new ApiError(400,'Не выбран сезонный кейс.');
+    if(!/^[A-Za-z0-9_-]{12,100}$/.test(requestId))throw new ApiError(400,'Некорректный идентификатор открытия.');
+    const auth=await validateTelegramInitData(initData,env),telegramId=String(auth.user.id),now=Math.floor(Date.now()/1000);
+    const row=await env.DB.prepare(`SELECT g.grant_id,g.status,g.rewards_json,g.snapshot_json,g.opened_at,g.opening_started_at,d.title,d.closed_image_url,d.open_image_url FROM season_pass_case_grants g LEFT JOIN season_pass_case_definitions d ON d.case_id=g.case_id WHERE g.telegram_id=? AND g.case_id=? AND g.open_request_id=? ORDER BY g.created_at,g.grant_id LIMIT 1`).bind(telegramId,caseId,requestId).first();
+    if(!row)return jsonResponse({ok:true,pending:false,missing:true,state:'missing',requestId});
+    const status=String(row.status||'pending');
+    if(status==='opened'){const rewards=safeJson(row.rewards_json,[]),snapshot=safeJson(row.snapshot_json,{}),inventory=await seasonPassSeasonalCaseInventory(env,telegramId);return jsonResponse({ok:true,pending:false,opened:true,state:'opened',requestId,case:{caseId,grantId:String(row.grant_id||''),title:String(snapshot?.title||row.title||'Сезонный кейс'),imageUrl:String(snapshot?.openImageUrl||snapshot?.imageUrl||row.open_image_url||row.closed_image_url||''),rewards:Array.isArray(rewards)?rewards:[]},seasonalCases:inventory});}
+    if(status==='opening'){const startedAt=Math.max(0,Number(row.opening_started_at||0)),ageSeconds=startedAt?Math.max(0,now-startedAt):0;if(ageSeconds>=120)return jsonResponse({ok:true,pending:false,stale:true,state:'stale',requestId,startedAt,ageSeconds});return jsonResponse({ok:true,pending:true,state:'opening',requestId,startedAt,ageSeconds,retryAfterMs:750},202);}
+    return jsonResponse({ok:true,pending:false,state:'pending',requestId});
+  }catch(error){if(error instanceof ApiError)return jsonResponse({ok:false,error:error.message},error.status);console.error('getSeasonPassSeasonalCaseStatus failed',error);return jsonResponse({ok:false,error:'Не удалось проверить открытие сезонного кейса.'},500);}
 }
 
 async function seasonPassLetterRequestContext(request,env){
@@ -32316,15 +32347,15 @@ function seasonPassSeasonalCaseWeightedPick(items,groupChances=null,rng=Math.ran
 async function openSeasonPassSeasonalCase(request,env,executionCtx=null){
   let grantId='',token='',requestId='',openingStartedAt=0;
   try{
-    const ctx=await seasonPassRequestContext(request,env);const caseId=String(ctx.body?.caseId||'').trim();requestId=String(ctx.body?.requestId||'').trim();if(!caseId)throw new ApiError(400,'Не выбран сезонный кейс.');if(!/^[A-Za-z0-9_-]{12,100}$/.test(requestId))throw new ApiError(400,'Некорректный идентификатор открытия.');
+    const ctx=await seasonPassRequestContext(request,env);await ensureSeasonPassCaseOperationSchema(env);const caseId=String(ctx.body?.caseId||'').trim();requestId=String(ctx.body?.requestId||'').trim();if(!caseId)throw new ApiError(400,'Не выбран сезонный кейс.');if(!/^[A-Za-z0-9_-]{12,100}$/.test(requestId))throw new ApiError(400,'Некорректный идентификатор открытия.');
     const now=Math.floor(Date.now()/1000);
     const taskEventPromise=prepareSeasonPassTaskProgressEvent(env,ctx.telegramId,{cases_opened:1},now,{season:ctx.season,player:ctx.player}).catch((error)=>{console.error('seasonal case task progress prepare failed',error);return null;});
     const definition=await env.DB.prepare(`SELECT d.*,s.title AS season_title FROM season_pass_case_definitions d LEFT JOIN season_pass_seasons s ON s.season_id=d.season_id WHERE d.case_id=? LIMIT 1`).bind(caseId).first();
     if(!definition||!Number(definition.enabled||0)||Number(definition.release_at||0)>now)throw new ApiError(409,'Этот сезонный кейс пока недоступен.');
     let existingRequest=await env.DB.prepare(`SELECT grant_id,status,rewards_json,snapshot_json,opened_at,opening_started_at,opening_token FROM season_pass_case_grants WHERE telegram_id=? AND case_id=? AND open_request_id=? ORDER BY created_at,grant_id LIMIT 1`).bind(ctx.telegramId,caseId,requestId).first();
     if(String(existingRequest?.status||'')==='opened'){const previousRewards=safeJson(existingRequest.rewards_json,[]),previousSnapshot=safeJson(existingRequest.snapshot_json,{}),inventory=await seasonPassSeasonalCaseInventory(env,ctx.telegramId);return jsonResponse({ok:true,repeated:true,case:{caseId,grantId:String(existingRequest.grant_id||''),title:String(previousSnapshot?.title||definition.title||'Сезонный кейс'),imageUrl:String(previousSnapshot?.openImageUrl||previousSnapshot?.imageUrl||definition.open_image_url||definition.closed_image_url||''),rewards:Array.isArray(previousRewards)?previousRewards:[]},seasonalCases:inventory});}
-    if(String(existingRequest?.status||'')==='opening'){const started=Math.max(0,Number(existingRequest.opening_started_at||0)),age=started?Math.max(0,now-started):12;if(age<12)return jsonResponse({ok:true,pending:true,requestId,retryAfterMs:900},202);const reset=await env.DB.prepare(`UPDATE season_pass_case_grants SET status='pending',opening_started_at=0,opening_token='',open_request_id='' WHERE grant_id=? AND telegram_id=? AND status='opening' AND opening_started_at=? AND opening_token=? AND open_request_id=?`).bind(String(existingRequest.grant_id||''),ctx.telegramId,started,String(existingRequest.opening_token||''),requestId).run();if(Number(reset?.meta?.changes||0)<1)return jsonResponse({ok:true,pending:true,requestId,retryAfterMs:700},202);}
-    const staleCutoff=now-24;await env.DB.prepare(`UPDATE season_pass_case_grants SET status='pending',opening_started_at=0,opening_token='',open_request_id='' WHERE telegram_id=? AND case_id=? AND status='opening' AND (opening_started_at=0 OR opening_started_at<=?)`).bind(ctx.telegramId,caseId,staleCutoff).run();
+    if(String(existingRequest?.status||'')==='opening'){const started=Math.max(0,Number(existingRequest.opening_started_at||0)),age=started?Math.max(0,now-started):12;if(age<120)return jsonResponse({ok:true,pending:true,requestId,retryAfterMs:750},202);const reset=await env.DB.prepare(`UPDATE season_pass_case_grants SET status='pending',opening_started_at=0,opening_token='',open_request_id='' WHERE grant_id=? AND telegram_id=? AND status='opening' AND opening_started_at=? AND opening_token=? AND open_request_id=?`).bind(String(existingRequest.grant_id||''),ctx.telegramId,started,String(existingRequest.opening_token||''),requestId).run();if(Number(reset?.meta?.changes||0)<1)return jsonResponse({ok:true,pending:true,requestId,retryAfterMs:700},202);}
+    const staleCutoff=now-120;await env.DB.prepare(`UPDATE season_pass_case_grants SET status='pending',opening_started_at=0,opening_token='',open_request_id='' WHERE telegram_id=? AND case_id=? AND status='opening' AND (opening_started_at=0 OR opening_started_at<=?)`).bind(ctx.telegramId,caseId,staleCutoff).run();
     const grant=await env.DB.prepare(`SELECT grant_id,snapshot_json FROM season_pass_case_grants WHERE telegram_id=? AND case_id=? AND status='pending' ORDER BY created_at,grant_id LIMIT 1`).bind(ctx.telegramId,caseId).first();
     if(!grant?.grant_id)throw new ApiError(409,'Сезонных кейсов этого типа нет.');
     grantId=String(grant.grant_id);token=crypto.randomUUID().replace(/-/g,'');openingStartedAt=now;
