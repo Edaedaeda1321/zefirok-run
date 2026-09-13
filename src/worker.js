@@ -2239,7 +2239,16 @@ export default {
         // deletes scores.
         try {
           const ratingSeason=await selectLeaderboardSeasonForState(env,Math.floor(scheduledAtMs/1000),true);
-          if(String(ratingSeason?.status||'')==='active') await maybeRepairLeaderboardIntegrity(env,ratingSeason,{force:true,recoverTransient:true,notifyLeaderChange:true});
+          if(String(ratingSeason?.status||'')==='active') {
+            await maybeRepairLeaderboardIntegrity(env,ratingSeason,{force:true,recoverTransient:true,notifyLeaderChange:true});
+            // The client can crash before final settlement while the protected run
+            // session/checkpoints are already in D1. Reconcile those server matches
+            // too, including stale started sessions that stopped checkpointing.
+            const serverRecovery=await repairLeaderboardFromServerRunRegistry(env,ratingSeason,{includeStaleStarted:true,staleStartedMs:120000,proofGraceMs:AUTHORITATIVE_RUN_CHECKPOINT_MAX_WALL_GAP_MS,limit:5000,notifyLeaderChange:true});
+            if(Number(serverRecovery?.repairedPlayers||0)>0){
+              await maybeRepairLeaderboardIntegrity(env,ratingSeason,{force:true,recoverTransient:true,recoverAllQualifying:true,notifyLeaderChange:false});
+            }
+          }
         } catch (error) {
           console.error("Scheduled leaderboard integrity repair failed", error);
         }
@@ -12329,6 +12338,152 @@ async function leaderboardRecoveryWindow(env,season){
     }catch(error){console.error('rating recovery game-season window lookup failed',error);}
   }
   return {start,end,leaderboardStart,leaderboardEnd,gameSeasonId,gameSeasonTitle:String(gameSeason?.title||'')};
+}
+
+
+const LEADERBOARD_SERVER_RECOVERY_STALE_MS = 15000;
+const LEADERBOARD_SERVER_RECOVERY_MAX_ROWS = 12000;
+
+function leaderboardServerEvidenceView(row, settings={}){
+  const minMs=Math.max(1000,Number(settings.minMs||0));
+  const minScore=Math.max(1,Number(settings.minScore||1));
+  const proofMinMs=Math.max(1000,Number(settings.proofMinMs||minMs));
+  const includeStaleStarted=Boolean(settings.includeStaleStarted);
+  const staleBeforeMs=Math.max(0,Number(settings.staleBeforeMs||0));
+  const status=String(row?.session_status||'missing_session');
+  const proofLastServerAtMs=Math.max(0,Number(row?.proof_last_server_at_ms||0));
+  const transientReason=/^(?:rating_disabled|season_)/.test(String(row?.rating_rejection_reason||''));
+  const evidence=[];
+  const add=(source,score,durationMs,exact,accepted=true)=>{
+    const s=Math.max(0,Number(score||0)),d=Math.max(0,Number(durationMs||0));
+    if(s<=0||d<=0||!accepted)return;
+    const qualifies=exact ? (s>=minScore&&d>=minMs) : (
+      s>=minScore&&d>=proofMinMs&&Number(row?.proof_seq||0)>0&&
+      (status!=='started'||(includeStaleStarted&&proofLastServerAtMs>0&&proofLastServerAtMs<=staleBeforeMs))
+    );
+    evidence.push({source,score:s,durationMs:d,exact:Boolean(exact),qualifies,grace:!exact&&qualifies&&d<minMs});
+  };
+  add('ledger',row?.ledger_score,row?.ledger_duration_ms,true,Number(row?.ledger_accepted||0)===1||Number(row?.rating_accepted||0)===1||transientReason);
+  add('leaderboard_run',row?.rating_score,row?.rating_duration_ms,true,Number(row?.rating_accepted||0)===1||transientReason);
+  add('finished_session',row?.session_score,row?.session_duration_ms,true,status==='finished');
+  add('server_proof',row?.proof_score,row?.proof_duration_ms,false,true);
+  evidence.sort((a,b)=>Number(b.qualifies)-Number(a.qualifies)||b.score-a.score||Number(b.exact)-Number(a.exact)||b.durationMs-a.durationMs);
+  const trusted=evidence[0]||null;
+  const qualifying=evidence.find(item=>item.qualifies)||null;
+  return {trusted,qualifying,evidence,status};
+}
+
+async function leaderboardServerRunRegistry(env,season,options={}){
+  if(!season?.id)return {ok:true,seasonId:'',rows:[],summary:{matches:0,players:0,qualifyingPlayers:0,missingPlayers:0}};
+  await Promise.all([ensureRuntimeCompatibilitySchema(env),ensureAuthoritativeEconomySchema(env),ensureOperationsSecuritySchema(env)]);
+  const sid=String(season.id),window=await leaderboardRecoveryWindow(env,season);
+  const start=Math.max(0,Number(window.start||season.starts_at||0)),end=Math.max(start+1,Number(window.end||season.ends_at||0));
+  const minSeconds=positiveInt(env.LEADERBOARD_MIN_RUN_SECONDS,DEFAULT_LEADERBOARD_MIN_RUN_SECONDS),minMs=minSeconds*1000;
+  const minScore=positiveInt(env.LEADERBOARD_MIN_SCORE,DEFAULT_LEADERBOARD_MIN_SCORE);
+  const proofGraceMs=Math.max(0,Math.min(AUTHORITATIVE_RUN_CHECKPOINT_MAX_WALL_GAP_MS,Number(options.proofGraceMs??AUTHORITATIVE_RUN_CHECKPOINT_MAX_WALL_GAP_MS)));
+  const proofMinMs=Math.max(1000,minMs-proofGraceMs);
+  const includeStaleStarted=Boolean(options.includeStaleStarted);
+  const staleStartedMs=Math.max(5000,Number(options.staleStartedMs||LEADERBOARD_SERVER_RECOVERY_STALE_MS));
+  const staleBeforeMs=Date.now()-staleStartedMs;
+  const limit=Math.max(100,Math.min(LEADERBOARD_SERVER_RECOVERY_MAX_ROWS,Number(options.limit||LEADERBOARD_SERVER_RECOVERY_MAX_ROWS)));
+  const rows=(await env.DB.prepare(`WITH raw_matches AS (
+      SELECT s.run_id,s.telegram_id,COALESCE(s.status,'') AS session_status,
+             COALESCE(NULLIF(s.created_at,0),CAST(s.started_at_ms/1000 AS INTEGER),0) AS created_at,
+             COALESCE(s.started_at_ms,0) AS started_at_ms,COALESCE(s.finished_at_ms,0) AS finished_at_ms,
+             COALESCE(s.score,0) AS session_score,COALESCE(s.duration_ms,0) AS session_duration_ms,
+             COALESCE(p.seq,0) AS proof_seq,COALESCE(p.score,0) AS proof_score,COALESCE(p.duration_ms,0) AS proof_duration_ms,
+             COALESCE(p.last_server_at_ms,0) AS proof_last_server_at_ms
+      FROM game_run_sessions s LEFT JOIN game_run_live_proofs p ON p.run_id=s.run_id AND p.telegram_id=s.telegram_id
+      WHERE COALESCE(NULLIF(s.created_at,0),CAST(s.started_at_ms/1000 AS INTEGER),0)>=? AND COALESCE(NULLIF(s.created_at,0),CAST(s.started_at_ms/1000 AS INTEGER),0)<=?
+      UNION ALL
+      SELECT p.run_id,p.telegram_id,'missing_session' AS session_status,
+             COALESCE(NULLIF(p.created_at,0),p.updated_at,0) AS created_at,0,0,0,0,
+             COALESCE(p.seq,0),COALESCE(p.score,0),COALESCE(p.duration_ms,0),COALESCE(p.last_server_at_ms,0)
+      FROM game_run_live_proofs p LEFT JOIN game_run_sessions s ON s.run_id=p.run_id AND s.telegram_id=p.telegram_id
+      WHERE s.run_id IS NULL AND COALESCE(NULLIF(p.created_at,0),p.updated_at,0)>=? AND COALESCE(NULLIF(p.created_at,0),p.updated_at,0)<=?
+    )
+    SELECT m.*,
+           COALESCE(l.raw_score,0) AS ledger_score,COALESCE(l.duration_ms,0) AS ledger_duration_ms,COALESCE(l.accepted_rating,0) AS ledger_accepted,
+           COALESCE(r.score,0) AS rating_score,COALESCE(r.duration_ms,0) AS rating_duration_ms,COALESCE(r.accepted,0) AS rating_accepted,COALESCE(r.rejection_reason,'') AS rating_rejection_reason,
+           COALESCE(e.best_score,0) AS entry_score,
+           COALESCE(NULLIF(b.display_name,''),NULLIF(a.display_name,''),m.telegram_id) AS display_name,
+           COALESCE(NULLIF(b.username,''),NULLIF(a.username,''),'') AS username,
+           COALESCE(a.photo_url,'') AS photo_url,COALESCE(pr.profile_xp,0) AS profile_xp,
+           COALESCE(cs.active_avatar_id,'') AS case_avatar_id,COALESCE(cs.active_frame_id,'') AS case_frame_id,
+           COALESCE(t.exclude_from_rating,0) AS excluded_from_rating
+    FROM raw_matches m
+    LEFT JOIN player_economy_run_ledger l ON l.run_id=m.run_id
+    LEFT JOIN leaderboard_runs r ON r.run_id=m.run_id
+    LEFT JOIN leaderboard_entries e ON e.season_id=? AND e.telegram_id=m.telegram_id
+    LEFT JOIN bot_subscribers b ON b.telegram_id=m.telegram_id
+    LEFT JOIN leaderboard_all_time a ON a.telegram_id=m.telegram_id
+    LEFT JOIN admin_profile_state pr ON pr.telegram_id=m.telegram_id
+    LEFT JOIN case_player_state cs ON cs.telegram_id=m.telegram_id
+    LEFT JOIN tester_accounts t ON t.telegram_id=m.telegram_id
+    ORDER BY m.created_at DESC,m.run_id DESC LIMIT ?`).bind(start,end,start,end,sid,limit).all()).results||[];
+  const normalized=[];
+  for(const row of rows){
+    if(Number(row?.excluded_from_rating||0)===1)continue;
+    const evidence=leaderboardServerEvidenceView(row,{minMs,minScore,proofMinMs,includeStaleStarted,staleBeforeMs});
+    const q=evidence.qualifying,t=evidence.trusted;
+    normalized.push({
+      runId:String(row.run_id||''),telegramId:String(row.telegram_id||''),name:String(row.display_name||row.telegram_id||''),username:String(row.username||''),photoUrl:String(row.photo_url||''),
+      createdAt:Math.max(0,Number(row.created_at||0)),status:String(row.session_status||'missing_session'),proofSeq:Math.max(0,Number(row.proof_seq||0)),proofLastServerAtMs:Math.max(0,Number(row.proof_last_server_at_ms||0)),
+      score:Math.max(0,Number(t?.score||row.proof_score||row.session_score||0)),durationMs:Math.max(0,Number(t?.durationMs||row.proof_duration_ms||row.session_duration_ms||0)),source:String(t?.source||'none'),
+      qualifies:Boolean(q),qualifyingSource:String(q?.source||''),qualifyingScore:Math.max(0,Number(q?.score||0)),qualifyingDurationMs:Math.max(0,Number(q?.durationMs||0)),qualificationGrace:Boolean(q?.grace),
+      entryScore:Math.max(0,Number(row.entry_score||0)),needsRecovery:Boolean(q&&Number(q.score||0)>Number(row.entry_score||0)),
+      profileXp:Math.max(0,Number(row.profile_xp||0)),caseAvatarId:String(row.case_avatar_id||''),caseFrameId:String(row.case_frame_id||''),
+      runTreats:0,runCoffee:0
+    });
+  }
+  const playerIds=new Set(normalized.map(row=>row.telegramId).filter(Boolean)),qualifyingIds=new Set(normalized.filter(row=>row.qualifies).map(row=>row.telegramId)),missingIds=new Set(normalized.filter(row=>row.needsRecovery).map(row=>row.telegramId));
+  const byStatus={};for(const row of normalized)byStatus[row.status]=(byStatus[row.status]||0)+1;
+  return {ok:true,seasonId:sid,recoveryWindow:window,minSeconds,minScore,proofGraceMs,proofMinMs,includeStaleStarted,staleStartedMs,rows:normalized,summary:{matches:normalized.length,players:playerIds.size,qualifyingPlayers:qualifyingIds.size,missingPlayers:missingIds.size,byStatus}};
+}
+
+async function repairLeaderboardFromServerRunRegistry(env,season,options={}){
+  if(!season?.id)return {ok:true,skipped:true,reason:'no_season'};
+  const sid=String(season.id),now=Math.floor(Date.now()/1000),oldLeader=await leaderboardCurrentVisibleLeader(env,sid).catch(()=>null);
+  const registry=await leaderboardServerRunRegistry(env,season,{...options,limit:options.limit||LEADERBOARD_SERVER_RECOVERY_MAX_ROWS});
+  const best=new Map();
+  for(const row of registry.rows||[]){
+    if(!row.qualifies||!row.telegramId)continue;
+    const candidate={...row,score:Number(row.qualifyingScore||row.score||0),durationMs:Number(row.qualifyingDurationMs||row.durationMs||0),source:String(row.qualifyingSource||row.source||'server_proof')};
+    const current=best.get(candidate.telegramId);
+    if(!current||candidate.score>current.score||(candidate.score===current.score&&candidate.createdAt<current.createdAt))best.set(candidate.telegramId,candidate);
+  }
+  const candidates=[...best.values()].sort((a,b)=>b.score-a.score||a.createdAt-b.createdAt||a.telegramId.localeCompare(b.telegramId));
+  if(!candidates.length)return {ok:true,seasonId:sid,repairedPlayers:0,candidatePlayers:0,registrySummary:registry.summary,proofGraceMs:registry.proofGraceMs,rows:(registry.rows||[]).slice(0,120)};
+  const existingRows=(await env.DB.prepare(`SELECT telegram_id,best_score,achieved_at,hidden FROM leaderboard_entries WHERE season_id=?`).bind(sid).all()).results||[];
+  const existing=new Map(existingRows.map(row=>[String(row.telegram_id),row]));
+  const statements=[];let repairedPlayers=0,gracePlayers=0;const recovered=[];
+  for(const row of candidates){
+    const previous=existing.get(row.telegramId),score=Math.max(0,Math.floor(row.score)),durationMs=Math.max(0,Math.floor(row.durationMs)),achievedAt=Math.max(1,Math.floor(row.createdAt||now));
+    const changed=!previous||Number(previous.hidden||0)!==0||score>Number(previous.best_score||0)||(score===Number(previous.best_score||0)&&achievedAt<Number(previous.achieved_at||achievedAt+1));
+    if(changed){repairedPlayers+=1;if(row.qualificationGrace)gracePlayers+=1;if(recovered.length<200)recovered.push({telegramId:row.telegramId,name:row.name,score,durationMs,status:row.status,source:row.source,runId:row.runId,grace:Boolean(row.qualificationGrace)});}
+    statements.push(env.DB.prepare(`INSERT INTO leaderboard_entries(season_id,telegram_id,display_name,username,photo_url,best_score,level,achieved_at,updated_at,hidden,case_avatar_id,case_frame_id)
+      VALUES(?,?,?,?,?,?,?,?,?,0,?,?) ON CONFLICT(season_id,telegram_id) DO UPDATE SET
+      display_name=CASE WHEN excluded.display_name<>'' THEN excluded.display_name ELSE leaderboard_entries.display_name END,
+      username=CASE WHEN excluded.username<>'' THEN excluded.username ELSE leaderboard_entries.username END,
+      photo_url=CASE WHEN excluded.photo_url<>'' THEN excluded.photo_url ELSE leaderboard_entries.photo_url END,
+      best_score=MAX(leaderboard_entries.best_score,excluded.best_score),
+      achieved_at=CASE WHEN excluded.best_score>leaderboard_entries.best_score OR (excluded.best_score=leaderboard_entries.best_score AND excluded.achieved_at<leaderboard_entries.achieved_at) THEN excluded.achieved_at ELSE leaderboard_entries.achieved_at END,
+      level=MAX(leaderboard_entries.level,excluded.level),hidden=0,updated_at=excluded.updated_at,case_avatar_id=excluded.case_avatar_id,case_frame_id=excluded.case_frame_id`)
+      .bind(sid,row.telegramId,String(row.name||row.telegramId).slice(0,120),String(row.username||'').slice(0,64),String(row.photoUrl||'').slice(0,500),score,profileLevelFromXp(Number(row.profileXp||0)),achievedAt,now,normalizeCaseCosmeticId('avatar',row.caseAvatarId),normalizeCaseCosmeticId('frame',row.caseFrameId)));
+    statements.push(env.DB.prepare(`INSERT INTO leaderboard_runs(run_id,telegram_id,score,duration_ms,run_treats,run_coffee,season_id,accepted,rejection_reason,created_at)
+      VALUES(?,?,?,?,0,0,?,1,'server_registry_recovery',?) ON CONFLICT(run_id) DO UPDATE SET
+      score=MAX(leaderboard_runs.score,excluded.score),duration_ms=MAX(leaderboard_runs.duration_ms,excluded.duration_ms),season_id=excluded.season_id,accepted=1,
+      rejection_reason=CASE WHEN leaderboard_runs.accepted=1 THEN leaderboard_runs.rejection_reason ELSE 'server_registry_recovery' END`)
+      .bind(row.runId,row.telegramId,score,durationMs,sid,achievedAt));
+    statements.push(env.DB.prepare(`UPDATE game_run_sessions SET score=MAX(score,?),duration_ms=MAX(duration_ms,?),accepted_rating=1,season_id=?,updated_at=MAX(updated_at,?) WHERE run_id=? AND telegram_id=?`)
+      .bind(score,durationMs,sid,now,row.runId,row.telegramId));
+  }
+  for(let i=0;i<statements.length;i+=60)await env.DB.batch(statements.slice(i,i+60));
+  leaderboardIntegrityResetMemory();
+  const newLeader=await leaderboardCurrentVisibleLeader(env,sid).catch(()=>null);
+  const leaderChanged=Boolean(oldLeader?.telegram_id&&newLeader?.telegram_id&&String(oldLeader.telegram_id)!==String(newLeader.telegram_id));
+  if(leaderChanged&&options.notifyLeaderChange!==false){try{await queueLeaderboardDethroneNotificationIfNeeded(env,{seasonId:sid,previousLeaderId:String(oldLeader.telegram_id),expectedLeaderId:String(newLeader.telegram_id)});}catch(error){console.error('server registry recovery dethrone notification failed',error);}}
+  return {ok:true,seasonId:sid,repairedPlayers,candidatePlayers:candidates.length,gracePlayers,registrySummary:registry.summary,proofGraceMs:registry.proofGraceMs,recovered,rows:(registry.rows||[]).slice(0,120),leaderChanged,leaderId:String(newLeader?.telegram_id||''),previousLeaderId:String(oldLeader?.telegram_id||'')};
 }
 
 async function leaderboardRatingFallbackCandidates(env,season,options={}){
@@ -46279,11 +46434,23 @@ async function ownerPanelRepairRating(env,ctx){
   if(!season||String(season.status||'')!=='active')throw new ApiError(409,'Сейчас нет активного рейтингового сезона для восстановления.');
   const before=await leaderboardIntegritySnapshot(env,season);
   const result=await maybeRepairLeaderboardIntegrity(env,season,{force:true,recoverTransient:true,recoverAllQualifying:Boolean(ctx.body?.recoverAllQualifying),recoverOrphanProofs:Boolean(ctx.body?.recoverOrphanProofs||ctx.body?.recoverAllQualifying),notifyLeaderChange:true});
+  // Emergency server registry pass: do not depend on a Game Over settlement row.
+  // Every protected run creates game_run_sessions and live proof checkpoints first,
+  // so a broken finish UI can be recovered directly from Production D1 evidence.
+  const serverRecovery=await repairLeaderboardFromServerRunRegistry(env,season,{includeStaleStarted:true,staleStartedMs:5000,proofGraceMs:AUTHORITATIVE_RUN_CHECKPOINT_MAX_WALL_GAP_MS,limit:LEADERBOARD_SERVER_RECOVERY_MAX_ROWS,notifyLeaderChange:true});
+  // Once proof-only sessions have been promoted into authoritative rating history,
+  // run the normal reconciler again. This restores the secondary rating state
+  // (all-time mirrors, accepted flags and recoverable notifications) from the rows
+  // we just reconstructed, without paying economy/XP a second time.
+  const postServerRepair=Number(serverRecovery?.repairedPlayers||0)>0
+    ? await maybeRepairLeaderboardIntegrity(env,season,{force:true,recoverTransient:true,recoverAllQualifying:true,notifyLeaderChange:false})
+    : {ok:true,skipped:true,reason:'no_server_changes'};
   leaderboardIntegrityResetMemory();
   const availabilityAfter=await leaderboardRatingRecoveryPolicy(env);
-  await logStaffAction(env,ctx.user,ctx.access,'owner_panel_rating_integrity_repair',null,'rating',null,null,{seasonId:String(season.id),before,result,recoverAllQualifying:Boolean(ctx.body?.recoverAllQualifying),recoverOrphanProofs:Boolean(ctx.body?.recoverOrphanProofs||ctx.body?.recoverAllQualifying),restoreAvailability,availabilityBefore,availabilityAfter});
+  const after=await leaderboardIntegritySnapshot(env,season);
+  await logStaffAction(env,ctx.user,ctx.access,'owner_panel_rating_integrity_repair',null,'rating',null,null,{seasonId:String(season.id),before,result,serverRecovery,postServerRepair,recoverAllQualifying:Boolean(ctx.body?.recoverAllQualifying),recoverOrphanProofs:Boolean(ctx.body?.recoverOrphanProofs||ctx.body?.recoverAllQualifying),restoreAvailability,availabilityBefore,availabilityAfter});
   const sources=result?.sourceCounts||{};
-  return {...result,availabilityBefore,availabilityAfter,message:`Рейтинг восстановлен: игроков ${Number(result?.candidatePlayers||0)}, исправлено мест ${Number(result?.repairedPlayers||0)}, восстановлено забегов ${Number(result?.recoveredRuns||0)+Number(result?.recoveredFallbackRuns||0)}, proof ${Number(result?.recoveredProofPlayers||0)}, Season Pass ${Number(sources.season_pass_run||0)}, timeline ${Number(sources.timeline_run||0)}, уведомлений ${Number(result?.restoredNotifications||0)}.${restoreAvailability?' Доступ рейтинга возвращён для всех игроков.':''}`};
+  return {...result,after,serverRecovery,availabilityBefore,availabilityAfter,message:`Рейтинг восстановлен с сервера: обычное восстановление ${Number(result?.repairedPlayers||0)} игроков, серверные run sessions/proofs ${Number(serverRecovery?.repairedPlayers||0)} игроков (${Number(serverRecovery?.candidatePlayers||0)} кандидатов, из них через финальный checkpoint grace ${Number(serverRecovery?.gracePlayers||0)}). Точных забегов ${Number(result?.recoveredRuns||0)+Number(result?.recoveredFallbackRuns||0)}, proof ${Number(result?.recoveredProofPlayers||0)}, Season Pass ${Number(sources.season_pass_run||0)}, timeline ${Number(sources.timeline_run||0)}.${restoreAvailability?' Доступ рейтинга возвращён для всех игроков.':''}`};
 }
 
 async function ownerPanelRating(env, ctx) {
@@ -46293,9 +46460,18 @@ async function ownerPanelRating(env, ctx) {
   const rank={active:0,scheduled:1,ended:2,cancelled:3};const rows=(seasonsResult.results||[]).map(row=>{const projected={...row,status:leaderboardSeasonStatusAt(row,now)};if(!String(projected.game_season_id||'').trim()){const target=leaderboardGameSeasonCandidate(projected,gameSeasonRows);if(target?.season_id){projected.game_season_id=String(target.season_id);projected.rating_kind=String(projected.rating_kind||'primary')||'primary';}}return projected;}).sort((a,b)=>(rank[String(a.status)]??9)-(rank[String(b.status)]??9)||Number(b.starts_at||0)-Number(a.starts_at||0));
   const current=rows.find(row=>String(row.status)==='active')||rows.find(row=>String(row.status)==='scheduled')||rows[0]||null,gameSeasonMap=new Map(gameSeasonRows.map(row=>[String(row.season_id||''),row]));
   let integrity=current&&String(current.status)==='active'?await maybeRepairLeaderboardIntegrity(env,current,{recoverTransient:true,notifyLeaderChange:true}):{ok:true,skipped:true,reason:'no_active_season'};
-  if(current&&String(current.status)==='active')integrity={...integrity,snapshot:await leaderboardIntegritySnapshot(env,current),policy:integrity?.policy||await leaderboardRatingRecoveryPolicy(env)};
+  let serverRecovery={ok:true,skipped:true,reason:'no_active_season',rows:[],registrySummary:{matches:0,players:0,qualifyingPlayers:0,missingPlayers:0}};
+  if(current&&String(current.status)==='active'){
+    // Opening Rating Control Room itself performs a Production-D1 forensic pass.
+    // This sees sessions that never reached the Game Over submit endpoint.
+    serverRecovery=await repairLeaderboardFromServerRunRegistry(env,current,{includeStaleStarted:true,staleStartedMs:LEADERBOARD_SERVER_RECOVERY_STALE_MS,proofGraceMs:AUTHORITATIVE_RUN_CHECKPOINT_MAX_WALL_GAP_MS,limit:LEADERBOARD_SERVER_RECOVERY_MAX_ROWS,notifyLeaderChange:true});
+    if(Number(serverRecovery?.repairedPlayers||0)>0){
+      await maybeRepairLeaderboardIntegrity(env,current,{force:true,recoverTransient:true,recoverAllQualifying:true,notifyLeaderChange:false});
+    }
+    integrity={...integrity,snapshot:await leaderboardIntegritySnapshot(env,current),policy:integrity?.policy||await leaderboardRatingRecoveryPolicy(env),serverRecovery};
+  }
   const topResult=current&&String(current.status)==='active'?await env.DB.prepare(`SELECT telegram_id,display_name,username,photo_url,best_score,level,achieved_at FROM leaderboard_entries WHERE season_id=? AND hidden=0 ORDER BY best_score DESC,achieved_at ASC,telegram_id ASC LIMIT 20`).bind(String(current.id)).all():{results:[]};
-  return {ok:true,seasons:rows.map(row=>ownerPanelRatingSeasonView(row,gameSeasonMap)),active:ownerPanelRatingSeasonView(current,gameSeasonMap),gameSeasons:gameSeasonRows.map(row=>ownerPanelGameSeasonView(row)),top:(topResult.results||[]).map((row,index)=>({place:index+1,telegramId:String(row.telegram_id),name:String(row.display_name||row.username||row.telegram_id),username:String(row.username||''),photoUrl:String(row.photo_url||''),score:Number(row.best_score||0),level:Number(row.level||1)})),integrity,banners:{current:seasonVisualsView(current?.visuals_json).rating.heroImage||SEASON_VISUAL_RATING_HERO_FALLBACK,allTime:'/assets/rating/v8/all-time-rating.webp'}};
+  return {ok:true,seasons:rows.map(row=>ownerPanelRatingSeasonView(row,gameSeasonMap)),active:ownerPanelRatingSeasonView(current,gameSeasonMap),gameSeasons:gameSeasonRows.map(row=>ownerPanelGameSeasonView(row)),top:(topResult.results||[]).map((row,index)=>({place:index+1,telegramId:String(row.telegram_id),name:String(row.display_name||row.username||row.telegram_id),username:String(row.username||''),photoUrl:String(row.photo_url||''),score:Number(row.best_score||0),level:Number(row.level||1)})),integrity,serverRecovery,banners:{current:seasonVisualsView(current?.visuals_json).rating.heroImage||SEASON_VISUAL_RATING_HERO_FALLBACK,allTime:'/assets/rating/v8/all-time-rating.webp'}};
 }
 
 async function ownerPanelSaveRatingVisuals(env, ctx) {
