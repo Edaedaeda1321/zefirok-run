@@ -11,6 +11,18 @@ CREATE TABLE admin_profile_state(telegram_id TEXT PRIMARY KEY,wallet INTEGER NOT
 CREATE TABLE case_player_state(telegram_id TEXT PRIMARY KEY,revision INTEGER NOT NULL DEFAULT 1,owned_avatars_json TEXT NOT NULL DEFAULT '[]',updated_at INTEGER NOT NULL DEFAULT 0,created_at INTEGER NOT NULL DEFAULT 0);
 CREATE TABLE granted_cases(id TEXT PRIMARY KEY,telegram_id TEXT NOT NULL,case_type TEXT NOT NULL,status TEXT NOT NULL DEFAULT 'pending',granted_by TEXT NOT NULL DEFAULT '',reason TEXT NOT NULL DEFAULT '',rewards_json TEXT NOT NULL DEFAULT '[]',created_at INTEGER NOT NULL,opened_at INTEGER NOT NULL DEFAULT 0,opening_started_at INTEGER NOT NULL DEFAULT 0,opening_token TEXT NOT NULL DEFAULT '');
 CREATE TABLE season_pass_players(season_id TEXT NOT NULL,telegram_id TEXT NOT NULL,xp INTEGER NOT NULL DEFAULT 0,premium_tier TEXT NOT NULL DEFAULT 'none',elite_plus_bonus_granted INTEGER NOT NULL DEFAULT 0,revision INTEGER NOT NULL DEFAULT 1,created_at INTEGER NOT NULL,updated_at INTEGER NOT NULL,PRIMARY KEY(season_id,telegram_id));
+-- Added to the compatibility snapshot so every migration after 0087 can be
+-- applied automatically. This is the pre-0089 shape (no open_request_id yet).
+CREATE TABLE season_pass_case_grants(
+ grant_id TEXT PRIMARY KEY,case_id TEXT NOT NULL,source_season_id TEXT NOT NULL DEFAULT '',telegram_id TEXT NOT NULL,
+ status TEXT NOT NULL DEFAULT 'pending' CHECK(status IN ('pending','opening','opened')),rewards_json TEXT NOT NULL DEFAULT '[]',snapshot_json TEXT NOT NULL DEFAULT '{}',
+ opening_started_at INTEGER NOT NULL DEFAULT 0,opening_token TEXT NOT NULL DEFAULT '',granted_by TEXT NOT NULL DEFAULT '',created_at INTEGER NOT NULL,opened_at INTEGER NOT NULL DEFAULT 0
+);
+CREATE TABLE zefirok_schema_contract(
+ contract_key TEXT PRIMARY KEY CHECK(contract_key='main'),contract_version INTEGER NOT NULL CHECK(contract_version>=1),migration_name TEXT NOT NULL,updated_at INTEGER NOT NULL,updated_by TEXT NOT NULL DEFAULT ''
+);
+INSERT INTO zefirok_schema_contract(contract_key,contract_version,migration_name,updated_at,updated_by)
+VALUES('main',1,'0085_schema_contract_v1.sql',1700000000,'snapshot');
 CREATE TABLE shop_assortment(product_id TEXT PRIMARY KEY,enabled INTEGER NOT NULL DEFAULT 1,points INTEGER NOT NULL DEFAULT 0,treats INTEGER NOT NULL DEFAULT 0,coffee INTEGER NOT NULL DEFAULT 0,updated_at INTEGER NOT NULL DEFAULT 0);
 CREATE TABLE player_economy_meta(meta_key TEXT PRIMARY KEY,value_int INTEGER NOT NULL DEFAULT 0,updated_at INTEGER NOT NULL DEFAULT 0);
 INSERT INTO player_economy_meta(meta_key,value_int,updated_at) VALUES('server_authority_cutover_at',1700000000,1700000000);

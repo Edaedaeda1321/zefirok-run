@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { access, mkdtemp, rm } from 'node:fs/promises';
+import { access, mkdtemp, readdir, rm } from 'node:fs/promises';
 import { constants as fsConstants } from 'node:fs';
 import { spawn } from 'node:child_process';
 import path from 'node:path';
@@ -9,21 +9,28 @@ import process from 'node:process';
 const root=process.cwd();
 const database='zefirok-rewards';
 const snapshot=path.join(root,'scripts','fixtures','d1_pre_0087_snapshot.sql');
-const migrations=[
-  path.join(root,'migrations','0087_p1_platform_hardening.sql'),
-  path.join(root,'migrations','0088_operational_retention.sql')
-];
+const snapshotBaseline=Number((/d1_pre_(\d{4})_snapshot\.sql$/i.exec(snapshot)||[])[1]||0);
 const cases=[
   path.join(root,'scripts','fixtures','d1_integration_cases.sql'),
-  path.join(root,'scripts','fixtures','d1_retention_cases.sql')
+  path.join(root,'scripts','fixtures','d1_retention_cases.sql'),
+  path.join(root,'scripts','fixtures','d1_schema_contract_cases.sql')
 ];
+
+async function migrationsAfterSnapshot(){
+  const names=(await readdir(path.join(root,'migrations')))
+    .filter(name=>/^\d{4}_.+\.sql$/i.test(name))
+    .sort();
+  return names
+    .filter(name=>Number(name.slice(0,4))>=snapshotBaseline)
+    .map(name=>path.join(root,'migrations',name));
+}
 
 function displayPath(file){
   const relative=path.relative(root,file);
   return relative && !relative.startsWith('..') ? relative : file;
 }
 
-async function assertRequiredFiles(){
+async function assertRequiredFiles(migrations){
   const required=[snapshot,...migrations,...cases];
   const missing=[];
   for(const file of required){
@@ -62,12 +69,14 @@ async function executeFile(persist,file){
 
 let persist='';
 try{
-  await assertRequiredFiles();
+  const migrations=await migrationsAfterSnapshot();
+  if(!snapshotBaseline||!migrations.length)throw new Error(`Could not resolve migrations after integration snapshot baseline ${snapshotBaseline||'(unknown)'}.`);
+  await assertRequiredFiles(migrations);
   persist=await mkdtemp(path.join(os.tmpdir(),'zefirok-d1-integration-'));
   await executeFile(persist,snapshot);
   for(const migration of migrations)await executeFile(persist,migration);
   for(const file of cases)await executeFile(persist,file);
-  console.log('D1 integration OK: migrations + support/revision + purchase/case retries + reward idempotency/archive + season double-claim + stale revision + price change + retention.');
+  console.log(`D1 integration OK: snapshot pre-${String(snapshotBaseline).padStart(4,'0')} + ${migrations.length} migration(s) through ${path.basename(migrations.at(-1))} + recovery/idempotency/retention/schema-contract fixtures.`);
 }catch(error){
   console.error(`\nD1 INTEGRATION FAILED\n${error?.message||error}`);
   process.exitCode=1;

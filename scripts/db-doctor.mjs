@@ -3,7 +3,8 @@ import { mkdir, writeFile } from 'node:fs/promises';
 import { spawn } from 'node:child_process';
 import path from 'node:path';
 import process from 'node:process';
-import { D1_DATABASE_NAME } from './schema-contract.mjs';
+import { D1_DATABASE_NAME, REQUIRED_COLUMN_SPECS } from './schema-contract.mjs';
+import { buildRequiredSchemaManifest } from './check-database-schema.mjs';
 
 const argv = process.argv.slice(2);
 const remote = argv.includes('--remote');
@@ -64,30 +65,63 @@ async function sql(command) {
 function quote(value) { return `'${String(value).replaceAll("'", "''")}'`; }
 function hasAll(set, names) { return names.every(name => set.has(name)); }
 
+const DOCTOR_COLUMN_TABLES = Object.freeze([
+  'admin_profile_state','case_player_state','level_case_openings','granted_cases','reward_delivery_queue',
+  'game_run_sessions','season_pass_seasons','season_pass_players','season_pass_claims','season_pass_purchases',
+  'player_account_revision','live_content_release_rules','live_content_registry_state'
+]);
+
 async function loadSchema() {
-  const tableRows = await sql("SELECT name FROM sqlite_schema WHERE type='table' AND name NOT LIKE 'sqlite_%' ORDER BY name");
-  const tables = new Set(tableRows.map(row => String(row.name || '')).filter(Boolean));
-  const wanted = [
-    'admin_profile_state','case_player_state','level_case_openings','granted_cases','reward_delivery_queue',
-    'game_run_sessions','season_pass_seasons','season_pass_players','season_pass_claims','season_pass_purchases',
-    'player_account_revision','live_content_release_rules','live_content_registry_state'
-  ].filter(name => tables.has(name));
+  const rows = await sql("SELECT type,name FROM sqlite_schema WHERE type IN ('table','index','trigger') AND name NOT LIKE 'sqlite_%' ORDER BY type,name");
+  const tables = new Set(), indexes = new Set(), triggers = new Set();
+  for (const row of rows) {
+    const type=String(row.type||'').toLowerCase(), name=String(row.name||'');
+    if (!name) continue;
+    if (type==='table') tables.add(name);
+    else if (type==='index') indexes.add(name);
+    else if (type==='trigger') triggers.add(name);
+  }
+  const wanted = [...new Set([...DOCTOR_COLUMN_TABLES, ...REQUIRED_COLUMN_SPECS.map(item=>item.table)])].filter(name => tables.has(name));
   const columns = new Map();
   for (const table of wanted) {
-    const rows = await sql(`SELECT name FROM pragma_table_info(${quote(table)})`);
-    columns.set(table, new Set(rows.map(row => String(row.name || '')).filter(Boolean)));
+    const info = await sql(`SELECT name FROM pragma_table_info(${quote(table)})`);
+    columns.set(table, new Set(info.map(row => String(row.name || '')).filter(Boolean)));
   }
-  return { tables, columns };
+  return { tables, indexes, triggers, columns };
 }
 
+const manifest = await buildRequiredSchemaManifest(root);
 const schema = await loadSchema();
 const checks = [];
+const schemaResults = [];
+const schemaResultKeys = new Set();
+const skippedChecks = [];
+function recordSchemaProblem(kind,name,title=`Missing required ${kind} ${name}`) {
+  const key=`${kind}:${name}`;
+  if (schemaResultKeys.has(key)) return;
+  schemaResultKeys.add(key);
+  schemaResults.push({id:`schema_missing_${kind}_${String(name).replace(/[^A-Za-z0-9_]+/g,'_')}`,severity:'critical',title,count:1,samples:[]});
+}
+for (const table of manifest.tables) if (!schema.tables.has(table)) recordSchemaProblem('table',table);
+for (const index of manifest.indexes) if (!schema.indexes.has(index)) recordSchemaProblem('index',index);
+for (const trigger of manifest.triggers) if (!schema.triggers.has(trigger)) recordSchemaProblem('trigger',trigger);
+for (const spec of REQUIRED_COLUMN_SPECS) {
+  if (!schema.tables.has(spec.table)) continue;
+  if (!(schema.columns.get(spec.table)||new Set()).has(spec.column)) recordSchemaProblem('column',`${spec.table}.${spec.column}`);
+}
 function add(check) {
-  const tables = check.tables || [];
-  if (!hasAll(schema.tables, tables)) return;
+  const missingTables=(check.tables||[]).filter(table=>!schema.tables.has(table));
+  const missingColumns=[];
   for (const [table, cols] of Object.entries(check.columns || {})) {
-    const available = schema.columns.get(table) || new Set();
-    if (!hasAll(available, cols)) return;
+    if (!schema.tables.has(table)) continue;
+    const available=schema.columns.get(table)||new Set();
+    for (const column of cols) if (!available.has(column)) missingColumns.push(`${table}.${column}`);
+  }
+  if (missingTables.length || missingColumns.length) {
+    for (const table of missingTables) recordSchemaProblem('table',table,`DB Doctor check ${check.id}: missing table ${table}`);
+    for (const column of missingColumns) recordSchemaProblem('column',column,`DB Doctor check ${check.id}: missing column ${column}`);
+    skippedChecks.push({id:check.id,missingTables,missingColumns});
+    return;
   }
   checks.push(check);
 }
@@ -259,24 +293,36 @@ for (const check of checks) {
   results.push(result);
 }
 
-const critical = results.filter(item => item.severity === 'critical' && item.count > 0);
-const warnings = results.filter(item => item.severity === 'warning' && item.count > 0);
-console.log(`DB Doctor ${remote ? 'REMOTE' : 'LOCAL'}: ${checks.length} check(s), ${critical.length} critical check(s) with issues, ${warnings.length} warning check(s) with issues.`);
-for (const item of results.filter(result => result.count > 0)) {
+const allResults=[...schemaResults,...results];
+const critical = allResults.filter(item => item.severity === 'critical' && item.count > 0);
+const warnings = allResults.filter(item => item.severity === 'warning' && item.count > 0);
+const expectedObjects=manifest.tables.length+manifest.indexes.length+manifest.triggers.length+REQUIRED_COLUMN_SPECS.length;
+const missingObjects=schemaResults.length;
+const coveragePercent=expectedObjects?Math.max(0,Math.round(((expectedObjects-missingObjects)*10000)/expectedObjects)/100):100;
+console.log(`DB Doctor ${remote ? 'REMOTE' : 'LOCAL'}: ${checks.length} data check(s), schema coverage ${coveragePercent}%, ${critical.length} critical result(s), ${warnings.length} warning result(s).`);
+for (const item of allResults.filter(result => result.count > 0)) {
   const tag = item.severity === 'critical' ? 'CRITICAL' : 'WARN';
   console.log(`${tag} ${item.id}: ${item.count} - ${item.title}`);
   for (const sample of item.samples) console.log(`  ${sample}`);
 }
-if (!critical.length && !warnings.length) console.log('DB Doctor: no known data integrity anomalies found.');
+if (skippedChecks.length) console.log(`DB Doctor: ${skippedChecks.length} data check(s) skipped because required schema is missing.`);
+if (!critical.length && !warnings.length && !skippedChecks.length) console.log('DB Doctor: schema coverage 100%; no known data integrity anomalies found.');
 
 const report = {
-  version:1,
+  version:2,
   database,
   target:remote ? 'remote' : 'local',
   checkedAt:new Date().toISOString(),
   checkedAtUnix:now,
-  checks:results,
-  summary:{ criticalChecksWithIssues:critical.length, warningChecksWithIssues:warnings.length }
+  checks:allResults,
+  schema:{
+    expected:{tables:manifest.tables.length,indexes:manifest.indexes.length,triggers:manifest.triggers.length,columns:REQUIRED_COLUMN_SPECS.length,total:expectedObjects},
+    actual:{tables:schema.tables.size,indexes:schema.indexes.size,triggers:schema.triggers.size},
+    missing:schemaResults.map(item=>item.title),
+    skippedChecks,
+    coveragePercent
+  },
+  summary:{ criticalChecksWithIssues:critical.length, warningChecksWithIssues:warnings.length, schemaMissing:missingObjects, checksSkipped:skippedChecks.length, coveragePercent }
 };
 await mkdir(path.join(root, '.wrangler'), { recursive:true });
 await writeFile(path.join(root, '.wrangler', 'db-doctor-last.json'), `${JSON.stringify(report, null, 2)}\n`);

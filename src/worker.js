@@ -1,3 +1,10 @@
+import {
+  RUNTIME_SCHEMA_REQUIRED_TABLES,
+  RUNTIME_SCHEMA_REQUIRED_INDEXES,
+  ACCOUNT_REVISION_REQUIRED_TRIGGERS,
+  RUNTIME_COMPATIBILITY_REQUIRED_COLUMNS
+} from './runtime-schema-manifest.mjs';
+
 const SYSTEM_IMAGE_FALLBACK = "/assets/ui/error404-no-icon.webp";
 
 const PRODUCTS = Object.freeze({
@@ -1517,6 +1524,69 @@ const LEGACY_SHOP_DIRECT_COMMANDS = Object.freeze(new Set([
 let runtimeCompatibilitySchemaReady = false;
 let runtimeCompatibilitySchemaPromise = null;
 
+const RUNTIME_SCHEMA_CONTRACT_VERSION = 2;
+const RUNTIME_SCHEMA_CONTRACT_MIGRATION = '0090_schema_contract_v2.sql';
+let runtimeSchemaContractReady = false;
+let runtimeSchemaContractPromise = null;
+
+function shouldEnforceRuntimeSchemaContract(pathname) {
+  const path=String(pathname||'');
+  if (!path.startsWith('/api/')) return false;
+  if (path==='/api/health' || path==='/api/bot/health' || path==='/api/diagnostics/network') return false;
+  if (path.startsWith('/api/owner/') || path.startsWith('/api/admin/') || path.startsWith('/api/staff/') || path.startsWith('/api/maintenance/') || path.startsWith('/api/bot/')) return false;
+  if (path.startsWith('/api/legal/') || path==='/api/access/bootstrap') return false;
+  return true;
+}
+
+async function ensureRuntimeSchemaContractReady(env) {
+  requireDatabase(env);
+  if (runtimeSchemaContractReady) return true;
+  if (runtimeSchemaContractPromise) return runtimeSchemaContractPromise;
+  const promise=(async()=>{
+    const [objectsResult,contract]=await Promise.all([
+      env.DB.prepare(`SELECT type,name FROM sqlite_schema WHERE type IN ('table','index','trigger') AND name NOT LIKE 'sqlite_%'`).all(),
+      env.DB.prepare(`SELECT contract_version,migration_name FROM zefirok_schema_contract WHERE contract_key='main' LIMIT 1`).first()
+    ]);
+    const tables=new Set(),indexes=new Set(),triggers=new Set();
+    for (const row of objectsResult.results||[]) {
+      const type=String(row.type||'').toLowerCase(),name=String(row.name||'');
+      if (!name) continue;
+      if (type==='table') tables.add(name);
+      else if (type==='index') indexes.add(name);
+      else if (type==='trigger') triggers.add(name);
+    }
+    const missing=[];
+    for (const name of RUNTIME_SCHEMA_REQUIRED_TABLES) if (!tables.has(name)) missing.push(`table:${name}`);
+    for (const name of RUNTIME_SCHEMA_REQUIRED_INDEXES) if (!indexes.has(name)) missing.push(`index:${name}`);
+    for (const name of ACCOUNT_REVISION_REQUIRED_TRIGGERS) if (!triggers.has(name)) missing.push(`trigger:${name}`);
+    if (Number(contract?.contract_version||0)<RUNTIME_SCHEMA_CONTRACT_VERSION || String(contract?.migration_name||'')!==RUNTIME_SCHEMA_CONTRACT_MIGRATION) {
+      missing.push(`contract:v${Number(contract?.contract_version||0)}:${String(contract?.migration_name||'missing')}`);
+    }
+    const grouped=new Map();
+    for (const item of RUNTIME_COMPATIBILITY_REQUIRED_COLUMNS) {
+      const list=grouped.get(item.table)||[];
+      list.push(item.column);grouped.set(item.table,list);
+    }
+    const tableNames=[...grouped.keys()];
+    if (tableNames.length) {
+      const infoResults=await env.DB.batch(tableNames.map(table=>env.DB.prepare(`PRAGMA table_info(${table})`)));
+      for (let i=0;i<tableNames.length;i+=1) {
+        const table=tableNames[i],available=new Set((infoResults[i]?.results||[]).map(row=>String(row.name||'')));
+        for (const column of grouped.get(table)||[]) if (!available.has(column)) missing.push(`column:${table}.${column}`);
+      }
+    }
+    if (missing.length) {
+      const preview=missing.slice(0,12).join(', '),more=missing.length>12?` +${missing.length-12}`:'';
+      throw new Error(`SCHEMA_NOT_READY ${preview}${more}`);
+    }
+    runtimeSchemaContractReady=true;
+    return true;
+  })();
+  runtimeSchemaContractPromise=promise;
+  try { return await promise; }
+  finally { if (runtimeSchemaContractPromise===promise) runtimeSchemaContractPromise=null; }
+}
+
 function isMissingRuntimeDatabaseSchemaError(error) {
   const text = String(error?.message || error || '').toLowerCase();
   return text.includes('no such table') || text.includes('no such column');
@@ -1705,6 +1775,11 @@ export default {
       if (url.pathname === "/api/battle-pass/access" && request.method === "POST") {
         const legalGate = await enforceLegalAcceptanceForRequest(request, env);
         if (legalGate) return legalGate;
+        try { await ensureRuntimeSchemaContractReady(env); }
+        catch (error) {
+          console.error("Runtime schema contract blocked battle pass access", String(error?.message||error));
+          return jsonResponse({ok:false,code:"SCHEMA_NOT_READY",error:"Серверная база требует обслуживания. Попробуй открыть раздел чуть позже."},503);
+        }
         return await withPlayerApiPerformance(env, ctx, "battle_pass_access", () => getBattlePassAccess(request, env), request);
       }
       // Telegram service routes must stay independent from D1 schema checks.
@@ -1757,13 +1832,15 @@ export default {
       if (url.pathname.startsWith("/api/owner/test-project/") && request.method === "POST") {
         return await handleOwnerPanelApi(request, env, url.pathname, ctx);
       }
-      if (url.pathname.startsWith("/api/") && url.pathname !== "/api/runs/start" && url.pathname !== "/api/runs/checkpoint") {
-        // Compatibility migrations are a deploy/cron concern, not player-request work.
-        // Warm them in the background on a cold isolate; individual hot endpoints keep
-        // their missing-schema fallback for a genuinely incomplete deployment.
-        if (!runtimeCompatibilitySchemaReady && !runtimeCompatibilitySchemaPromise) {
-          const warmup = ensureRuntimeCompatibilitySchema(env).catch((error) => console.warn("Runtime compatibility warmup failed", String(error?.message || error)));
-          if (ctx?.waitUntil) ctx.waitUntil(warmup); else void warmup;
+      if (shouldEnforceRuntimeSchemaContract(url.pathname)) {
+        // Player traffic is read/write application work, never a schema repair job.
+        // A cold isolate verifies the migration-backed contract once and fails closed
+        // before any legacy ensure*Schema() helper can recreate an empty subsystem.
+        try {
+          await ensureRuntimeSchemaContractReady(env);
+        } catch (error) {
+          console.error("Runtime schema contract blocked player API", url.pathname, String(error?.message||error));
+          return jsonResponse({ok:false,code:"SCHEMA_NOT_READY",error:"Серверная база требует обслуживания. Попробуй открыть раздел чуть позже."},503);
         }
       }
       if (url.pathname === "/legal.html" && request.method === "GET") {
@@ -44895,19 +44972,6 @@ async function reconcileAlbumMilestoneClaims(env, telegramId, claims) {
 // Public acquisition metadata, shared by Album items. Never used for granting.
 // One cache per database; no per-item requests and no player-specific data in it.
 const albumAcquisitionCache = new WeakMap();
-const ALBUM_ACQUISITION_CACHE_TTL_MS = 5 * 60 * 1000;
-const ALBUM_ACQUISITION_CACHE_FALLBACK_TTL_MS = 30 * 1000;
-const ALBUM_ACQUISITION_TIMEOUT_MS = 1200;
-function albumAcquisitionFallback(){return {map:new Map(),complete:false};}
-function withAlbumAcquisitionTimeout(promise, timeoutMs = ALBUM_ACQUISITION_TIMEOUT_MS) {
-  return Promise.race([
-    promise,
-    new Promise((resolve)=>setTimeout(()=>resolve(albumAcquisitionFallback()), timeoutMs))
-  ]).catch((error)=>{
-    console.error("album acquisition metadata timed out", error);
-    return albumAcquisitionFallback();
-  });
-}
 function albumCaseAcquisitionSources(liveops) {
   const result=new Map();
   const add=(kind,id,type,guaranteeOnly=false)=>{
@@ -44943,7 +45007,7 @@ async function albumAcquisitionSources(env) {
   const cached=albumAcquisitionCache.get(env.DB),now=Date.now();
   if(cached?.promise)return cached.promise;
   if(cached?.value&&cached.expires>now)return cached.value;
-  const entry={promise:null,value:cached?.value||null,expires:cached?.expires||0};
+  const entry={promise:null,value:null,expires:0};
   const read=async()=>{
     let complete=true;
     const optional=async(label,fn,fallback)=>{try{return await fn();}catch(error){complete=false;console.error("album source metadata unavailable",label,error?.message||error);return fallback;}};
@@ -45014,20 +45078,19 @@ async function albumAcquisitionSources(env) {
     }
     return {map,complete};
   };
-  entry.promise=read().then(value=>{entry.value=value;entry.expires=Date.now()+(value.complete?ALBUM_ACQUISITION_CACHE_TTL_MS:ALBUM_ACQUISITION_CACHE_FALLBACK_TTL_MS);return value;}).finally(()=>{entry.promise=null;});
+  entry.promise=read().then(value=>{entry.value=value;entry.expires=Date.now()+(value.complete?15000:0);return value;}).finally(()=>{entry.promise=null;});
   albumAcquisitionCache.set(env.DB,entry);return entry.promise;
 }
 
 async function albumPlayerState(env,telegramId){
   await ensureAlbumSchema(env);await ensureCasePlayerState(env,String(telegramId),{});
-  const acquisitionPromise = withAlbumAcquisitionTimeout(albumAcquisitionSources(env));
   const [collectionsRes,itemsRes,milestonesRes,claimsRes,caseState,catalog,acquisition]=await Promise.all([
     env.DB.prepare(`SELECT * FROM album_collections WHERE status='published' ORDER BY sort_order ASC,published_at ASC,collection_id ASC`).all(),
     env.DB.prepare(`SELECT i.* FROM album_collection_items i JOIN album_collections c ON c.collection_id=i.collection_id WHERE c.status='published' ORDER BY i.collection_id,i.sort_order,i.item_kind,i.item_id`).all(),
     env.DB.prepare(`SELECT m.* FROM album_milestones m JOIN album_collections c ON c.collection_id=m.collection_id WHERE c.status='published' AND m.enabled=1 ORDER BY m.collection_id,m.threshold_percent,m.sort_order,m.milestone_id`).all(),
     env.DB.prepare(`SELECT * FROM album_milestone_claims WHERE telegram_id=?`).bind(String(telegramId)).all(),
     env.DB.prepare(`SELECT owned_avatars_json,owned_frames_json,owned_trails_json,owned_skins_json,owned_music_json FROM case_player_state WHERE telegram_id=? LIMIT 1`).bind(String(telegramId)).first(),
-    albumCatalogSnapshot(env),acquisitionPromise
+    albumCatalogSnapshot(env),albumAcquisitionSources(env)
   ]);
   const owned={
     avatar:albumOwnedSet(caseState?.owned_avatars_json),frame:albumOwnedSet(caseState?.owned_frames_json),trail:albumOwnedSet(caseState?.owned_trails_json),

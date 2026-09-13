@@ -1,5 +1,7 @@
-export const SCHEMA_CONTRACT_VERSION = 1;
-export const SCHEMA_CONTRACT_MIGRATION = '0085_schema_contract_v1.sql';
+export const SCHEMA_CONTRACT_VERSION = 2;
+export const SCHEMA_CONTRACT_MIGRATION = '0090_schema_contract_v2.sql';
+export const RUNTIME_CANONICALIZATION_MIGRATION = '0085_schema_contract_v1.sql';
+export const PLATFORM_HARDENING_MIGRATION = '0087_p1_platform_hardening.sql';
 export const D1_DATABASE_NAME = 'zefirok-rewards';
 export const PREFLIGHT_STAMP_MAX_AGE_MS = 15 * 60 * 1000;
 
