@@ -88,6 +88,7 @@
     "0085_schema_contract_v1.sql": "7cca1bd9ba78a3d0690964a837f4de62f51d5eabea80c683c45c49e497f3d627",
     "0086_live_content_registry_authority.sql": "88b188aeef5dfe892ada6e877636d030d4cd9d626b13a0c9640ebcc23ddb44fd",
     "0087_p1_platform_hardening.sql": "aad6ab8165e2a6087a659b051006320d5933c2e98a36d7dd0221cc43efa07504",
-    "0088_operational_retention.sql": "9a4015258bbcb0ca8b7669cf43f5ebbcd79f077684b984ae92b952fb64889fb9"
+    "0088_operational_retention.sql": "9a4015258bbcb0ca8b7669cf43f5ebbcd79f077684b984ae92b952fb64889fb9",
+    "0089_season_pass_case_request_recovery.sql": "9ee6a2ed10eb215d70832633bdb62cf6eb27f1ffe50e97254f3958fb8805ccea"
   }
 }
