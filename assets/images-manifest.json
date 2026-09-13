@@ -1,8 +1,8 @@
 {
   "version": 2,
   "hashAlgorithm": "sha256",
-  "catalogHash": "b6cbc4eca3613654",
-  "count": 455,
+  "catalogHash": "b08145b2e2237e3d",
+  "count": 456,
   "images": [
     {
       "fileName": "achievements/background_achivment_panel.webp",
@@ -3459,6 +3459,14 @@
       "path": "/assets/ui/icon_player_elit%2B.webp",
       "hash": "d5725402c05b",
       "size": 39336
+    },
+    {
+      "fileName": "ui/icon_prize.webp",
+      "label": "Icon prize",
+      "folder": "ui",
+      "path": "/assets/ui/icon_prize.webp",
+      "hash": "51103fb1e076",
+      "size": 56456
     },
     {
       "fileName": "ui/icon_profile_button.webp",

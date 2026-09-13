@@ -4675,7 +4675,7 @@ async function ensurePlayerGiftInboxSchema(env) {
 }
 
 function normalizePlayerGiftRewards(input) {
-  const allowed = new Set(["points", "zefir", "coffee", "case", "avatar", "frame", "trail", "skin", "showcase_style", "booster", "streak_protection", "season_pass_xp", "season_pass_tier", "season_pass_xp_grant"]);
+  const allowed = new Set(["points", "zefir", "coffee", "case", "seasonal_case", "avatar", "frame", "trail", "skin", "showcase_style", "booster", "streak_protection", "season_pass_xp", "season_pass_tier", "season_pass_xp_grant"]);
   const merged = new Map();
   for (const raw of Array.isArray(input) ? input : []) {
     if (!raw || typeof raw !== "object") continue;
@@ -4723,13 +4723,15 @@ function normalizePlayerGiftRewards(input) {
       continue;
     }
     const id = String(raw.id || raw.rewardId || "").trim().slice(0, 96);
-    if (["case", "avatar", "frame", "trail", "skin", "showcase_style"].includes(kind) && !id) continue;
+    if (["case", "seasonal_case", "avatar", "frame", "trail", "skin", "showcase_style"].includes(kind) && !id) continue;
     const amount = ["avatar", "frame", "trail", "skin", "showcase_style"].includes(kind)
       ? 1
-      : kind === 'streak_protection' ? Math.max(1,Math.min(30,Math.floor(Number(raw.amount||1)))) : Math.max(1, Math.min(5000000, Math.floor(Number(raw.amount || 1))));
+      : kind === 'streak_protection' ? Math.max(1,Math.min(30,Math.floor(Number(raw.amount||1))))
+      : kind === "seasonal_case" ? Math.max(1,Math.min(20,Math.floor(Number(raw.amount||1))))
+      : Math.max(1, Math.min(5000000, Math.floor(Number(raw.amount || 1))));
     const key = `${kind}:${id}`;
     const current = merged.get(key);
-    if (current && !["avatar", "frame", "trail", "skin", "showcase_style"].includes(kind)) current.amount = Math.min(kind === "streak_protection" ? 30 : 5000000, current.amount + amount);
+    if (current && !["avatar", "frame", "trail", "skin", "showcase_style"].includes(kind)) current.amount = Math.min(kind === "streak_protection" ? 30 : kind === "seasonal_case" ? 20 : 5000000, current.amount + amount);
     else if (!current) merged.set(key, { kind, id, amount });
   }
   return [...merged.values()].slice(0, 30);
@@ -32259,15 +32261,52 @@ async function openSeasonPassStoryTest(request,env){
   }catch(error){if(error instanceof ApiError)return jsonResponse({ok:false,error:error.message},error.status);console.error('openSeasonPassStoryTest failed',error);return jsonResponse({ok:false,error:'Не удалось открыть тест сюжета.'},500);}
 }
 
+function seasonPassSeasonalCaseInfoView(snapshotValue,definitionValue,fallbackItems=[]){
+  const snapshot=snapshotValue&&typeof snapshotValue==='object'?snapshotValue:{};
+  const definition=definitionValue&&typeof definitionValue==='object'?definitionValue:{};
+  const sourceItems=Array.isArray(snapshot.items)&&snapshot.items.length?snapshot.items:(Array.isArray(fallbackItems)?fallbackItems:[]);
+  const items=sourceItems.map((row,index)=>{
+    const kind=String(row?.reward_kind||row?.kind||'').trim(),itemId=String(row?.item_id||row?.itemId||'').trim();
+    const weight=Number(row?.weight||0),amount=Math.max(1,Math.floor(Number(row?.amount)||1));
+    if(!kind||!Number.isFinite(weight)||weight<=0)return null;
+    return {key:String(row?.item_key||row?.key||`${kind}:${itemId||index}`),kind,itemId,amount,weight,rarity:String(row?.rarity||'seasonal'),title:String(row?.title||''),imageUrl:String(row?.image_url||row?.imageUrl||'')};
+  }).filter(Boolean);
+  return {
+    title:String(snapshot.title||definition.title||'Сезонный кейс'),
+    description:String(snapshot.description||definition.description||''),
+    imageUrl:String(snapshot.imageUrl||definition.closed_image_url||definition.imageUrl||''),
+    openImageUrl:String(snapshot.openImageUrl||definition.open_image_url||definition.openImageUrl||''),
+    slots:Math.max(1,Math.min(5,Number(snapshot.slots??definition.slots)||1)),
+    duplicatePoints:Math.max(0,Number(snapshot.duplicatePoints??definition.duplicate_points??definition.duplicatePoints)||0),
+    groupChances:seasonPassSeasonalCaseGroupChances(snapshot.groupChances)||seasonPassSeasonalCaseGroupChances(definition.reward_groups_json||definition.groupChances)||null,
+    items
+  };
+}
+
 async function seasonPassSeasonalCaseInventory(env,telegramId){
-  const rows=(await env.DB.prepare(`SELECT g.case_id,g.status,COUNT(*) AS count,MAX(CASE WHEN g.status='opening' THEN g.open_request_id ELSE '' END) AS opening_request_id,MAX(CASE WHEN g.status='opening' THEN g.opening_started_at ELSE 0 END) AS opening_started_at,d.title,d.description,d.closed_image_url,d.open_image_url,d.release_at,d.enabled,s.title AS season_title,s.ends_at
+  const playerId=String(telegramId);
+  const rows=(await env.DB.prepare(`SELECT g.case_id,g.status,COUNT(*) AS count,MAX(CASE WHEN g.status='opening' THEN g.open_request_id ELSE '' END) AS opening_request_id,MAX(CASE WHEN g.status='opening' THEN g.opening_started_at ELSE 0 END) AS opening_started_at,d.title,d.description,d.closed_image_url,d.open_image_url,d.slots,d.duplicate_points,d.reward_groups_json,d.release_at,d.enabled,s.title AS season_title,s.ends_at
     FROM season_pass_case_grants g JOIN season_pass_case_definitions d ON d.case_id=g.case_id LEFT JOIN season_pass_seasons s ON s.season_id=d.season_id
-    WHERE g.telegram_id=? AND d.enabled=1 GROUP BY g.case_id,g.status ORDER BY MAX(g.created_at) DESC`).bind(String(telegramId)).all()).results||[];
+    WHERE g.telegram_id=? AND d.enabled=1 GROUP BY g.case_id,g.status ORDER BY MAX(g.created_at) DESC`).bind(playerId).all()).results||[];
   const byCase=new Map();
   const now=Math.floor(Date.now()/1000);
   for(const row of rows){
-    const id=String(row.case_id);let item=byCase.get(id);if(!item){item={caseId:id,title:String(row.title||'Сезонный кейс'),description:String(row.description||''),imageUrl:String(row.closed_image_url||''),openImageUrl:String(row.open_image_url||''),seasonTitle:String(row.season_title||''),released:Number(row.release_at||0)<=now,pending:0,opening:0,opened:0};byCase.set(id,item);}
+    const id=String(row.case_id);let item=byCase.get(id);if(!item){item={caseId:id,title:String(row.title||'Сезонный кейс'),description:String(row.description||''),imageUrl:String(row.closed_image_url||''),openImageUrl:String(row.open_image_url||''),seasonTitle:String(row.season_title||''),released:Number(row.release_at||0)<=now,pending:0,opening:0,opened:0,_definition:{title:String(row.title||''),description:String(row.description||''),closed_image_url:String(row.closed_image_url||''),open_image_url:String(row.open_image_url||''),slots:Number(row.slots||1),duplicate_points:Number(row.duplicate_points||0),reward_groups_json:String(row.reward_groups_json||'')}};byCase.set(id,item);}
     const status=String(row.status||'pending');if(status in item)item[status]=Number(row.count||0);if(status==='opening'&&String(row.opening_request_id||'')){item.openRequestId=String(row.opening_request_id);item.openingStartedAt=Math.max(0,Number(row.opening_started_at||0))*1000;}
+  }
+  if(!byCase.size)return [];
+  const snapshots=(await env.DB.prepare(`SELECT case_id,status,snapshot_json,created_at,grant_id FROM season_pass_case_grants WHERE telegram_id=? AND status IN ('opening','pending') ORDER BY CASE WHEN status='opening' THEN 0 ELSE 1 END,created_at,grant_id`).bind(playerId).all()).results||[];
+  const snapshotByCase=new Map();
+  for(const row of snapshots){const caseId=String(row.case_id||'');if(caseId&&byCase.has(caseId)&&!snapshotByCase.has(caseId))snapshotByCase.set(caseId,safeJson(row.snapshot_json,{}));}
+  for(const item of byCase.values()){
+    if(Number(item.pending||0)+Number(item.opening||0)<=0){delete item._definition;continue;}
+    const snapshot=snapshotByCase.get(item.caseId)||{};
+    let info=seasonPassSeasonalCaseInfoView(snapshot,item._definition,[]);
+    if(!info.items.length){
+      try{info=seasonPassSeasonalCaseInfoView(snapshot,item._definition,await seasonPassEffectiveCaseItems(env,item.caseId));}catch(error){console.error('seasonal case info fallback failed',item.caseId,error);}
+    }
+    item.caseInfo=info;
+    delete item._definition;
   }
   return [...byCase.values()];
 }
@@ -38988,9 +39027,41 @@ async function ownerV85VerifyCompensationConfirmation(env,ownerId,rawConfirmatio
   return true;
 }
 
-function ownerV85CompensationRewardCatalog(){
+async function ownerGrantableSeasonalCaseCatalog(env){
+  await ensureSeasonPassSchema(env);
+  const nowMs=Date.now(),fallback=configuredSeasonPassState(env,nowMs);
+  const [definitions,seasons]=await Promise.all([
+    env.DB.prepare(`SELECT case_id,season_id,title,description,closed_image_url,open_image_url,slots,duplicate_points,reward_groups_json,enabled,release_at,updated_at FROM season_pass_case_definitions ORDER BY release_at DESC,updated_at DESC,case_id`).all(),
+    env.DB.prepare(`SELECT * FROM season_pass_seasons ORDER BY starts_at DESC,season_id`).all()
+  ]);
+  const seasonMap=new Map((seasons.results||[]).map(row=>[String(row.season_id||''),seasonPassSeasonFromRow(row,fallback,nowMs)]));
+  const rank={active:0,archived:1,upcoming:2,draft:3,missing:4};
+  return (definitions.results||[]).map(row=>{
+    const view=ownerPanelSeasonalCaseView(row,seasonMap);if(!view?.caseId)return null;
+    const status=String(view.status||'missing'),locked=status==='draft'||status==='upcoming',grantable=!locked&&(status==='active'||status==='archived');
+    const seasonTitle=String(view.seasonTitle||''),title=String(view.title||'Сезонный кейс');
+    return {id:String(view.caseId),caseId:String(view.caseId),seasonId:String(view.seasonId||''),title,seasonTitle,label:seasonTitle?`${title} · ${seasonTitle}`:title,imageUrl:String(view.imageUrl||''),openImageUrl:String(view.openImageUrl||''),releaseAt:Math.max(0,Number(view.releaseAt||0)),status,locked,grantable};
+  }).filter(Boolean).sort((a,b)=>(rank[a.status]??9)-(rank[b.status]??9)||Number(b.releaseAt||0)-Number(a.releaseAt||0)||a.title.localeCompare(b.title,'ru')).slice(0,100);
+}
+async function ownerSeasonalCaseGrantPayload(env,caseIdValue){
+  await ensureSeasonPassSchema(env);
+  const now=Math.floor(Date.now()/1000),caseId=String(caseIdValue||'').trim();
+  if(!caseId)throw new ApiError(400,'Выберите сезонный кейс.');
+  const definition=await env.DB.prepare(`SELECT case_id,season_id,title,description,closed_image_url,open_image_url,slots,duplicate_points,reward_groups_json,enabled,release_at FROM season_pass_case_definitions WHERE case_id=? LIMIT 1`).bind(caseId).first();
+  if(!definition)throw new ApiError(404,'Сезонный кейс не найден.');
+  if(Number(definition.enabled||0)!==1)throw new ApiError(409,'Этот сезонный кейс пока закрыт в настройках сезона.');
+  if(Number(definition.release_at||0)>now)throw new ApiError(409,'Этот сезонный кейс пока закрыт. Дождитесь даты открытия.');
+  const caseItems=await seasonPassEffectiveCaseItems(env,caseId);
+  if(!caseItems.length)throw new ApiError(409,'В сезонном кейсе пока нет наград.');
+  const snapshot=JSON.stringify({title:String(definition.title||'Сезонный кейс'),description:String(definition.description||''),imageUrl:String(definition.closed_image_url||''),openImageUrl:String(definition.open_image_url||''),slots:Math.max(1,Math.min(5,Number(definition.slots)||1)),duplicatePoints:Math.max(0,Number(definition.duplicate_points)||0),groupChances:seasonPassSeasonalCaseGroupChances(definition.reward_groups_json),items:caseItems.map(item=>({key:String(item.item_key),kind:String(item.reward_kind),itemId:String(item.item_id),amount:Math.max(1,Number(item.amount||1)),weight:Number(item.weight||1),rarity:String(item.rarity||'seasonal'),title:String(item.title||''),imageUrl:String(item.image_url||'')}))});
+  return {caseId,definition,caseItems,snapshot};
+}
+
+async function ownerV85CompensationRewardCatalog(env){
+  const seasonalCases=await ownerGrantableSeasonalCaseCatalog(env);
   return {
     cases: grantCatalogItems("case").map(item=>({id:String(item.id),title:String(item.title)})),
+    seasonalCases: seasonalCases.map(item=>({id:String(item.id),title:String(item.title||"Сезонный кейс"),label:String(item.label||item.title||"Сезонный кейс"),seasonId:String(item.seasonId||""),seasonTitle:String(item.seasonTitle||""),imageUrl:String(item.imageUrl||""),openImageUrl:String(item.openImageUrl||""),releaseAt:Number(item.releaseAt||0),status:String(item.status||""),locked:Boolean(item.locked),grantable:Boolean(item.grantable)})),
     skins: grantCatalogItems("skin").map(item=>({id:String(item.id),title:String(item.title)})),
     avatars: grantCatalogItems("avatar").map(item=>({id:String(item.id),title:String(item.title)})),
     frames: grantCatalogItems("frame").map(item=>({id:String(item.id),title:String(item.title)})),
@@ -39002,8 +39073,10 @@ function ownerV85CompensationRewardCatalog(){
 async function ownerV85NormalizeCustomCompensationRewards(env,input){
   const raw=Array.isArray(input)?input:[];
   if(raw.length>8)throw new ApiError(400,"В своей компенсации можно указать максимум 8 строк наград.");
+  const seasonalCases=await ownerGrantableSeasonalCaseCatalog(env);
   const catalog={
     case:new Set(grantCatalogItems("case").map(item=>String(item.id))),
+    seasonal_case:new Map(seasonalCases.map(item=>[String(item.id),item])),
     skin:new Set(grantCatalogItems("skin").map(item=>String(item.id))),
     avatar:new Set(grantCatalogItems("avatar").map(item=>String(item.id))),
     frame:new Set(grantCatalogItems("frame").map(item=>String(item.id))),
@@ -39036,6 +39109,21 @@ async function ownerV85NormalizeCustomCompensationRewards(env,input){
     if(kind==="case"){
       if(!catalog.case.has(id))throw new ApiError(400,"Выбран неизвестный кейс.");
       if(!Number.isFinite(amount)||amount<1||amount>20)throw new ApiError(400,"За одну компенсацию можно выдать от 1 до 20 кейсов одного типа.");
+      checked.push({kind,id,amount});
+      continue;
+    }
+    if(kind==="seasonal_case"){
+      const selected=catalog.seasonal_case.get(id);
+      if(!selected)throw new ApiError(400,"Выбран неизвестный сезонный кейс.");
+      if(!selected.grantable){
+        if(selected.status==="upcoming")throw new ApiError(409,"Этот сезонный кейс пока закрыт. Дождитесь даты открытия.");
+        if(selected.status==="draft")throw new ApiError(409,"Этот сезонный кейс пока закрыт в настройках сезона.");
+        throw new ApiError(409,"Этот сезонный кейс сейчас нельзя выдавать.");
+      }
+      // Validate the actual pool before creating a compensation campaign so a
+      // broken/empty seasonal case cannot enter the delivery queue.
+      await ownerSeasonalCaseGrantPayload(env,id);
+      if(!Number.isFinite(amount)||amount<1||amount>20)throw new ApiError(400,"За одну компенсацию можно выдать от 1 до 20 сезонных кейсов одного типа.");
       checked.push({kind,id,amount});
       continue;
     }
@@ -39075,17 +39163,18 @@ async function ownerV85NormalizeCustomCompensationRewards(env,input){
 }
 
 async function ownerPanelV85Compensations(env,ctx){
-  await ensureControlCenterV85Schema(env);const [templates,segments,queue,campaigns,notifyQueue,confirmationWord]=await Promise.all([
+  await ensureControlCenterV85Schema(env);const [templates,segments,queue,campaigns,notifyQueue,confirmationWord,rewardCatalog]=await Promise.all([
     env.DB.prepare(`SELECT * FROM compensation_templates WHERE enabled=1 ORDER BY template_id`).all(),ownerV85SegmentCatalog(env,false),
     env.DB.prepare(`SELECT status,COUNT(*) AS count FROM reward_delivery_queue WHERE source_type IN ('compensation','campaign') AND created_at>=? GROUP BY status`).bind(Math.floor(Date.now()/1000)-7*86400).all(),
     env.DB.prepare(`SELECT campaign_id,title,status,total_count,processed_count,failed_count,created_at,completed_at FROM admin_campaigns WHERE title LIKE 'Компенсация:%' ORDER BY created_at DESC LIMIT 24`).all(),
     env.DB.prepare(`SELECT status,COUNT(*) AS count FROM player_notification_queue GROUP BY status`).all().catch(()=>({results:[]})),
-    ownerV85CompConfirmationStatus(env,ctx.user.id)
+    ownerV85CompConfirmationStatus(env,ctx.user.id),
+    ownerV85CompensationRewardCatalog(env)
   ]);
   const mappedTemplates=(templates.results||[]).filter(r=>!ownerV8SafeJson(r.rewards_json,[]).some(x=>String(x?.kind)==='physical_restore')).map(r=>({id:String(r.template_id),title:String(r.title),description:String(r.description||""),rewards:ownerV8SafeJson(r.rewards_json,[])}));
   mappedTemplates.unshift({id:"__message__",title:"Только уведомление",description:"Сообщение без игровой награды",rewards:[]});
   mappedTemplates.splice(1,0,{id:"__custom__",title:"Своя компенсация",description:"Набор наград задаётся вручную перед отправкой",rewards:[]});
-  return {ok:true,templates:mappedTemplates,rewardCatalog:ownerV85CompensationRewardCatalog(),confirmationWord,segments,queue:(queue.results||[]).map(r=>({status:String(r.status),count:Number(r.count||0)})),notificationQueue:(notifyQueue.results||[]).map(r=>({status:String(r.status),count:Number(r.count||0)})),recent:(campaigns.results||[]).map(r=>({id:String(r.campaign_id),title:String(r.title||""),status:String(r.status||""),total:Number(r.total_count||0),processed:Number(r.processed_count||0),failed:Number(r.failed_count||0),createdAt:Number(r.created_at||0),completedAt:Number(r.completed_at||0)}))};
+  return {ok:true,templates:mappedTemplates,rewardCatalog,confirmationWord,segments,queue:(queue.results||[]).map(r=>({status:String(r.status),count:Number(r.count||0)})),notificationQueue:(notifyQueue.results||[]).map(r=>({status:String(r.status),count:Number(r.count||0)})),recent:(campaigns.results||[]).map(r=>({id:String(r.campaign_id),title:String(r.title||""),status:String(r.status||""),total:Number(r.total_count||0),processed:Number(r.processed_count||0),failed:Number(r.failed_count||0),createdAt:Number(r.created_at||0),completedAt:Number(r.completed_at||0)}))};
 }
 async function ownerPanelV85CompensationPreview(env,ctx){const target=String(ctx.body?.target||"segment");if(target==="player"){const id=String(ctx.body?.telegramId||"").trim();if(!/^\d{4,20}$/.test(id)||!(await playerProfileExists(id,env)))throw new ApiError(404,"Игрок не найден.");return {ok:true,count:1,players:[{telegramId:id,name:await playerDisplayNameById(id,env)}]};}if(target==="players"){const audience=await ownerV85SelectedPlayerAudience(env,ctx.body?.telegramIds);return {ok:true,key:"selected_players",title:"Выбранные игроки",count:audience.ids.length,players:audience.players.slice(0,30)};}if(target==="all")return ownerV85AllPlayerPreview(env);return ownerPanelV85SegmentPreview(env,ctx);}
 async function ownerPanelV85CompensationSend(env,ctx){
@@ -39113,7 +39202,7 @@ async function ownerPanelV85CompensationSend(env,ctx){
   const hasLegendary=rewards.some(r=>String(r?.kind)==="case"&&String(r?.id)==="legendary");
   const customHighImpact=templateId==="__custom__"&&rewards.some(r=>{
     const kind=String(r?.kind||""),id=String(r?.id||""),amount=Math.max(1,Number(r?.amount||1));
-    return kind==="skin"||kind==="showcase_style"||kind==="season_pass_tier"||(kind==="season_pass_xp_grant"&&amount>=1000)||(kind==="case"&&["mythic","legendary"].includes(id))||(kind==="points"&&amount>=1000000)||(["zefir","coffee"].includes(kind)&&amount>=1000);
+    return kind==="skin"||kind==="showcase_style"||kind==="seasonal_case"||kind==="season_pass_tier"||(kind==="season_pass_xp_grant"&&amount>=1000)||(kind==="case"&&["mythic","legendary"].includes(id))||(kind==="points"&&amount>=1000000)||(["zefir","coffee"].includes(kind)&&amount>=1000);
   });
   const payload={templateId,templateTitle:String(template.title||"Уведомление"),mailTitle,preview,imageUrl,rewards,reason,message,segmentKey,targetMode:target,audienceSnapshotAt,targetCount:ids.length,targetIds:target==="all"?[]:ids.slice(0,10000),reportChatId:String(ctx.user.id)};
   if(hasLegendary||ids.length>250||(customHighImpact&&ids.length>1)){
@@ -42465,7 +42554,8 @@ function testProjectSandboxPassPayload(state, snapshot) {
   const seasonalCases=caseDefinitions.map((definition)=>{
     const caseId=String(definition?.caseId||"");const pending=Math.max(0,Number(state?.seasonalCaseInventory?.[caseId]||0));
     const releaseMs=Math.max(0,Number(definition?.releaseAt||0))*1000;
-    return {caseId,id:caseId,title:String(definition?.title||"Сезонный кейс"),description:String(definition?.description||""),imageUrl:String(definition?.imageUrl||""),openImageUrl:String(definition?.openImageUrl||""),seasonTitle:String(season?.title||""),released:!releaseMs||nowMs>=releaseMs,pending,opening:0,opened:0,testProject:true,draftCase:definition?.enabled===false,status:String(definition?.status||"")};
+    const caseInfo={title:String(definition?.title||"Сезонный кейс"),description:String(definition?.description||""),imageUrl:String(definition?.imageUrl||""),openImageUrl:String(definition?.openImageUrl||""),slots:Math.max(1,Math.min(5,Number(definition?.slots)||1)),duplicatePoints:Math.max(0,Number(definition?.duplicatePoints)||0),groupChances:seasonPassSeasonalCaseGroupChances(definition?.groupChances)||null,items:(Array.isArray(definition?.items)?definition.items:[]).filter(item=>item?.enabled!==false&&Number(item?.weight)>0).map((item,index)=>({key:String(item?.key||item?.item_key||`${item?.kind||item?.reward_kind||"reward"}:${item?.itemId||item?.item_id||index}`),kind:String(item?.kind||item?.reward_kind||""),itemId:String(item?.itemId||item?.item_id||""),amount:Math.max(1,Math.floor(Number(item?.amount)||1)),weight:Number(item?.weight||1),rarity:String(item?.rarity||"seasonal"),title:String(item?.title||""),imageUrl:String(item?.imageUrl||item?.image_url||"")}))};
+    return {caseId,id:caseId,title:String(definition?.title||"Сезонный кейс"),description:String(definition?.description||""),imageUrl:String(definition?.imageUrl||""),openImageUrl:String(definition?.openImageUrl||""),seasonTitle:String(season?.title||""),released:!releaseMs||nowMs>=releaseMs,pending,opening:0,opened:0,testProject:true,draftCase:definition?.enabled===false,status:String(definition?.status||""),caseInfo};
   }).filter((item)=>item.caseId&&item.pending>0);
   return {
     ok:true,testProject:true,isolated:true,
@@ -45141,6 +45231,7 @@ async function ownerPanelPlayer(env, ctx) {
   ]);
   if (!profile) throw new ApiError(404, "Профиль игрока не найден.");
   const dailyConfigPromise = coreOnly ? Promise.resolve(null) : loadDailyLoyaltyConfig(env, { allowDisabled:true }).catch(() => null);
+  const seasonalCaseCatalogPromise = coreOnly ? Promise.resolve([]) : ownerGrantableSeasonalCaseCatalog(env).catch((error)=>{console.error("owner player seasonal case catalog failed",error);return [];});
   const dailyStatePromise = (async () => {
     const config = await dailyConfigPromise;
     if (!config?.season?.id) return null;
@@ -45153,7 +45244,7 @@ async function ownerPanelPlayer(env, ctx) {
     const serverDayKey = dailyLoyaltyDayKey(Date.now(), config.season.timezoneOffsetMinutes);
     return { config, bundle, serverDayKey, model:dailyLoyaltyModel(config,bundle,serverDayKey),returnTest:returnTest&&String(returnTest.status)==='pending'&&Number(returnTest.expires_at||0)>now?returnTest:null,presence };
   })();
-  const [allTime, seasonal, subscriber, caseRow, caseCounts, passPlayer, staffMember, recentRuns, recentAudit, showcaseOwnership, dailyState] = await Promise.all([
+  const [allTime, seasonal, subscriber, caseRow, caseCounts, passPlayer, staffMember, recentRuns, recentAudit, showcaseOwnership, dailyState, seasonalCaseCatalog] = await Promise.all([
     env.DB.prepare(`SELECT * FROM leaderboard_all_time WHERE telegram_id=? LIMIT 1`).bind(telegramId).first(),
     env.DB.prepare(`SELECT * FROM leaderboard_entries WHERE season_id=? AND telegram_id=? LIMIT 1`).bind(String(season.id), telegramId).first(),
     env.DB.prepare(`SELECT display_name,username,last_started_at,active FROM bot_subscribers WHERE telegram_id=? LIMIT 1`).bind(telegramId).first().catch(() => null),
@@ -45164,7 +45255,8 @@ async function ownerPanelPlayer(env, ctx) {
     coreOnly ? Promise.resolve({results:[]}) : env.DB.prepare(`SELECT run_id,season_id,score,duration_ms,accepted,rejection_reason,created_at FROM leaderboard_runs WHERE telegram_id=? ORDER BY created_at DESC LIMIT 10`).bind(telegramId).all().catch(() => ({results:[]})),
     coreOnly ? Promise.resolve({results:[]}) : env.DB.prepare(`SELECT id,action,target_telegram_id,target_type,actor_name,actor_telegram_id,actor_role,old_value,new_value,created_at,details_json FROM staff_action_log WHERE target_telegram_id=? ORDER BY created_at DESC,id DESC LIMIT 12`).bind(telegramId).all().catch(() => ({results:[]})),
     coreOnly ? Promise.resolve({results:[]}) : env.DB.prepare(`SELECT style_id FROM achievement_showcase_style_ownership WHERE telegram_id=? ORDER BY unlocked_at,style_id`).bind(telegramId).all().catch(() => ({results:[]})),
-    dailyStatePromise
+    dailyStatePromise,
+    seasonalCaseCatalogPromise
   ]);
   const identity = seasonal || allTime || subscriber || {};
   const caseState = caseStateFromRow(caseRow || {});
@@ -45260,6 +45352,7 @@ async function ownerPanelPlayer(env, ctx) {
         overflow: seasonPassOverflowView(passXp,0),
         progression: seasonPassProgressionView(),
         tier: String(passPlayer?.premium_tier || "none"),
+        seasonalCases: Array.isArray(seasonalCaseCatalog) ? seasonalCaseCatalog : [],
         prices: {
           elite: {
             points: seasonPassInteger(seasonPass?.prices?.elite?.points),
@@ -45601,6 +45694,7 @@ async function ownerPanelGrantDirectReward(env, ctx, telegramId, kind, itemId, a
   const sourceId = ctx.grantOperation.id;
   const baseResult={ok:true,grantType:"direct",sourceId,direct:true,message:`\u041d\u0430\u0447\u0438\u0441\u043b\u0435\u043d\u043e \u043d\u0430\u043f\u0440\u044f\u043c\u0443\u044e: ${safeRewardDescription({kind,id:itemId,amount})}.`};
   let alreadyOwned = false;
+  let seasonalCaseTitle = "";
 
   if (["points", "zefir", "coffee"].includes(kind)) {
     const field = ({ points:"pending_wallet", zefir:"pending_treats", coffee:"pending_coffee" })[kind];
@@ -45626,6 +45720,10 @@ async function ownerPanelGrantDirectReward(env, ctx, telegramId, kind, itemId, a
   } else if (kind === "case") {
     const grants=Array.from({length:amount},(_,index)=>env.DB.prepare(`INSERT INTO granted_cases(id,telegram_id,case_type,status,granted_by,reason,created_at) VALUES(?,?,?,'pending',?,?,?)`).bind(`${sourceId}_${index+1}`,telegramId,itemId,`owner-direct:${ctx.user.id}`,reason,now));
     await ownerGrantCommit(env,ctx,[...grants,bumpPlayerAccountRevisionStatement(env,telegramId,now)],baseResult);
+  } else if (kind === "seasonal_case") {
+    const seasonal=await ownerSeasonalCaseGrantPayload(env,itemId);seasonalCaseTitle=String(seasonal.definition.title||"Сезонный кейс");
+    const grants=Array.from({length:amount},(_,index)=>env.DB.prepare(`INSERT OR IGNORE INTO season_pass_case_grants(grant_id,case_id,source_season_id,telegram_id,status,rewards_json,snapshot_json,granted_by,created_at) VALUES(?,?,?,?,'pending','[]',?,?,?)`).bind(`${sourceId}_spcase_${index+1}`.slice(0,190),seasonal.caseId,String(seasonal.definition.season_id||''),telegramId,seasonal.snapshot,`owner-direct:${ctx.user.id}`,now));
+    await ownerGrantCommit(env,ctx,[...grants,bumpPlayerAccountRevisionStatement(env,telegramId,now)],{...baseResult,message:`Начислено напрямую: ${amount.toLocaleString("ru-RU")} × ${seasonalCaseTitle}.`,seasonalCase:{caseId:seasonal.caseId,title:seasonalCaseTitle,seasonId:String(seasonal.definition.season_id||'')}});
   } else if (kind === "booster") {
     const booster = runBoosterDefinition(itemId);
     if (!booster) throw new ApiError(400, "Неизвестный усилитель.");
@@ -45660,7 +45758,7 @@ async function ownerPanelGrantDirectReward(env, ctx, telegramId, kind, itemId, a
     throw new ApiError(400, "Неизвестный тип прямой награды.");
   }
 
-  const description = safeRewardDescription({ kind, id:itemId, amount });
+  const description = kind==="seasonal_case"&&seasonalCaseTitle ? `${amount.toLocaleString("ru-RU")} × ${seasonalCaseTitle}` : safeRewardDescription({ kind, id:itemId, amount });
   const details = { kind, itemId, amount, reason, sourceId, direct:true, alreadyOwned };
   await logStaffAction(env, ctx.user, ctx.access, "owner_panel_grant", telegramId, "direct_reward", null, amount, details);
   try {
@@ -45705,15 +45803,18 @@ async function ownerPanelGrantPlayerOnce(env, ctx) {
   }
 
   const kind = rawKind === "treats" ? "zefir" : rawKind;
-  if (!["points", "zefir", "coffee", "case", "skin", "booster", "showcase_style", "streak_protection"].includes(kind)) throw new ApiError(400, "Неизвестный тип награды.");
+  if (!["points", "zefir", "coffee", "case", "seasonal_case", "skin", "booster", "showcase_style", "streak_protection"].includes(kind)) throw new ApiError(400, "Неизвестный тип награды.");
   const singleItemReward = kind === "skin" || kind === "showcase_style";
   const cosmeticSkin = kind === "skin";
-  const amount = singleItemReward ? 1 : ownerPanelInteger(ctx.body?.amount, 1, kind === 'streak_protection' ? 30 : kind === "case" ? 20 : kind === "booster" ? 999 : 10000000);
+  const amount = singleItemReward ? 1 : ownerPanelInteger(ctx.body?.amount, 1, kind === 'streak_protection' ? 30 : (kind === "case" || kind === "seasonal_case") ? 20 : kind === "booster" ? 999 : 10000000);
   if (amount == null) throw new ApiError(400, "Некорректное количество награды.");
   let itemId = "";
   if (kind === "case") {
     itemId = normalizeCaseType(ctx.body?.itemId);
     if (!itemId) throw new ApiError(400, "Выберите тип кейса.");
+  } else if (kind === "seasonal_case") {
+    itemId = String(ctx.body?.itemId || "").trim();
+    if (!itemId) throw new ApiError(400, "Выберите сезонный кейс.");
   } else if (kind === "booster") {
     itemId = String(ctx.body?.itemId || "").trim().toLowerCase();
     if (!runBoosterDefinition(itemId)) throw new ApiError(400, "Выберите доступный усилитель.");

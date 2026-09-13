@@ -1380,6 +1380,7 @@ button{-webkit-tap-highlight-color:transparent}
   transition:.22s
 }
 .toast.show{transform:translate(-50%,0);opacity:1}
+.inline-prize-icon{display:inline-block;width:1.15em;height:1.15em;object-fit:contain;vertical-align:-.2em;flex:0 0 auto}.toast.has-prize-icon{display:flex;align-items:center;justify-content:center;gap:7px}
 
 .tier-celebration{
   position:fixed;
@@ -1634,6 +1635,9 @@ button{-webkit-tap-highlight-color:transparent}
   margin:2px auto 0
 }
 .reward-summary-head .summary-icon img{max-width:70px;max-height:60px;object-fit:contain;filter:drop-shadow(0 8px 10px rgba(137,91,24,.16))}
+.reward-summary.is-seasonal-case .reward-summary-head{background:radial-gradient(circle at 50% -5%,rgba(205,151,255,.36),transparent 50%)}
+.reward-summary.is-seasonal-case .summary-icon{width:100px;height:88px;margin:4px auto 2px}.reward-summary.is-seasonal-case .summary-icon img{max-width:96px;max-height:86px;filter:drop-shadow(0 10px 14px rgba(93,50,112,.22))}
+.reward-summary.is-seasonal-case .reward-summary-kicker{background:#f4e5ff;color:#784b8f}
 .reward-summary-head h2{margin:2px 0 4px;font-size:25px;line-height:1.08;color:#71344d;font-weight:1000}
 .reward-summary-head p{margin:0;color:#95756d;font-size:10px;font-weight:850}
 .reward-summary-body{
@@ -1802,7 +1806,129 @@ button{-webkit-tap-highlight-color:transparent}
   box-shadow:0 10px 22px rgba(184,56,108,.18)
 }
 @keyframes rewardSummaryIn{from{opacity:0;transform:translateY(22px) scale(.955)}to{opacity:1;transform:translateY(0) scale(1)}}
+.seasonal-case-opening{
+  position:fixed;
+  inset:0;
+  z-index:181;
+  display:grid;
+  place-items:center;
+  padding:14px;
+  background:rgba(32,19,42,.66);
+  backdrop-filter:blur(13px);
+  -webkit-backdrop-filter:blur(13px)
+}
+.seasonal-case-opening[hidden]{display:none!important}
+.seasonal-case-opening-card{
+  position:relative;
+  width:min(400px,100%);
+  max-height:min(760px,94dvh);
+  overflow:hidden;
+  border:1px solid rgba(255,255,255,.74);
+  border-radius:30px;
+  background:linear-gradient(180deg,#fffdf9 0%,#fff8f4 54%,#fff 100%);
+  box-shadow:0 30px 88px rgba(30,16,42,.42),inset 0 1px 0 #fff;
+  text-align:center;
+  animation:rewardSummaryIn .22s cubic-bezier(.2,.75,.25,1)
+}
+.seasonal-case-xp-shell{
+  --case-accent:#c77de5;
+  --case-accent-2:#f3c7ff;
+  --case-deep:#563768;
+  position:relative;
+  isolation:isolate;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  min-height:590px;
+  padding:31px 22px 22px;
+  overflow:hidden;
+  color:#553b58;
+  background:
+    linear-gradient(180deg,rgba(31,18,54,.24),rgba(85,36,77,.17)),
+    url('/assets/optimized/v0.79.5/background_season2.webp') center 34%/cover no-repeat
+}
+.seasonal-case-xp-shell::before{
+  content:"";
+  position:absolute;
+  inset:0;
+  z-index:0;
+  background:linear-gradient(180deg,rgba(37,19,57,.28) 0%,rgba(255,247,252,.16) 38%,rgba(255,249,246,.88) 76%,rgba(255,249,246,.98) 100%);
+  pointer-events:none
+}
+.seasonal-case-xp-shell>*{position:relative;z-index:2}
+.seasonal-case-xp-result-kicker{
+  display:inline-flex;
+  align-items:center;
+  gap:7px;
+  min-height:29px;
+  padding:6px 11px;
+  border:1px solid rgba(218,175,255,.45);
+  border-radius:999px;
+  background:rgba(255,245,255,.86);
+  box-shadow:0 5px 16px rgba(54,27,69,.11);
+  color:#693f7a;
+  font-size:10px;
+  font-weight:950;
+  letter-spacing:.09em
+}
+.seasonal-case-xp-result-kicker i{font-style:normal;color:#d693f2;font-size:13px}
+.seasonal-case-xp-preparing{justify-content:center;padding-top:34px}
+.seasonal-case-xp-preparing-art{position:relative;display:grid;place-items:center;width:230px;height:230px;margin:12px 0 -4px}
+.seasonal-case-xp-preparing-glow{position:absolute;width:164px;height:164px;border-radius:50%;background:radial-gradient(circle,rgba(224,158,255,.52),rgba(255,210,236,.16) 48%,transparent 70%);filter:blur(2px);animation:caseXpPrepareGlow 1.55s ease-in-out infinite}
+.seasonal-case-xp-preparing-case{position:relative!important;width:180px!important;height:180px!important;max-width:180px!important;max-height:180px!important;object-fit:contain!important;margin:0!important;filter:drop-shadow(0 20px 19px rgba(53,27,67,.27));animation:caseXpPrepareCase 1.8s ease-in-out infinite}
+.seasonal-case-xp-preparing h2,.seasonal-case-xp-status h2{margin:7px 0 7px;font-size:24px;line-height:1.08;letter-spacing:-.025em;color:#4d3654}
+.seasonal-case-xp-preparing p,.seasonal-case-xp-status p{max-width:310px;margin:0;color:#795f80;font-size:13px;line-height:1.45;font-weight:760}
+.seasonal-case-xp-preparing-bar{width:min(250px,82%);height:6px;margin:22px auto 13px;border-radius:999px;overflow:hidden;background:rgba(248,230,248,.88);box-shadow:inset 0 1px 3px rgba(72,41,79,.08)}
+.seasonal-case-xp-preparing-bar i{display:block;width:44%;height:100%;border-radius:inherit;background:linear-gradient(90deg,transparent,#c77de5,#ffd0e6,transparent);animation:caseXpLoading 1.1s ease-in-out infinite}
+.seasonal-case-xp-preparing-note{display:inline-flex;align-items:center;gap:7px;max-width:290px;color:#806a89;font-size:10px;line-height:1.35}
+.seasonal-case-xp-preparing-note i{width:7px;height:7px;border-radius:50%;background:#77c38f;box-shadow:0 0 0 4px rgba(119,195,143,.14);flex:0 0 auto}
+.seasonal-case-xp-opening-heading{min-height:93px}
+.seasonal-case-xp-opening-heading small{display:block;margin-bottom:4px;color:#e4acff;font-size:10px;font-weight:950;letter-spacing:.11em;text-shadow:0 1px 9px rgba(65,25,75,.55)}
+.seasonal-case-xp-opening-heading h2{margin:0;color:#fff8ff;font-size:25px;letter-spacing:-.03em;text-shadow:0 2px 15px rgba(45,20,61,.72)}
+.seasonal-case-xp-opening-heading p{margin:6px 0 0;color:#f8def8;font-size:12px;font-weight:800;text-shadow:0 2px 12px rgba(44,18,59,.68)}
+.seasonal-case-xp-case-stage{display:grid;place-items:center;width:100%;height:350px;min-height:350px;margin:-8px 0 -3px;padding:0;border:0!important;border-radius:0!important;background:transparent!important;box-shadow:none!important;overflow:visible;appearance:none;-webkit-appearance:none}
+.seasonal-case-xp-case-stage:active{transform:none!important}
+.seasonal-case-xp-stage-vignette{position:absolute;width:260px;height:260px;border-radius:50%;background:radial-gradient(circle,rgba(255,236,255,.82) 0%,rgba(213,139,244,.28) 48%,transparent 72%);filter:blur(3px);opacity:.88}
+.seasonal-case-xp-rays{position:absolute;width:310px;height:310px;border-radius:50%;opacity:.18;background:repeating-conic-gradient(from 0deg,#e8b3ff 0deg 5deg,transparent 5deg 20deg);mask-image:radial-gradient(circle,transparent 0 23%,#000 27% 64%,transparent 70%);-webkit-mask-image:radial-gradient(circle,transparent 0 23%,#000 27% 64%,transparent 70%)}
+.seasonal-case-xp-particles{position:absolute;inset:30px 35px;pointer-events:none}
+.seasonal-case-xp-particles i{position:absolute;width:9px;height:9px;border-radius:2px;background:#efc3ff;box-shadow:0 0 13px rgba(239,195,255,.78);opacity:0}
+.seasonal-case-xp-particles i:nth-child(1){left:13%;top:48%}.seasonal-case-xp-particles i:nth-child(2){left:24%;top:20%}.seasonal-case-xp-particles i:nth-child(3){left:35%;top:72%}.seasonal-case-xp-particles i:nth-child(4){left:47%;top:11%}.seasonal-case-xp-particles i:nth-child(5){left:62%;top:76%}.seasonal-case-xp-particles i:nth-child(6){left:72%;top:22%}.seasonal-case-xp-particles i:nth-child(7){left:84%;top:54%}.seasonal-case-xp-particles i:nth-child(8){left:56%;top:34%}
+.seasonal-case-xp-case-stack{position:relative;display:grid;place-items:center;width:250px;height:250px;transform-origin:50% 64%;filter:drop-shadow(0 24px 22px rgba(38,19,51,.34))}
+.seasonal-case-xp-case-img{position:absolute!important;inset:0!important;width:250px!important;height:250px!important;max-width:250px!important;max-height:250px!important;margin:0!important;object-fit:contain!important;user-select:none;-webkit-user-drag:none;will-change:transform,opacity,filter}
+.seasonal-case-xp-case-open{opacity:0;transform:scale(.96)}
+.seasonal-case-xp-flash{position:absolute;width:270px;height:270px;border-radius:50%;background:radial-gradient(circle,#fff 0 7%,#ffdff5 18%,rgba(209,131,240,.62) 42%,transparent 68%);filter:blur(1px);opacity:0;transform:scale(.32);pointer-events:none}
+.seasonal-case-xp-opening-progress{width:112px;height:3px;overflow:hidden;border-radius:999px;background:rgba(247,224,245,.86)}
+.seasonal-case-xp-opening-progress i{display:block;width:100%;height:100%;border-radius:inherit;background:#d793ee;transform-origin:left center;transform:scaleX(0)}
+.seasonal-case-xp-skip-note{min-height:14px;margin-top:8px;color:#775f7e;font-size:9px;font-weight:800;letter-spacing:.025em}
+.seasonal-case-xp-opening.is-animating .seasonal-case-xp-opening-progress i{animation:caseXpProgress var(--case-xp-duration) linear forwards}
+.seasonal-case-xp-opening.is-animating .seasonal-case-xp-case-closed{animation:caseXpClosed var(--case-xp-duration) cubic-bezier(.22,.75,.22,1) forwards}
+.seasonal-case-xp-opening.is-animating .seasonal-case-xp-case-open{animation:caseXpOpen var(--case-xp-duration) cubic-bezier(.18,.86,.25,1) forwards}
+.seasonal-case-xp-opening.is-animating .seasonal-case-xp-flash{animation:caseXpFlash var(--case-xp-duration) ease-out forwards}
+.seasonal-case-xp-opening.is-animating .seasonal-case-xp-rays{animation:caseXpRays var(--case-xp-duration) linear forwards}
+.seasonal-case-xp-opening.is-animating .seasonal-case-xp-particles i{animation:caseXpParticle var(--case-xp-duration) ease-out forwards}
+.seasonal-case-xp-opening.is-animating .seasonal-case-xp-case-stack{animation:caseXpLegendary var(--case-xp-duration) cubic-bezier(.12,.7,.12,1) forwards}
+.seasonal-case-xp-opening.is-skipping .seasonal-case-xp-case-stack{transform:scale(1.08)!important;filter:drop-shadow(0 20px 28px rgba(208,120,237,.42))!important;transition:.14s ease}
+.seasonal-case-xp-opening.is-skipping .seasonal-case-xp-flash{opacity:1;transform:scale(1.25);transition:.14s ease}
+.seasonal-case-xp-status{justify-content:flex-start;padding-top:35px}
+.seasonal-case-xp-status-case{position:relative;display:grid;place-items:center;width:190px;height:190px;margin:1px auto -6px}
+.seasonal-case-xp-status-case::before{content:"";position:absolute;width:145px;height:145px;border-radius:50%;background:radial-gradient(circle,rgba(220,159,247,.28),transparent 68%)}
+.seasonal-case-xp-status-case img{position:relative;width:155px;height:155px;object-fit:contain;filter:drop-shadow(0 15px 16px rgba(43,21,55,.2))}
+.seasonal-case-xp-status-pill{display:inline-flex;padding:5px 9px;margin:4px 0;border-radius:999px;background:rgba(253,239,255,.9);color:#86549a;font-size:9px;font-weight:900;letter-spacing:.05em;text-transform:uppercase}
+.seasonal-case-xp-status-note{display:flex;flex-direction:column;gap:2px;width:100%;margin-top:17px;padding:11px 13px;border:1px solid rgba(234,214,239,.92);border-radius:14px;background:rgba(255,255,255,.84);text-align:left}
+.seasonal-case-xp-status-note strong{color:#684b70;font-size:10px}.seasonal-case-xp-status-note small{color:#8d7794;font-size:9px;line-height:1.4}
+.seasonal-case-xp-primary{width:100%;min-height:48px;margin-top:auto;border:0;border-radius:15px;background:linear-gradient(135deg,#b96bd4,#8a52b8);color:#fff;font-size:12px;font-weight:950;box-shadow:0 11px 24px rgba(112,62,145,.26)}
+@keyframes caseXpPrepareGlow{0%,100%{transform:scale(.92);opacity:.45}50%{transform:scale(1.08);opacity:.9}}
+@keyframes caseXpPrepareCase{0%,100%{transform:translateY(2px) scale(.99)}50%{transform:translateY(-5px) scale(1.015)}}
+@keyframes caseXpLoading{0%{transform:translateX(-120%)}100%{transform:translateX(300%)}}
+@keyframes caseXpProgress{from{transform:scaleX(0)}to{transform:scaleX(1)}}
+@keyframes caseXpClosed{0%,59%{opacity:1;filter:brightness(1)}66%{opacity:1;filter:brightness(1.25)}70%,100%{opacity:0;transform:scale(1.055)}}
+@keyframes caseXpOpen{0%,63%{opacity:0;transform:scale(.91)}70%{opacity:1;transform:scale(1.08);filter:brightness(1.35)}82%,100%{opacity:1;transform:scale(1);filter:brightness(1)}}
+@keyframes caseXpFlash{0%,57%{opacity:0;transform:scale(.28)}67%{opacity:.94;transform:scale(1.12)}78%,100%{opacity:0;transform:scale(1.55)}}
+@keyframes caseXpRays{0%{transform:rotate(0) scale(.76);opacity:.05}62%{opacity:.18}78%{transform:rotate(120deg) scale(1.07);opacity:.34}100%{transform:rotate(175deg) scale(1.12);opacity:.14}}
+@keyframes caseXpParticle{0%,42%{opacity:0;transform:translateY(10px) scale(.4)}61%{opacity:.9}100%{opacity:0;transform:translateY(-62px) scale(1.15) rotate(90deg)}}
+@keyframes caseXpLegendary{0%{transform:scale(.82);filter:brightness(.82)}38%{transform:scale(.96);filter:brightness(.94)}58%{transform:scale(1.02);filter:brightness(1.05)}69%{transform:scale(1.16);filter:brightness(1.25)}80%{transform:scale(1.02)}100%{transform:scale(1)}}
 @media(max-width:430px){
+  .seasonal-case-opening{padding:10px}.seasonal-case-opening-card{max-height:95dvh;border-radius:27px}.seasonal-case-xp-shell{min-height:550px;padding:25px 16px 18px}.seasonal-case-xp-case-stage{height:320px;min-height:320px}.seasonal-case-xp-case-stack,.seasonal-case-xp-case-img{width:225px!important;height:225px!important;max-width:225px!important;max-height:225px!important}.seasonal-case-xp-opening-heading h2{font-size:22px}
   .tier-celebration{padding:12px}
   .tier-celebration-scroll{padding:22px 14px max(16px,env(safe-area-inset-bottom))}
   .tier-celebration-badge{width:132px;height:116px}.tier-celebration-badge img{max-width:128px;max-height:112px}
@@ -3085,6 +3211,23 @@ img[src$="/xp.webp"]{
 <style id="zefirok-season-letter-case-v1">
 .season-letter-card{display:grid;grid-template-columns:62px minmax(0,1fr) auto;gap:11px;align-items:center;margin:10px 0;padding:12px;border:1px solid rgba(205,151,51,.4);border-radius:18px;background:linear-gradient(145deg,#fffaf3,#fff1dc);box-shadow:0 8px 22px rgba(127,75,45,.08)}.season-letter-card[hidden],.seasonal-case-shelf[hidden],.season-story-card[hidden]{display:none!important}.season-letter-icon{width:62px;height:62px;display:grid;place-items:center;border-radius:17px;background:linear-gradient(145deg,#fff,#ffe1b8);font-size:32px;box-shadow:inset 0 0 0 1px rgba(208,154,72,.24)}.season-letter-copy{min-width:0}.season-letter-copy b{display:block;color:#704637;font-size:13px;font-weight:950}.season-letter-copy span{display:block;margin-top:3px;color:#9d786a;font-size:9px;font-weight:800;line-height:1.35}.season-letter-open{min-height:36px;padding:0 12px;border:0;border-radius:12px;background:linear-gradient(145deg,#e9b449,#c98222);color:#fffaf0;font-size:9px;font-weight:950}.seasonal-case-shelf{margin:10px 0 2px;padding:12px;border:1px solid rgba(210,157,71,.32);border-radius:18px;background:rgba(255,250,243,.9)}.seasonal-case-shelf-head{display:flex;justify-content:space-between;gap:8px;align-items:end;margin-bottom:8px}.seasonal-case-shelf-head b{color:#6d473c;font-size:13px}.seasonal-case-shelf-head span{color:#a08075;font-size:8px;font-weight:850}.seasonal-case-list{display:grid;grid-template-columns:repeat(auto-fit,minmax(165px,1fr));gap:8px}.seasonal-case-player-card{display:grid;grid-template-columns:54px minmax(0,1fr);gap:8px;align-items:center;padding:9px;border:1px solid rgba(221,183,142,.44);border-radius:14px;background:#fff}.seasonal-case-player-card img{width:54px;height:54px;object-fit:contain}.seasonal-case-player-card b,.seasonal-case-player-card span{display:block}.seasonal-case-player-card b{color:#714d42;font-size:10px;font-weight:950}.seasonal-case-player-card span{margin-top:2px;color:#9b7b72;font-size:8px;font-weight:800}.seasonal-case-player-card button{grid-column:1/-1;min-height:32px;border:0;border-radius:10px;background:linear-gradient(145deg,#e8b14a,#c78322);color:#fffaf1;font-size:8px;font-weight:950}.seasonal-case-player-card button:disabled{opacity:.55}.season-letter-overlay{position:fixed;inset:0;z-index:9998;display:grid;place-items:center;padding:18px;background:rgba(67,38,33,.5);backdrop-filter:blur(7px)}.season-letter-overlay[hidden]{display:none!important}.season-letter-sheet{width:min(430px,100%);max-height:min(82vh,720px);overflow:auto;border-radius:25px;padding:17px;background:linear-gradient(165deg,#fffdf9,#fff1dc);box-shadow:0 24px 70px rgba(67,34,24,.3);text-align:center}.season-letter-art{width:100%;max-height:220px;object-fit:cover;border-radius:18px;margin-bottom:12px}.season-letter-envelope{width:102px;height:78px;margin:7px auto 14px;display:grid;place-items:center;border-radius:18px;background:linear-gradient(145deg,#fff5df,#efc474);font-size:48px;box-shadow:0 12px 25px rgba(144,91,32,.18)}.season-letter-sheet h2{margin:0;color:#68453b;font-size:22px}.season-letter-sheet .letter-preview{margin:7px auto 0;max-width:330px;color:#a0796d;font-size:11px;font-weight:800;line-height:1.5}.season-letter-body{margin:13px 0;padding:13px;border-radius:16px;background:rgba(255,255,255,.72);color:#6f4b41;font-size:12px;font-weight:750;line-height:1.65;text-align:left;white-space:pre-wrap}.season-letter-target{display:block;margin:8px 0;color:#9a6c25;font-size:9px;font-weight:900}.season-letter-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px}.season-letter-actions button{min-height:42px;border:0;border-radius:13px;font-size:10px;font-weight:950}.season-letter-actions .primary{background:linear-gradient(145deg,#e8b249,#c78121);color:#fffaf0}.season-letter-actions .secondary{background:#f3e8df;color:#76584f}@media(max-width:520px){.season-letter-card{grid-template-columns:52px minmax(0,1fr)}.season-letter-icon{width:52px;height:52px}.season-letter-open{grid-column:1/-1;width:100%}.season-letter-actions{grid-template-columns:1fr}}
 </style>
+<style id="zefirok-seasonal-case-info-v1">
+.seasonal-case-player-card{display:grid!important;grid-template-columns:1fr!important;gap:8px!important;align-items:stretch!important}
+.seasonal-case-player-info{display:grid;grid-template-columns:54px minmax(0,1fr) 20px;gap:9px;align-items:center;width:100%;min-width:0;padding:0;border:0;background:transparent;text-align:left;color:inherit}
+.seasonal-case-player-info img{width:54px;height:54px;object-fit:contain;filter:drop-shadow(0 5px 7px rgba(139,91,38,.12))}
+.seasonal-case-player-info-copy{min-width:0}.seasonal-case-player-info-copy b,.seasonal-case-player-info-copy span{display:block}.seasonal-case-player-info-copy b{color:#714d42;font-size:10px;font-weight:950;line-height:1.25}.seasonal-case-player-info-copy span{margin-top:3px;color:#9b7b72;font-size:8px;font-weight:800;line-height:1.35}.seasonal-case-player-info-chevron{display:grid;place-items:center;color:#c58f39;font-size:22px;font-weight:700}
+.seasonal-case-open-button{width:100%;min-height:32px;border:0;border-radius:10px;background:linear-gradient(145deg,#e8b14a,#c78322);color:#fffaf1;font-size:8px;font-weight:950}.seasonal-case-open-button:disabled{opacity:.55}
+.seasonal-case-info-overlay{position:fixed;inset:0;z-index:9999;display:flex;align-items:flex-end;justify-content:center;background:rgba(57,34,40,.58);backdrop-filter:blur(9px);-webkit-backdrop-filter:blur(9px);padding:12px}.seasonal-case-info-overlay[hidden]{display:none!important}
+.seasonal-case-info-sheet{display:flex;flex-direction:column;width:min(100%,470px);max-height:min(88dvh,780px);overflow:hidden;border:1px solid rgba(238,206,184,.95);border-radius:28px;background:linear-gradient(180deg,#fffdf9 0%,#fff8f2 58%,#fff3ed 100%);box-shadow:0 28px 80px rgba(63,35,42,.32);color:#67443d}
+.seasonal-case-info-head{display:flex;align-items:center;gap:10px;padding:3px 16px 11px;flex:0 0 auto}.seasonal-case-info-head-copy{min-width:0;flex:1}.seasonal-case-info-head small{display:block;color:#b47a2d;font-size:8px;font-weight:950;letter-spacing:.08em}.seasonal-case-info-head h2{margin:2px 0 0;color:#70433e;font-size:18px;line-height:1.15;font-weight:1000}.seasonal-case-info-close,.seasonal-case-info-back{flex:0 0 38px;width:38px;height:38px;border:1px solid rgba(227,192,182,.78);border-radius:13px;background:#fff;color:#9a4c68;font-size:19px;font-weight:900}.seasonal-case-info-back{font-size:23px}
+.seasonal-case-info-tabs{display:grid;grid-template-columns:1fr 1fr;gap:4px;margin:0 16px 10px;padding:4px;border-radius:15px;background:#f4e9e6;flex:0 0 auto}.seasonal-case-info-tabs button{min-height:38px;border:0;border-radius:11px;background:transparent;color:#96756f;font-size:10px;font-weight:900}.seasonal-case-info-tabs button[aria-selected="true"]{background:#fff;color:#ad4a70;box-shadow:0 3px 9px rgba(83,48,54,.07)}
+.seasonal-case-info-scroll{min-height:0;flex:1;overflow:auto;padding:0 16px 14px;-webkit-overflow-scrolling:touch;overscroll-behavior:contain}.seasonal-case-info-hero{display:grid;grid-template-columns:92px minmax(0,1fr);gap:12px;align-items:center;padding:13px;border:1px solid rgba(228,195,168,.74);border-radius:20px;background:rgba(255,255,255,.76)}.seasonal-case-info-hero-art{display:grid;place-items:center;width:92px;height:92px;border-radius:22px;background:radial-gradient(circle at 50% 42%,#fffdf0 0,#fff1cc 48%,rgba(255,229,197,.26) 73%,transparent 74%)}.seasonal-case-info-hero-art img{width:88px;height:88px;object-fit:contain;filter:drop-shadow(0 9px 12px rgba(123,76,29,.14))}.seasonal-case-info-hero h3{margin:0;color:#714638;font-size:17px;line-height:1.15}.seasonal-case-info-hero p{margin:5px 0 0;color:#9a776d;font-size:9px;font-weight:750;line-height:1.45}.seasonal-case-info-stock{display:inline-flex;margin-top:7px;padding:5px 8px;border-radius:999px;background:#fff1c7;color:#96641a;font-size:8px;font-weight:950}.seasonal-case-info-meta{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}.seasonal-case-info-meta span{padding:5px 8px;border-radius:999px;background:#f8ece8;color:#8d6861;font-size:8px;font-weight:900}
+.seasonal-case-info-section{margin-top:14px}.seasonal-case-info-section>h3{margin:0;color:#69423b;font-size:14px}.seasonal-case-info-section>p{margin:4px 0 9px;color:#9a7970;font-size:9px;font-weight:750;line-height:1.45}.seasonal-case-info-resources{display:grid;gap:7px}.seasonal-case-info-resource{display:grid;grid-template-columns:44px minmax(0,1fr) auto;gap:9px;align-items:center;width:100%;padding:9px;border:1px solid rgba(232,205,191,.8);border-radius:15px;background:#fff;text-align:left}.seasonal-case-info-resource img{width:44px;height:44px;object-fit:contain}.seasonal-case-info-resource strong{display:block;color:#714b42;font-size:10px}.seasonal-case-info-resource small{display:block;margin-top:2px;color:#9f7c73;font-size:8px;font-weight:800}.seasonal-case-info-resource i{font-style:normal;color:#c18a39;font-size:19px}
+.seasonal-case-info-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px}.seasonal-case-info-item{display:grid;align-content:start;justify-items:center;gap:5px;min-height:126px;padding:9px 6px;border:1px solid rgba(231,204,194,.82);border-radius:16px;background:#fff;text-align:center}.seasonal-case-info-item img{width:58px;height:58px;object-fit:contain}.seasonal-case-info-item strong{font-size:8px;line-height:1.2;color:#70483f}.seasonal-case-info-rarity{font-size:7px;font-weight:950;color:#ac6680}.seasonal-case-info-rarity[data-rarity="legendary"]{color:#b57817}.seasonal-case-info-rarity[data-rarity="mythic"]{color:#9850b2}.seasonal-case-info-rarity[data-rarity="epic"]{color:#b04d8d}.seasonal-case-info-note,.seasonal-case-info-alert{margin-top:10px;padding:10px 11px;border-radius:14px;background:#fff8e7;border:1px solid rgba(231,198,118,.64);color:#8b6a35;font-size:8px;font-weight:800;line-height:1.5}.seasonal-case-info-alert{background:#fff0f5;border-color:rgba(226,145,177,.5);color:#934d68}
+.seasonal-case-info-odds{display:grid;gap:8px}.seasonal-case-info-odds details,.seasonal-case-info-rule{overflow:hidden;border:1px solid rgba(231,203,188,.8);border-radius:15px;background:#fff}.seasonal-case-info-odds summary,.seasonal-case-info-rule summary{display:grid;grid-template-columns:38px minmax(0,1fr) auto;gap:8px;align-items:center;padding:9px;cursor:pointer;list-style:none}.seasonal-case-info-rule summary{grid-template-columns:minmax(0,1fr) auto;color:#724a41;font-size:9px;font-weight:950}.seasonal-case-info-odds summary::-webkit-details-marker,.seasonal-case-info-rule summary::-webkit-details-marker{display:none}.seasonal-case-info-odds summary img{width:38px;height:38px;object-fit:contain}.seasonal-case-info-odds summary strong{font-size:10px;color:#704940}.seasonal-case-info-chance{font-size:10px;font-weight:1000;color:#c47727}.seasonal-case-info-odds-items{border-top:1px solid #f1dfd7;padding:4px 8px}.seasonal-case-info-odds-item{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;align-items:center;width:100%;padding:8px 4px;border:0;border-bottom:1px dashed #f0dfd7;background:transparent;text-align:left}.seasonal-case-info-odds-item:last-child{border-bottom:0}.seasonal-case-info-odds-item span:first-child{color:#74534b;font-size:8px;font-weight:850}.seasonal-case-info-odds-item small{display:block;margin-top:2px;color:#a1847b;font-size:7px}.seasonal-case-info-rule p{margin:0;padding:0 11px 11px;color:#93766e;font-size:8px;font-weight:750;line-height:1.5}.seasonal-case-info-rules{display:grid;gap:7px}.seasonal-case-info-detail{text-align:center;padding:6px 2px 3px}.seasonal-case-info-detail-art{display:grid;place-items:center;width:132px;height:132px;margin:0 auto 8px;border-radius:30px;background:radial-gradient(circle,#fff9df 0,#ffe8c9 55%,transparent 72%)}.seasonal-case-info-detail-art img{width:116px;height:116px;object-fit:contain}.seasonal-case-info-detail h3{margin:0;color:#6d433b;font-size:20px}.seasonal-case-info-detail dl{display:grid;gap:7px;margin:12px 0;text-align:left}.seasonal-case-info-detail dl div{display:flex;justify-content:space-between;gap:12px;padding:9px 10px;border-radius:13px;background:#fff}.seasonal-case-info-detail dt{color:#9a7a72;font-size:8px;font-weight:800}.seasonal-case-info-detail dd{margin:0;color:#724a41;font-size:8px;font-weight:950;text-align:right}
+.seasonal-case-info-footer{flex:0 0 auto;padding:10px 16px calc(10px + env(safe-area-inset-bottom));border-top:1px solid #f0ddd5;background:rgba(255,251,247,.96)}.seasonal-case-info-primary{width:100%;min-height:46px;border:0;border-radius:15px;background:linear-gradient(145deg,#e8b14a,#c78322);color:#fffaf1;font-size:11px;font-weight:1000;box-shadow:0 8px 20px rgba(188,126,30,.16)}.seasonal-case-info-primary:disabled{opacity:.52;box-shadow:none}
+@media(max-width:380px){.seasonal-case-info-overlay{padding:7px}.seasonal-case-info-sheet{max-height:92dvh;border-radius:24px}.seasonal-case-info-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.seasonal-case-info-hero{grid-template-columns:78px minmax(0,1fr)}.seasonal-case-info-hero-art{width:78px;height:78px}.seasonal-case-info-hero-art img{width:74px;height:74px}}
+</style>
 <style id="zefirok-season-pass-finale-v1">
 .catchup-card{display:grid;grid-template-columns:58px minmax(0,1fr) auto;align-items:center;gap:11px;margin:10px 0;padding:12px;border:1px solid rgba(207,157,47,.42);border-radius:18px;background:linear-gradient(145deg,#fffdf3,#fff0c7);box-shadow:0 8px 22px rgba(146,102,26,.08)}
 .catchup-card[hidden]{display:none!important}.catchup-icon{width:58px;height:58px;display:grid;place-items:center;border-radius:16px;background:linear-gradient(145deg,#fff9d9,#f4c44b);font-size:30px;box-shadow:inset 0 0 0 1px rgba(190,127,18,.2)}.catchup-copy{min-width:0}.catchup-copy strong{display:block;color:#785110;font-size:13px;font-weight:950}.catchup-copy p{margin:3px 0 0;color:#9a762d;font-size:9px;font-weight:800;line-height:1.45}.catchup-multiplier{min-width:58px;padding:8px 10px;border-radius:14px;background:#d99b20;color:#fff9e6;text-align:center;font-size:16px;font-weight:1000;box-shadow:0 6px 14px rgba(160,105,18,.18)}
@@ -3791,6 +3934,22 @@ img[src$="/xp.webp"]{
 <section class="season-story-overlay" id="seasonStoryOverlay" hidden aria-modal="true" role="dialog" aria-labelledby="seasonStoryTitle"><div class="season-story-sheet"><img class="season-story-art" id="seasonStoryArt" hidden alt=""><span class="season-story-kicker">История сезона</span><h2 id="seasonStoryTitle">Сюжет</h2><div class="season-story-meta" id="seasonStoryMeta"></div><div class="season-story-body" id="seasonStoryBody"></div><div class="season-story-reward" id="seasonStoryReward" hidden><img id="seasonStoryRewardImage" src="/assets/season-pass/season.webp" alt=""><div><b id="seasonStoryRewardTitle">Награда за завершение</b><span>Будет выдана один раз после последней страницы.</span></div></div><div class="season-story-footer"><button class="secondary" id="seasonStoryBack" type="button">Назад</button><button class="secondary" id="seasonStoryClose" type="button">Закрыть</button><button class="primary" id="seasonStoryComplete" type="button">Продолжить</button></div></div></section>
 <section class="season-story-archive-overlay" id="seasonStoryArchiveOverlay" hidden aria-modal="true" role="dialog"><div class="season-story-archive-sheet"><div class="season-story-archive-head"><h2>История сезона</h2><button class="season-story-archive-close" id="seasonStoryArchiveClose" type="button">×</button></div><div class="season-story-archive-list" id="seasonStoryArchiveList"></div></div></section>
 
+<section class="seasonal-case-info-overlay" id="seasonalCaseInfoOverlay" hidden aria-modal="true" role="dialog" aria-labelledby="seasonalCaseInfoTitle">
+  <div class="seasonal-case-info-sheet" id="seasonalCaseInfoSheet">
+    <div class="seasonal-case-info-head" data-service-drag>
+      <button class="seasonal-case-info-back" id="seasonalCaseInfoBack" type="button" aria-label="Назад" hidden>‹</button>
+      <div class="seasonal-case-info-head-copy"><small id="seasonalCaseInfoKicker">СЕЗОННЫЙ КЕЙС</small><h2 id="seasonalCaseInfoTitle">Содержимое кейса</h2></div>
+      <button class="seasonal-case-info-close" id="seasonalCaseInfoClose" type="button" aria-label="Закрыть">×</button>
+    </div>
+    <div class="seasonal-case-info-tabs" id="seasonalCaseInfoTabs" role="tablist" aria-label="Информация о сезонном кейсе">
+      <button type="button" role="tab" data-seasonal-case-info-tab="content">Содержимое</button>
+      <button type="button" role="tab" data-seasonal-case-info-tab="odds">Шансы и правила</button>
+    </div>
+    <div class="seasonal-case-info-scroll" id="seasonalCaseInfoScroll"></div>
+    <footer class="seasonal-case-info-footer"><button class="seasonal-case-info-primary" id="seasonalCaseInfoOpen" type="button">Открыть кейс</button></footer>
+  </div>
+</section>
+
 <section class="season-finale-overlay" id="seasonFinaleOverlay" hidden aria-modal="true" role="dialog" aria-labelledby="seasonFinaleTitle">
   <div class="season-finale-sheet">
     <div class="season-finale-crown">⭐</div>
@@ -3905,8 +4064,8 @@ img[src$="/xp.webp"]{
 <section class="reward-summary" id="rewardSummary" hidden aria-modal="true" role="dialog" aria-labelledby="rewardSummaryTitle">
   <div class="reward-summary-card">
     <header class="reward-summary-head">
-      <span class="reward-summary-kicker">НАГРАДА ПОЛУЧЕНА</span>
-      <div class="summary-icon"><img src="/assets/cases/gold_open.webp" alt=""></div>
+      <span class="reward-summary-kicker" id="rewardSummaryKicker">НАГРАДА ПОЛУЧЕНА</span>
+      <div class="summary-icon"><img id="rewardSummarySourceIcon" src="/assets/cases/gold_open.webp" alt=""></div>
       <h2 id="rewardSummaryTitle">Вот это улов!</h2>
       <p id="rewardSummarySubtitle">Полученные награды уже на аккаунте.</p>
     </header>
@@ -3925,6 +4084,12 @@ img[src$="/xp.webp"]{
       </details>
     </div>
     <button class="reward-summary-close" id="rewardSummaryClose" type="button">Отлично</button>
+  </div>
+</section>
+
+<section class="seasonal-case-opening" id="seasonalCaseOpening" hidden aria-modal="true" role="dialog" aria-labelledby="seasonalCaseOpeningTitle">
+  <div class="seasonal-case-opening-card" id="seasonalCaseOpeningCard">
+    <div id="seasonalCaseOpeningContent"></div>
   </div>
 </section>
 
@@ -4067,6 +4232,10 @@ img[src$="/xp.webp"]{
     },700);
   }
   restoreSeasonalCasePendingRequests();
+  const SEASONAL_CASE_ANIMATION_MS = 2600;
+  let seasonalCaseOpeningBusy = false;
+  let seasonalCaseOpeningFlowId = 0;
+  let seasonalCaseAnimationState = null;
   const MAX_LEVEL = 50;
   const DEFAULT_OVERFLOW_STEP_XP = 1500;
 
@@ -4956,9 +5125,15 @@ img[src$="/xp.webp"]{
     localStorage.setItem(PASS_KEY,JSON.stringify(pass));
   }
 
-  function showToast(text) {
+  function prizeIconMarkup(cls="inline-prize-icon") {
+    return `<img class="${cls}" src="/assets/ui/icon_prize.png" alt="" aria-hidden="true">`;
+  }
+
+  function showToast(text,{prize=false}={}) {
     const toast = el("toast");
-    toast.textContent = text;
+    toast.classList.toggle("has-prize-icon",Boolean(prize));
+    if(prize){const img=document.createElement("img");img.className="inline-prize-icon";img.src="/assets/ui/icon_prize.png";img.alt="";img.setAttribute("aria-hidden","true");toast.replaceChildren(img,document.createTextNode(String(text||"")));}
+    else toast.textContent = text;
     toast.classList.add("show");
     clearTimeout(toastTimer);
     toastTimer = setTimeout(()=>toast.classList.remove("show"),1800);
@@ -6048,23 +6223,169 @@ img[src$="/xp.webp"]{
   function closeSeasonStory(){stopSeasonStoryMusic();el("seasonStoryOverlay").hidden=true;seasonStoryView=null;if(el("seasonStoryArchiveOverlay").hidden&&el("seasonLetterOverlay").hidden&&el("rewardSummary").hidden&&el("purchaseConfirm").hidden)document.body.style.overflow="";}
   function closeSeasonStoryArchive(){el("seasonStoryArchiveOverlay").hidden=true;if(el("seasonStoryOverlay").hidden&&el("seasonLetterOverlay").hidden&&el("rewardSummary").hidden&&el("purchaseConfirm").hidden)document.body.style.overflow="";}
   function storyPages(item){const pages=Array.isArray(item?.pages)?item.pages:[];if(pages.length)return pages;return [{title:"",bodyText:String(item?.bodyText||""),imageUrl:String(item?.imageUrl||""),buttonText:String(item?.buttonText||"Продолжить"),musicId:"",musicUrl:"",musicTitle:""}];}
-  function renderSeasonStoryPage(){if(!seasonStoryView)return;const item=seasonStoryView.item,pages=storyPages(item),index=Math.max(0,Math.min(pages.length-1,Number(seasonStoryView.index)||0)),page=pages[index];seasonStoryView.index=index;const art=el("seasonStoryArt");if(page.imageUrl){art.src=page.imageUrl;art.hidden=false;}else{art.hidden=true;art.removeAttribute("src");}playSeasonStoryMusic(page.musicUrl||"");el("seasonStoryTitle").textContent=page.title||item.title||"История сезона";const unlockDate=Number(item.unlockAt||0)>0?new Intl.DateTimeFormat("ru-RU",{day:"2-digit",month:"2-digit",year:"numeric",hour:"2-digit",minute:"2-digit",timeZone:"Europe/Moscow"}).format(new Date(Number(item.unlockAt)*1000)):"";el("seasonStoryMeta").textContent=`${item.testMode?"ТЕСТ · ":""}Уровень ${Number(item.unlockLevel||1)}${unlockDate?` · с ${unlockDate}`:""} · страница ${index+1} из ${pages.length}${page.musicTitle?` · 🎵 ${page.musicTitle}`:""}`;el("seasonStoryBody").textContent=String(page.bodyText||"");const rewardBox=el("seasonStoryReward"),reward=item.reward||null,isLast=index===pages.length-1;rewardBox.hidden=!(reward&&isLast);if(reward&&isLast){const canonical=canonicalRewardAsset(reward.kind,reward.itemId,reward.title);const direct=String(reward.imageUrl||"").trim();const preferCanonical=["points","treats","zefir","coffee","case","streak_protection"].includes(String(reward.kind||"").toLowerCase());el("seasonStoryRewardImage").src=(preferCanonical?(canonical||direct):(direct||canonical))||IMAGE_ERROR_FALLBACK;el("seasonStoryRewardTitle").textContent=`🎁 ${reward.title||"Награда за завершение"}`;}el("seasonStoryBack").disabled=index===0;el("seasonStoryComplete").hidden=false;el("seasonStoryComplete").textContent=page.buttonText||(index===pages.length-1?(seasonStoryView.pending?"Завершить":"Закрыть"):"Далее");el("seasonStoryComplete").dataset.eventId=seasonStoryView.pending?String(item.eventId||""):"";}
+  function renderSeasonStoryPage(){if(!seasonStoryView)return;const item=seasonStoryView.item,pages=storyPages(item),index=Math.max(0,Math.min(pages.length-1,Number(seasonStoryView.index)||0)),page=pages[index];seasonStoryView.index=index;const art=el("seasonStoryArt");if(page.imageUrl){art.src=page.imageUrl;art.hidden=false;}else{art.hidden=true;art.removeAttribute("src");}playSeasonStoryMusic(page.musicUrl||"");el("seasonStoryTitle").textContent=page.title||item.title||"История сезона";const unlockDate=Number(item.unlockAt||0)>0?new Intl.DateTimeFormat("ru-RU",{day:"2-digit",month:"2-digit",year:"numeric",hour:"2-digit",minute:"2-digit",timeZone:"Europe/Moscow"}).format(new Date(Number(item.unlockAt)*1000)):"";el("seasonStoryMeta").textContent=`${item.testMode?"ТЕСТ · ":""}Уровень ${Number(item.unlockLevel||1)}${unlockDate?` · с ${unlockDate}`:""} · страница ${index+1} из ${pages.length}${page.musicTitle?` · 🎵 ${page.musicTitle}`:""}`;el("seasonStoryBody").textContent=String(page.bodyText||"");const rewardBox=el("seasonStoryReward"),reward=item.reward||null,isLast=index===pages.length-1;rewardBox.hidden=!(reward&&isLast);if(reward&&isLast){const canonical=canonicalRewardAsset(reward.kind,reward.itemId,reward.title);const direct=String(reward.imageUrl||"").trim();const preferCanonical=["points","treats","zefir","coffee","case","streak_protection"].includes(String(reward.kind||"").toLowerCase());el("seasonStoryRewardImage").src=(preferCanonical?(canonical||direct):(direct||canonical))||IMAGE_ERROR_FALLBACK;el("seasonStoryRewardTitle").innerHTML=`${prizeIconMarkup()} <span>${String(reward.title||"Награда за завершение").replace(/</g,'&lt;')}</span>`;}el("seasonStoryBack").disabled=index===0;el("seasonStoryComplete").hidden=false;el("seasonStoryComplete").textContent=page.buttonText||(index===pages.length-1?(seasonStoryView.pending?"Завершить":"Закрыть"):"Далее");el("seasonStoryComplete").dataset.eventId=seasonStoryView.pending?String(item.eventId||""):"";}
   function showSeasonStoryEvent(item,{pending=false}={}){if(!item)return;seasonStoryView={item,pending:Boolean(pending),index:0};renderSeasonStoryPage();el("seasonStoryOverlay").hidden=false;document.body.style.overflow="hidden";passSelectHaptic();}
   async function showPendingSeasonStory(){const pending=seasonStoryData()?.pending;if(!pending)return;if(seasonTutorialBlocksAutoPopups()){seasonPostOpenPresentationHandled=false;return;}try{const data=await seasonPassApi(STORY_OPEN_PATH,{eventId:String(pending.eventId||"")});if(data?.story)serverPass={...(serverPass||{}),story:data.story};if(data?.miniGameVisuals||data?.minigameVisual){try{window.parent?.postMessage?.({type:"zefirok-minigame-visual",visual:data.minigameVisual||data?.miniGameVisuals?.treats||null,visuals:data.miniGameVisuals||null},"*");}catch(error){}}renderSeasonStory();showSeasonStoryEvent(serverPass?.story?.pending||pending,{pending:true});}catch(error){passNotifyHaptic("error");showToast(error.message||"Не удалось открыть историю");}}
   async function loadRequestedStoryTest(){const query=new URLSearchParams(location.search);if(query.get("storyTest")!=="1")return false;const token=String(query.get("storyTestToken")||"").trim();if(!token)return false;try{const data=await seasonPassApi(STORY_TEST_OPEN_PATH,{token});if(!data?.event)throw new Error("Тестовое событие не найдено");showSeasonStoryEvent({...data.event,testMode:true},{pending:false});return true;}catch(error){passNotifyHaptic("error");showToast(error.message||"Не удалось открыть тест сюжета");return false;}}
-  async function completeSeasonStory(){const button=el("seasonStoryComplete"),eventId=String(button.dataset.eventId||"");if(!eventId)return;const old=button.textContent;button.disabled=true;button.textContent="Сохраняем…";try{const data=await seasonPassApi(STORY_COMPLETE_PATH,{eventId});if(data?.story)serverPass={...(serverPass||{}),story:data.story};if(Array.isArray(data?.seasonalCases))serverPass={...(serverPass||{}),seasonalCases:data.seasonalCases};closeSeasonStory();renderSeasonStory();renderSeasonalCases();passNotifyHaptic("success");if(data?.reward){notifyAccountChanged();if(data.rewardStatus==="delivered")openRewardSummary([{premium:false,icon:"",image:data.reward.imageUrl||"",name:data.reward.title||"Награда за историю",source:"Сюжет сезона"}]);else showToast(`🎁 ${data.reward.title||"Награда"} поставлена в очередь`);}if(serverPass?.story?.pending)setTimeout(()=>{void showPendingSeasonStory();},data?.reward&&data.rewardStatus==="delivered"?700:220);}catch(error){passNotifyHaptic("error");showToast(error.message||"Не удалось продолжить историю");}finally{button.disabled=false;button.textContent=old;}}
+  async function completeSeasonStory(){const button=el("seasonStoryComplete"),eventId=String(button.dataset.eventId||"");if(!eventId)return;const old=button.textContent;button.disabled=true;button.textContent="Сохраняем…";try{const data=await seasonPassApi(STORY_COMPLETE_PATH,{eventId});if(data?.story)serverPass={...(serverPass||{}),story:data.story};if(Array.isArray(data?.seasonalCases))serverPass={...(serverPass||{}),seasonalCases:data.seasonalCases};closeSeasonStory();renderSeasonStory();renderSeasonalCases();passNotifyHaptic("success");if(data?.reward){notifyAccountChanged();if(data.rewardStatus==="delivered")openRewardSummary([{premium:false,icon:"",image:data.reward.imageUrl||"",name:data.reward.title||"Награда за историю",source:"Сюжет сезона"}]);else showToast(`${data.reward.title||"Награда"} поставлена в очередь`,{prize:true});}if(serverPass?.story?.pending)setTimeout(()=>{void showPendingSeasonStory();},data?.reward&&data.rewardStatus==="delivered"?700:220);}catch(error){passNotifyHaptic("error");showToast(error.message||"Не удалось продолжить историю");}finally{button.disabled=false;button.textContent=old;}}
   async function advanceSeasonStory(){if(!seasonStoryView)return;const pages=storyPages(seasonStoryView.item);if(Number(seasonStoryView.index)<pages.length-1){seasonStoryView.index+=1;renderSeasonStoryPage();passSelectHaptic();return;}if(seasonStoryView.pending){await completeSeasonStory();return;}closeSeasonStory();}
   function previousSeasonStoryPage(){if(!seasonStoryView||Number(seasonStoryView.index)<=0)return;seasonStoryView.index-=1;renderSeasonStoryPage();passSelectHaptic();}
-  function showSeasonStoryArchive(){const archive=Array.isArray(seasonStoryData()?.archive)?seasonStoryData().archive:[];if(!archive.length)return showToast("Прочитанных сюжетных событий пока нет");el("seasonStoryArchiveList").innerHTML=archive.map(item=>{const pages=storyPages(item);return `<article class="season-story-archive-item"><img src="${String(item.imageUrl||pages[0]?.imageUrl||IMAGE_ERROR_FALLBACK).replace(/"/g,'&quot;')}" alt=""><div><b>${String(item.title||'История сезона').replace(/</g,'&lt;')}</b><span>Уровень ${Number(item.unlockLevel||1)} · ${pages.length} стр. · прочитано${item.reward?` · 🎁 ${String(item.reward.title||'награда').replace(/</g,'&lt;')}`:''}</span></div><button type="button" data-story-archive-event="${String(item.eventId||'').replace(/"/g,'&quot;')}">Открыть</button></article>`;}).join("");el("seasonStoryArchiveList").querySelectorAll("[data-story-archive-event]").forEach(button=>button.addEventListener("click",()=>{const item=archive.find(x=>String(x.eventId)===String(button.dataset.storyArchiveEvent));closeSeasonStoryArchive();showSeasonStoryEvent(item,{pending:false});}));el("seasonStoryArchiveOverlay").hidden=false;document.body.style.overflow="hidden";passSelectHaptic();}
-  function renderSeasonStory(){const story=seasonStoryData(),pending=story?.pending||null,archive=Array.isArray(story?.archive)?story.archive:[],card=el("seasonStoryCard");if(!card)return;const visible=Boolean(pending||archive.length);card.hidden=!visible;if(!visible)return;el("seasonStoryCardTitle").textContent=pending?(pending.title||"Новая часть истории"):"История сезона";el("seasonStoryCardPreview").textContent=pending?`Открылась новая часть сюжета · уровень ${Number(pending.unlockLevel||1)} · ${storyPages(pending).length} стр.${pending.reward?` · 🎁 ${pending.reward.title}`:''}`:`Прочитано событий: ${archive.length}`;el("seasonStoryOpen").hidden=!pending;el("seasonStoryArchive").hidden=!archive.length;}
+  function showSeasonStoryArchive(){const archive=Array.isArray(seasonStoryData()?.archive)?seasonStoryData().archive:[];if(!archive.length)return showToast("Прочитанных сюжетных событий пока нет");el("seasonStoryArchiveList").innerHTML=archive.map(item=>{const pages=storyPages(item);return `<article class="season-story-archive-item"><img src="${String(item.imageUrl||pages[0]?.imageUrl||IMAGE_ERROR_FALLBACK).replace(/"/g,'&quot;')}" alt=""><div><b>${String(item.title||'История сезона').replace(/</g,'&lt;')}</b><span>Уровень ${Number(item.unlockLevel||1)} · ${pages.length} стр. · прочитано${item.reward?` · ${prizeIconMarkup()} ${String(item.reward.title||'награда').replace(/</g,'&lt;')}`:''}</span></div><button type="button" data-story-archive-event="${String(item.eventId||'').replace(/"/g,'&quot;')}">Открыть</button></article>`;}).join("");el("seasonStoryArchiveList").querySelectorAll("[data-story-archive-event]").forEach(button=>button.addEventListener("click",()=>{const item=archive.find(x=>String(x.eventId)===String(button.dataset.storyArchiveEvent));closeSeasonStoryArchive();showSeasonStoryEvent(item,{pending:false});}));el("seasonStoryArchiveOverlay").hidden=false;document.body.style.overflow="hidden";passSelectHaptic();}
+  function renderSeasonStory(){const story=seasonStoryData(),pending=story?.pending||null,archive=Array.isArray(story?.archive)?story.archive:[],card=el("seasonStoryCard");if(!card)return;const visible=Boolean(pending||archive.length);card.hidden=!visible;if(!visible)return;el("seasonStoryCardTitle").textContent=pending?(pending.title||"Новая часть истории"):"История сезона";el("seasonStoryCardPreview").innerHTML=pending?`Открылась новая часть сюжета · уровень ${Number(pending.unlockLevel||1)} · ${storyPages(pending).length} стр.${pending.reward?` · ${prizeIconMarkup()} ${String(pending.reward.title||"Награда").replace(/</g,'&lt;')}`:''}`:`Прочитано событий: ${archive.length}`;el("seasonStoryOpen").hidden=!pending;el("seasonStoryArchive").hidden=!archive.length;}
 
   function isSeasonalCaseRetryableError(error){const status=Number(error?.status||0);if(error?.pending||error?.timeout||error?.code==="REQUEST_TIMEOUT"||!status||status>=500)return true;if(status!==409)return false;return /состояние кейса изменилось|открытие было восстановлено|уже открывается|повторите открытие/i.test(String(error?.message||""));}
-  function renderSeasonalCases(){const list=(Array.isArray(serverPass?.seasonalCases)?serverPass.seasonalCases:[]).filter(item=>Number(item.pending||0)+Number(item.opening||0)>0);const shelf=el("seasonalCaseShelf");if(!shelf)return;shelf.hidden=!list.length;if(!list.length){el("seasonalCaseList").innerHTML="";return;}const total=list.reduce((sum,item)=>sum+Number(item.pending||0)+Number(item.opening||0),0);el("seasonalCaseCount").textContent=`Доступно: ${total}`;el("seasonalCaseList").innerHTML=list.map(item=>{const caseId=String(item.caseId||"");if(item?.openRequestId&&!seasonalCaseRequestId(caseId)){rememberSeasonalCaseRequest(caseId,String(item.openRequestId));const restored=seasonalCasePendingRequests.get(caseId);if(restored&&Number(item.openingStartedAt||0)>0)restored.startedAt=Number(item.openingStartedAt);persistSeasonalCasePendingRequests();}const checking=Boolean(seasonalCaseRequestId(caseId));return `<article class="seasonal-case-player-card"><img src="${String(item.imageUrl||IMAGE_ERROR_FALLBACK).replace(/"/g,'&quot;')}" alt=""><div><b>${String(item.title||'Сезонный кейс').replace(/</g,'&lt;')}</b><span>${String(item.seasonTitle||'Архив сезона').replace(/</g,'&lt;')} · ${Number(item.pending||0)} шт.</span></div><button type="button" data-open-seasonal-case="${caseId.replace(/"/g,'&quot;')}" ${item.released===false?'disabled':''}>${item.released===false?'Откроется позже':checking?'Проверить открытие':'Открыть кейс'}</button></article>`;}).join("");el("seasonalCaseList").querySelectorAll("[data-open-seasonal-case]").forEach(button=>button.addEventListener("click",()=>{passImpactHaptic("medium");void openSeasonalCase(button.dataset.openSeasonalCase,button);}));}
+  function seasonalCaseOpenImageFallback(closedUrl=""){
+    const value=String(closedUrl||"").trim();
+    if(!value)return "/assets/cases/seasonal/season_2_open.webp";
+    const replacements=[[/_closed(?=\.[a-z0-9]+(?:\?|$))/i,"_open"],[/closed(?=\.[a-z0-9]+(?:\?|$))/i,"open"],[/_close(?=\.[a-z0-9]+(?:\?|$))/i,"_open"],[/close(?=\.[a-z0-9]+(?:\?|$))/i,"open"]];
+    for(const [pattern,replacement] of replacements){if(pattern.test(value))return value.replace(pattern,replacement);}
+    return value;
+  }
+
+  function seasonalCaseMeta(caseId){
+    const entry=(Array.isArray(serverPass?.seasonalCases)?serverPass.seasonalCases:[]).find(item=>String(item?.caseId||"")===String(caseId||""));
+    const imageUrl=String(entry?.imageUrl||REWARD_ASSETS.goldCase||"/assets/cases/seasonal/season_2_closed.webp");
+    const openImageUrl=String(entry?.openImageUrl||seasonalCaseOpenImageFallback(imageUrl));
+    return {caseId:String(entry?.caseId||caseId||""),title:String(entry?.title||"Сезонный кейс"),seasonTitle:String(entry?.seasonTitle||serverPass?.season?.title||"Ночь сладких чудес"),imageUrl,openImageUrl};
+  }
+
+  function seasonalCaseOpeningEls(){return {layer:el("seasonalCaseOpening"),card:el("seasonalCaseOpeningCard"),content:el("seasonalCaseOpeningContent")};}
+
+  function seasonalCaseShowLayer(){const {layer}=seasonalCaseOpeningEls();if(!layer)return;layer.hidden=false;document.body.style.overflow="hidden";}
+
+  function seasonalCaseClearAnimation(){
+    const state=seasonalCaseAnimationState;
+    seasonalCaseAnimationState=null;
+    if(!state)return;
+    for(const timer of state.timers||[])clearTimeout(timer);
+    if(typeof state.resolve==="function")state.resolve(false);
+  }
+
+  function closeSeasonalCaseOpening(){
+    if(seasonalCaseOpeningBusy)return;
+    const {layer,card,content}=seasonalCaseOpeningEls();
+    seasonalCaseClearAnimation();
+    seasonalCaseOpeningFlowId+=1;
+    if(layer)layer.hidden=true;
+    if(card)card.classList.remove("is-opening-busy");
+    if(content)content.innerHTML="";
+    if(el("tierCelebration").hidden&&el("purchaseConfirm").hidden&&el("rewardSummary").hidden)document.body.style.overflow="";
+  }
+
+  function showSeasonalCasePreparing(meta,checking=false){
+    const {card,content}=seasonalCaseOpeningEls();if(!card||!content)return;
+    seasonalCaseClearAnimation();
+    seasonalCaseOpeningBusy=true;
+    card.classList.add("is-opening-busy");
+    content.innerHTML=`<div class="seasonal-case-xp-shell seasonal-case-xp-preparing">
+      <div class="seasonal-case-xp-result-kicker"><i aria-hidden="true">✦</i><span>${checking?"ПРОВЕРЯЕМ ОТКРЫТИЕ":"ПОДГОТОВКА"}</span></div>
+      <div class="seasonal-case-xp-preparing-art"><span class="seasonal-case-xp-preparing-glow" aria-hidden="true"></span><img class="seasonal-case-xp-preparing-case" src="${String(meta.imageUrl||IMAGE_ERROR_FALLBACK).replace(/"/g,'&quot;')}" alt=""></div>
+      <h2 id="seasonalCaseOpeningTitle">${checking?"Проверяем":"Готовим"} ${String(meta.title||"сезонный кейс").replace(/</g,'&lt;')}</h2>
+      <p>${checking?"Продолжаем ту же операцию — второй кейс не спишется.":"Ещё мгновение — и узнаем, что внутри."}</p>
+      <div class="seasonal-case-xp-preparing-bar" aria-hidden="true"><i></i></div>
+      <small class="seasonal-case-xp-preparing-note"><i aria-hidden="true"></i> Сначала фиксируем результат на сервере, чтобы награда не потерялась</small>
+    </div>`;
+    seasonalCaseShowLayer();
+  }
+
+  function showSeasonalCaseStatus(meta,message,retryable){
+    const {card,content}=seasonalCaseOpeningEls();if(!card||!content)return;
+    seasonalCaseClearAnimation();
+    seasonalCaseOpeningBusy=false;
+    card.classList.remove("is-opening-busy");
+    content.innerHTML=`<div class="seasonal-case-xp-shell seasonal-case-xp-status">
+      <div class="seasonal-case-xp-result-kicker"><i aria-hidden="true">${retryable?"↻":"!"}</i><span>${retryable?"ПРОВЕРКА СЕРВЕРА":"ОТКРЫТИЕ ПРЕРВАНО"}</span></div>
+      <div class="seasonal-case-xp-status-case"><img src="${String(meta.imageUrl||IMAGE_ERROR_FALLBACK).replace(/"/g,'&quot;')}" alt=""></div>
+      <span class="seasonal-case-xp-status-pill">${retryable?"кейс не списывается повторно":"ошибка"}</span>
+      <h2 id="seasonalCaseOpeningTitle">${retryable?"Открытие ещё проверяется":"Не удалось открыть кейс"}</h2>
+      <p>${String(message||"").replace(/</g,'&lt;')}</p>
+      <div class="seasonal-case-xp-status-note"><strong>${retryable?"Продолжим ту же попытку":"Награда не будет скрыта"}</strong><small>${retryable?"Закрой окно и нажми «Проверить открытие» в карточке сезонного кейса.":"Если сервер уже успел выдать награду, повторная синхронизация её покажет."}</small></div>
+      <button class="seasonal-case-xp-primary" id="seasonalCaseOpeningPrimary" type="button">Закрыть</button>
+    </div>`;
+    seasonalCaseShowLayer();
+    el("seasonalCaseOpeningPrimary")?.addEventListener("click",()=>{passSelectHaptic();closeSeasonalCaseOpening();},{once:true});
+  }
+
+  function runSeasonalCaseOpeningAnimation(meta,flowId){
+    const {card,content}=seasonalCaseOpeningEls();if(!card||!content)return Promise.resolve(true);
+    seasonalCaseClearAnimation();
+    seasonalCaseOpeningBusy=true;
+    card.classList.add("is-opening-busy");
+    const reduced=Boolean(window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches);
+    const duration=reduced?420:SEASONAL_CASE_ANIMATION_MS;
+    const closed=String(meta.imageUrl||IMAGE_ERROR_FALLBACK),opened=String(meta.openImageUrl||seasonalCaseOpenImageFallback(closed)||closed);
+    content.innerHTML=`<div class="seasonal-case-xp-shell seasonal-case-xp-opening" style="--case-xp-duration:${duration}ms">
+      <div class="seasonal-case-xp-opening-heading"><small>СЕЗОННЫЙ КЕЙС · ${String(meta.seasonTitle||"Ночь сладких чудес").replace(/</g,'&lt;')}</small><h2 id="seasonalCaseOpeningTitle">${String(meta.title||"Сезонный кейс").replace(/</g,'&lt;')}</h2><p>Лунный свет раскрывает награду</p></div>
+      <button class="seasonal-case-xp-case-stage" data-seasonal-case-skip type="button" aria-label="Ускорить открытие">
+        <span class="seasonal-case-xp-stage-vignette" aria-hidden="true"></span><span class="seasonal-case-xp-rays" aria-hidden="true"></span>
+        <span class="seasonal-case-xp-particles" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></span>
+        <span class="seasonal-case-xp-case-stack"><img class="seasonal-case-xp-case-img seasonal-case-xp-case-closed" src="${closed.replace(/"/g,'&quot;')}" alt=""><img class="seasonal-case-xp-case-img seasonal-case-xp-case-open" src="${opened.replace(/"/g,'&quot;')}" alt=""></span>
+        <span class="seasonal-case-xp-flash" aria-hidden="true"></span>
+      </button>
+      <div class="seasonal-case-xp-opening-progress"><i></i></div><small class="seasonal-case-xp-skip-note">${reduced?"":"Коснись кейса, чтобы ускорить"}</small>
+    </div>`;
+    seasonalCaseShowLayer();
+    return new Promise(resolve=>{
+      const state={flowId,resolve,timers:[],canSkipAt:Date.now()+(reduced?0:450),done:false};
+      const finish=()=>{if(state.done)return;state.done=true;for(const timer of state.timers)clearTimeout(timer);state.timers=[];if(seasonalCaseAnimationState===state)seasonalCaseAnimationState=null;resolve(true);};
+      state.finish=finish;seasonalCaseAnimationState=state;
+      requestAnimationFrame(()=>{if(flowId===seasonalCaseOpeningFlowId)content.querySelector(".seasonal-case-xp-opening")?.classList.add("is-animating");});
+      if(!reduced)state.timers.push(setTimeout(()=>{if(flowId===seasonalCaseOpeningFlowId)passImpactHaptic("heavy");},Math.min(duration-200,1640)));
+      state.timers.push(setTimeout(finish,duration));
+    });
+  }
+
+  function skipSeasonalCaseOpening(){
+    const state=seasonalCaseAnimationState;if(!state||state.done||Date.now()<state.canSkipAt)return;
+    const {content}=seasonalCaseOpeningEls();const shell=content?.querySelector(".seasonal-case-xp-opening");if(!shell)return;
+    shell.classList.add("is-skipping");passImpactHaptic("light");
+    for(const timer of state.timers||[])clearTimeout(timer);state.timers=[];
+    state.timers.push(setTimeout(()=>state.finish?.(),150));
+  }
+
+  let seasonalCaseInfoState=null;
+  const SEASONAL_CASE_INFO_KIND_LABELS={points:"Очки",treats:"Зефир",zefir:"Зефир",coffee:"Кофе",case:"Кейс",skin:"Скин",avatar:"Аватарка",frame:"Рамка",trail:"След",music:"Музыка",showcase_style:"Витрина"};
+  const SEASONAL_CASE_INFO_RARITY={resource:"Ресурс",seasonal:"Сезонная",common:"Обычная",rare:"Редкая",superrare:"Сверхредкая",epic:"Эпическая",mythic:"Мифическая",legendary:"Легендарная"};
+  function seasonalCaseInfoEscape(value){return String(value??"").replace(/[&<>"']/g,ch=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"})[ch]);}
+  function seasonalCaseInfoChance(value){const n=Math.max(0,Number(value)||0);if(n===0)return"0%";const digits=n>=10?1:n>=1?2:n>=.01?3:Math.min(6,Math.max(4,Math.ceil(-Math.log10(n))+2));const text=n.toFixed(digits).replace(/(\.\d*?[1-9])0+$|\.0+$/,"$1");return `${text}%`;}
+  function seasonalCaseInfoGroup(kind){const k=String(kind||"");if(["points","treats","zefir","coffee"].includes(k))return"currency";if(k==="case")return"case";if(["skin","avatar","frame","trail","music","showcase_style"].includes(k))return"cosmetic";return"other";}
+  function seasonalCaseInfoAmount(item){const amount=Math.max(1,Math.floor(Number(item?.amount)||1)),kind=String(item?.kind||"");if(kind==="points")return `${amount.toLocaleString("ru-RU")} очков`;if(kind==="treats"||kind==="zefir")return `${amount.toLocaleString("ru-RU")} зефира`;if(kind==="coffee")return `${amount.toLocaleString("ru-RU")} кофе`;if(kind==="case")return `${amount.toLocaleString("ru-RU")} шт.`;return amount>1?`×${amount}`:"Предмет коллекции";}
+  function seasonalCaseInfoGroupMeta(key,items=[]){if(key==="currency")return{title:"Ресурсы",image:items[0]?.imageUrl||REWARD_ASSETS.points||"/assets/shop/currency_star_256x256.webp"};if(key==="case")return{title:"Постоянные кейсы",image:items[0]?.imageUrl||REWARD_ASSETS.goldCase||"/assets/cases/gold_closed.webp"};return{title:"Косметика и коллекция",image:items[0]?.imageUrl||"/assets/ui/icon_albom.webp"};}
+  function seasonalCaseInfoModel(entry){
+    const info=entry?.caseInfo&&typeof entry.caseInfo==="object"?entry.caseInfo:{};
+    const items=(Array.isArray(info.items)?info.items:[]).map((row,index)=>({key:String(row?.key||`${row?.kind||"reward"}:${row?.itemId||index}`),kind:String(row?.kind||""),itemId:String(row?.itemId||""),amount:Math.max(1,Math.floor(Number(row?.amount)||1)),weight:Math.max(0,Number(row?.weight)||0),rarity:String(row?.rarity||"seasonal"),title:String(row?.title||SEASONAL_CASE_INFO_KIND_LABELS[String(row?.kind||"")]||"Награда"),imageUrl:String(row?.imageUrl||IMAGE_ERROR_FALLBACK)})).filter(row=>row.kind&&row.weight>0);
+    const configured=info.groupChances&&typeof info.groupChances==="object"?{currency:Math.max(0,Number(info.groupChances.currency)||0),cosmetic:Math.max(0,Number(info.groupChances.cosmetic)||0),case:Math.max(0,Number(info.groupChances.case)||0)}:null;
+    const configuredTotal=configured?configured.currency+configured.cosmetic+configured.case:0;
+    const keys=["currency","cosmetic","case"],groups=[];
+    if(configuredTotal>0){
+      const active=keys.map(key=>({key,weight:configured[key],items:items.filter(item=>seasonalCaseInfoGroup(item.kind)===key)})).filter(group=>group.weight>0&&group.items.length),activeTotal=active.reduce((sum,group)=>sum+group.weight,0)||1;
+      if(active.length){for(const group of active){const itemTotal=group.items.reduce((sum,item)=>sum+item.weight,0)||1,groupChance=100*group.weight/activeTotal;group.items=group.items.map(item=>({...item,chance:groupChance*item.weight/itemTotal}));groups.push({...group,chance:groupChance,...seasonalCaseInfoGroupMeta(group.key,group.items)});}for(const item of items){if(!groups.some(group=>group.items.some(row=>row.key===item.key)))item.chance=0;}}
+      else{const total=items.reduce((sum,item)=>sum+item.weight,0)||1;for(const key of keys){const rows=items.filter(item=>seasonalCaseInfoGroup(item.kind)===key);if(!rows.length)continue;const weight=rows.reduce((sum,item)=>sum+item.weight,0),chance=100*weight/total;groups.push({key,weight,chance,items:rows.map(item=>({...item,chance:100*item.weight/total})),...seasonalCaseInfoGroupMeta(key,rows)});}}
+    }else{
+      const total=items.reduce((sum,item)=>sum+item.weight,0)||1;
+      for(const key of keys){const rows=items.filter(item=>seasonalCaseInfoGroup(item.kind)===key);if(!rows.length)continue;const weight=rows.reduce((sum,item)=>sum+item.weight,0),chance=100*weight/total;groups.push({key,weight,chance,items:rows.map(item=>({...item,chance:100*item.weight/total})),...seasonalCaseInfoGroupMeta(key,rows)});}
+    }
+    const itemMap=new Map();for(const group of groups)for(const item of group.items)itemMap.set(item.key,item);
+    for(const item of items)if(!itemMap.has(item.key))itemMap.set(item.key,{...item,chance:0});
+    const configuredActiveTotal=configured?groups.reduce((sum,group)=>sum+(configured[group.key]||0),0):0;
+    return {caseId:String(entry?.caseId||""),title:String(info.title||entry?.title||"Сезонный кейс"),seasonTitle:String(entry?.seasonTitle||"Архив сезона"),description:String(info.description||entry?.description||""),imageUrl:String(info.imageUrl||entry?.imageUrl||IMAGE_ERROR_FALLBACK),openImageUrl:String(info.openImageUrl||entry?.openImageUrl||""),slots:Math.max(1,Math.min(5,Number(info.slots)||1)),duplicatePoints:Math.max(0,Number(info.duplicatePoints)||0),pending:Math.max(0,Number(entry?.pending)||0),opening:Math.max(0,Number(entry?.opening)||0),released:entry?.released!==false,configured,configuredTotal,configuredActiveTotal,groups,items:[...itemMap.values()]};
+  }
+  function seasonalCaseInfoItemMeta(item,model){const kind=String(item?.kind||""),cosmetic=["skin","avatar","frame","trail","music","showcase_style"].includes(kind);let rule;if(cosmetic)rule=model.duplicatePoints>0?`Если этот предмет уже есть в коллекции, сервер заменит его на ${model.duplicatePoints.toLocaleString("ru-RU")} очков.`:"Если предмет уже есть в коллекции, сработает правило дубликата этого сезонного кейса.";else if(kind==="case")rule="Выпавший постоянный кейс добавится в твой запас кейсов.";else rule="Ресурс сразу добавится на серверный баланс аккаунта.";return{cosmetic,kindLabel:SEASONAL_CASE_INFO_KIND_LABELS[kind]||"Награда",rarity:SEASONAL_CASE_INFO_RARITY[item?.rarity]||String(item?.rarity||"Награда"),rule};}
+  function seasonalCaseInfoHero(model){return `<div class="seasonal-case-info-hero"><div class="seasonal-case-info-hero-art"><img src="${seasonalCaseInfoEscape(model.imageUrl)}" alt=""></div><div><h3>${seasonalCaseInfoEscape(model.title)}</h3><p>${seasonalCaseInfoEscape(model.description||model.seasonTitle)}</p><span class="seasonal-case-info-stock">В наличии: ${(model.pending+model.opening).toLocaleString("ru-RU")}</span><div class="seasonal-case-info-meta"><span>${model.slots===1?"1 награда за открытие":`${model.slots} награды за открытие`}</span><span>${seasonalCaseInfoEscape(model.seasonTitle)}</span></div></div></div>`;}
+  function seasonalCaseInfoContent(model){const simple=model.items.filter(item=>!["skin","avatar","frame","trail","music","showcase_style"].includes(item.kind)),cosmetic=model.items.filter(item=>["skin","avatar","frame","trail","music","showcase_style"].includes(item.kind));return `${simple.length?`<section class="seasonal-case-info-section"><h3>Ресурсы и награды</h3><p>Нажми на награду, чтобы увидеть её точный шанс на первый слот и правило получения.</p><div class="seasonal-case-info-resources">${simple.map(item=>`<button class="seasonal-case-info-resource" data-seasonal-case-info-item="${seasonalCaseInfoEscape(item.key)}" type="button"><img src="${seasonalCaseInfoEscape(item.imageUrl)}" alt=""><span><strong>${seasonalCaseInfoEscape(item.title)}</strong><small>${seasonalCaseInfoEscape(seasonalCaseInfoAmount(item))} · шанс ${seasonalCaseInfoChance(item.chance)}</small></span><i>›</i></button>`).join("")}</div></section>`:""}${cosmetic.length?`<section class="seasonal-case-info-section"><h3>Предметы в коллекцию</h3><p>Повтор уже полученной косметики превращается в компенсацию очками.</p><div class="seasonal-case-info-grid">${cosmetic.map(item=>{const meta=seasonalCaseInfoItemMeta(item,model);return `<button class="seasonal-case-info-item" data-seasonal-case-info-item="${seasonalCaseInfoEscape(item.key)}" type="button"><img src="${seasonalCaseInfoEscape(item.imageUrl)}" alt=""><strong>${seasonalCaseInfoEscape(item.title)}</strong><small class="seasonal-case-info-rarity" data-rarity="${seasonalCaseInfoEscape(item.rarity)}">${seasonalCaseInfoEscape(meta.rarity)} · ${seasonalCaseInfoChance(item.chance)}</small></button>`;}).join("")}</div></section>`:""}<p class="seasonal-case-info-note">Проценты в карточках — шанс конкретной награды в первом слоте открытия. Если кейс выдаёт несколько наград, после каждого выпадения выбранная позиция убирается из пула, поэтому следующий слот пересчитывается.</p>`;}
+  function seasonalCaseInfoOdds(model){const groups=model.groups.filter(group=>group.chance>0&&group.items.length),rebalanced=Boolean(model.configured&&model.configuredTotal>0&&Math.abs(model.configuredActiveTotal-model.configuredTotal)>.001);return `<section class="seasonal-case-info-section"><h3>Шансы на один слот</h3><p>Как и в обычных кейсах: сначала выбирается группа, затем конкретная награда внутри неё по весу.</p>${rebalanced?`<p class="seasonal-case-info-alert">Одна из настроенных групп сейчас пуста. Сервер распределяет её долю между реально доступными группами — ниже показаны фактические проценты.</p>`:""}<div class="seasonal-case-info-odds">${groups.map((group,index)=>`<details ${index===0?"open":""}><summary><img src="${seasonalCaseInfoEscape(group.image)}" alt=""><strong>${seasonalCaseInfoEscape(group.title)}</strong><span class="seasonal-case-info-chance">${seasonalCaseInfoChance(group.chance)}</span></summary><div class="seasonal-case-info-odds-items">${group.items.map(item=>`<button class="seasonal-case-info-odds-item" type="button" data-seasonal-case-info-item="${seasonalCaseInfoEscape(item.key)}"><span>${seasonalCaseInfoEscape(item.title)}<small>${seasonalCaseInfoEscape(seasonalCaseInfoAmount(item))}</small></span><span class="seasonal-case-info-chance">${seasonalCaseInfoChance(item.chance)}</span></button>`).join("")}</div></details>`).join("")}</div></section><section class="seasonal-case-info-section"><h3>Правила кейса</h3><div class="seasonal-case-info-rules"><details class="seasonal-case-info-rule" open><summary><span>Как выбирается награда</span><span>›</span></summary><p>${model.configured?"Сначала сервер выбирает одну из настроенных групп по её проценту, затем конкретную награду внутри группы по весу.":"Для этого кейса используется общий вес всех активных наград; процент каждой позиции рассчитывается из её веса."}</p></details><details class="seasonal-case-info-rule"><summary><span>${model.slots>1?`Несколько наград · ${model.slots} слота`:"Одна награда"}</span><span>›</span></summary><p>${model.slots>1?`За одно открытие сервер делает до ${model.slots} последовательных выборов. Уже выбранная позиция не может повториться в том же открытии, поэтому после каждого слота вероятности пересчитываются по оставшемуся пулу.`:"За одно открытие выбирается одна позиция из текущего пула наград."}</p></details><details class="seasonal-case-info-rule"><summary><span>Повторы косметики</span><span>›</span></summary><p>${model.duplicatePoints>0?`Если выпала косметика, которая уже есть на аккаунте, она заменяется на ${model.duplicatePoints.toLocaleString("ru-RU")} очков. Сам шанс позиции от владения не исчезает.`:"Для повторов косметики используется серверное правило сезонного кейса."}</p></details><details class="seasonal-case-info-rule"><summary><span>Гарант и сервер</span><span>›</span></summary><p>Отдельного pity-гаранта по числу открытий у сезонного кейса нет. Результат, списание кейса и выдачу награды определяет сервер. Просмотр этого окна ничего не списывает.</p></details></div></section>`;}
+  function seasonalCaseInfoDetail(item,model){const meta=seasonalCaseInfoItemMeta(item,model);return `<div class="seasonal-case-info-detail"><div class="seasonal-case-info-detail-art"><img src="${seasonalCaseInfoEscape(item.imageUrl)}" alt=""></div><h3>${seasonalCaseInfoEscape(item.title)}</h3><span class="seasonal-case-info-rarity" data-rarity="${seasonalCaseInfoEscape(item.rarity)}">${seasonalCaseInfoEscape(meta.rarity)} · ${seasonalCaseInfoEscape(meta.kindLabel)}</span><dl><div><dt>Награда</dt><dd>${seasonalCaseInfoEscape(seasonalCaseInfoAmount(item))}</dd></div><div><dt>Шанс в первом слоте</dt><dd>${seasonalCaseInfoChance(item.chance)}</dd></div>${model.slots>1?`<div><dt>Слотов за открытие</dt><dd>${model.slots}</dd></div>`:""}</dl><p class="seasonal-case-info-note">${seasonalCaseInfoEscape(meta.rule)}</p>${model.slots>1?`<p class="seasonal-case-info-note">После каждого выпавшего предмета следующий слот пересчитывается по оставшемуся пулу, поэтому его процент может отличаться от первого.</p>`:""}<p class="seasonal-case-info-note">Просмотр награды ничего не открывает и не списывает.</p></div>`;}
+  function renderSeasonalCaseInfo(){if(!seasonalCaseInfoState)return;const entry=(serverPass?.seasonalCases||[]).find(row=>String(row?.caseId||"")===String(seasonalCaseInfoState.caseId||""));if(!entry){closeSeasonalCaseInfo();return;}const model=seasonalCaseInfoModel(entry),item=seasonalCaseInfoState.itemKey?model.items.find(row=>row.key===seasonalCaseInfoState.itemKey):null,back=el("seasonalCaseInfoBack"),tabs=el("seasonalCaseInfoTabs"),scroll=el("seasonalCaseInfoScroll"),open=el("seasonalCaseInfoOpen");if(!scroll)return;el("seasonalCaseInfoKicker").textContent=item?"О НАГРАДЕ":`СЕЗОННЫЙ КЕЙС · ${model.seasonTitle}`;el("seasonalCaseInfoTitle").textContent=item?item.title:"Содержимое кейса";back.hidden=!item;tabs.hidden=Boolean(item);tabs.querySelectorAll("[data-seasonal-case-info-tab]").forEach(button=>{const selected=button.dataset.seasonalCaseInfoTab===seasonalCaseInfoState.tab;button.setAttribute("aria-selected",String(selected));button.tabIndex=selected?0:-1;});scroll.innerHTML=item?seasonalCaseInfoDetail(item,model):`${seasonalCaseInfoHero(model)}${seasonalCaseInfoState.tab==="odds"?seasonalCaseInfoOdds(model):seasonalCaseInfoContent(model)}`;scroll.scrollTop=0;const checking=Boolean(seasonalCaseRequestId(model.caseId));open.disabled=!model.released;open.textContent=!model.released?"Откроется позже":checking?"Проверить открытие":"Открыть кейс";scroll.querySelectorAll("[data-seasonal-case-info-item]").forEach(button=>button.addEventListener("click",()=>{seasonalCaseInfoState.itemKey=button.dataset.seasonalCaseInfoItem||"";passSelectHaptic();renderSeasonalCaseInfo();}));}
+  function showSeasonalCaseInfo(caseId){const entry=(serverPass?.seasonalCases||[]).find(row=>String(row?.caseId||"")===String(caseId||""));if(!entry)return;seasonalCaseInfoState={caseId:String(caseId),tab:"content",itemKey:""};renderSeasonalCaseInfo();el("seasonalCaseInfoOverlay").hidden=false;document.body.style.overflow="hidden";passSelectHaptic();}
+  function closeSeasonalCaseInfo(){const overlay=el("seasonalCaseInfoOverlay");if(overlay)overlay.hidden=true;seasonalCaseInfoState=null;if(el("seasonalCaseOpening")?.hidden!==false&&el("seasonStoryOverlay").hidden&&el("seasonStoryArchiveOverlay").hidden&&el("seasonLetterOverlay").hidden&&el("rewardSummary").hidden&&el("purchaseConfirm").hidden)document.body.style.overflow="";}
+  function openSeasonalCaseFromInfo(){if(!seasonalCaseInfoState)return;const caseId=String(seasonalCaseInfoState.caseId||""),button=[...el("seasonalCaseList").querySelectorAll("[data-open-seasonal-case]")].find(node=>String(node.dataset.openSeasonalCase||"")===caseId);closeSeasonalCaseInfo();passImpactHaptic("medium");void openSeasonalCase(caseId,button||null);}
+
+  function renderSeasonalCases(){const list=(Array.isArray(serverPass?.seasonalCases)?serverPass.seasonalCases:[]).filter(item=>Number(item.pending||0)+Number(item.opening||0)>0);const shelf=el("seasonalCaseShelf");if(!shelf)return;shelf.hidden=!list.length;if(!list.length){el("seasonalCaseList").innerHTML="";return;}const total=list.reduce((sum,item)=>sum+Number(item.pending||0)+Number(item.opening||0),0);el("seasonalCaseCount").textContent=`Доступно: ${total}`;el("seasonalCaseList").innerHTML=list.map(item=>{const caseId=String(item.caseId||"");if(item?.openRequestId&&!seasonalCaseRequestId(caseId)){rememberSeasonalCaseRequest(caseId,String(item.openRequestId));const restored=seasonalCasePendingRequests.get(caseId);if(restored&&Number(item.openingStartedAt||0)>0)restored.startedAt=Number(item.openingStartedAt);persistSeasonalCasePendingRequests();}const checking=Boolean(seasonalCaseRequestId(caseId)),available=Number(item.pending||0)+Number(item.opening||0);return `<article class="seasonal-case-player-card"><button class="seasonal-case-player-info" type="button" data-seasonal-case-info="${seasonalCaseInfoEscape(caseId)}" aria-label="Посмотреть содержимое и шансы кейса ${seasonalCaseInfoEscape(item.title||'Сезонный кейс')}"><img src="${seasonalCaseInfoEscape(item.imageUrl||IMAGE_ERROR_FALLBACK)}" alt=""><span class="seasonal-case-player-info-copy"><b>${seasonalCaseInfoEscape(item.title||'Сезонный кейс')}</b><span>${seasonalCaseInfoEscape(item.seasonTitle||'Архив сезона')} · ${available} шт. · Содержимое и шансы</span></span><span class="seasonal-case-player-info-chevron" aria-hidden="true">›</span></button><button class="seasonal-case-open-button" type="button" data-open-seasonal-case="${seasonalCaseInfoEscape(caseId)}" ${item.released===false?'disabled':''}>${item.released===false?'Откроется позже':checking?'Проверить открытие':'Открыть кейс'}</button></article>`;}).join("");el("seasonalCaseList").querySelectorAll("[data-seasonal-case-info]").forEach(button=>button.addEventListener("click",()=>showSeasonalCaseInfo(button.dataset.seasonalCaseInfo)));el("seasonalCaseList").querySelectorAll("[data-open-seasonal-case]").forEach(button=>button.addEventListener("click",()=>{passImpactHaptic("medium");void openSeasonalCase(button.dataset.openSeasonalCase,button);}));if(seasonalCaseInfoState&&!el("seasonalCaseInfoOverlay").hidden)renderSeasonalCaseInfo();}
   function seasonalCaseRewardSummary(data){return Array.isArray(data?.case?.rewards)?data.case.rewards.map(item=>({premium:false,icon:"",image:item.imageUrl||data?.case?.imageUrl||"",name:item.title||(item.kind==="points"?`${Number(item.amount||0).toLocaleString("ru-RU")} очков`:"Сезонная награда"),source:data?.case?.title||"Сезонный кейс",rewardType:item.kind||item.rewardType||"",amount:Number(item.amount||0),itemId:item.itemId||item.id||""})):[];}
-  function applySeasonalCaseOpenResult(caseId,requestId,data){forgetSeasonalCaseRequest(caseId,requestId);if(Array.isArray(data?.seasonalCases))serverPass={...(serverPass||{}),seasonalCases:data.seasonalCases};renderSeasonalCases();notifyAccountChanged();const rewards=seasonalCaseRewardSummary(data);passNotifyHaptic("success");if(rewards.length)openRewardSummary(rewards);else showToast("Сезонный кейс открыт");}
+  async function applySeasonalCaseOpenResult(caseId,requestId,data,meta=seasonalCaseMeta(caseId),flowId=seasonalCaseOpeningFlowId){forgetSeasonalCaseRequest(caseId,requestId);if(Array.isArray(data?.seasonalCases))serverPass={...(serverPass||{}),seasonalCases:data.seasonalCases};renderSeasonalCases();notifyAccountChanged();const rewards=seasonalCaseRewardSummary(data);const resolvedMeta={...meta,title:String(data?.case?.title||meta?.title||"Сезонный кейс"),openImageUrl:String(data?.case?.imageUrl||meta?.openImageUrl||seasonalCaseOpenImageFallback(meta?.imageUrl)),imageUrl:String(meta?.imageUrl||REWARD_ASSETS.goldCase||"")};if(flowId===seasonalCaseOpeningFlowId){await runSeasonalCaseOpeningAnimation(resolvedMeta,flowId);if(flowId===seasonalCaseOpeningFlowId){seasonalCaseOpeningBusy=false;seasonalCaseOpeningEls().card?.classList.remove("is-opening-busy");seasonalCaseOpeningEls().layer.hidden=true;if(el("tierCelebration").hidden&&el("purchaseConfirm").hidden&&el("rewardSummary").hidden)document.body.style.overflow="";}}passNotifyHaptic("success");if(rewards.length)openRewardSummary(rewards,{seasonalCase:true,caseImage:resolvedMeta.openImageUrl||resolvedMeta.imageUrl,kicker:"СЕЗОННЫЙ КЕЙС",subtitle:resolvedMeta.title});else showToast("Сезонный кейс открыт");}
   async function seasonalCaseOperationStatus(caseId,requestId){return seasonPassApi(SEASONAL_CASE_STATUS_PATH,{caseId,requestId},SEASONAL_CASE_STATUS_REQUEST_TIMEOUT_MS);}
   async function waitForSeasonalCaseOperation(caseId,requestId,deadline,button){let lastError=null;while(Date.now()<deadline){try{const status=await seasonalCaseOperationStatus(caseId,requestId);if(status?.case&&!status?.pending)return status;if(status?.missing||status?.stale||status?.state==="pending")return status;if(button?.isConnected)button.textContent="Открываем…";const remaining=deadline-Date.now();if(remaining<=0)break;await new Promise(resolve=>setTimeout(resolve,Math.max(350,Math.min(1100,Number(status?.retryAfterMs||750),remaining))));}catch(error){lastError=error;if(!isSeasonalCaseRetryableError(error))throw error;const remaining=deadline-Date.now();if(remaining<=0)break;await new Promise(resolve=>setTimeout(resolve,Math.min(1000,remaining)));}}return {ok:true,pending:true,state:"opening",lastError};}
-  async function openSeasonalCase(caseId,button){const key=String(caseId||"");if(!key||seasonalCaseOpenBusy.has(key))return;seasonalCaseOpenBusy.add(key);const existingRequestId=seasonalCaseRequestId(key);const requestId=existingRequestId||(()=>{try{return `spcase_${crypto.randomUUID().replace(/-/g,"")}`.slice(0,96);}catch{return `spcase_${Date.now().toString(36)}_${Math.random().toString(36).slice(2,14)}`.slice(0,96);}})();rememberSeasonalCaseRequest(key,requestId);const deadline=Date.now()+SEASONAL_CASE_OPEN_UI_DEADLINE_MS;if(button){button.disabled=true;button.textContent=existingRequestId?"Проверяем…":"Открываем…";}try{let data=null,lastError=null;if(existingRequestId){try{data=await seasonalCaseOperationStatus(key,requestId);}catch(error){lastError=error;if(!isSeasonalCaseRetryableError(error))throw error;}}if(data?.case&&!data?.pending){applySeasonalCaseOpenResult(key,requestId,data);return;}if(!data||data?.missing||data?.stale||data?.state==="pending"){try{data=await seasonPassApi(SEASONAL_CASE_OPEN_PATH,{caseId:key,requestId},SEASONAL_CASE_OPEN_REQUEST_TIMEOUT_MS);}catch(error){lastError=error;if(!isSeasonalCaseRetryableError(error))throw error;data={ok:true,pending:true,state:"opening"};}}if(data?.case&&!data?.pending){applySeasonalCaseOpenResult(key,requestId,data);return;}if(button?.isConnected)button.textContent="Открываем…";data=await waitForSeasonalCaseOperation(key,requestId,deadline,button);if(data?.case&&!data?.pending){applySeasonalCaseOpenResult(key,requestId,data);return;}if(data?.missing||data?.stale||data?.state==="pending"){try{const retry=await seasonPassApi(SEASONAL_CASE_OPEN_PATH,{caseId:key,requestId},SEASONAL_CASE_OPEN_REQUEST_TIMEOUT_MS);if(retry?.case&&!retry?.pending){applySeasonalCaseOpenResult(key,requestId,retry);return;}data=retry;}catch(error){lastError=error;if(!isSeasonalCaseRetryableError(error))throw error;}}const pendingError=lastError||new Error("Открытие кейса ещё обрабатывается сервером.");pendingError.pending=true;throw pendingError;}catch(error){const retryable=isSeasonalCaseRetryableError(error);if(!retryable)forgetSeasonalCaseRequest(key,requestId);if(retryable){showToast("Кейс ещё открывается. Результат сохранён — нажмите «Проверить открытие», если окно не обновится автоматически.");void loadServerPass().then(()=>renderSeasonalCases()).catch(()=>{});}else{passNotifyHaptic("error");showToast(error.message||"Не удалось открыть сезонный кейс");}}finally{seasonalCaseOpenBusy.delete(key);if(button?.isConnected){button.disabled=false;button.textContent=seasonalCaseRequestId(key)?"Проверить открытие":"Открыть кейс";}renderSeasonalCases();}}
+  async function openSeasonalCase(caseId,button){const key=String(caseId||"");if(!key||seasonalCaseOpenBusy.has(key))return;seasonalCaseOpenBusy.add(key);const meta=seasonalCaseMeta(key);const existingRequestId=seasonalCaseRequestId(key);const flowId=++seasonalCaseOpeningFlowId;showSeasonalCasePreparing(meta,Boolean(existingRequestId));const requestId=existingRequestId||(()=>{try{return `spcase_${crypto.randomUUID().replace(/-/g,"")}`.slice(0,96);}catch{return `spcase_${Date.now().toString(36)}_${Math.random().toString(36).slice(2,14)}`.slice(0,96);}})();rememberSeasonalCaseRequest(key,requestId);const deadline=Date.now()+SEASONAL_CASE_OPEN_UI_DEADLINE_MS;if(button){button.disabled=true;button.textContent=existingRequestId?"Проверяем…":"Открываем…";}try{let data=null,lastError=null;if(existingRequestId){try{data=await seasonalCaseOperationStatus(key,requestId);}catch(error){lastError=error;if(!isSeasonalCaseRetryableError(error))throw error;}}if(data?.case&&!data?.pending){await applySeasonalCaseOpenResult(key,requestId,data,meta,flowId);return;}if(!data||data?.missing||data?.stale||data?.state==="pending"){try{data=await seasonPassApi(SEASONAL_CASE_OPEN_PATH,{caseId:key,requestId},SEASONAL_CASE_OPEN_REQUEST_TIMEOUT_MS);}catch(error){lastError=error;if(!isSeasonalCaseRetryableError(error))throw error;data={ok:true,pending:true,state:"opening"};}}if(data?.case&&!data?.pending){await applySeasonalCaseOpenResult(key,requestId,data,meta,flowId);return;}if(button?.isConnected)button.textContent="Открываем…";if(flowId===seasonalCaseOpeningFlowId)showSeasonalCasePreparing(meta,true);data=await waitForSeasonalCaseOperation(key,requestId,deadline,button);if(data?.case&&!data?.pending){await applySeasonalCaseOpenResult(key,requestId,data,meta,flowId);return;}if(data?.missing||data?.stale||data?.state==="pending"){try{const retry=await seasonPassApi(SEASONAL_CASE_OPEN_PATH,{caseId:key,requestId},SEASONAL_CASE_OPEN_REQUEST_TIMEOUT_MS);if(retry?.case&&!retry?.pending){await applySeasonalCaseOpenResult(key,requestId,retry,meta,flowId);return;}data=retry;}catch(error){lastError=error;if(!isSeasonalCaseRetryableError(error))throw error;}}const pendingError=lastError||new Error("Открытие кейса ещё обрабатывается сервером.");pendingError.pending=true;throw pendingError;}catch(error){const retryable=isSeasonalCaseRetryableError(error);if(!retryable)forgetSeasonalCaseRequest(key,requestId);const message=retryable?"Кейс ещё открывается. Результат сохранён — нажмите «Проверить открытие», если окно не обновится автоматически.":(error.message||"Не удалось открыть сезонный кейс");if(flowId===seasonalCaseOpeningFlowId)showSeasonalCaseStatus(meta,message,retryable);if(retryable){showToast(message);void loadServerPass().then(()=>renderSeasonalCases()).catch(()=>{});}else{passNotifyHaptic("error");showToast(message);}}finally{seasonalCaseOpenBusy.delete(key);if(button?.isConnected){button.disabled=false;button.textContent=seasonalCaseRequestId(key)?"Проверить открытие":"Открыть кейс";}renderSeasonalCases();}}
 
   function catchUpData(){return serverPass?.catchUp&&typeof serverPass.catchUp==="object"?serverPass.catchUp:null;}
   function renderCatchUpCard(){
@@ -6792,9 +7113,15 @@ img[src$="/xp.webp"]{
     return 20;
   }
 
-  function openRewardSummary(items) {
+  function openRewardSummary(items, options = {}) {
     const original=(Array.isArray(items)?items:[]).filter(Boolean);
     if (!original.length) return;
+    const summaryOptions=options&&typeof options==="object"?options:{};
+    const summaryLayer=el("rewardSummary"),summaryIcon=el("rewardSummarySourceIcon"),summaryKicker=el("rewardSummaryKicker");
+    const seasonalSummary=summaryOptions.seasonalCase===true;
+    summaryLayer?.classList.toggle("is-seasonal-case",seasonalSummary);
+    if(summaryIcon)summaryIcon.src=String(summaryOptions.caseImage||"/assets/cases/gold_open.webp");
+    if(summaryKicker)summaryKicker.textContent=String(summaryOptions.kicker||(seasonalSummary?"СЕЗОННЫЙ КЕЙС":"НАГРАДА ПОЛУЧЕНА"));
     const overflowRows=original.map(item=>item?.streakProtection).filter(value=>Number(value?.overflowAmount||0)>0);
     const overflow=overflowRows.length?{
       overflowAmount:overflowRows.reduce((sum,value)=>sum+Math.max(0,Number(value?.overflowAmount||0)),0),
@@ -6804,8 +7131,8 @@ img[src$="/xp.webp"]{
     const compensationKind=String(overflow?.compensationType||'points');
     const valid=overflow?[...original,{premium:true,icon:'',image:'/assets/ui/icon_series_protection.webp',name:'Запас защиты заполнен',source:`${Number(overflow.overflowAmount||0)} лишн. → компенсация ${Number(overflow.compensationAmount||0).toLocaleString('ru-RU')} ${compensationKind==='zefir'?'зефира':compensationKind==='coffee'?'кофе':'очков'}`,rewardType:'streak_protection_overflow',amount:1,itemId:'',overflowNotice:true}]:original;
     const uniqueLevels=new Set(original.map(item=>String(item?.level??"")).filter(value=>/^\d+$/.test(value)));
-    el("rewardSummaryTitle").textContent=overflow?"Защита серии получена":"Вот это улов!";
-    el("rewardSummarySubtitle").textContent=overflow?`Запас защиты достиг лимита. Лишняя защита автоматически превращена в компенсацию.`:`Получено ${original.length.toLocaleString("ru-RU")} ${original.length%10===1&&original.length%100!==11?"награда":original.length%10>=2&&original.length%10<=4&&(original.length%100<10||original.length%100>=20)?"награды":"наград"}${uniqueLevels.size>1?` · уровней: ${uniqueLevels.size}`:""}`;
+    el("rewardSummaryTitle").textContent=String(summaryOptions.title||(overflow?"Защита серии получена":"Вот это улов!"));
+    el("rewardSummarySubtitle").textContent=String(summaryOptions.subtitle||(overflow?`Запас защиты достиг лимита. Лишняя защита автоматически превращена в компенсацию.`:`Получено ${original.length.toLocaleString("ru-RU")} ${original.length%10===1&&original.length%100!==11?"награда":original.length%10>=2&&original.length%10<=4&&(original.length%100<10||original.length%100>=20)?"награды":"наград"}${uniqueLevels.size>1?` · уровней: ${uniqueLevels.size}`:""}`));
 
     const resources={zefir:0,coffee:0,points:0};
     for(const item of valid){const kind=rewardSummaryKind(item);if(kind in resources)resources[kind]+=rewardSummaryAmount(item);}
@@ -6842,6 +7169,7 @@ img[src$="/xp.webp"]{
 
   function closeRewardSummary() {
     el("rewardSummary").hidden = true;
+    el("rewardSummary")?.classList.remove("is-seasonal-case");
     if(el("tierCelebration").hidden&&el("purchaseConfirm").hidden)document.body.style.overflow = "";
   }
 
@@ -7197,10 +7525,12 @@ img[src$="/xp.webp"]{
       ['purchaseConfirm','.purchase-confirm-card','',closePurchaseConfirm,()=>tierPurchaseSubmitting],
       ['levelPurchaseModal','.level-purchase-card','',closeLevelPurchaseModal,()=>levelPurchaseSubmitting],
       ['rewardSummary','.reward-summary-card','',closeRewardSummary],
+      ['seasonalCaseOpening','.seasonal-case-opening-card','',closeSeasonalCaseOpening,()=>seasonalCaseOpeningBusy],
       ['tierCelebration','.tier-celebration-card','',()=>closeTierCelebration({showRewards:false})],
       ['seasonLetterOverlay','.season-letter-sheet','',closeSeasonLetter,()=>el('seasonLetterReveal')?.disabled],
       ['seasonStoryOverlay','.season-story-sheet','',closeSeasonStory,()=>el('seasonStoryComplete')?.disabled],
       ['seasonStoryArchiveOverlay','.season-story-archive-sheet','#seasonStoryArchiveList',closeSeasonStoryArchive],
+      ['seasonalCaseInfoOverlay','.seasonal-case-info-sheet','#seasonalCaseInfoScroll',closeSeasonalCaseInfo],
       ['seasonFinaleOverlay','.season-finale-sheet','',closeSeasonFinale]
     ];
     for(const [id,selector,scrollSelector,dismiss,isBusy=()=>false] of configs){
@@ -7288,6 +7618,11 @@ img[src$="/xp.webp"]{
   el("seasonStoryOverlay").addEventListener("click",event=>{if(event.target===el("seasonStoryOverlay"))closeSeasonStory();});
   el("seasonStoryArchiveClose").addEventListener("click",()=>{passSelectHaptic();closeSeasonStoryArchive();});
   el("seasonStoryArchiveOverlay").addEventListener("click",event=>{if(event.target===el("seasonStoryArchiveOverlay"))closeSeasonStoryArchive();});
+  el("seasonalCaseInfoClose").addEventListener("click",()=>{passSelectHaptic();closeSeasonalCaseInfo();});
+  el("seasonalCaseInfoBack").addEventListener("click",()=>{if(!seasonalCaseInfoState)return;seasonalCaseInfoState.itemKey="";passSelectHaptic();renderSeasonalCaseInfo();});
+  el("seasonalCaseInfoTabs").addEventListener("click",event=>{const button=event.target.closest?.("[data-seasonal-case-info-tab]");if(!button||!seasonalCaseInfoState)return;seasonalCaseInfoState.tab=button.dataset.seasonalCaseInfoTab==="odds"?"odds":"content";seasonalCaseInfoState.itemKey="";passSelectHaptic();renderSeasonalCaseInfo();});
+  el("seasonalCaseInfoOpen").addEventListener("click",openSeasonalCaseFromInfo);
+  el("seasonalCaseInfoOverlay").addEventListener("click",event=>{if(event.target===el("seasonalCaseInfoOverlay"))closeSeasonalCaseInfo();});
 
   el("purchaseCancel").addEventListener("click",()=>{ passSelectHaptic(); closePurchaseConfirm(); });
   el("purchaseSubmit").addEventListener("click",()=>{
@@ -7310,17 +7645,23 @@ img[src$="/xp.webp"]{
   el("rewardSummary").addEventListener("click",event=>{
     if (event.target === el("rewardSummary")) closeRewardSummary();
   });
+  el("seasonalCaseOpening").addEventListener("click",event=>{
+    if(event.target.closest?.("[data-seasonal-case-skip]")){skipSeasonalCaseOpening();return;}
+    if (event.target === el("seasonalCaseOpening") && !seasonalCaseOpeningBusy) closeSeasonalCaseOpening();
+  });
   document.addEventListener("keydown",event=>{
     if (event.key !== "Escape") return;
     if (!el("tierCelebration").hidden) closeTierCelebration({showRewards:false});
     else if (!el("levelPurchaseModal").hidden) closeLevelPurchaseModal();
     else if (!el("rewardPreviewSheet").hidden) closeRewardPreview({animated:true});
     else if (!el("tariffSheet").hidden) closeTariffSheet({animated:true});
+    else if (!el("seasonalCaseInfoOverlay").hidden) closeSeasonalCaseInfo();
     else if (!el("seasonFinaleOverlay").hidden) closeSeasonFinale();
     else if (!el("seasonStoryOverlay").hidden) closeSeasonStory();
     else if (!el("seasonStoryArchiveOverlay").hidden) closeSeasonStoryArchive();
     else if (!el("seasonLetterOverlay").hidden) closeSeasonLetter();
     else if (!el("purchaseConfirm").hidden) closePurchaseConfirm();
+    else if (!el("seasonalCaseOpening").hidden && !seasonalCaseOpeningBusy) closeSeasonalCaseOpening();
     else if (!el("rewardSummary").hidden) closeRewardSummary();
   });
 
