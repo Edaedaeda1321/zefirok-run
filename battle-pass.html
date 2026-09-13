@@ -5445,25 +5445,43 @@ img[src$="/xp.webp"]{
       </section>`;
     }).join("");
     el("rewardTrack").innerHTML = levelColumns + overflowRewardColumnMarkup();
-    requestAnimationFrame(()=>clampRewardScroll());
+    requestAnimationFrame(()=>scrollToLevel(selectedLevel || level,"auto"));
   }
 
-  function rewardScrollMaxLeft(scroll=el("rewardScroll")) {
-    if (!scroll) return 0;
-    return Math.max(0, scroll.scrollWidth - scroll.clientWidth);
+  // Reward lane v5: do not use native horizontal scrolling on iOS/Telegram.
+  // The whole rail is translated inside a clipped viewport, so there is no
+  // browser rubber-band state capable of exposing blank space after level 50+.
+  let rewardRailX = 0;
+  let rewardRailTransitionTimer = 0;
+  function rewardRailBounds() {
+    const viewport=el("rewardScroll"),track=el("rewardTrack");
+    if(!viewport||!track)return {min:0,max:0};
+    const viewportWidth=Math.max(0,Number(viewport.clientWidth)||0);
+    const contentWidth=Math.max(0,Number(track.scrollWidth)||0);
+    return {min:Math.min(0,viewportWidth-contentWidth),max:0};
   }
-
-  function clampRewardScroll(nextLeft = null) {
-    const scroll = el("rewardScroll");
-    if (!scroll) return 0;
-    const maxLeft = rewardScrollMaxLeft(scroll);
-    const raw = nextLeft == null ? Number(scroll.scrollLeft)||0 : Number(nextLeft)||0;
-    const clamped = Math.max(0, Math.min(maxLeft, raw));
-    if (Math.abs((Number(scroll.scrollLeft)||0) - clamped) > 0.5) scroll.scrollLeft = clamped;
-    return clamped;
+  function rewardRailClampX(value) {
+    const bounds=rewardRailBounds();
+    return Math.max(bounds.min,Math.min(bounds.max,Number(value)||0));
   }
-
-  window.addEventListener("resize",()=>requestAnimationFrame(()=>clampRewardScroll()),{passive:true});
+  function setRewardRailX(value,{animate=false,duration=360}={}) {
+    const track=el("rewardTrack");
+    if(!track)return 0;
+    clearTimeout(rewardRailTransitionTimer);
+    const next=rewardRailClampX(value);
+    const reduced=window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches===true;
+    if(animate&&!reduced){
+      track.style.transition=`transform ${Math.max(120,Number(duration)||360)}ms cubic-bezier(.22,.74,.24,1)`;
+      rewardRailTransitionTimer=setTimeout(()=>{if(track.isConnected)track.style.transition="";},Math.max(160,Number(duration)||360)+40);
+    }else track.style.transition="none";
+    rewardRailX=next;
+    track.style.transform=`translate3d(${next.toFixed(2)}px,0,0)`;
+    return next;
+  }
+  function syncRewardRailBounds() {
+    return setRewardRailX(rewardRailX,{animate:false});
+  }
+  window.addEventListener("resize",()=>requestAnimationFrame(()=>scrollToLevel(selectedLevel,"auto")),{passive:true});
 
   function updateNavigator(level) {
     selectedLevel = Math.max(1,Math.min(MAX_LEVEL+1,Number(level)||1));
@@ -5483,30 +5501,30 @@ img[src$="/xp.webp"]{
   }
 
   function scrollToLevel(level,behavior="smooth") {
-    const targetLevel = Math.max(1,Math.min(MAX_LEVEL+1,Number(level)||1));
-    const target = document.querySelector(`[data-level-column="${targetLevel}"]`);
-    if (!target) return;
-    const scroll = el("rewardScroll");
-    const desiredLeft = Math.max(0,target.offsetLeft - Math.max(0,(scroll.clientWidth-target.offsetWidth)/2));
-    const left = Math.min(rewardScrollMaxLeft(scroll), desiredLeft);
-    suppressScrollSync = true;
+    const targetLevel=Math.max(1,Math.min(MAX_LEVEL+1,Number(level)||1));
+    const target=document.querySelector(`[data-level-column="${targetLevel}"]`);
+    const viewport=el("rewardScroll");
+    if(!target||!viewport)return;
+    // Center where possible. At the first/last reward the hard clamp wins, so
+    // the rail edge always stays flush with the viewport instead of creating
+    // artificial whitespace just to center the card.
+    const targetCenter=target.offsetLeft+target.offsetWidth/2;
+    const desiredX=viewport.clientWidth/2-targetCenter;
+    suppressScrollSync=true;
     updateNavigator(targetLevel);
-    scroll.scrollTo({left,behavior});
-    releaseScrollSync(behavior === "smooth" ? 460 : 90);
+    setRewardRailX(desiredX,{animate:behavior==="smooth",duration:behavior==="smooth"?380:0});
+    releaseScrollSync(behavior === "smooth" ? 430 : 60);
   }
 
-  function nearestVisibleLevel() {
-    const scroll = el("rewardScroll");
-    const center = scroll.scrollLeft + scroll.clientWidth/2;
-    let bestLevel = selectedLevel;
-    let bestDistance = Infinity;
+  function nearestVisibleLevel(offsetX=rewardRailX) {
+    const viewport=el("rewardScroll");
+    if(!viewport)return selectedLevel;
+    const center=-rewardRailClampX(offsetX)+viewport.clientWidth/2;
+    let bestLevel=selectedLevel,bestDistance=Infinity;
     document.querySelectorAll("[data-level-column]").forEach(column=>{
-      const columnCenter = column.offsetLeft + column.offsetWidth/2;
-      const distance = Math.abs(columnCenter-center);
-      if (distance < bestDistance) {
-        bestDistance = distance;
-        bestLevel = Number(column.dataset.levelColumn);
-      }
+      const columnCenter=column.offsetLeft+column.offsetWidth/2;
+      const distance=Math.abs(columnCenter-center);
+      if(distance<bestDistance){bestDistance=distance;bestLevel=Number(column.dataset.levelColumn);}
     });
     return bestLevel;
   }
@@ -6558,8 +6576,23 @@ img[src$="/xp.webp"]{
   let tierActivationClaimPromise = null;
 
   function tierActivationBenefitIcon(item) {
-    const image = String(item?.imageUrl || "").trim();
-    if (image) return `<img src="${image}" alt="">`;
+    const key=String(item?.key||"");
+    const liveVisual={
+      premium_rewards:["tariffs.elitePremiumRewardsIcon",PASS_LIVEOPS_VISUAL_FALLBACKS.elitePremiumRewardsIcon],
+      premium_tasks:["tariffs.elitePremiumTasksIcon",PASS_LIVEOPS_VISUAL_FALLBACKS.elitePremiumTasksIcon],
+      legendary_case:["tariffs.eliteFinalCaseIcon",PASS_LIVEOPS_VISUAL_FALLBACKS.eliteFinalCaseIcon],
+      elite_all:["tariffs.elitePlusIncludesEliteIcon",PASS_LIVEOPS_VISUAL_FALLBACKS.elitePlusIncludesEliteIcon],
+      season_xp_x2:["tariffs.elitePlusXpBoostIcon",PASS_LIVEOPS_VISUAL_FALLBACKS.elitePlusXpBoostIcon],
+      profile_xp_x2:["tariffs.elitePlusXpBoostIcon",PASS_LIVEOPS_VISUAL_FALLBACKS.elitePlusXpBoostIcon],
+      bonus_levels:["tariffs.elitePlusLevelsIcon",PASS_LIVEOPS_VISUAL_FALLBACKS.elitePlusLevelsIcon]
+    }[key];
+    let image="";
+    if(key==="rating_badge"){
+      const plus=String(tierCelebrationNotice?.newTier||"")==="elite_plus";
+      image=plus?seasonPassLiveOpsVisual("tariffs.elitePlusRatingBadgeIcon",PASS_LIVEOPS_VISUAL_FALLBACKS.elitePlusRatingBadgeIcon):seasonPassLiveOpsVisual("tariffs.eliteRatingBadgeIcon",PASS_LIVEOPS_VISUAL_FALLBACKS.eliteRatingBadgeIcon);
+    }else if(liveVisual)image=seasonPassLiveOpsVisual(liveVisual[0],liveVisual[1]);
+    else image=String(item?.imageUrl||"").trim();
+    if(image)return `<img src="${image}" alt="">`;
     return `<span aria-hidden="true">${String(item?.symbol || "✦")}</span>`;
   }
 
@@ -6937,54 +6970,48 @@ img[src$="/xp.webp"]{
   el("levelSlider").addEventListener("touchend",finishSliderInteraction,{passive:true});
   el("levelSlider").addEventListener("blur",finishSliderInteraction);
 
-  const rewardScroll = el("rewardScroll");
-  const rewardTouchPan={active:false,id:null,startX:0,startY:0,startLeft:0,axis:""};
+  const rewardScroll=el("rewardScroll");
+  const rewardTouchPan={active:false,id:null,startX:0,startY:0,startRailX:0,axis:"",lastClientX:0,lastAt:0,velocity:0};
   rewardScroll.addEventListener("touchstart",event=>{
     if(event.touches?.length!==1){rewardTouchPan.active=false;rewardTouchPan.axis="";return;}
-    const touch=event.touches[0];
-    rewardTouchPan.active=true;
-    rewardTouchPan.id=touch.identifier;
-    rewardTouchPan.startX=Number(touch.clientX)||0;
-    rewardTouchPan.startY=Number(touch.clientY)||0;
-    rewardTouchPan.startLeft=clampRewardScroll();
-    rewardTouchPan.axis="";
+    const touch=event.touches[0],now=performance.now();
+    clearTimeout(rewardRailTransitionTimer);
+    el("rewardTrack").style.transition="none";
+    rewardTouchPan.active=true;rewardTouchPan.id=touch.identifier;
+    rewardTouchPan.startX=Number(touch.clientX)||0;rewardTouchPan.startY=Number(touch.clientY)||0;
+    rewardTouchPan.startRailX=rewardRailClampX(rewardRailX);rewardTouchPan.axis="";
+    rewardTouchPan.lastClientX=rewardTouchPan.startX;rewardTouchPan.lastAt=now;rewardTouchPan.velocity=0;
   },{passive:true});
   rewardScroll.addEventListener("touchmove",event=>{
     if(!rewardTouchPan.active)return;
-    const touch=Array.from(event.touches||[]).find(item=>item.identifier===rewardTouchPan.id);
-    if(!touch)return;
-    const dx=(Number(touch.clientX)||0)-rewardTouchPan.startX;
-    const dy=(Number(touch.clientY)||0)-rewardTouchPan.startY;
-    if(!rewardTouchPan.axis){
-      if(Math.max(Math.abs(dx),Math.abs(dy))<5)return;
-      rewardTouchPan.axis=Math.abs(dx)>Math.abs(dy)*1.05?"x":"y";
-    }
+    const touch=Array.from(event.touches||[]).find(item=>item.identifier===rewardTouchPan.id);if(!touch)return;
+    const clientX=Number(touch.clientX)||0,clientY=Number(touch.clientY)||0;
+    const dx=clientX-rewardTouchPan.startX,dy=clientY-rewardTouchPan.startY;
+    if(!rewardTouchPan.axis){if(Math.max(Math.abs(dx),Math.abs(dy))<5)return;rewardTouchPan.axis=Math.abs(dx)>Math.abs(dy)*1.04?"x":"y";}
     if(rewardTouchPan.axis!=="x")return;
-    // Never hand a horizontal gesture to iOS native overflow scrolling.
-    // We move scrollLeft ourselves and clamp every frame to real content.
     event.preventDefault();
-    const maxLeft=rewardScrollMaxLeft(rewardScroll);
-    const next=Math.max(0,Math.min(maxLeft,rewardTouchPan.startLeft-dx));
-    if(Math.abs((Number(rewardScroll.scrollLeft)||0)-next)>0.25)rewardScroll.scrollLeft=next;
+    const now=performance.now(),dt=Math.max(8,now-rewardTouchPan.lastAt);
+    const fingerVelocity=(clientX-rewardTouchPan.lastClientX)/dt;
+    rewardTouchPan.velocity=rewardTouchPan.velocity*.68+fingerVelocity*.32;
+    rewardTouchPan.lastClientX=clientX;rewardTouchPan.lastAt=now;
+    setRewardRailX(rewardTouchPan.startRailX+dx,{animate:false});
+    if(!suppressScrollSync&&!sliderInteracting){
+      cancelAnimationFrame(scrollFrame);scrollFrame=requestAnimationFrame(()=>updateNavigator(nearestVisibleLevel()));
+    }
   },{passive:false});
-  const finishRewardTouchPan=()=>{
-    rewardTouchPan.active=false;
-    rewardTouchPan.id=null;
-    rewardTouchPan.axis="";
-    clampRewardScroll();
+  const finishRewardTouchPan=event=>{
+    if(!rewardTouchPan.active)return;
+    const horizontal=rewardTouchPan.axis==="x",velocity=rewardTouchPan.velocity;
+    rewardTouchPan.active=false;rewardTouchPan.id=null;rewardTouchPan.axis="";
+    if(!horizontal){syncRewardRailBounds();return;}
+    // Native-like momentum, but projected and snapped entirely inside the real
+    // rail bounds. There is no overscroll/rubber-band path at either edge.
+    const projected=rewardRailClampX(rewardRailX+velocity*260);
+    const targetLevel=nearestVisibleLevel(projected);
+    scrollToLevel(targetLevel,"smooth");
   };
   rewardScroll.addEventListener("touchend",finishRewardTouchPan,{passive:true});
-  rewardScroll.addEventListener("touchcancel",finishRewardTouchPan,{passive:true});
-  rewardScroll.addEventListener("scroll",()=>{
-    const maxLeft=rewardScrollMaxLeft(rewardScroll);
-    const raw=Number(rewardScroll.scrollLeft)||0;
-    if(raw<0||raw>maxLeft){clampRewardScroll(raw);return;}
-    if (suppressScrollSync || sliderInteracting) return;
-    cancelAnimationFrame(scrollFrame);
-    scrollFrame = requestAnimationFrame(()=>{
-      if (!suppressScrollSync && !sliderInteracting) updateNavigator(nearestVisibleLevel());
-    });
-  },{passive:true});
+  rewardScroll.addEventListener("touchcancel",()=>{rewardTouchPan.active=false;rewardTouchPan.id=null;rewardTouchPan.axis="";syncRewardRailBounds();},{passive:true});
 
   el("buyLevel").addEventListener("click",()=>openLevelPurchaseConfirm());
   el("levelBuyEntry").addEventListener("click",()=>openLevelPurchaseConfirm());
@@ -7151,25 +7178,59 @@ img[src$="/xp.webp"]{
 
   el("claimAllTasks").addEventListener("click",()=>{ void claimTasks(); });
 
-  el("claimAll").addEventListener("click",()=>{
-    passImpactHaptic("medium");
-    const button=el("claimAll");const oldText=button.textContent;button.disabled=true;button.textContent="Получаем награды…";
-    void seasonPassApi(CLAIM_ALL_PATH).then((data)=>{
-      applyServerPass(data); render(); notifyAccountChanged();
-      const received = Array.isArray(data.received) ? data.received.map(item=>({premium:item.lane==="premium",icon:"",image:item.imageUrl||"",name:item.title||"Награда",description:"Начислено на аккаунт",level:item.level,source:`Уровень ${item.level} · ${item.lane==="premium"?"Премиум":"Бесплатно"}`,rewardType:item.rewardType||"",amount:Number(item.amount||0),itemId:item.itemId||"",streakProtection:item.streakProtection||null})) : [];
-      const failedCount = Array.isArray(data?.failedRewards) ? data.failedRewards.length : 0;
-      if (received.length) {
-        passNotifyHaptic(failedCount?"warning":"success");
-        openRewardSummary(received);
-        if(failedCount)showToast(`Получено ${received.length}. Не удалось получить: ${failedCount}`);
-      } else if(failedCount) {
-        passNotifyHaptic("error");
-        showToast(`Не удалось получить ${failedCount} наград. Попробуйте ещё раз.`);
-      } else {
-        passNotifyHaptic("warning");showToast("Нет доступных наград");
+  function rewardSummaryItemFromServer(item){
+    return {premium:item?.lane==="premium",icon:"",image:item?.imageUrl||"",name:item?.title||"Награда",description:"Начислено на аккаунт",level:Number(item?.level)||0,source:`Уровень ${Number(item?.level)||0} · ${item?.lane==="premium"?"Премиум":"Бесплатно"}`,rewardType:item?.rewardType||"",amount:Number(item?.amount||0),itemId:item?.itemId||"",streakProtection:item?.streakProtection||null};
+  }
+  function rewardSummaryItemsFromClaimIds(ids){
+    return (Array.isArray(ids)?ids:[]).map(id=>{
+      const detail=rewardDetailsFromId(id);if(!detail)return null;
+      return {premium:Boolean(detail.premium),icon:detail.icon||"",image:detail.image||"",name:detail.name||"Награда",description:"Начислено на аккаунт",level:Number(detail.level)||0,source:`Уровень ${Number(detail.level)||0} · ${detail.premium?"Премиум":"Бесплатно"}`,rewardType:"",amount:0,itemId:"",streakProtection:null};
+    }).filter(Boolean);
+  }
+  async function claimAllRewardsReliable(){
+    const button=el("claimAll"),oldText=button.textContent;
+    const before=new Set((pass.claimed||[]).map(String));
+    button.disabled=true;button.textContent="Получаем награды…";
+    let confirmed=false;
+    try{
+      // Bulk delivery can legitimately take longer than a tiny UI request when
+      // many case/cosmetic grants are being committed. Give the authoritative
+      // operation time to finish instead of aborting it at 7 seconds.
+      const data=await seasonPassApi(CLAIM_ALL_PATH,{},22000);
+      applyServerPass(data);render();notifyAccountChanged();confirmed=true;
+      const stateAdded=(pass.claimed||[]).map(String).filter(id=>!before.has(id));
+      const received=Array.isArray(data.received)&&data.received.length?data.received.map(rewardSummaryItemFromServer):rewardSummaryItemsFromClaimIds(stateAdded);
+      const failedCount=Array.isArray(data?.failedRewards)?data.failedRewards.length:0;
+      if(received.length){passNotifyHaptic(failedCount?"warning":"success");openRewardSummary(received);if(failedCount)showToast(`Получено ${received.length}. Не удалось получить: ${failedCount}`);}
+      else if(failedCount){passNotifyHaptic("error");showToast(`Не удалось получить ${failedCount} наград. Попробуйте ещё раз.`);}
+      else{passNotifyHaptic("warning");showToast("Нет доступных наград");}
+    }catch(error){
+      const uncertain=Boolean(error?.timeout||error?.code==="REQUEST_TIMEOUT"||error?.code==="REQUEST_ABORTED");
+      if(!uncertain)throw error;
+      // A fetch timeout does not mean the Worker transaction failed. Re-read the
+      // authoritative state before telling the player anything; this fixes the
+      // old false-error case where a relaunch showed that rewards were already claimed.
+      button.textContent="Проверяем получение…";
+      await new Promise(resolve=>setTimeout(resolve,500));
+      try{
+        const state=await seasonPassApi(STATE_PATH,{},12000);
+        applyServerPass(state);render();notifyAccountChanged();
+        const added=(pass.claimed||[]).map(String).filter(id=>!before.has(id));
+        if(added.length){
+          confirmed=true;passNotifyHaptic("success");
+          const summary=rewardSummaryItemsFromClaimIds(added);if(summary.length)openRewardSummary(summary);
+          showToast(`Получено наград: ${added.length}`);
+        }
+      }catch{}
+      if(!confirmed){
+        const verifyError=new Error("Не удалось подтвердить итог. Нажми ещё раз — уже выданные награды повторно не начислятся.");
+        verifyError.code="CLAIM_RESULT_UNCERTAIN";throw verifyError;
       }
-    }).catch(error=>{passNotifyHaptic("error");showToast(error.message||"Не удалось получить награды");}).finally(()=>{button.textContent=oldText;button.disabled=false;render();});
-  });
+    }finally{
+      button.textContent=oldText;button.disabled=false;render();
+    }
+  }
+  el("claimAll").addEventListener("click",()=>{passImpactHaptic("medium");void claimAllRewardsReliable().catch(error=>{passNotifyHaptic("error");showToast(error.message||"Не удалось получить награды");});});
 
   el("seasonLetterCardOpen").addEventListener("click",showSeasonLetter);
   el("seasonLetterClose").addEventListener("click",()=>{passSelectHaptic();closeSeasonLetter();});
@@ -8003,16 +8064,11 @@ let taskInfoMotion = null;
   .season-story-actions button:not([hidden]){display:flex!important;align-items:center!important;justify-content:center!important;width:min(100%,330px)!important;min-height:42px!important}
   .season-story-actions button[hidden]{display:none!important}
 }
-/* v4: iOS/Telegram WebView must not own horizontal panning here.
-   Native overflow scrolling can rubber-band past scrollWidth and expose a huge
-   blank area even while scrollLeft itself remains clamped. Keep the viewport
-   programmatically scrollable, but handle horizontal finger drags ourselves. */
-.reward-scroll{
-  overflow-x:hidden!important;
-  overscroll-behavior:none!important;
-  touch-action:pan-y!important;
-  -webkit-overflow-scrolling:auto!important;
-}
+/* v5 reward rail: a clipped transform viewport, not a native scroll area.
+   This preserves smooth touch momentum while making blank-space overscroll
+   structurally impossible in iOS Telegram WebView. */
+.reward-scroll{overflow:hidden!important;overscroll-behavior:none!important;touch-action:pan-y!important;-webkit-overflow-scrolling:auto!important;contain:paint!important}
+.reward-track{transform:translate3d(0,0,0);will-change:transform;backface-visibility:hidden}
 </style>
 
 

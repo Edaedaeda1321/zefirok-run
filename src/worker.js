@@ -32474,24 +32474,29 @@ function seasonPassTierActivationSourceKey(value) {
   return raw.slice(0,160)||`tier_${Date.now().toString(36)}`;
 }
 
+function seasonPassTierActivationVisual(season,key,fallback){
+  const value=String(season?.visuals?.battlePass?.tariffs?.[key]||'').trim();
+  return value.startsWith('/assets/')?value:fallback;
+}
 function seasonPassTierActivationBenefits(season,newTier,payload={}) {
   if(newTier==='elite') return [
-    {key:'premium_rewards',title:'Премиальная линия из 50 наград',imageUrl:'/assets/season-pass/season.webp?v=07939'},
-    {key:'premium_tasks',title:'Премиальные задания',imageUrl:'/assets/season-pass/quest.webp?v=07939'},
-    {key:'rating_badge',title:'Значок «Элитный» в рейтинге',imageUrl:'/assets/ui/icon_player_elit.webp',symbol:''},
-    {key:'legendary_case',title:'Легендарный кейс на 50 уровне',imageUrl:'/assets/cases/legendary_closed.webp'}
+    {key:'premium_rewards',title:'Премиальная линия из 50 наград',imageUrl:seasonPassTierActivationVisual(season,'elitePremiumRewardsIcon','/assets/season-pass/season.webp?v=07939')},
+    {key:'premium_tasks',title:'Премиальные задания',imageUrl:seasonPassTierActivationVisual(season,'elitePremiumTasksIcon','/assets/season-pass/quest.webp?v=07939')},
+    {key:'rating_badge',title:'Значок «Элитный» в рейтинге',imageUrl:seasonPassTierActivationVisual(season,'eliteRatingBadgeIcon','/assets/ui/icon_player_elit.webp'),symbol:''},
+    {key:'legendary_case',title:'Легендарный кейс на 50 уровне',imageUrl:seasonPassTierActivationVisual(season,'eliteFinalCaseIcon','/assets/cases/legendary_closed.webp')}
   ];
   const settings=seasonPassPublicTierSettings(season)?.elitePlus||{};
   const benefits=[
-    {key:'elite_all',title:'Все преимущества «Элитного»',imageUrl:'/assets/season-pass/elite.webp?v=07939'},
-    {key:'rating_badge',title:'Значок «Элитный+» в рейтинге',imageUrl:'/assets/ui/icon_player_elit+.webp',symbol:''}
+    {key:'elite_all',title:'Все преимущества «Элитного»',imageUrl:seasonPassTierActivationVisual(season,'elitePlusIncludesEliteIcon','/assets/season-pass/elite.webp?v=07939')},
+    {key:'rating_badge',title:'Значок «Элитный+» в рейтинге',imageUrl:seasonPassTierActivationVisual(season,'elitePlusRatingBadgeIcon','/assets/ui/icon_player_elit+.webp'),symbol:''}
   ];
   if(settings.xpBoost!==false){
-    benefits.push({key:'season_xp_x2',title:'×2 XP сезона',imageUrl:'/assets/season-pass/xp_x2.webp?v=07939'});
-    benefits.push({key:'profile_xp_x2',title:'×2 XP профиля',imageUrl:'/assets/season-pass/xp_x2.webp?v=07939'});
+    const boostIcon=seasonPassTierActivationVisual(season,'elitePlusXpBoostIcon','/assets/season-pass/xp_x2.webp?v=07939');
+    benefits.push({key:'season_xp_x2',title:'×2 XP сезона',imageUrl:boostIcon});
+    benefits.push({key:'profile_xp_x2',title:'×2 XP профиля',imageUrl:boostIcon});
   }
   const bonusLevels=Math.max(0,Number(payload.bonusLevels??settings.bonusLevels)||0);
-  if(bonusLevels>0)benefits.push({key:'bonus_levels',title:`+${bonusLevels} уровней пропуска`,imageUrl:'/assets/season-pass/levels_5.webp?v=07939'});
+  if(bonusLevels>0)benefits.push({key:'bonus_levels',title:`+${bonusLevels} уровней пропуска`,imageUrl:seasonPassTierActivationVisual(season,'elitePlusLevelsIcon','/assets/season-pass/levels_5.webp?v=07939')});
   for(const cosmetic of Array.isArray(settings.cosmetics)?settings.cosmetics:[]){
     if(!cosmetic||cosmetic.kind==='secret')continue;
     benefits.push({key:`cosmetic_${String(cosmetic.kind||'item')}`,title:String(cosmetic.title||'Эксклюзивная награда'),imageUrl:String(cosmetic.imageUrl||SYSTEM_IMAGE_FALLBACK)});
