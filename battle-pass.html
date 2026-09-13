@@ -3847,6 +3847,310 @@ img[src$="/xp.webp"]{
 @media(prefers-reduced-motion:reduce){.seasonal-case-xp-shell *,.seasonal-case-xp-shell *::before,.seasonal-case-xp-shell *::after{animation-duration:.001ms!important;animation-iteration-count:1!important;transition-duration:.001ms!important}.seasonal-case-xp-skip-note{display:none!important}}
 </style>
 
+<style id="zefirok-seasonal-case-redesign-v7">
+/* Seasonal cases: production UI refresh. Visual-only; API/open/recovery logic is unchanged. */
+.seasonal-case-shelf{
+  position:relative;
+  overflow:hidden;
+  margin:14px 0 4px!important;
+  padding:16px!important;
+  border:1px solid rgba(221,176,116,.52)!important;
+  border-radius:24px!important;
+  background:
+    radial-gradient(circle at 96% 2%,rgba(255,222,236,.78) 0,rgba(255,222,236,0) 34%),
+    linear-gradient(145deg,#fff9f2 0%,#fffdfb 54%,#fff6f8 100%)!important;
+  box-shadow:0 12px 30px rgba(116,69,49,.08),inset 0 1px 0 rgba(255,255,255,.96)!important
+}
+.seasonal-case-shelf::before{
+  content:"";
+  position:absolute;
+  width:150px;
+  height:150px;
+  right:-74px;
+  bottom:-96px;
+  border-radius:999px;
+  background:radial-gradient(circle,rgba(239,170,201,.18),rgba(239,170,201,0) 68%);
+  pointer-events:none
+}
+.seasonal-case-shelf-head{
+  position:relative;
+  z-index:1;
+  display:grid!important;
+  grid-template-columns:minmax(0,1fr) auto;
+  gap:10px 12px!important;
+  align-items:center!important;
+  margin-bottom:12px!important
+}
+.seasonal-case-shelf-head>div{min-width:0}
+.seasonal-case-shelf-head>div::before{
+  content:"✦  СЕЗОННЫЙ АРХИВ";
+  display:block;
+  margin-bottom:4px;
+  color:#c48a31;
+  font-size:7px;
+  line-height:1;
+  font-weight:1000;
+  letter-spacing:.11em
+}
+.seasonal-case-shelf-head b{
+  color:#68443a!important;
+  font-size:16px!important;
+  line-height:1.1;
+  font-weight:1000;
+  letter-spacing:-.015em
+}
+.seasonal-case-shelf-head>div>span{
+  display:block;
+  max-width:470px;
+  margin-top:5px;
+  color:#987970!important;
+  font-size:9px!important;
+  line-height:1.42;
+  font-weight:780!important
+}
+#seasonalCaseCount{
+  display:inline-flex!important;
+  align-items:center;
+  justify-content:center;
+  min-height:34px;
+  padding:0 12px;
+  border:1px solid rgba(226,149,185,.44);
+  border-radius:999px;
+  background:linear-gradient(180deg,#fff,#fff4f8);
+  color:#ad537b!important;
+  font-size:9px!important;
+  line-height:1;
+  font-weight:950!important;
+  white-space:nowrap;
+  box-shadow:0 5px 13px rgba(179,91,128,.08)
+}
+#seasonalCaseCount::before{
+  content:"✦";
+  margin-right:6px;
+  color:#e1a534;
+  font-size:10px
+}
+.seasonal-case-list{
+  position:relative;
+  z-index:1;
+  display:grid!important;
+  grid-template-columns:1fr!important;
+  gap:10px!important
+}
+.seasonal-case-player-card{
+  position:relative;
+  overflow:hidden;
+  display:grid!important;
+  grid-template-columns:1fr!important;
+  gap:11px!important;
+  align-items:stretch!important;
+  padding:12px!important;
+  border:1px solid rgba(232,197,185,.88)!important;
+  border-radius:20px!important;
+  background:
+    radial-gradient(circle at 0 0,rgba(255,237,245,.62) 0,rgba(255,237,245,0) 31%),
+    linear-gradient(180deg,#fff 0%,#fffdfb 100%)!important;
+  box-shadow:0 8px 22px rgba(108,64,55,.065)!important
+}
+.seasonal-case-player-card::after{
+  content:"";
+  position:absolute;
+  width:92px;
+  height:92px;
+  right:-52px;
+  top:-52px;
+  border-radius:999px;
+  background:radial-gradient(circle,rgba(239,190,111,.12),rgba(239,190,111,0) 68%);
+  pointer-events:none
+}
+.seasonal-case-player-main{
+  position:relative;
+  z-index:1;
+  display:grid!important;
+  grid-template-columns:76px minmax(0,1fr)!important;
+  gap:13px!important;
+  align-items:center!important;
+  min-width:0!important;
+  padding:0!important
+}
+.seasonal-case-player-main>img{
+  width:76px!important;
+  height:76px!important;
+  padding:6px!important;
+  border:1px solid rgba(232,193,172,.58)!important;
+  border-radius:19px!important;
+  background:radial-gradient(circle at 50% 42%,#fff 0 34%,#fff3e9 75%,#ffeaf2 100%)!important;
+  object-fit:contain!important;
+  filter:drop-shadow(0 7px 9px rgba(122,72,41,.12))!important;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.96)
+}
+.seasonal-case-player-copy{
+  min-width:0!important;
+  text-align:left!important
+}
+.seasonal-case-player-copy>b{
+  display:block!important;
+  color:#67433a!important;
+  font-size:12.5px!important;
+  line-height:1.24!important;
+  font-weight:1000!important;
+  letter-spacing:-.01em;
+  overflow-wrap:anywhere
+}
+.seasonal-case-player-meta{
+  display:inline-flex!important;
+  width:auto!important;
+  max-width:100%;
+  margin-top:6px!important;
+  padding:4px 8px!important;
+  border:1px solid rgba(223,181,113,.25);
+  border-radius:999px;
+  background:#fff8e9;
+  color:#957161!important;
+  font-size:8px!important;
+  line-height:1.2!important;
+  font-weight:850!important
+}
+.seasonal-case-player-card .seasonal-case-info-link{
+  display:inline-flex!important;
+  align-items:center!important;
+  justify-content:center!important;
+  gap:6px!important;
+  width:auto!important;
+  min-height:30px!important;
+  margin-top:7px!important;
+  padding:5px 10px!important;
+  border:1px solid rgba(225,156,189,.38)!important;
+  border-radius:999px!important;
+  background:linear-gradient(180deg,#fff9fc,#fff1f7)!important;
+  box-shadow:0 4px 10px rgba(179,83,126,.055)!important;
+  color:#ac537c!important;
+  font:950 8px/1.15 inherit!important;
+  text-align:left!important;
+  grid-column:auto!important
+}
+.seasonal-case-player-card .seasonal-case-info-link span{
+  margin:0!important;
+  color:#cb6c9a!important;
+  font-size:14px!important;
+  line-height:1!important
+}
+.seasonal-case-player-card .seasonal-case-open-button{
+  position:relative;
+  z-index:1;
+  grid-column:1/-1!important;
+  width:100%!important;
+  min-height:42px!important;
+  padding:0 14px!important;
+  border:1px solid rgba(191,123,24,.25)!important;
+  border-radius:13px!important;
+  background:linear-gradient(135deg,#efbb49 0%,#dfa03a 54%,#c98524 100%)!important;
+  color:#fffdf5!important;
+  font-size:10px!important;
+  line-height:1!important;
+  font-weight:1000!important;
+  letter-spacing:.01em;
+  box-shadow:0 8px 16px rgba(185,119,28,.18),inset 0 1px 0 rgba(255,255,255,.34)!important
+}
+.seasonal-case-player-card .seasonal-case-open-button::before{
+  content:"✦";
+  margin-right:7px;
+  color:#fff4c8;
+  font-size:10px
+}
+.seasonal-case-player-card .seasonal-case-open-button:active{transform:translateY(1px)}
+.seasonal-case-player-card .seasonal-case-open-button:disabled{
+  opacity:.6!important;
+  border-color:rgba(188,170,162,.3)!important;
+  background:linear-gradient(180deg,#eee6e2,#e3d9d4)!important;
+  color:#967f77!important;
+  box-shadow:none!important
+}
+.seasonal-case-player-card.is-tutorial{
+  border:1.5px dashed rgba(195,99,149,.42)!important;
+  background:linear-gradient(145deg,#fff,#fff7fb)!important;
+  box-shadow:0 7px 20px rgba(183,85,128,.07)!important
+}
+.seasonal-case-player-card.is-tutorial .seasonal-case-player-main>img{
+  background:radial-gradient(circle at 50% 42%,#fff 0 35%,#fff0f7 76%,#ffe7f1 100%)!important
+}
+@media(max-width:520px){
+  .seasonal-case-shelf{padding:13px!important;border-radius:21px!important}
+  .seasonal-case-shelf-head{gap:8px!important;margin-bottom:10px!important}
+  .seasonal-case-shelf-head b{font-size:15px!important}
+  .seasonal-case-shelf-head>div>span{font-size:8.5px!important}
+  #seasonalCaseCount{min-height:31px;padding:0 10px;font-size:8px!important}
+  .seasonal-case-player-card{padding:11px!important;border-radius:18px!important}
+  .seasonal-case-player-main{grid-template-columns:68px minmax(0,1fr)!important;gap:11px!important}
+  .seasonal-case-player-main>img{width:68px!important;height:68px!important;border-radius:17px!important}
+  .seasonal-case-player-copy>b{font-size:11.5px!important}
+  .seasonal-case-player-card .seasonal-case-open-button{min-height:40px!important}
+}
+@media(max-width:360px){
+  .seasonal-case-shelf-head{grid-template-columns:1fr!important}
+  #seasonalCaseCount{justify-self:start}
+  .seasonal-case-player-main{grid-template-columns:62px minmax(0,1fr)!important}
+  .seasonal-case-player-main>img{width:62px!important;height:62px!important;padding:5px!important}
+  .seasonal-case-player-card .seasonal-case-info-link{padding-inline:9px!important}
+}
+</style>
+
+
+
+<style id="zefirok-reward-path-v1">
+/* Reward Path v1 — FREE above, central season route, PREMIUM below, story stations on the route. */
+.reward-board{grid-template-columns:74px minmax(0,1fr)!important;border:1px solid rgba(220,193,224,.78)!important;border-radius:26px!important;background:linear-gradient(180deg,#fffafd 0,#fffdfb 48%,#fff9ef 100%)!important;box-shadow:0 12px 30px rgba(95,55,91,.08)!important}
+.lane-labels{grid-template-rows:106px 60px 106px 46px!important;border-right:1px solid rgba(226,205,224,.72)!important;background:linear-gradient(180deg,#faf6ff,#fff9f5)!important;box-shadow:8px 0 20px rgba(91,53,86,.05)!important}
+.lane-label.free{grid-row:1!important;background:linear-gradient(180deg,#f6effc,#eee7f7)!important;color:#705b82!important}.lane-divider{grid-row:2!important;position:relative;background:linear-gradient(180deg,#fff8fb,#fff4f8)!important;color:#d9578a!important;font-size:0!important}.lane-divider:after{content:"ПУТЬ";display:inline-flex;align-items:center;justify-content:center;padding:4px 7px;border-radius:999px;background:#f7e4ed;color:#a95c79;font-size:6.5px;font-weight:1000;letter-spacing:.1em}.lane-label.premium{grid-row:3!important;background:linear-gradient(180deg,#fff8df,#fff0c9)!important;color:#8f681e!important}.lane-empty{grid-row:4!important;display:grid!important;place-items:center!important;border-top:1px solid rgba(226,205,224,.72)!important;background:#fff9fc!important}.lane-empty:after{content:"СЮЖЕТ";font-size:6.5px;font-weight:1000;letter-spacing:.08em;color:#9a759e}
+.lane-label-art{width:64px!important;height:92px!important;object-fit:contain!important;opacity:.96}
+.reward-scroll{background:transparent!important}.reward-track{min-height:318px!important;align-items:stretch!important}
+.level-column{position:relative!important;flex:0 0 110px!important;display:grid!important;grid-template-rows:106px 60px 106px 46px!important;padding:0 5px!important;border-right:0!important;background:transparent!important;box-shadow:none!important;scroll-snap-align:start!important}
+.level-column:before{content:"";position:absolute;top:7px;bottom:7px;right:0;width:1px;background:linear-gradient(180deg,transparent,rgba(219,199,216,.48) 14%,rgba(219,199,216,.48) 86%,transparent);pointer-events:none}.level-column:last-child:before{display:none}
+.level-column>.reward-cell:not(.premium){grid-row:1!important}.level-column>.reward-cell.premium{grid-row:3!important}
+.reward-cell{align-self:center!important;width:100%!important;height:96px!important;min-height:96px!important;max-height:96px!important;grid-template-areas:"state" "icon" "name" "action"!important;grid-template-rows:14px 45px 19px 16px!important;gap:0!important;padding:4px 5px 5px!important;border-radius:18px!important;box-shadow:0 6px 16px rgba(92,55,77,.055)!important;transition:transform .18s ease,box-shadow .22s ease,border-color .22s ease,background .22s ease!important}
+.reward-cell:not(.premium){border:1px solid rgba(207,187,224,.64)!important;background:linear-gradient(155deg,#fff 0,#f9f3ff 100%)!important}.reward-cell.premium{border:1px solid rgba(231,194,113,.68)!important;background:linear-gradient(155deg,#fffef9 0,#fff4d8 100%)!important}
+.reward-cell.claimable:not(.premium){border-color:#dc6c9d!important;background:linear-gradient(155deg,#fff,#ffeaf3)!important;box-shadow:0 0 0 2px rgba(222,91,145,.10),0 8px 22px rgba(201,69,119,.16)!important}.reward-cell.premium.claimable{border-color:#dda52d!important;background:linear-gradient(150deg,#fffdf5,#ffecb9)!important;box-shadow:0 0 0 2px rgba(216,158,38,.10),0 8px 22px rgba(188,126,25,.17)!important}
+.reward-cell.claimed:not(.premium){border-color:rgba(116,183,128,.7)!important;background:linear-gradient(155deg,#fbfffc,#eef9f0)!important}.reward-cell.premium.claimed{border-color:rgba(204,157,54,.74)!important;background:linear-gradient(155deg,#fffdf5,#f9e8b7)!important}
+.reward-cell.level-locked,.reward-cell.tier-locked{opacity:.66!important;filter:saturate(.68)!important;background:linear-gradient(155deg,#fbf9fa,#f1edef)!important;border-color:rgba(210,200,204,.68)!important}
+.reward-cell .reward-availability{display:none!important}.reward-state{height:14px!important;min-height:14px!important;line-height:14px!important;padding:0 6px!important;font-size:6.2px!important;max-width:96%!important;background:transparent!important;box-shadow:none!important;color:#a58493!important}.reward-cell.premium .reward-state{color:#9a7a35!important}.reward-cell.claimable .reward-state{color:#b54b77!important}.reward-cell.claimed .reward-state{color:#5e9067!important}
+.reward-icon{width:45px!important;height:45px!important;border:0!important;border-radius:14px!important;background:rgba(255,255,255,.72)!important;box-shadow:inset 0 0 0 1px rgba(255,255,255,.8),0 4px 10px rgba(95,55,77,.07)!important}.reward-cell.premium .reward-icon{background:rgba(255,253,242,.78)!important}.reward-name{height:19px!important;max-height:19px!important;font-size:7.8px!important;line-height:1.12!important;color:#674551!important}.reward-action{width:88%!important;height:16px!important;min-height:16px!important;line-height:16px!important;padding:0 4px!important;border-radius:999px!important;font-size:6.2px!important;background:#f2e4ed!important;color:#9c5874!important}.reward-cell.premium .reward-action{background:#f4e5b9!important;color:#87641e!important}.reward-cell.claimable:not(.premium) .reward-action{background:linear-gradient(145deg,#ec78a6,#d85088)!important;color:#fff!important}.reward-cell.premium.claimable .reward-action{background:linear-gradient(145deg,#e6ba52,#c98a1f)!important;color:#fffaf0!important}
+.reward-status-mark span{width:24px!important;height:24px!important}.reward-cell.locked .reward-status-mark span{transform:translateY(5px)!important}.reward-lock-icon{width:27px!important;height:27px!important}.reward-cell.claimed:after{right:4px!important;bottom:4px!important;width:18px!important;height:18px!important;font-size:10px!important}
+.reward-connector{grid-row:2!important;grid-column:1!important;position:relative!important;z-index:1!important;display:grid!important;place-items:center!important;background:transparent!important;overflow:visible!important}.reward-connector:before{left:-5px!important;right:-5px!important;height:4px!important;border-radius:999px!important;background:linear-gradient(90deg,#ddb165,#e8a1be)!important;box-shadow:0 2px 7px rgba(191,104,143,.13)!important}.level-column.is-future .reward-connector:before{background:#e7d8e9!important;box-shadow:none!important}.level-column.current .reward-connector:before{background:linear-gradient(90deg,#ddb165 0,#e78db2 52%,#e7d8e9 100%)!important}.reward-connector span{display:none!important}
+.level-number{grid-row:2!important;grid-column:1!important;align-self:center!important;justify-self:center!important;position:relative!important;z-index:4!important;display:flex!important;align-items:center!important;justify-content:center!important;width:38px!important;height:38px!important;margin:0!important;border:3px solid rgba(255,255,255,.94)!important;border-radius:50%!important;background:linear-gradient(145deg,#f1d8e5,#dca9c1)!important;color:#814b61!important;box-shadow:0 0 0 1px rgba(189,130,158,.25),0 5px 12px rgba(111,62,84,.13)!important;font-family:"Arial Rounded MT Bold","Trebuchet MS",system-ui,sans-serif!important;font-size:14px!important;font-style:normal!important;text-shadow:none!important}.level-number small{display:none!important}.level-number b{font-size:14px!important;line-height:1!important}.level-column.is-complete .level-number{background:linear-gradient(145deg,#efc66b,#d89b37)!important;color:#fffdf4!important;box-shadow:0 0 0 1px rgba(192,132,30,.28),0 5px 12px rgba(168,103,23,.15)!important}.level-column.is-complete .level-number:after{content:"✓";position:absolute;right:-4px;top:-5px;display:grid;place-items:center;width:15px;height:15px;border:2px solid #fff;border-radius:50%;background:#72b37b;color:#fff;font-size:8px;font-weight:1000}.level-column.current .level-number{width:46px!important;height:46px!important;background:linear-gradient(145deg,#f47cac,#d94b84)!important;color:#fff!important;box-shadow:0 0 0 3px rgba(230,93,148,.15),0 0 18px rgba(223,82,139,.32),0 7px 15px rgba(168,44,98,.22)!important;font-size:17px!important}.level-column.current .level-number b{font-size:17px!important}.level-column.is-future .level-number{background:linear-gradient(145deg,#f2eaf4,#dfd0e5)!important;color:#9b7ba1!important;box-shadow:0 0 0 1px rgba(169,137,178,.16)!important}
+.level-story-glyph{position:absolute!important;right:-11px!important;top:-13px!important;width:23px!important;height:23px!important;object-fit:contain!important;filter:drop-shadow(0 3px 5px rgba(114,65,125,.18))!important}.level-column.has-story .level-number{box-shadow:0 0 0 2px rgba(194,137,213,.18),0 0 18px rgba(183,116,205,.20)!important}.level-column.story-available .level-number{animation:seasonPathStoryPulse 2.3s ease-in-out infinite!important;box-shadow:0 0 0 3px rgba(231,94,153,.15),0 0 22px rgba(225,76,141,.35)!important}
+.season-path-story-spacer,.season-path-story-marker{grid-row:4!important;align-self:center!important}.season-path-story-spacer{height:36px}.season-path-story-marker{width:100%!important;min-height:36px!important;padding:4px 5px!important;border:1px solid rgba(183,147,200,.32)!important;border-radius:11px!important;background:linear-gradient(145deg,#fbf7ff,#f2e8f7)!important;color:#735879!important;text-align:center!important;overflow:hidden!important;box-shadow:none!important}.season-path-story-marker span,.season-path-story-marker strong,.season-path-story-marker small{display:block!important;overflow:hidden!important;text-overflow:ellipsis!important;white-space:nowrap!important}.season-path-story-marker .season-path-story-kicker{font-size:5.6px!important;font-weight:1000!important;letter-spacing:.08em!important;color:#a476b0!important}.season-path-story-marker strong{margin-top:1px!important;font-size:6.6px!important;line-height:1.05!important}.season-path-story-marker small{margin-top:1px!important;font-size:5.5px!important;font-weight:900!important;color:#a28aa5!important}.season-path-story-marker.is-available{border-color:rgba(223,88,146,.54)!important;background:linear-gradient(145deg,#fff5fb,#ffe3f0)!important;box-shadow:0 5px 13px rgba(207,68,126,.12)!important}.season-path-story-marker.is-available strong,.season-path-story-marker.is-available small{color:#a53d68!important}.season-path-story-marker.is-read{border-color:rgba(111,174,123,.36)!important;background:linear-gradient(145deg,#f8fff9,#edf8ef)!important}.season-path-story-marker.is-read small{color:#5f8f68!important}.season-path-story-marker.is-locked{opacity:.72!important}
+.season-path-story-strip{margin-top:9px}.season-path-story-strip[hidden]{display:none!important}.season-path-story-strip-button,.season-path-story-strip-complete{width:100%;min-height:50px;display:grid;grid-template-columns:40px minmax(0,1fr) auto;align-items:center;gap:9px;padding:7px 10px;border:1px solid rgba(193,157,205,.34);border-radius:16px;background:linear-gradient(145deg,#fffafd,#f5ecfa);color:#6e5074;text-align:left;box-shadow:0 6px 16px rgba(89,53,97,.05)}.season-path-story-strip-button{cursor:pointer}.season-path-story-strip-button.is-available{border-color:rgba(220,92,147,.42);background:linear-gradient(145deg,#fff7fb,#ffe9f2);box-shadow:0 7px 18px rgba(199,70,123,.09)}.season-path-story-strip img{width:40px;height:40px;object-fit:contain}.season-path-story-strip span{min-width:0}.season-path-story-strip small{display:block;color:#ad7cb2;font-size:6.8px;font-weight:1000;letter-spacing:.09em}.season-path-story-strip strong{display:block;margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#684b70;font-size:9px;font-weight:950}.season-path-story-strip-button.is-available strong{color:#9c4268}.season-path-story-strip b{display:grid;place-items:center;min-width:32px;height:28px;padding:0 8px;border-radius:999px;background:#efe2f4;color:#7a5d81;font-size:8px;font-weight:1000}.season-path-story-strip-button.is-available b{background:linear-gradient(145deg,#e96d9e,#cc4b81);color:#fff}
+.level-column.final-milestone-column{flex-basis:128px!important;min-width:128px!important;background:linear-gradient(180deg,rgba(255,248,222,.45),rgba(255,255,255,0))!important}.level-column.final-milestone-column:before{display:none!important}.level-column.final-milestone-column:after{content:"ФИНАЛ";position:absolute;z-index:6;top:4px;left:50%;transform:translateX(-50%);padding:2px 6px;border-radius:999px;background:#d39a2a;color:#fff9e9;font-size:5.5px;font-weight:1000;letter-spacing:.08em}.level-column.final-milestone-column .level-number{background:linear-gradient(145deg,#efc351,#c98a1f)!important;color:#fff!important}
+.level-column.overflow-reward-column{flex-basis:132px!important;min-width:132px!important;grid-template-rows:106px 60px 106px 46px!important;background:linear-gradient(180deg,rgba(255,249,225,.5),rgba(255,255,255,0))!important}.level-column.overflow-reward-column .level-number{grid-row:2!important;z-index:5!important;width:52px!important;border-radius:999px!important}.overflow-reward-cell{grid-row:1/5!important;position:relative!important;z-index:1!important;margin:5px!important;padding-top:62px!important;border-radius:18px!important}.level-column.overflow-reward-column:before{display:none}
+@keyframes seasonPathStoryPulse{0%,100%{transform:scale(1)}50%{transform:scale(1.055)}}
+@media(max-width:430px){.reward-board{grid-template-columns:67px minmax(0,1fr)!important}.lane-labels{grid-template-rows:102px 58px 102px 44px!important}.lane-label-art{width:58px!important;height:88px!important}.reward-track{min-height:306px!important}.level-column{flex-basis:104px!important;grid-template-rows:102px 58px 102px 44px!important;padding-inline:4px!important}.reward-cell{height:92px!important;min-height:92px!important;max-height:92px!important;grid-template-rows:13px 43px 19px 15px!important}.reward-icon{width:43px!important;height:43px!important}.level-number{width:36px!important;height:36px!important}.level-column.current .level-number{width:43px!important;height:43px!important}.season-path-story-marker{min-height:34px!important;padding-inline:4px!important}.level-column.overflow-reward-column{grid-template-rows:102px 58px 102px 44px!important}}
+@media(prefers-reduced-motion:reduce){.level-column.story-available .level-number{animation:none!important}}
+</style>
+
+
+<style id="zefirok-reward-path-v1-1">
+/* Reward Path V1.1: stable completed badge, smooth rail, story explainer. */
+.level-column.is-complete .level-number::after{content:"✓"!important;left:auto!important;right:-5px!important;top:-6px!important;bottom:auto!important;width:16px!important;height:16px!important;transform:none!important;border:2px solid #fff!important;border-radius:50%!important;background:#72b37b!important;color:#fff!important;box-shadow:0 3px 7px rgba(66,123,77,.18)!important;font:1000 9px/12px "Arial Rounded MT Bold","Trebuchet MS",system-ui,sans-serif!important;text-align:center!important}
+.reward-track{transform-style:preserve-3d;perspective:1000px}.reward-scroll.is-touching .level-column{pointer-events:none}
+.season-path-story-strip-button.is-next{transition:transform .16s ease,box-shadow .16s ease,border-color .16s ease}.season-path-story-strip-button.is-next:active{transform:scale(.985);border-color:rgba(188,125,204,.52);box-shadow:0 4px 12px rgba(89,53,97,.08)}
+.season-path-story-info-overlay{position:fixed;inset:0;z-index:10040;display:flex;align-items:flex-end;justify-content:center;padding:14px 12px max(12px,env(safe-area-inset-bottom));background:rgba(51,32,55,.54);backdrop-filter:blur(9px);-webkit-backdrop-filter:blur(9px)}
+.season-path-story-info-overlay[hidden]{display:none!important}.season-path-story-info-sheet{width:min(100%,480px);max-height:min(88dvh,760px);overflow:auto;padding:8px 16px 16px;border:1px solid rgba(217,188,225,.8);border-radius:28px 28px 22px 22px;background:linear-gradient(180deg,#fffdfd 0,#faf4ff 62%,#fff8fb 100%);box-shadow:0 -18px 60px rgba(53,30,64,.25);color:#654d6a}.season-path-story-info-handle{width:40px;height:4px;margin:1px auto 13px;border-radius:999px;background:#dec9df}.season-path-story-info-head{display:grid;grid-template-columns:58px minmax(0,1fr) 42px;gap:11px;align-items:center}.season-path-story-info-head>img{width:58px;height:58px;object-fit:contain;border-radius:17px;background:#f5ecfa}.season-path-story-info-head span{display:block;color:#ab7ab5;font-size:8px;font-weight:1000;letter-spacing:.1em}.season-path-story-info-head h2{margin:3px 0 0;color:#65466c;font-size:20px;line-height:1.12}.season-path-story-info-head button{width:42px;height:42px;border:0;border-radius:14px;background:#f1e6f5;color:#795e80;font-size:22px;font-weight:900}.season-path-story-info-progress{display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:8px;margin:15px 0 11px;padding:10px 11px;border:1px solid rgba(202,166,214,.32);border-radius:16px;background:rgba(255,255,255,.72)}.season-path-story-info-progress>span:not(.season-path-story-info-read){display:grid;gap:2px}.season-path-story-info-progress small{color:#a38aa8;font-size:7px;font-weight:850}.season-path-story-info-progress strong{color:#6b5071;font-size:10px}.season-path-story-info-progress>i{height:4px;border-radius:999px;background:linear-gradient(90deg,#e6a4c1,#cfa9df)}.season-path-story-info-progress>em{grid-column:1/-1;justify-self:start;padding:4px 8px;border-radius:999px;background:#f2e7f6;color:#8d6697;font-size:7px;font-style:normal;font-weight:950}.season-path-story-info-read{grid-column:1/-1;color:#648d6c!important;font-size:8px!important;font-weight:900!important}.season-path-story-info-lead{margin:0;color:#826f86;font-size:10px;font-weight:750;line-height:1.55}.season-path-story-info-steps{display:grid;gap:8px;margin-top:12px}.season-path-story-info-steps>div{display:grid;grid-template-columns:30px minmax(0,1fr);gap:9px;align-items:start;padding:9px;border-radius:15px;background:rgba(255,255,255,.7)}.season-path-story-info-steps>div>b{display:grid;place-items:center;width:30px;height:30px;border-radius:10px;background:linear-gradient(145deg,#ecdafa,#f8dbe8);color:#8b5d98;font-size:11px}.season-path-story-info-steps span{min-width:0}.season-path-story-info-steps strong{display:block;color:#674d6d;font-size:10px}.season-path-story-info-steps small{display:block;margin-top:3px;color:#927f96;font-size:8px;font-weight:750;line-height:1.45}.season-path-story-info-actions{display:grid;grid-template-columns:1fr 1.25fr;gap:8px;margin-top:14px}.season-path-story-info-actions button{min-height:43px;border:0;border-radius:14px;font-size:10px;font-weight:950}.season-path-story-info-actions .secondary{background:#eee5f1;color:#735b78}.season-path-story-info-actions .primary{background:linear-gradient(145deg,#e66d9d,#cc4f82);color:#fff;box-shadow:0 7px 16px rgba(196,67,119,.15)}
+@media(max-width:380px){.season-path-story-info-head{grid-template-columns:50px minmax(0,1fr) 38px}.season-path-story-info-head>img{width:50px;height:50px}.season-path-story-info-head button{width:38px;height:38px}.season-path-story-info-actions{grid-template-columns:1fr}}
+</style>
+
+
+<style id="zefirok-reward-path-v1-2">
+/* Reward Path V1.2 — spring physics, clean lane art, fixed story explainer. */
+.reward-scroll{touch-action:pan-y!important;overscroll-behavior-x:none!important}
+.reward-track{will-change:transform!important;backface-visibility:hidden!important;-webkit-backface-visibility:hidden!important;transform:translate3d(0,0,0)}
+.reward-scroll.is-touching .reward-track{transition:none!important}
+.reward-scroll.is-touching .level-column{pointer-events:none!important}
+.lane-label{overflow:hidden!important}
+.lane-label-art{display:block!important;background:transparent!important;border:0!important;box-shadow:none!important;filter:none!important}
+.season-path-story-info-handle{display:none!important}
+.season-path-story-info-sheet[data-story-info-fixed]{transform:none!important;transition:none!important;overscroll-behavior:contain!important;touch-action:pan-y!important;-webkit-overflow-scrolling:touch}
+</style>
+
 </head>
 <body>
 <section class="access-gate" id="accessGate">
@@ -3973,6 +4277,7 @@ img[src$="/xp.webp"]{
           </div>
         </div>
 
+        <div class="season-path-story-strip" id="seasonPathStoryStrip" hidden></div>
         <button class="claim-all" id="claimAll" type="button">Получить все доступные награды</button>
       </section>
 
@@ -5730,19 +6035,78 @@ img[src$="/xp.webp"]{
     </section>`;
   }
 
-  function renderRewardTrack() {
-    const level = currentLevel();
+  function seasonPathStoryTimeline(){
+    const story=seasonStoryData?.()||{},timeline=Array.isArray(story.timeline)?story.timeline:[];
+    if(timeline.length)return timeline.map((item,index)=>({...item,chapterNumber:Math.max(1,Number(item?.chapterNumber)||index+1),unlockLevel:Math.max(1,Math.min(MAX_LEVEL,Number(item?.unlockLevel)||1)),status:["read","available","locked"].includes(String(item?.status||""))?String(item.status):"locked"}));
+    const archive=Array.isArray(story.archive)?story.archive:[],pending=story.pending||null,combined=[...archive.map(item=>({...item,status:"read"})),...(pending?[{...pending,status:"available"}]:[])].sort((a,b)=>(Number(a.unlockLevel)||1)-(Number(b.unlockLevel)||1)||(Number(a.sortOrder)||0)-(Number(b.sortOrder)||0));
+    return combined.map((item,index)=>({...item,chapterNumber:index+1,unlockLevel:Math.max(1,Math.min(MAX_LEVEL,Number(item?.unlockLevel)||1))}));
+  }
+  function seasonPathStoryAtLevel(level){
+    const items=seasonPathStoryTimeline().filter(item=>Number(item.unlockLevel)===Number(level));
+    return items.find(item=>item.status==="available")||items.find(item=>item.status==="read")||items[0]||null;
+  }
+  function seasonPathStoryMarkerMarkup(level){
+    const story=seasonPathStoryAtLevel(level);if(!story)return '<div class="season-path-story-spacer" aria-hidden="true"></div>';
+    const state=String(story.status||"locked"),chapter=Math.max(1,Number(story.chapterNumber)||1),title=state==="locked"?`Глава ${chapter}`:(story.title||`Глава ${chapter}`),stateText=state==="read"?"Прочитано":state==="available"?"Читать":"Сюжет";
+    return `<button class="season-path-story-marker is-${state}" type="button" data-season-path-story="${storyEscapeHtml(story.eventId||"")}" data-story-status="${state}" data-story-level="${Number(story.unlockLevel)||level}" aria-label="Глава ${chapter}. ${storyEscapeHtml(title)}. ${stateText}"><span class="season-path-story-kicker">ГЛАВА ${chapter}</span><strong>${state==="locked"?`Ур. ${Number(story.unlockLevel)||level}`:storyEscapeHtml(title)}</strong><small>${stateText}</small></button>`;
+  }
+  function closeSeasonPathStoryInfo(){
+    const overlay=document.getElementById("seasonPathStoryInfoOverlay");if(!overlay)return;overlay.hidden=true;
+    if(el("seasonStoryOverlay")?.hidden!==false&&el("seasonStoryArchiveOverlay")?.hidden!==false&&el("seasonLetterOverlay")?.hidden!==false&&el("rewardSummary")?.hidden!==false&&el("purchaseConfirm")?.hidden!==false)document.body.style.overflow="";
+  }
+  function ensureSeasonPathStoryInfo(){
+    let overlay=document.getElementById("seasonPathStoryInfoOverlay");if(overlay)return overlay;
+    overlay=document.createElement("section");overlay.id="seasonPathStoryInfoOverlay";overlay.className="season-path-story-info-overlay";overlay.hidden=true;overlay.setAttribute("role","dialog");overlay.setAttribute("aria-modal","true");overlay.setAttribute("aria-labelledby","seasonPathStoryInfoTitle");
+    overlay.innerHTML=`<div class="season-path-story-info-sheet" data-story-info-fixed><div class="season-path-story-info-head"><img src="/assets/ui/icon_sushet_season.webp" alt=""><div><span id="seasonPathStoryInfoKicker">СЮЖЕТ СЕЗОНА</span><h2 id="seasonPathStoryInfoTitle">Как работает сюжет?</h2></div><button type="button" data-story-info-close aria-label="Закрыть">×</button></div><div class="season-path-story-info-progress" id="seasonPathStoryInfoProgress"></div><p class="season-path-story-info-lead">Сюжетные главы — особые события внутри сезонного пропуска. Они открываются на определённых уровнях и остаются доступными после прочтения.</p><div class="season-path-story-info-steps"><div><b>1</b><span><strong>Повышай уровень сезона</strong><small>Следующая глава откроется, когда ты дойдёшь до отмеченного уровня.</small></span></div><div><b>2</b><span><strong>Открой главу в пропуске</strong><small>Прочитай историю. Если за главу назначена награда, она будет выдана сервером после завершения.</small></span></div><div><b>3</b><span><strong>Возвращайся к истории</strong><small>Прочитанные главы сохраняются в «Истории сезона» и после первого открытия появляются в сюжетном разделе Telegram-бота.</small></span></div></div><div class="season-path-story-info-actions"><button class="secondary" type="button" data-story-info-close>Понятно</button><button class="primary" type="button" data-story-info-level>Показать уровень</button></div></div>`;
+    overlay.addEventListener("click",event=>{if(event.target===overlay||event.target.closest?.("[data-story-info-close]"))closeSeasonPathStoryInfo();});
+    const fixedSheet=overlay.querySelector("[data-story-info-fixed]");
+    fixedSheet?.addEventListener("touchstart",event=>event.stopPropagation(),{passive:true});
+    fixedSheet?.addEventListener("touchmove",event=>event.stopPropagation(),{passive:true});
+    document.body.appendChild(overlay);return overlay;
+  }
+  function showSeasonPathStoryInfo(item={}){
+    const overlay=ensureSeasonPathStoryInfo(),chapter=Math.max(1,Number(item?.chapterNumber)||1),unlockLevel=Math.max(1,Math.min(MAX_LEVEL,Number(item?.unlockLevel)||1)),level=currentLevel(),remaining=Math.max(0,unlockLevel-level),readCount=seasonPathStoryTimeline().filter(entry=>entry.status==="read").length;
+    const kicker=overlay.querySelector("#seasonPathStoryInfoKicker"),progress=overlay.querySelector("#seasonPathStoryInfoProgress"),levelButton=overlay.querySelector("[data-story-info-level]");
+    if(kicker)kicker.textContent=`ГЛАВА ${chapter} · УРОВЕНЬ ${unlockLevel}`;
+    if(progress)progress.innerHTML=`<span><small>Сейчас</small><strong>Уровень ${level}</strong></span><i aria-hidden="true"></i><span><small>Следующая глава</small><strong>Уровень ${unlockLevel}</strong></span><em>${remaining>0?`Осталось ${remaining} ур.`:"Уже доступна"}</em><span class="season-path-story-info-read">✓ Прочитано глав: ${readCount}</span>`;
+    if(levelButton){levelButton.textContent=`Показать уровень ${unlockLevel}`;levelButton.onclick=()=>{closeSeasonPathStoryInfo();scrollToLevel(unlockLevel,"smooth");};}
+    overlay.hidden=false;document.body.style.overflow="hidden";passSelectHaptic?.();
+  }
+  function openSeasonPathStory(eventId,status,unlockLevel){
+    const story=seasonStoryData?.()||{},id=String(eventId||""),timeline=seasonPathStoryTimeline(),timelineItem=timeline.find(entry=>String(entry?.eventId||"")===id)||timeline.find(entry=>Number(entry?.unlockLevel)===Number(unlockLevel))||{eventId:id,unlockLevel:Number(unlockLevel)||1,status:"locked",chapterNumber:timeline.findIndex(entry=>Number(entry?.unlockLevel)===Number(unlockLevel))+1};
+    if(status==="available"){void showPendingSeasonStory();return;}
+    if(status==="read"){const item=(Array.isArray(story.archive)?story.archive:[]).find(entry=>String(entry?.eventId||"")===id);if(item){showSeasonStoryEvent(item,{pending:false});return;}}
+    showSeasonPathStoryInfo(timelineItem);
+  }
+  function bindSeasonPathStoryMarkers(){
+    el("rewardTrack")?.querySelectorAll?.("[data-season-path-story]").forEach(button=>button.addEventListener("click",event=>{event.stopPropagation();openSeasonPathStory(button.dataset.seasonPathStory,button.dataset.storyStatus,button.dataset.storyLevel);}));
+  }
+  function renderSeasonPathStoryStrip(){
+    const strip=el("seasonPathStoryStrip");if(!strip)return;const timeline=seasonPathStoryTimeline();if(!timeline.length){strip.hidden=true;strip.replaceChildren();return;}
+    const pending=timeline.find(item=>item.status==="available")||null,next=timeline.find(item=>item.status==="locked")||null,readCount=timeline.filter(item=>item.status==="read").length,target=pending||next;
+    strip.hidden=false;
+    if(target){const available=target.status==="available",chapter=Math.max(1,Number(target.chapterNumber)||1);strip.innerHTML=`<button class="season-path-story-strip-button ${available?"is-available":"is-next"}" type="button" data-season-path-strip><img src="/assets/ui/icon_sushet_season.webp" alt=""><span><small>${available?"НОВАЯ ГЛАВА":"СЛЕДУЮЩАЯ ГЛАВА"}</small><strong>${available?`Глава ${chapter} · ${storyEscapeHtml(target.title||"История сезона")}`:`Глава ${chapter} · уровень ${Number(target.unlockLevel)||1}`}</strong></span><b>${available?"Читать":"›"}</b></button>`;const button=strip.querySelector("[data-season-path-strip]");button?.addEventListener("click",()=>openSeasonPathStory(target.eventId,target.status,target.unlockLevel));return;}
+    strip.innerHTML=`<div class="season-path-story-strip-complete"><img src="/assets/ui/icon_sushet_season.webp" alt=""><span><small>СЮЖЕТ СЕЗОНА</small><strong>Прочитано глав: ${readCount}</strong></span><b>✓</b></div>`;
+  }
+  function syncSeasonPathStoryMarkers(){
+    el("rewardTrack")?.querySelectorAll?.("[data-level-column]").forEach(column=>{const level=Number(column.dataset.levelColumn)||0;if(level<1||level>MAX_LEVEL)return;const story=seasonPathStoryAtLevel(level),old=column.querySelector(".season-path-story-marker,.season-path-story-spacer"),holder=document.createElement("div");holder.innerHTML=seasonPathStoryMarkerMarkup(level);old?.replaceWith(holder.firstElementChild);column.classList.toggle("has-story",Boolean(story));column.classList.toggle("story-available",story?.status==="available");column.classList.toggle("story-read",story?.status==="read");column.classList.toggle("story-locked",story?.status==="locked");});bindSeasonPathStoryMarkers();renderSeasonPathStoryStrip();
+  }
+
+  function renderRewardTrack({preservePosition=false}={}) {
+    const level = currentLevel(),previousX=typeof rewardRailX==="number"?rewardRailX:0;
     const levelColumns = rewards.map((reward,index)=>{
-      const itemLevel = index + 1;
-      return `<section class="level-column ${itemLevel===MAX_LEVEL?"final-milestone-column":""} ${itemLevel===level?"current":""} ${itemLevel===selectedLevel?"selected":""}" data-level-column="${itemLevel}">
-        <div class="level-number" data-level-purchase-target="${itemLevel}" role="button" tabindex="0" aria-label="Уровень ${itemLevel}"><small>УР.</small><b>${itemLevel}</b></div>
+      const itemLevel = index + 1,story=seasonPathStoryAtLevel(itemLevel),storyState=String(story?.status||""),past=itemLevel<level,future=itemLevel>level;
+      return `<section class="level-column ${itemLevel===MAX_LEVEL?"final-milestone-column":""} ${itemLevel===level?"current":""} ${past?"is-complete":""} ${future?"is-future":""} ${story?"has-story":""} ${storyState?`story-${storyState}`:""} ${itemLevel===selectedLevel?"selected":""}" data-level-column="${itemLevel}">
         ${rewardCellMarkup(itemLevel,"free",reward.free)}
         <div class="reward-connector"><span></span></div>
+        <div class="level-number" data-level-purchase-target="${itemLevel}" role="button" tabindex="0" aria-label="Уровень ${itemLevel}">${story?'<img class="level-story-glyph" src="/assets/ui/icon_sushet_season.webp" alt="" aria-hidden="true">':''}<small>УР.</small><b>${itemLevel}</b></div>
         ${rewardCellMarkup(itemLevel,"premium",reward.premium)}
+        ${seasonPathStoryMarkerMarkup(itemLevel)}
       </section>`;
     }).join("");
     el("rewardTrack").innerHTML = levelColumns + overflowRewardColumnMarkup();
-    requestAnimationFrame(()=>scrollToLevel(selectedLevel || level,"auto"));
+    bindSeasonPathStoryMarkers();renderSeasonPathStoryStrip();
+    requestAnimationFrame(()=>preservePosition?setRewardRailX(previousX,{animate:false}):scrollToLevel(selectedLevel || level,"auto"));
   }
 
   // Reward lane v5: do not use native horizontal scrolling on iOS/Telegram.
@@ -5750,6 +6114,8 @@ img[src$="/xp.webp"]{
   // browser rubber-band state capable of exposing blank space after level 50+.
   let rewardRailX = 0;
   let rewardRailTransitionTimer = 0;
+  let rewardRailMotionRaf = 0;
+  let rewardRailMotionToken = 0;
   function rewardRailBounds() {
     const viewport=el("rewardScroll"),track=el("rewardTrack");
     if(!viewport||!track)return {min:0,max:0};
@@ -5761,22 +6127,58 @@ img[src$="/xp.webp"]{
     const bounds=rewardRailBounds();
     return Math.max(bounds.min,Math.min(bounds.max,Number(value)||0));
   }
-  function setRewardRailX(value,{animate=false,duration=360}={}) {
-    const track=el("rewardTrack");
-    if(!track)return 0;
-    clearTimeout(rewardRailTransitionTimer);
+  function rewardRailPaint(value) {
+    const track=el("rewardTrack");if(!track)return 0;
+    rewardRailX=Number(value)||0;
+    track.style.transform=`translate3d(${rewardRailX.toFixed(3)}px,0,0)`;
+    return rewardRailX;
+  }
+  function stopRewardRailMotion() {
+    rewardRailMotionToken+=1;
+    if(rewardRailMotionRaf)cancelAnimationFrame(rewardRailMotionRaf);
+    rewardRailMotionRaf=0;clearTimeout(rewardRailTransitionTimer);
+    const track=el("rewardTrack");if(track){track.style.transition="none";track.style.willChange="transform";}
+  }
+  function rewardRailSpringTo(value,{initialVelocity=0,onComplete=null}={}) {
+    const track=el("rewardTrack");if(!track)return 0;
+    const target=rewardRailClampX(value),reduced=window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches===true;
+    stopRewardRailMotion();
+    if(reduced||Math.abs(target-rewardRailX)<.15){rewardRailPaint(target);track.style.willChange="";onComplete?.();return target;}
+    const token=rewardRailMotionToken;let x=rewardRailX,v=Math.max(-2600,Math.min(2600,Number(initialVelocity)||0)),last=performance.now(),stable=0;
+    const stiffness=235,damping=30.5;
+    const frame=now=>{
+      if(token!==rewardRailMotionToken||!track.isConnected)return;
+      const dt=Math.min(.032,Math.max(.001,(now-last)/1000));last=now;
+      const steps=Math.max(1,Math.ceil(dt/.008)),h=dt/steps;
+      for(let i=0;i<steps;i+=1){const a=-stiffness*(x-target)-damping*v;v+=a*h;x+=v*h;}
+      rewardRailPaint(x);
+      if(Math.abs(x-target)<.22&&Math.abs(v)<5)stable+=1;else stable=0;
+      if(stable>=2){rewardRailPaint(target);rewardRailMotionRaf=0;track.style.willChange="";onComplete?.();return;}
+      rewardRailMotionRaf=requestAnimationFrame(frame);
+    };
+    rewardRailMotionRaf=requestAnimationFrame(frame);return target;
+  }
+  function setRewardRailX(value,{animate=false,duration=360,initialVelocity=0,onComplete=null}={}) {
     const next=rewardRailClampX(value);
-    const reduced=window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches===true;
-    if(animate&&!reduced){
-      track.style.transition=`transform ${Math.max(120,Number(duration)||360)}ms cubic-bezier(.22,.74,.24,1)`;
-      rewardRailTransitionTimer=setTimeout(()=>{if(track.isConnected)track.style.transition="";},Math.max(160,Number(duration)||360)+40);
-    }else track.style.transition="none";
-    rewardRailX=next;
-    track.style.transform=`translate3d(${next.toFixed(2)}px,0,0)`;
-    return next;
+    if(animate)return rewardRailSpringTo(next,{initialVelocity,onComplete});
+    stopRewardRailMotion();rewardRailPaint(next);const track=el("rewardTrack");if(track)track.style.willChange="";onComplete?.();return next;
   }
   function syncRewardRailBounds() {
     return setRewardRailX(rewardRailX,{animate:false});
+  }
+  function rewardRailElasticX(value,min,max) {
+    const x=Number(value)||0;
+    if(x>max){const d=x-max;return max+Math.min(30,Math.log1p(d)*7.2);}
+    if(x<min){const d=min-x;return min-Math.min(30,Math.log1p(d)*7.2);}
+    return x;
+  }
+  function rewardRailTargetX(level) {
+    const targetLevel=Math.max(1,Math.min(MAX_LEVEL+1,Number(level)||1));
+    const target=document.querySelector(`[data-level-column="${targetLevel}"]`),viewport=el("rewardScroll");
+    if(!target||!viewport)return rewardRailClampX(rewardRailX);
+    if(targetLevel===1)return 0;
+    if(targetLevel===MAX_LEVEL+1)return rewardRailClampX(viewport.clientWidth-(target.offsetLeft+target.offsetWidth));
+    return rewardRailClampX(viewport.clientWidth/2-(target.offsetLeft+target.offsetWidth/2));
   }
   window.addEventListener("resize",()=>requestAnimationFrame(()=>scrollToLevel(selectedLevel,"auto")),{passive:true});
 
@@ -5797,30 +6199,27 @@ img[src$="/xp.webp"]{
     scrollSyncTimer = setTimeout(()=>{ suppressScrollSync = false; },delay);
   }
 
-  function scrollToLevel(level,behavior="smooth") {
+  function scrollToLevel(level,behavior="smooth",motion={}) {
     const targetLevel=Math.max(1,Math.min(MAX_LEVEL+1,Number(level)||1));
-    const target=document.querySelector(`[data-level-column="${targetLevel}"]`);
-    const viewport=el("rewardScroll");
+    const target=document.querySelector(`[data-level-column="${targetLevel}"]`),viewport=el("rewardScroll");
     if(!target||!viewport)return;
-    // Center where possible. At the first/last reward the hard clamp wins, so
-    // the rail edge always stays flush with the viewport instead of creating
-    // artificial whitespace just to center the card.
-    const targetCenter=target.offsetLeft+target.offsetWidth/2;
-    const desiredX=viewport.clientWidth/2-targetCenter;
-    suppressScrollSync=true;
-    updateNavigator(targetLevel);
-    setRewardRailX(desiredX,{animate:behavior==="smooth",duration:behavior==="smooth"?380:0});
-    releaseScrollSync(behavior === "smooth" ? 430 : 60);
+    const desiredX=rewardRailTargetX(targetLevel);
+    suppressScrollSync=true;updateNavigator(targetLevel);
+    if(behavior==="smooth"){
+      rewardRailSpringTo(desiredX,{initialVelocity:Number(motion?.initialVelocity)||0,onComplete:()=>{releaseScrollSync(0);motion?.onComplete?.();}});
+    }else{setRewardRailX(desiredX,{animate:false});releaseScrollSync(50);motion?.onComplete?.();}
   }
 
   function nearestVisibleLevel(offsetX=rewardRailX) {
     const viewport=el("rewardScroll");
     if(!viewport)return selectedLevel;
-    const center=-rewardRailClampX(offsetX)+viewport.clientWidth/2;
+    const bounds=rewardRailBounds(),clamped=Math.max(bounds.min,Math.min(bounds.max,Number(offsetX)||0));
+    if(clamped<=bounds.min+2)return MAX_LEVEL+1;
+    if(clamped>=bounds.max-2)return 1;
+    const center=-clamped+viewport.clientWidth/2;
     let bestLevel=selectedLevel,bestDistance=Infinity;
     document.querySelectorAll("[data-level-column]").forEach(column=>{
-      const columnCenter=column.offsetLeft+column.offsetWidth/2;
-      const distance=Math.abs(columnCenter-center);
+      const columnCenter=column.offsetLeft+column.offsetWidth/2,distance=Math.abs(columnCenter-center);
       if(distance<bestDistance){bestDistance=distance;bestLevel=Number(column.dataset.levelColumn);}
     });
     return bestLevel;
@@ -6331,6 +6730,7 @@ img[src$="/xp.webp"]{
     el("seasonStoryCardTitle").textContent=pending?(pending.title||"Новая глава доступна"):"История сезона";
     el("seasonStoryCardPreview").innerHTML=pending?`Доступна сейчас · уровень ${Number(pending.unlockLevel||1)} · ${storyPages(pending).length} стр.${pending.reward?` <span class="season-story-card-reward">${prizeIconMarkup()} ${storyEscapeHtml(pending.reward.title||"Награда")}</span>`:""}`:`Прочитано глав: ${archive.length}`;
     el("seasonStoryOpen").hidden=!pending;el("seasonStoryArchive").hidden=!archive.length;
+    renderSeasonPathStoryStrip();syncSeasonPathStoryMarkers();
   }
 
   function isSeasonalCaseRetryableError(error){const status=Number(error?.status||0);if(error?.pending||error?.timeout||error?.code==="REQUEST_TIMEOUT"||!status||status>=500)return true;if(status!==409)return false;return /состояние кейса изменилось|открытие было восстановлено|уже открывается|повторите открытие/i.test(String(error?.message||""));}
@@ -7565,47 +7965,47 @@ img[src$="/xp.webp"]{
   el("levelSlider").addEventListener("blur",finishSliderInteraction);
 
   const rewardScroll=el("rewardScroll");
-  const rewardTouchPan={active:false,id:null,startX:0,startY:0,startRailX:0,axis:"",lastClientX:0,lastAt:0,velocity:0};
+  const rewardTouchPan={active:false,id:null,startX:0,startY:0,startRailX:0,axis:"",lastClientX:0,lastAt:0,velocity:0,minX:0,maxX:0,pendingX:0,raf:0};
+  const flushRewardTouchFrame=()=>{
+    rewardTouchPan.raf=0;const track=el("rewardTrack");if(!track)return;rewardRailPaint(rewardTouchPan.pendingX);
+  };
+  const scheduleRewardTouchX=value=>{
+    rewardTouchPan.pendingX=rewardRailElasticX(value,rewardTouchPan.minX,rewardTouchPan.maxX);
+    if(!rewardTouchPan.raf)rewardTouchPan.raf=requestAnimationFrame(flushRewardTouchFrame);
+  };
   rewardScroll.addEventListener("touchstart",event=>{
     if(event.touches?.length!==1){rewardTouchPan.active=false;rewardTouchPan.axis="";return;}
-    const touch=event.touches[0],now=performance.now();
-    clearTimeout(rewardRailTransitionTimer);
-    el("rewardTrack").style.transition="none";
-    rewardTouchPan.active=true;rewardTouchPan.id=touch.identifier;
+    const touch=event.touches[0],now=performance.now(),bounds=rewardRailBounds();
+    stopRewardRailMotion();cancelAnimationFrame(rewardTouchPan.raf);rewardTouchPan.raf=0;rewardScroll.classList.add("is-touching");
+    rewardTouchPan.active=true;rewardTouchPan.id=touch.identifier;rewardTouchPan.minX=bounds.min;rewardTouchPan.maxX=bounds.max;
     rewardTouchPan.startX=Number(touch.clientX)||0;rewardTouchPan.startY=Number(touch.clientY)||0;
-    rewardTouchPan.startRailX=rewardRailClampX(rewardRailX);rewardTouchPan.axis="";
+    rewardTouchPan.startRailX=Math.max(bounds.min,Math.min(bounds.max,rewardRailX));rewardTouchPan.pendingX=rewardTouchPan.startRailX;rewardTouchPan.axis="";
     rewardTouchPan.lastClientX=rewardTouchPan.startX;rewardTouchPan.lastAt=now;rewardTouchPan.velocity=0;
   },{passive:true});
   rewardScroll.addEventListener("touchmove",event=>{
     if(!rewardTouchPan.active)return;
     const touch=Array.from(event.touches||[]).find(item=>item.identifier===rewardTouchPan.id);if(!touch)return;
-    const clientX=Number(touch.clientX)||0,clientY=Number(touch.clientY)||0;
-    const dx=clientX-rewardTouchPan.startX,dy=clientY-rewardTouchPan.startY;
-    if(!rewardTouchPan.axis){if(Math.max(Math.abs(dx),Math.abs(dy))<5)return;rewardTouchPan.axis=Math.abs(dx)>Math.abs(dy)*1.04?"x":"y";}
+    const clientX=Number(touch.clientX)||0,clientY=Number(touch.clientY)||0,dx=clientX-rewardTouchPan.startX,dy=clientY-rewardTouchPan.startY;
+    if(!rewardTouchPan.axis){if(Math.max(Math.abs(dx),Math.abs(dy))<5)return;rewardTouchPan.axis=Math.abs(dx)>Math.abs(dy)*1.08?"x":"y";}
     if(rewardTouchPan.axis!=="x")return;
-    event.preventDefault();
-    const now=performance.now(),dt=Math.max(8,now-rewardTouchPan.lastAt);
-    const fingerVelocity=(clientX-rewardTouchPan.lastClientX)/dt;
-    rewardTouchPan.velocity=rewardTouchPan.velocity*.68+fingerVelocity*.32;
-    rewardTouchPan.lastClientX=clientX;rewardTouchPan.lastAt=now;
-    setRewardRailX(rewardTouchPan.startRailX+dx,{animate:false});
-    if(!suppressScrollSync&&!sliderInteracting){
-      cancelAnimationFrame(scrollFrame);scrollFrame=requestAnimationFrame(()=>updateNavigator(nearestVisibleLevel()));
-    }
+    if(event.cancelable)event.preventDefault();
+    const now=performance.now(),dt=Math.max(6,now-rewardTouchPan.lastAt),fingerVelocity=(clientX-rewardTouchPan.lastClientX)/dt;
+    rewardTouchPan.velocity=rewardTouchPan.velocity*.58+fingerVelocity*.42;rewardTouchPan.lastClientX=clientX;rewardTouchPan.lastAt=now;
+    scheduleRewardTouchX(rewardTouchPan.startRailX+dx);
   },{passive:false});
-  const finishRewardTouchPan=event=>{
+  const finishRewardTouchPan=(cancelled=false)=>{
     if(!rewardTouchPan.active)return;
-    const horizontal=rewardTouchPan.axis==="x",velocity=rewardTouchPan.velocity;
-    rewardTouchPan.active=false;rewardTouchPan.id=null;rewardTouchPan.axis="";
+    if(rewardTouchPan.raf){cancelAnimationFrame(rewardTouchPan.raf);rewardTouchPan.raf=0;flushRewardTouchFrame();}
+    const horizontal=rewardTouchPan.axis==="x",velocity=cancelled?0:rewardTouchPan.velocity,minX=rewardTouchPan.minX,maxX=rewardTouchPan.maxX;
+    rewardTouchPan.active=false;rewardTouchPan.id=null;rewardTouchPan.axis="";rewardScroll.classList.remove("is-touching");
     if(!horizontal){syncRewardRailBounds();return;}
-    // Native-like momentum, but projected and snapped entirely inside the real
-    // rail bounds. There is no overscroll/rubber-band path at either edge.
-    const projected=rewardRailClampX(rewardRailX+velocity*260);
-    const targetLevel=nearestVisibleLevel(projected);
-    scrollToLevel(targetLevel,"smooth");
+    const clamped=Math.max(minX,Math.min(maxX,rewardRailX)),projected=Math.max(minX,Math.min(maxX,clamped+velocity*235));
+    const edgeSnap=Math.max(16,Math.min(42,rewardScroll.clientWidth*.06));
+    const targetLevel=(rewardRailX<minX||projected<=minX+edgeSnap)?MAX_LEVEL+1:(rewardRailX>maxX||projected>=maxX-edgeSnap)?1:nearestVisibleLevel(projected);
+    scrollToLevel(targetLevel,"smooth",{initialVelocity:velocity*1000,onComplete:()=>passSelectHaptic?.()});
   };
-  rewardScroll.addEventListener("touchend",finishRewardTouchPan,{passive:true});
-  rewardScroll.addEventListener("touchcancel",()=>{rewardTouchPan.active=false;rewardTouchPan.id=null;rewardTouchPan.axis="";syncRewardRailBounds();},{passive:true});
+  rewardScroll.addEventListener("touchend",()=>finishRewardTouchPan(false),{passive:true});
+  rewardScroll.addEventListener("touchcancel",()=>finishRewardTouchPan(true),{passive:true});
 
   el("buyLevel").addEventListener("click",()=>openLevelPurchaseConfirm());
   el("levelBuyEntry").addEventListener("click",()=>openLevelPurchaseConfirm());

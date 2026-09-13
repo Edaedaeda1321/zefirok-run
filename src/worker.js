@@ -32953,7 +32953,12 @@ async function seasonPassStoryForPlayer(env,season,telegramId,player){
   const normalUnlocked=firstIncomplete&&Number(firstIncomplete.unlock_level||1)<=level&&(Number(firstIncomplete.unlock_at||0)<=0||Number(firstIncomplete.unlock_at||0)<=now);
   const manualUnlocked=firstIncomplete&&Number(firstIncomplete.manual_unlocked_at||0)>0;
   const pendingRow=(normalUnlocked||manualUnlocked)?firstIncomplete:null;
-  return {seasonId:String(season.id),pending:seasonPassStoryEventView(pendingRow),archive,availableCount:pendingRow?1:0};
+  const pendingId=String(pendingRow?.event_id||'');
+  const timeline=rows.filter(row=>Number(row.enabled||0)===1).map((row,index)=>{
+    const eventId=String(row.event_id||''),completedAt=Math.max(0,Number(row.completed_at||0)),available=Boolean(pendingId&&eventId===pendingId),status=completedAt>0?'read':available?'available':'locked';
+    return {eventId,chapterNumber:index+1,unlockLevel:Math.max(1,Math.min(50,Number(row.unlock_level)||1)),unlockAt:Math.max(0,Number(row.unlock_at)||0),status,title:status==='locked'?'':String(row.title||''),completedAt};
+  });
+  return {seasonId:String(season.id),pending:seasonPassStoryEventView(pendingRow),archive,timeline,availableCount:pendingRow?1:0};
 }
 
 async function openSeasonPassStory(request,env){
