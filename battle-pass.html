@@ -6938,31 +6938,43 @@ img[src$="/xp.webp"]{
   el("levelSlider").addEventListener("blur",finishSliderInteraction);
 
   const rewardScroll = el("rewardScroll");
-  let rewardTouchStartX = 0;
-  let rewardTouchStartY = 0;
+  const rewardTouchPan={active:false,id:null,startX:0,startY:0,startLeft:0,axis:""};
   rewardScroll.addEventListener("touchstart",event=>{
-    const touch=event.touches?.[0];
-    rewardTouchStartX=Number(touch?.clientX)||0;
-    rewardTouchStartY=Number(touch?.clientY)||0;
-    clampRewardScroll();
+    if(event.touches?.length!==1){rewardTouchPan.active=false;rewardTouchPan.axis="";return;}
+    const touch=event.touches[0];
+    rewardTouchPan.active=true;
+    rewardTouchPan.id=touch.identifier;
+    rewardTouchPan.startX=Number(touch.clientX)||0;
+    rewardTouchPan.startY=Number(touch.clientY)||0;
+    rewardTouchPan.startLeft=clampRewardScroll();
+    rewardTouchPan.axis="";
   },{passive:true});
   rewardScroll.addEventListener("touchmove",event=>{
-    const touch=event.touches?.[0];
+    if(!rewardTouchPan.active)return;
+    const touch=Array.from(event.touches||[]).find(item=>item.identifier===rewardTouchPan.id);
     if(!touch)return;
-    const dx=(Number(touch.clientX)||0)-rewardTouchStartX;
-    const dy=(Number(touch.clientY)||0)-rewardTouchStartY;
-    if(Math.abs(dx)<=Math.abs(dy))return;
-    const maxLeft=rewardScrollMaxLeft(rewardScroll);
-    const current=Math.max(0,Math.min(maxLeft,Number(rewardScroll.scrollLeft)||0));
-    const pullingPastStart=current<=0.5&&dx>0;
-    const pullingPastEnd=current>=maxLeft-0.5&&dx<0;
-    if(pullingPastStart||pullingPastEnd){
-      event.preventDefault();
-      if(Math.abs((Number(rewardScroll.scrollLeft)||0)-current)>0.5)rewardScroll.scrollLeft=current;
+    const dx=(Number(touch.clientX)||0)-rewardTouchPan.startX;
+    const dy=(Number(touch.clientY)||0)-rewardTouchPan.startY;
+    if(!rewardTouchPan.axis){
+      if(Math.max(Math.abs(dx),Math.abs(dy))<5)return;
+      rewardTouchPan.axis=Math.abs(dx)>Math.abs(dy)*1.05?"x":"y";
     }
+    if(rewardTouchPan.axis!=="x")return;
+    // Never hand a horizontal gesture to iOS native overflow scrolling.
+    // We move scrollLeft ourselves and clamp every frame to real content.
+    event.preventDefault();
+    const maxLeft=rewardScrollMaxLeft(rewardScroll);
+    const next=Math.max(0,Math.min(maxLeft,rewardTouchPan.startLeft-dx));
+    if(Math.abs((Number(rewardScroll.scrollLeft)||0)-next)>0.25)rewardScroll.scrollLeft=next;
   },{passive:false});
-  rewardScroll.addEventListener("touchend",()=>clampRewardScroll(),{passive:true});
-  rewardScroll.addEventListener("touchcancel",()=>clampRewardScroll(),{passive:true});
+  const finishRewardTouchPan=()=>{
+    rewardTouchPan.active=false;
+    rewardTouchPan.id=null;
+    rewardTouchPan.axis="";
+    clampRewardScroll();
+  };
+  rewardScroll.addEventListener("touchend",finishRewardTouchPan,{passive:true});
+  rewardScroll.addEventListener("touchcancel",finishRewardTouchPan,{passive:true});
   rewardScroll.addEventListener("scroll",()=>{
     const maxLeft=rewardScrollMaxLeft(rewardScroll);
     const raw=Number(rewardScroll.scrollLeft)||0;
@@ -7991,7 +8003,16 @@ let taskInfoMotion = null;
   .season-story-actions button:not([hidden]){display:flex!important;align-items:center!important;justify-content:center!important;width:min(100%,330px)!important;min-height:42px!important}
   .season-story-actions button[hidden]{display:none!important}
 }
-.reward-scroll{overscroll-behavior-x:none!important}
+/* v4: iOS/Telegram WebView must not own horizontal panning here.
+   Native overflow scrolling can rubber-band past scrollWidth and expose a huge
+   blank area even while scrollLeft itself remains clamped. Keep the viewport
+   programmatically scrollable, but handle horizontal finger drags ourselves. */
+.reward-scroll{
+  overflow-x:hidden!important;
+  overscroll-behavior:none!important;
+  touch-action:pan-y!important;
+  -webkit-overflow-scrolling:auto!important;
+}
 </style>
 
 
