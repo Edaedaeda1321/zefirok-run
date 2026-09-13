@@ -5,11 +5,13 @@ const root = process.cwd();
 const workerPath = path.join(root, 'src', 'worker.js');
 const indexPath = path.join(root, 'index.html');
 const battlePassPath = path.join(root, 'battle-pass.html');
+const ratingPath = path.join(root, 'rating.html');
 const assetCheckPath = path.join(root, 'scripts', 'check-assets.mjs');
 const assetManifestCheckPath = path.join(root, 'scripts', 'check-asset-manifest.mjs');
 const worker = fs.readFileSync(workerPath, 'utf8');
 const index = fs.readFileSync(indexPath, 'utf8');
 const battlePass = fs.readFileSync(battlePassPath, 'utf8');
+const rating = fs.readFileSync(ratingPath, 'utf8');
 const assetCheck = fs.readFileSync(assetCheckPath, 'utf8');
 const assetManifestCheck = fs.readFileSync(assetManifestCheckPath, 'utf8');
 const playerUiPaths = ['index.html','battle-pass.html','rating.html','referrals.html','achievements.html','album.html','legal.html'];
@@ -295,6 +297,32 @@ assert(!tutorialPickupBranch.includes('state.runCoffee += 1'), 'tutorial pickup 
 assert(!tutorialPickupBranch.includes('state.score += 35'), 'tutorial pickup grants real score');
 assert(index.includes('gameplayCoachSkipBtn?.addEventListener'), 'gameplay coach cannot be skipped');
 assert(index.includes('gameplayCoachActionBtn?.addEventListener'), 'gameplay coach completion cannot resume the run');
+
+// Progressive onboarding uses the real production UI, keeps long-form guides as
+// manual reference, and allows at most one new automatic coach flow per app session.
+assert(index.includes('zefirok-progressive-context-coach-v1'), 'progressive context coach runtime is missing');
+assert(index.includes('zefirok_context_coach_seen_v1'), 'context coach seen-state storage is missing');
+assert(index.includes('zefirok_context_coach_session_v1'), 'context coach per-session limiter is missing');
+assert(index.includes('title:&#x27;Выбери нужную витрину&#x27;'), 'shop coach does not teach real filters');
+assert(index.includes('title:&#x27;Проверь, что спишется&#x27;'), 'purchase confirmation coach is missing');
+assert(index.includes('title:&#x27;Один из каждой группы&#x27;'), 'booster coach does not teach one-per-group behavior');
+assert(index.includes('×2 Кофе + Щит'), 'booster coach lacks the valid cross-group example');
+assert(index.includes('title:&#x27;Сначала посмотри состав и шансы&#x27;'), 'first-case coach is missing');
+assert(index.includes('allow:&#x27;.case-card-info-trigger&#x27;'), 'case coach does not require the safe info action');
+assert(index.includes('title:&#x27;Здесь твой уровень и XP&#x27;'), 'profile XP coach is missing');
+assert(index.includes('title:&#x27;Оформление — в «Моём стиле»&#x27;'), 'profile style coach is missing');
+assert(index.includes('Automatic long-form profile/case guides were replaced by contextual coach marks.'), 'legacy profile/case automatic guide was not retired');
+assert(index.includes('Rating onboarding now happens inside the real leaderboard with one contextual hint.'), 'legacy rating tutorial interception was not retired');
+for (const excluded of ['achievements','album','mail','friends','daily']) {
+  assert(!index.includes(`if(id===&#x27;${excluded}&#x27;)`), `excluded ${excluded} section was added to automatic context coach`);
+}
+assert(battlePass.includes('zefirok-season-context-coach-v1'), 'season contextual coach is missing');
+assert(battlePass.includes("SESSION_KEY='zefirok_context_coach_session_v1'"), 'season coach does not share the per-session limiter');
+assert(battlePass.includes("target:()=>document.querySelector('[data-view-tab=\"tasks\"]')"), 'season coach does not teach the real tasks tab');
+assert(battlePass.includes("target:()=>document.querySelector('#taskOverview')"), 'season coach does not explain task XP state');
+assert(rating.includes('zefirok-rating-context-coach-v1'), 'rating contextual hint is missing');
+assert(rating.includes("document.querySelectorAll('[data-player-profile-id]')"), 'rating coach does not target real player cards');
+assert(rating.includes("if(ev.type==='click')setTimeout(()=>finish(true),40)"), 'rating coach does not complete on a real player click');
 
 // Delivery monitoring must separate terminal application failures from Telegram
 // recipients who permanently blocked/deactivated the bot, and reward retries must

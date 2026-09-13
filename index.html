@@ -17417,17 +17417,8 @@ function createTutorialDeck(layer, mount, options, words) {
 
       function scheduleProfileTutorialAutoOpen(delay = 300) {
         window.clearTimeout(profileTutorialAutoTimer);
-        const caseTutorialPending = String(state.caseTutorialSeenKey || &quot;&quot;) !== CASE_TUTORIAL_KEY;
-        if ((!caseTutorialPending &amp;&amp; state.profileTutorialCompleted) || pendingReleaseNotice || (releaseLayer &amp;&amp; !releaseLayer.hidden)) return;
-        profileTutorialAutoTimer = window.setTimeout(() =&gt; {
-          const profileScreen = root.querySelector(&#x27;[data-screen=&quot;profile&quot;]&#x27;);
-          if (!profileScreen || profileScreen.hidden || !tutorialLayer?.hidden || (gameplayCoachLayer &amp;&amp; !gameplayCoachLayer.hidden)) return;
-          if (String(state.caseTutorialSeenKey || &quot;&quot;) !== CASE_TUTORIAL_KEY) {
-            openCaseTutorial(true);
-            return;
-          }
-          if (!state.profileTutorialCompleted) openProfileTutorial(true);
-        }, delay);
+        // Automatic long-form profile/case guides were replaced by contextual coach marks.
+        // The detailed guides remain available manually from «Настройки и обучение».
       }
 
 
@@ -25676,10 +25667,8 @@ function createTutorialDeck(layer, mount, options, words) {
       }
 
       function requestOpenLeaderboard() {
-        if (String(state.ratingTutorialSeenKey || &quot;&quot;) !== RATING_TUTORIAL_KEY) {
-          openRatingTutorial(false);
-          return;
-        }
+        // Rating onboarding now happens inside the real leaderboard with one contextual hint.
+        // The full rating guide is still available from the help button.
         openLeaderboard();
       }
 
@@ -30345,6 +30334,142 @@ html &gt; body.zefirok-game-expanded{height:var(--zefirok-visible-height,100dvh)
 })();
 &lt;/script&gt;
 
+&lt;script id=&quot;zefirok-progressive-context-coach-v1&quot;&gt;
+(()=&gt;{
+  if(window.__ZEFIROK_PROGRESSIVE_CONTEXT_COACH_V1__)return;
+  window.__ZEFIROK_PROGRESSIVE_CONTEXT_COACH_V1__=true;
+  const root=document.getElementById(&#x27;zefirok-maltipoo-runner&#x27;)||document;
+  const SEEN_KEY=&#x27;zefirok_context_coach_seen_v1&#x27;;
+  const SESSION_KEY=&#x27;zefirok_context_coach_session_v1&#x27;;
+  const RUNNER_PROGRESS_KEY=&#x27;zefirok-runner-progress-v2&#x27;;
+  let active=null,layoutFrame=0,retryTimer=0,maybeTimer=0;
+
+  const style=document.createElement(&#x27;style&#x27;);
+  style.id=&#x27;zefirok-context-coach-style-v1&#x27;;
+  style.textContent=`
+#zefirok-maltipoo-runner .context-coach-layer{position:fixed;inset:0;z-index:110500;pointer-events:none;font-family:-apple-system,BlinkMacSystemFont,&quot;Segoe UI&quot;,sans-serif;color:#6f3d51;isolation:isolate}
+#zefirok-maltipoo-runner .context-coach-layer[hidden]{display:none!important}
+#zefirok-maltipoo-runner .context-coach-spotlight{position:fixed;z-index:1;border:2px solid rgba(255,255,255,.98);border-radius:20px;box-shadow:0 0 0 9999px rgba(39,24,31,.64),0 0 0 6px rgba(236,105,153,.28),0 14px 34px rgba(73,33,48,.22);pointer-events:none;transition:left .18s ease,top .18s ease,width .18s ease,height .18s ease}
+#zefirok-maltipoo-runner .context-coach-spotlight::after{content:&quot;&quot;;position:absolute;inset:-7px;border:2px solid rgba(241,119,164,.72);border-radius:inherit;animation:zcc-pulse 1.35s ease-in-out infinite}
+#zefirok-maltipoo-runner .context-coach-card{position:fixed;z-index:3;width:min(338px,calc(100vw - 24px));box-sizing:border-box;padding:15px;border:1px solid rgba(242,198,212,.96);border-radius:21px;background:linear-gradient(180deg,#fffdfb,#fff4f8);box-shadow:0 20px 58px rgba(49,24,35,.30);pointer-events:auto;text-align:left}
+#zefirok-maltipoo-runner .context-coach-kicker{display:inline-flex;align-items:center;min-height:24px;padding:5px 9px;border-radius:999px;background:#ffe2ed;color:#b74770;font-size:9px;font-weight:950;letter-spacing:.06em;text-transform:uppercase}
+#zefirok-maltipoo-runner .context-coach-card h3{margin:8px 0 5px;color:#74354f;font-size:18px;line-height:1.1;font-weight:950}
+#zefirok-maltipoo-runner .context-coach-card p{margin:0;color:#846b76;font-size:12px;line-height:1.45;font-weight:650}
+#zefirok-maltipoo-runner .context-coach-actions{display:flex;justify-content:space-between;gap:8px;margin-top:12px}
+#zefirok-maltipoo-runner .context-coach-actions button{min-height:38px;padding:9px 13px;border-radius:12px;font:900 11px/1.1 inherit;touch-action:manipulation}
+#zefirok-maltipoo-runner .context-coach-skip{border:1px solid #ead8df;background:#fff;color:#97717f}
+#zefirok-maltipoo-runner .context-coach-action{margin-left:auto;border:0;background:linear-gradient(180deg,#ee82aa,#d95b8a);color:#fff;box-shadow:0 7px 16px rgba(205,77,125,.18)}
+@keyframes zcc-pulse{0%,100%{opacity:.55;transform:scale(.99)}50%{opacity:1;transform:scale(1.015)}}
+@media(max-width:360px){#zefirok-maltipoo-runner .context-coach-card{width:min(310px,calc(100vw - 20px));padding:13px}#zefirok-maltipoo-runner .context-coach-card h3{font-size:17px}}
+@media(prefers-reduced-motion:reduce){#zefirok-maltipoo-runner .context-coach-spotlight,#zefirok-maltipoo-runner .context-coach-spotlight::after{transition:none!important;animation:none!important}}
+`;
+  document.head.append(style);
+  const layer=document.createElement(&#x27;div&#x27;);
+  layer.className=&#x27;context-coach-layer&#x27;;layer.dataset.contextCoach=&#x27;&#x27;;layer.hidden=true;layer.setAttribute(&#x27;aria-hidden&#x27;,&#x27;true&#x27;);
+  layer.innerHTML=&#x27;&lt;div class=&quot;context-coach-spotlight&quot; data-context-coach-spotlight&gt;&lt;/div&gt;&lt;section class=&quot;context-coach-card&quot; data-context-coach-card role=&quot;dialog&quot; aria-modal=&quot;false&quot; aria-live=&quot;polite&quot;&gt;&lt;span class=&quot;context-coach-kicker&quot; data-context-coach-kicker&gt;Подсказка&lt;/span&gt;&lt;h3 data-context-coach-title&gt;&lt;/h3&gt;&lt;p data-context-coach-copy&gt;&lt;/p&gt;&lt;div class=&quot;context-coach-actions&quot;&gt;&lt;button class=&quot;context-coach-skip&quot; data-context-coach-skip type=&quot;button&quot;&gt;Пропустить&lt;/button&gt;&lt;button class=&quot;context-coach-action&quot; data-context-coach-action type=&quot;button&quot;&gt;Дальше&lt;/button&gt;&lt;/div&gt;&lt;/section&gt;&#x27;;
+  root.append(layer);
+  const spot=layer.querySelector(&#x27;[data-context-coach-spotlight]&#x27;),card=layer.querySelector(&#x27;[data-context-coach-card]&#x27;),kicker=layer.querySelector(&#x27;[data-context-coach-kicker]&#x27;),title=layer.querySelector(&#x27;[data-context-coach-title]&#x27;),copy=layer.querySelector(&#x27;[data-context-coach-copy]&#x27;),skip=layer.querySelector(&#x27;[data-context-coach-skip]&#x27;),action=layer.querySelector(&#x27;[data-context-coach-action]&#x27;);
+
+  function readSeen(){try{const v=JSON.parse(localStorage.getItem(SEEN_KEY)||&#x27;{}&#x27;);return v&amp;&amp;typeof v===&#x27;object&#x27;&amp;&amp;!Array.isArray(v)?v:{}}catch{return {}}}
+  function isSeen(id){return Boolean(readSeen()[id])}
+  function markSeen(id){try{const v=readSeen();v[id]=1;localStorage.setItem(SEEN_KEY,JSON.stringify(v))}catch{}}
+  function sessionOwner(){try{return String(sessionStorage.getItem(SESSION_KEY)||&#x27;&#x27;)}catch{return &#x27;&#x27;}}
+  function claimSession(id){try{const owner=sessionOwner();if(owner&amp;&amp;owner!==id)return false;if(!owner)sessionStorage.setItem(SESSION_KEY,id);return true}catch{return true}}
+  function gameplayTutorialCompleted(){try{return Boolean(JSON.parse(localStorage.getItem(RUNNER_PROGRESS_KEY)||&#x27;{}&#x27;)?.tutorialCompleted)}catch{return true}}
+  function visible(el){if(!(el instanceof Element)||el.hidden)return false;const r=el.getBoundingClientRect();const cs=getComputedStyle(el);return cs.display!==&#x27;none&#x27;&amp;&amp;cs.visibility!==&#x27;hidden&#x27;&amp;&amp;r.width&gt;2&amp;&amp;r.height&gt;2}
+  function screen(name){const el=root.querySelector(`[data-screen=&quot;${name}&quot;]`);return el&amp;&amp;!el.hidden?el:null}
+  function stockView(){return root.querySelector(&#x27;[data-stock-view][aria-selected=&quot;true&quot;]&#x27;)?.dataset.stockView||&#x27;&#x27;}
+  function hasBooster(){return Boolean(root.querySelector(&#x27;[data-case-boosters-list] .case-booster-card.is-active,[data-case-boosters-list] button[data-activate-case-booster]:not(:disabled),[data-case-boosters-list] button[data-booster-conflict]&#x27;))}
+  function hasCase(){return Boolean(root.querySelector(&#x27;[data-case-gifted-list] .gifted-case-card[data-case-stock-card]&#x27;))}
+  function busyFor(id){
+    if(active)return true;
+    const gameplay=root.querySelector(&#x27;[data-gameplay-coach]&#x27;);if(gameplay&amp;&amp;!gameplay.hidden)return true;
+    const guide=root.querySelector(&#x27;[data-tutorial-layer]&#x27;);if(guide&amp;&amp;!guide.hidden)return true;
+    const release=root.querySelector(&#x27;[data-release-layer]&#x27;);if(release&amp;&amp;!release.hidden)return true;
+    if(id===&#x27;shop_confirm&#x27;)return false;
+    const purchase=root.querySelector(&#x27;[data-purchase-layer]&#x27;);if(purchase&amp;&amp;!purchase.hidden)return true;
+    const caseLayer=root.querySelector(&#x27;[data-case-layer]&#x27;);if(caseLayer&amp;&amp;!caseLayer.hidden)return true;
+    return false;
+  }
+  const targetOf=step=&gt;{try{return typeof step.target===&#x27;function&#x27;?step.target():root.querySelector(step.target)}catch{return null}};
+  function decks(id){
+    if(id===&#x27;shop&#x27;)return [
+      {kicker:&#x27;Магазин · 1 из 2&#x27;,title:&#x27;Выбери нужную витрину&#x27;,copy:&#x27;Фильтры «Все», «В кафе» и «Кейсы» меняют только ассортимент. Нажми любой фильтр — покупка от этого не начнётся.&#x27;,target:&#x27;.rewards-v2-filters&#x27;,allow:&#x27;[data-rewards-v2-filter]&#x27;},
+      {kicker:&#x27;Магазин · 2 из 2&#x27;,title:&#x27;Смотри актуальную цену&#x27;,copy:&#x27;У товара могут одновременно требоваться очки, зефир и кофе. Ориентируйся на цену в карточке и в окне подтверждения.&#x27;,target:()=&gt;root.querySelector(&#x27;.rewards-v2-card .rewards-v2-prices&#x27;)||root.querySelector(&#x27;.rewards-v2-card&#x27;),button:&#x27;Понятно&#x27;}
+    ];
+    if(id===&#x27;shop_confirm&#x27;)return [{kicker:&#x27;Перед покупкой&#x27;,title:&#x27;Проверь, что спишется&#x27;,copy:&#x27;Здесь показана точная стоимость этой покупки. Деньги и ресурсы списываются только после нажатия «Купить» — эта подсказка ничего не покупает.&#x27;,target:()=&gt;root.querySelector(&#x27;[data-purchase-layer]:not([hidden]) .purchase-costs&#x27;)||root.querySelector(&#x27;[data-purchase-layer]:not([hidden]) .purchase-dialog&#x27;),button:&#x27;Понятно&#x27;}];
+    if(id===&#x27;boosters&#x27;){
+      const out=[];
+      if(stockView()!==&#x27;boosters&#x27;)out.push({kicker:&#x27;Мои покупки · 1 из 3&#x27;,title:&#x27;Твои усилители — здесь&#x27;,copy:&#x27;Полученные усилители хранятся в «Моих покупках». Нажми вкладку «Усилители».&#x27;,target:&#x27;[data-stock-view=&quot;boosters&quot;]&#x27;,allow:&#x27;[data-stock-view=&quot;boosters&quot;]&#x27;});
+      out.push({kicker:&#x27;Усилители&#x27;,title:&#x27;Один из каждой группы&#x27;,copy:&#x27;Можно одновременно использовать один «Бонус награды» и один «Помощник в забеге». Например, ×2 Кофе + Щит. Два усилителя одной группы вместе не работают.&#x27;,target:()=&gt;root.querySelector(&#x27;[data-case-boosters-list] .case-booster-card.is-active&#x27;)||root.querySelector(&#x27;[data-case-boosters-list] button[data-activate-case-booster]:not(:disabled)&#x27;)?.closest(&#x27;.case-booster-card&#x27;)||root.querySelector(&#x27;[data-case-boosters-list] button[data-booster-conflict]&#x27;)?.closest(&#x27;.case-booster-card&#x27;),button:&#x27;Дальше&#x27;});
+      out.push({kicker:&#x27;Перед забегом&#x27;,title:&#x27;Активация расходует один предмет&#x27;,copy:&#x27;Кнопка «Активировать» применяет усилитель к следующему забегу. Сейчас нажимать её не нужно — сначала выбери подходящее сочетание.&#x27;,target:()=&gt;root.querySelector(&#x27;[data-case-boosters-list] button[data-activate-case-booster]:not(:disabled)&#x27;)||root.querySelector(&#x27;[data-case-boosters-list] button[data-booster-conflict]&#x27;)||root.querySelector(&#x27;[data-case-boosters-list] .case-booster-card.is-active button&#x27;),button:&#x27;Понятно&#x27;});
+      return out;
+    }
+    if(id===&#x27;cases&#x27;){
+      const out=[];
+      if(stockView()!==&#x27;cases&#x27;)out.push({kicker:&#x27;Мои покупки · Кейсы&#x27;,title:&#x27;Кейсы хранятся отдельно&#x27;,copy:&#x27;Полученный обычный кейс появляется во вкладке «Кейсы». Нажми её.&#x27;,target:&#x27;[data-stock-view=&quot;cases&quot;]&#x27;,allow:&#x27;[data-stock-view=&quot;cases&quot;]&#x27;});
+      out.push({kicker:&#x27;Первый кейс&#x27;,title:&#x27;Сначала посмотри состав и шансы&#x27;,copy:&#x27;Нажми на изображение кейса. Откроются награды и правила — просмотр ничего не списывает. Сам кейс расходуется только кнопкой «Открыть».&#x27;,target:()=&gt;root.querySelector(&#x27;[data-case-gifted-list] .case-card-info-trigger&#x27;),allow:&#x27;.case-card-info-trigger&#x27;,finishOnAction:true});
+      return out;
+    }
+    if(id===&#x27;profile&#x27;)return [
+      {kicker:&#x27;Профиль · 1 из 2&#x27;,title:&#x27;Здесь твой уровень и XP&#x27;,copy:&#x27;Зачтённые забеги и подходящие покупки двигают прогресс профиля. Нажать на уровень можно позже, чтобы открыть полную лестницу наград.&#x27;,target:&#x27;.profile-level-card[data-profile-level-guide]&#x27;,button:&#x27;Дальше&#x27;},
+      {kicker:&#x27;Профиль · 2 из 2&#x27;,title:&#x27;Оформление — в «Моём стиле»&#x27;,copy:&#x27;Здесь можно примерить аватарку, рамку, след и музыку. Предпросмотр сам по себе ничего не применяет.&#x27;,target:&#x27;[data-my-style-entry]&#x27;,button:&#x27;Понятно&#x27;}
+    ];
+    return [];
+  }
+  function layout(){
+    if(!active||layer.hidden)return;const step=active.steps[active.index],target=targetOf(step);if(!visible(target)){retryLayout();return}
+    const r=target.getBoundingClientRect(),vw=Math.max(1,innerWidth||document.documentElement.clientWidth),vh=Math.max(1,innerHeight||document.documentElement.clientHeight),pad=7;
+    const left=Math.max(7,r.left-pad),top=Math.max(7,r.top-pad),width=Math.max(36,Math.min(vw-left-7,r.width+pad*2)),height=Math.max(36,Math.min(vh-top-7,r.height+pad*2));
+    Object.assign(spot.style,{left:`${left}px`,top:`${top}px`,width:`${width}px`,height:`${height}px`});
+    const cr=card.getBoundingClientRect(),cw=Math.min(Math.max(260,cr.width||330),vw-20),ch=Math.max(120,cr.height||155),cx=left+width/2;
+    const cardLeft=Math.max(10,Math.min(vw-cw-10,cx-cw/2));let cardTop=top+height+12;if(cardTop+ch&gt;vh-10)cardTop=Math.max(10,top-ch-12);
+    Object.assign(card.style,{left:`${cardLeft}px`,top:`${Math.max(10,Math.min(vh-ch-10,cardTop))}px`});
+  }
+  function retryLayout(){window.clearTimeout(retryTimer);retryTimer=window.setTimeout(()=&gt;{if(!active)return;const step=active.steps[active.index],target=targetOf(step);if(visible(target))renderStep();else finish(false)},220)}
+  function scheduleLayout(){if(!active)return;if(layoutFrame)cancelAnimationFrame(layoutFrame);layoutFrame=requestAnimationFrame(()=&gt;{layoutFrame=0;layout()})}
+  function renderStep(){
+    if(!active)return;const step=active.steps[active.index];if(!step){finish(true);return}const target=targetOf(step);
+    if(!visible(target)){retryLayout();return}
+    try{target.scrollIntoView({block:&#x27;center&#x27;,inline:&#x27;nearest&#x27;,behavior:&#x27;smooth&#x27;})}catch{}
+    kicker.textContent=step.kicker||&#x27;Подсказка&#x27;;title.textContent=step.title||&#x27;&#x27;;copy.textContent=step.copy||&#x27;&#x27;;action.textContent=step.button||&#x27;Дальше&#x27;;action.hidden=Boolean(step.allow&amp;&amp;!step.button);skip.hidden=false;
+    layer.hidden=false;layer.setAttribute(&#x27;aria-hidden&#x27;,&#x27;false&#x27;);window.setTimeout(scheduleLayout,80);scheduleLayout();
+  }
+  function start(id){
+    if(!gameplayTutorialCompleted()||isSeen(id)||sessionOwner()||busyFor(id))return false;
+    const steps=decks(id);if(!steps.length)return false;const first=targetOf(steps[0]);if(!visible(first))return false;
+    if(!claimSession(id))return false;active={id,steps,index:0};renderStep();return true;
+  }
+  function finish(mark=true){
+    if(!active)return;const id=active.id;if(mark)markSeen(id);active=null;window.clearTimeout(retryTimer);if(layoutFrame)cancelAnimationFrame(layoutFrame);layoutFrame=0;layer.hidden=true;layer.setAttribute(&#x27;aria-hidden&#x27;,&#x27;true&#x27;);
+  }
+  function advance(){if(!active)return;active.index+=1;if(active.index&gt;=active.steps.length){finish(true);return}window.setTimeout(renderStep,90)}
+  function guard(event){
+    if(!active)return;const t=event.target instanceof Element?event.target:null;if(t?.closest(&#x27;[data-context-coach-skip],[data-context-coach-action]&#x27;))return;
+    const step=active.steps[active.index],allowed=step?.allow&amp;&amp;t?.closest(step.allow);if(allowed){if(event.type===&#x27;click&#x27;)window.setTimeout(()=&gt;step.finishOnAction?finish(true):advance(),60);return}
+    event.preventDefault();event.stopImmediatePropagation();
+  }
+  function noteGameplay(){const g=root.querySelector(&#x27;[data-gameplay-coach]&#x27;);if(g&amp;&amp;!g.hidden&amp;&amp;!sessionOwner()){try{sessionStorage.setItem(SESSION_KEY,&#x27;gameplay&#x27;)}catch{}}}
+  function maybe(){
+    window.clearTimeout(maybeTimer);maybeTimer=0;noteGameplay();if(active||sessionOwner()||!gameplayTutorialCompleted())return;
+    const purchase=root.querySelector(&#x27;[data-purchase-layer]&#x27;);if(purchase&amp;&amp;!purchase.hidden&amp;&amp;String(purchase.dataset.purchaseMode||&#x27;&#x27;)===&#x27;confirm&#x27;&amp;&amp;!isSeen(&#x27;shop_confirm&#x27;)){if(start(&#x27;shop_confirm&#x27;))return}
+    if(screen(&#x27;shop&#x27;)&amp;&amp;!isSeen(&#x27;shop&#x27;)){if(start(&#x27;shop&#x27;))return}
+    if(screen(&#x27;warehouse&#x27;)){
+      if(!isSeen(&#x27;boosters&#x27;)&amp;&amp;hasBooster()){if(start(&#x27;boosters&#x27;))return}
+      if(!isSeen(&#x27;cases&#x27;)&amp;&amp;hasCase()){if(start(&#x27;cases&#x27;))return}
+    }
+    if(screen(&#x27;profile&#x27;)&amp;&amp;!isSeen(&#x27;profile&#x27;))start(&#x27;profile&#x27;);
+  }
+  function scheduleMaybe(delay=140){window.clearTimeout(maybeTimer);maybeTimer=window.setTimeout(maybe,delay)}
+  skip.addEventListener(&#x27;click&#x27;,event=&gt;{event.preventDefault();event.stopPropagation();finish(true)});
+  action.addEventListener(&#x27;click&#x27;,event=&gt;{event.preventDefault();event.stopPropagation();advance()});
+  root.addEventListener(&#x27;pointerdown&#x27;,guard,true);root.addEventListener(&#x27;click&#x27;,guard,true);
+  addEventListener(&#x27;resize&#x27;,scheduleLayout,{passive:true});addEventListener(&#x27;scroll&#x27;,scheduleLayout,{passive:true,capture:true});
+  new MutationObserver(()=&gt;scheduleMaybe()).observe(root,{subtree:true,childList:true,attributes:true,attributeFilter:[&#x27;hidden&#x27;,&#x27;aria-selected&#x27;,&#x27;data-purchase-mode&#x27;,&#x27;class&#x27;]});
+  document.addEventListener(&#x27;visibilitychange&#x27;,()=&gt;{if(!document.hidden)scheduleMaybe(180)});
+  scheduleMaybe(700);
+})();
+&lt;/script&gt;
 &lt;/body&gt;
 &lt;/html&gt;
 &lt;style id=&quot;zefirok-levels-boosters-info-v2&quot;&gt;
@@ -30463,7 +30588,7 @@ html &gt; body.zefirok-game-expanded{height:var(--zefirok-visible-height,100dvh)
 /* Night Shift artwork is 3:2 with a square center opening. Crop its padded sides so the opening matches the avatar. */
 #zefirok-maltipoo-runner .profile-avatar-wrap.case-frame-season3_frame_epic::after{inset:-8%!important;background-image:url(&quot;/assets/rating/frames/profile/epickramka_season2_2.webp&quot;);background-size:200% auto!important;background-position:center center!important}
 &lt;/style&gt;
-" title="Сладкий Забег"></iframe>
+&quot; title=&quot;Сладкий Забег"></iframe>
 <script id="zefirok-v07934-season-pass-overlay-audit" type="application/json">{"version":"0.79.34","scope":"outer-app-return-recovery","samePageOverlay":true,"mainGamePreserved":true,"restores":["telegram_profile","rating","balances","cases","notifications","feature_flags"]}</script>
 <script type="application/json" id="zefirok-v07944-outer-audit">{"build":"0.79.44","fixes":["season-pass-cache-version","return-refresh"]}</script>
 
