@@ -1951,6 +1951,11 @@ export default {
       const maintenanceResponse = await enforceMaintenanceForRequest(request, url, env);
       if (maintenanceResponse) return maintenanceResponse;
 
+      if (url.pathname === "/api/profile/overview" && request.method === "POST") {
+        const legalGate = await enforceLegalAcceptanceForRequest(request, env);
+        if (legalGate) return legalGate;
+        return await withPlayerApiPerformance(env, ctx, "profile_overview", () => getProfileOverview(request, env));
+      }
       if (url.pathname === "/api/album/state" && request.method === "POST") {
         const legalGate = await enforceLegalAcceptanceForRequest(request, env);
         if (legalGate) return legalGate;
@@ -7319,6 +7324,14 @@ function startupSectionError(error) {
   };
 }
 
+function startupBounded(label, promise, timeoutMs = 2500) {
+  let timer;
+  return Promise.race([
+    Promise.resolve(promise),
+    new Promise((_, reject) => { timer = setTimeout(() => reject(new ApiError(503, `${label}: timeout`)), timeoutMs); })
+  ]).finally(() => clearTimeout(timer));
+}
+
 async function getGameStartupPackage(request, env, ctx = null) {
   try {
     const body = await readJson(request);
@@ -7355,7 +7368,7 @@ async function getGameStartupPackage(request, env, ctx = null) {
     // Track a real game open without adding a new client request. This write runs in
     // parallel with the existing startup sections and is awaited before the package
     // returns, so the following Daily claim can reliably inspect the previous visit.
-    const presencePromise=recordGamePresence(env,telegramId).catch((error)=>{console.error('startup presence tracking failed',error);return null;});
+    scheduleRunSettlementBackground(ctx,recordGamePresence(env,telegramId),'startup presence tracking failed');
     // Pending reward delivery is maintenance work, not part of the startup response.
     // Cron remains the durable fallback when the isolate is stopped before waitUntil finishes.
     scheduleRunSettlementBackground(ctx,
@@ -7377,20 +7390,17 @@ async function getGameStartupPackage(request, env, ctx = null) {
       .catch((error) => { console.error("startup mail v3 maintenance failed", error); return 0; });
     const startupAccountRevisionPromise = startupMailMaintenancePromise.then(() => readPlayerAccountRevision(env, telegramId));
     const startupSideSections = Promise.allSettled([
-      readSeasonPassTaskNoticeState(env, telegramId),
-      getSeasonPassProfileBonusForUser(env, telegramId),
-      listMyRewards(null, env, { raw: true, body: internalBody, auth }),
-      publicFeatureFlags(env, telegramId, { trustedIdentity: true }),
-      getGameNewsForPlayer(env, telegramId),
-      playerMailV3Snapshot(env, telegramId, { maintenancePromise:startupMailMaintenancePromise, revisionPromise:startupAccountRevisionPromise }),
-      seasonPassMiniGameVisualsForPlayer(env, telegramId),
-      startupAccountRevisionPromise,
-      activeRunLiveOpsEvent(env),
-      newcomerPathState(env, telegramId),
-      Promise.race([
-        achievementShowcasePreviewForPlayer(env, telegramId),
-        new Promise((resolve)=>setTimeout(()=>resolve(null),350))
-      ])
+      startupBounded('season-task-notice', readSeasonPassTaskNoticeState(env, telegramId), 1800),
+      startupBounded('season-profile-bonus', getSeasonPassProfileBonusForUser(env, telegramId), 1800),
+      startupBounded('rewards', listMyRewards(null, env, { raw: true, body: internalBody, auth }), 2200),
+      startupBounded('feature-flags', publicFeatureFlags(env, telegramId, { trustedIdentity: true }), 1500),
+      startupBounded('news', getGameNewsForPlayer(env, telegramId), 1800),
+      startupBounded('mail-snapshot', playerMailV3Snapshot(env, telegramId, { maintenancePromise:startupMailMaintenancePromise, revisionPromise:startupAccountRevisionPromise }), 2200),
+      startupBounded('mini-game-visuals', seasonPassMiniGameVisualsForPlayer(env, telegramId), 1800),
+      startupBounded('account-revision', startupAccountRevisionPromise, 1800),
+      startupBounded('liveops-event', activeRunLiveOpsEvent(env), 1500),
+      startupBounded('newcomer-path', newcomerPathState(env, telegramId), 1800),
+      startupBounded('achievement-showcase', achievementShowcasePreviewForPlayer(env, telegramId), 900)
     ]);
 
     let profile = null;
@@ -7404,8 +7414,8 @@ async function getGameStartupPackage(request, env, ctx = null) {
     // Cases reuse the case state prepared by profile sync, so keep that dependency,
     // while the other startup sections have already been running in parallel.
     const [casesSettled, sideSettled] = await Promise.all([
-      Promise.allSettled([getLevelCaseState(null, env, { raw: true, body: internalBody, auth, shared })]),
-      Promise.all([startupSideSections,presencePromise]).then(([side])=>side)
+      Promise.allSettled([startupBounded('cases', getLevelCaseState(null, env, { raw: true, body: internalBody, auth, shared }), 2500)]),
+      startupSideSections
     ]);
     const casesResult = casesSettled[0];
     const [taskNoticeResult, seasonPassBonusResult, rewardsResult, flagsResult, newsResult, giftsResult, miniGameVisualResult, accountRevisionResult, liveOpsEventResult, newcomerPathResult, achievementShowcaseResult] = sideSettled;
@@ -8493,7 +8503,7 @@ async function readReadyAuthoritativeProfileRow(env, telegramId) {
   } catch(error) { if(isMissingRuntimeDatabaseSchemaError(error))return null; throw error; }
 }
 
-async function ensureAuthoritativeProfileRow(env, telegramId, actor = 'server') {
+async function ensureAuthoritativeProfileRow(env, telegramId, actor = 'server', options = {}) {
   const id = String(telegramId);
   const ready = await readReadyAuthoritativeProfileRow(env, id); if (ready) return ready;
   await ensureAuthoritativeEconomySchema(env);
@@ -8512,7 +8522,7 @@ async function ensureAuthoritativeProfileRow(env, telegramId, actor = 'server') 
   // that happened after the last legacy profile synchronization. No numbers
   // supplied by the client participate in this cutover.
   const cutoverAt = await authoritativeEconomyCutoverAt(env);
-  if (before && Number(before.created_at || 0) <= cutoverAt && !(await legacyPlayerMigrationReadFallback(env,'authoritative_economy_cutover'))) {
+  if (options?.allowLegacyRecovery !== false && before && Number(before.created_at || 0) <= cutoverAt && !(await legacyPlayerMigrationReadFallback(env,'authoritative_economy_cutover'))) {
     await recoverLegacyUnsyncedRunProgress(env, id, Number(before.updated_at || 0));
   }
   // New post-cutover players never need a legacy marker. Once the audit reaches
@@ -9317,7 +9327,7 @@ async function syncAdminProfile(request, env, internal = null) {
     // IMPORTANT: normal player sync never imports wallet / XP / ownership from
     // the browser. Only authenticated admin write/set operations may mutate
     // these values directly.
-    let authoritativeRow = await ensureAuthoritativeProfileRow(env, telegramId, `sync:${telegramId}`);
+    let authoritativeRow = await ensureAuthoritativeProfileRow(env, telegramId, `sync:${telegramId}`, { allowLegacyRecovery: mode !== 'read' });
     if (mode === "write") {
       const next = normalizeAdminProfile(body.next || {});
       await env.DB.prepare(
@@ -10893,7 +10903,7 @@ const CASE_STATE_COMMIT_MAX_ATTEMPTS = 3;
 async function ensureCasePlayerState(env, telegramId, currentProfile = {}, options = {}) {
   const now = Math.floor(Date.now() / 1000);
   const id = String(telegramId);
-  let profile = options?.profile || (options?.profilePromise ? await options.profilePromise : await ensureAuthoritativeProfileRow(env, id, `case-sync:${id}`));
+  let profile = options?.profile || (options?.profilePromise ? await options.profilePromise : (options?.skipProfile ? null : await ensureAuthoritativeProfileRow(env, id, `case-sync:${id}`, { allowLegacyRecovery: options?.allowLegacyRecovery !== false })));
   await env.DB.prepare(
     `INSERT OR IGNORE INTO case_player_state (telegram_id,created_at,updated_at) VALUES (?,?,?)`
   ).bind(id, now, now).run();
@@ -31316,9 +31326,9 @@ async function ensureSeasonPassSchema(env) {
   if (seasonPassSchemaReady) return;
   if (seasonPassSchemaPromise) return seasonPassSchemaPromise;
   const promise = (async () => {
-    if (await seasonPassSchemaMarkerReady(env)) return;
+    const markerReady = await seasonPassSchemaMarkerReady(env);
     if (await seasonPassSchemaQuickCheck(env)) {
-      await markSeasonPassSchemaReady(env);
+      if (!markerReady) await markSeasonPassSchemaReady(env);
       return;
     }
     await env.DB.batch([
@@ -44639,10 +44649,30 @@ async function buildReferralState(env, telegramId, actor = null) {
   return {ok:true,program:config,self:{telegramId:id,code,displayName:identities.get(id)?.displayName||telegramDisplayName(actor||{})||'Игрок'},inviter,milestoneRules:milestones.map((m)=>({key:String(m.milestone_key),title:String(m.title||''),description:String(m.description||''),triggerType:String(m.trigger_type||''),triggerValue:String(m.trigger_value||'')})),totalInvited:freshFriends.length,activeFriends,notifications:notificationState,friendGift:giftProgram,weeklyProgram:{enabled:Boolean(config.enabled&&config.weeklyEnabled),weekKey:period.key,target:weeklyTarget,myRuns:myWeekRuns,endsAt:period.endAt,completed:Boolean(weeklyAsReferrer),partnerId:String(weeklyAsReferrer?.invitee_telegram_id||''),achievedAt:Number(weeklyAsReferrer?.achieved_at||0),referrerReward:config.weeklyReferrerReward,referrerRewardLabel:referralRewardLabel(config.weeklyReferrerReward),inviteeReward:config.weeklyInviteeReward,inviteeRewardLabel:referralRewardLabel(config.weeklyInviteeReward)},nextNetworkMilestone:nextNetwork?{threshold:Number(nextNetwork.threshold),title:String(nextNetwork.title||''),remaining:Math.max(0,Number(nextNetwork.threshold)-activeFriends),reward:nextNetwork.reward,rewardLabel:nextNetwork.rewardLabel,choice:nextNetwork.choice}:null,networkMilestones:networkViews,pendingChoices,feed,friends:friendViews,rewards:rewards.map((row)=>({id:String(row.reward_id),inviteeTelegramId:String(row.invitee_telegram_id||''),role:String(row.role||''),sourceType:String(row.source_type||''),sourceKey:String(row.source_key||''),status:String(row.status||''),reward:referralSafeReward(row.reward_json),rewardLabel:referralRewardLabel(row.reward_json),targetSeasonId:String(row.target_season_id||''),createdAt:Number(row.created_at||0),deliveredAt:Number(row.delivered_at||0),error:String(row.error_text||'')})),pendingCount:rewards.filter((row)=>['pending','failed'].includes(String(row.status))).length+pendingChoices.length};
 }
 
+async function getProfileOverview(request, env){
+  try{
+    const body=await readJson(request),auth=await validateTelegramInitData(String(body?.initData||body?.init_data||''),env),telegramId=String(auth.user.id);
+    await Promise.all([ensureAlbumSchema(env),ensureReferralSchema(env),ensureCasePlayerState(env,telegramId,{}, {skipProfile:true,allowLegacyRecovery:false})]);
+    const [albumCollections,albumItems,caseRow,refConfig,links,rewards,choices,achievementShowcase]=await Promise.all([
+      env.DB.prepare(`SELECT collection_id FROM album_collections WHERE status='published'`).all(),
+      env.DB.prepare(`SELECT i.collection_id,i.item_kind,i.item_id,i.required FROM album_collection_items i JOIN album_collections c ON c.collection_id=i.collection_id WHERE c.status='published'`).all(),
+      env.DB.prepare(`SELECT owned_avatars_json,owned_frames_json,owned_trails_json,owned_skins_json,owned_music_json FROM case_player_state WHERE telegram_id=? LIMIT 1`).bind(telegramId).first(),
+      referralProgramConfig(env),
+      env.DB.prepare(`SELECT COUNT(*) AS total,SUM(CASE WHEN status='active' THEN 1 ELSE 0 END) AS active FROM referral_links WHERE referrer_telegram_id=?`).bind(telegramId).first(),
+      env.DB.prepare(`SELECT COUNT(*) AS count FROM referral_rewards WHERE beneficiary_telegram_id=? AND status IN ('pending','failed')`).bind(telegramId).first(),
+      env.DB.prepare(`SELECT COUNT(*) AS count FROM referral_reward_choices WHERE referrer_telegram_id=? AND selected_at=0`).bind(telegramId).first(),
+      startupBounded('profile-achievement-showcase',achievementShowcasePreviewForPlayer(env,telegramId),900).catch(()=>null)
+    ]);
+    const owned={avatar:albumOwnedSet(caseRow?.owned_avatars_json),frame:albumOwnedSet(caseRow?.owned_frames_json),trail:albumOwnedSet(caseRow?.owned_trails_json),skin:albumOwnedSet(caseRow?.owned_skins_json,['default']),music:albumOwnedSet(caseRow?.owned_music_json,['cafe_run'])};
+    let requiredTotal=0,ownedRequired=0;for(const row of albumItems.results||[]){if(Number(row.required||0)!==1)continue;requiredTotal+=1;if(owned[String(row.item_kind||'')]?.has(String(row.item_id||'').toLowerCase()))ownedRequired+=1;}
+    return jsonResponse({ok:true,album:{collections:(albumCollections.results||[]).length,requiredTotal,ownedRequired,progressPercent:requiredTotal?Math.floor(ownedRequired*100/requiredTotal):0},referrals:{programEnabled:Boolean(refConfig?.enabled),totalInvited:Number(links?.total||0),activeFriends:Number(links?.active||0),pendingCount:Number(rewards?.count||0)+Number(choices?.count||0),boost:refConfig?.boost||{}},achievements:achievementShowcase});
+  }catch(error){if(error instanceof ApiError)return jsonResponse({ok:false,error:error.message},error.status);console.error('getProfileOverview failed',error);return jsonResponse({ok:false,error:'Не удалось загрузить сводку профиля.'},500);}
+}
+
 async function getReferralState(request,env){
   try{
     const body=await readJson(request);const initData=String(body?.initData||body?.init_data||'');const auth=await validateTelegramInitData(initData,env);const telegramId=String(auth.user.id);
-    await ensureReferralSchema(env);await ensureAuthoritativeProfileRow(env,telegramId,'referrals-state');
+    await ensureReferralSchema(env);
     const signedCode=referralCodeFromStartParam(initData);if(signedCode)await tryBindReferral(env,telegramId,signedCode,auth.user);
     return jsonResponse(await buildReferralState(env,telegramId,auth.user));
   }catch(error){if(error instanceof ApiError)return jsonResponse({ok:false,error:error.message},error.status);console.error('getReferralState failed',error);return jsonResponse({ok:false,error:'Не удалось загрузить «Друзей кафе».'},500);}
@@ -44972,6 +45002,19 @@ async function reconcileAlbumMilestoneClaims(env, telegramId, claims) {
 // Public acquisition metadata, shared by Album items. Never used for granting.
 // One cache per database; no per-item requests and no player-specific data in it.
 const albumAcquisitionCache = new WeakMap();
+const ALBUM_ACQUISITION_CACHE_TTL_MS = 5 * 60 * 1000;
+const ALBUM_ACQUISITION_CACHE_FALLBACK_TTL_MS = 30 * 1000;
+const ALBUM_ACQUISITION_TIMEOUT_MS = 1200;
+function albumAcquisitionFallback(){return {map:new Map(),complete:false};}
+function withAlbumAcquisitionTimeout(promise, timeoutMs = ALBUM_ACQUISITION_TIMEOUT_MS) {
+  return Promise.race([
+    Promise.resolve(promise),
+    new Promise((resolve)=>setTimeout(()=>resolve(albumAcquisitionFallback()), timeoutMs))
+  ]).catch((error)=>{
+    console.error("album acquisition metadata unavailable", error);
+    return albumAcquisitionFallback();
+  });
+}
 function albumCaseAcquisitionSources(liveops) {
   const result=new Map();
   const add=(kind,id,type,guaranteeOnly=false)=>{
@@ -45007,7 +45050,7 @@ async function albumAcquisitionSources(env) {
   const cached=albumAcquisitionCache.get(env.DB),now=Date.now();
   if(cached?.promise)return cached.promise;
   if(cached?.value&&cached.expires>now)return cached.value;
-  const entry={promise:null,value:null,expires:0};
+  const entry={promise:null,value:cached?.value||null,expires:cached?.expires||0};
   const read=async()=>{
     let complete=true;
     const optional=async(label,fn,fallback)=>{try{return await fn();}catch(error){complete=false;console.error("album source metadata unavailable",label,error?.message||error);return fallback;}};
@@ -45078,19 +45121,20 @@ async function albumAcquisitionSources(env) {
     }
     return {map,complete};
   };
-  entry.promise=read().then(value=>{entry.value=value;entry.expires=Date.now()+(value.complete?15000:0);return value;}).finally(()=>{entry.promise=null;});
+  entry.promise=read().then(value=>{entry.value=value;entry.expires=Date.now()+(value.complete?ALBUM_ACQUISITION_CACHE_TTL_MS:ALBUM_ACQUISITION_CACHE_FALLBACK_TTL_MS);return value;}).finally(()=>{entry.promise=null;});
   albumAcquisitionCache.set(env.DB,entry);return entry.promise;
 }
 
 async function albumPlayerState(env,telegramId){
-  await ensureAlbumSchema(env);await ensureCasePlayerState(env,String(telegramId),{});
+  await ensureAlbumSchema(env);await ensureCasePlayerState(env,String(telegramId),{}, { skipProfile:true, allowLegacyRecovery:false });
+  const acquisitionPromise=withAlbumAcquisitionTimeout(albumAcquisitionSources(env));
   const [collectionsRes,itemsRes,milestonesRes,claimsRes,caseState,catalog,acquisition]=await Promise.all([
     env.DB.prepare(`SELECT * FROM album_collections WHERE status='published' ORDER BY sort_order ASC,published_at ASC,collection_id ASC`).all(),
     env.DB.prepare(`SELECT i.* FROM album_collection_items i JOIN album_collections c ON c.collection_id=i.collection_id WHERE c.status='published' ORDER BY i.collection_id,i.sort_order,i.item_kind,i.item_id`).all(),
     env.DB.prepare(`SELECT m.* FROM album_milestones m JOIN album_collections c ON c.collection_id=m.collection_id WHERE c.status='published' AND m.enabled=1 ORDER BY m.collection_id,m.threshold_percent,m.sort_order,m.milestone_id`).all(),
     env.DB.prepare(`SELECT * FROM album_milestone_claims WHERE telegram_id=?`).bind(String(telegramId)).all(),
     env.DB.prepare(`SELECT owned_avatars_json,owned_frames_json,owned_trails_json,owned_skins_json,owned_music_json FROM case_player_state WHERE telegram_id=? LIMIT 1`).bind(String(telegramId)).first(),
-    albumCatalogSnapshot(env),albumAcquisitionSources(env)
+    albumCatalogSnapshot(env),acquisitionPromise
   ]);
   const owned={
     avatar:albumOwnedSet(caseState?.owned_avatars_json),frame:albumOwnedSet(caseState?.owned_frames_json),trail:albumOwnedSet(caseState?.owned_trails_json),
