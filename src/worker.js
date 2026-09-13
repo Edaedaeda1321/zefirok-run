@@ -44895,6 +44895,19 @@ async function reconcileAlbumMilestoneClaims(env, telegramId, claims) {
 // Public acquisition metadata, shared by Album items. Never used for granting.
 // One cache per database; no per-item requests and no player-specific data in it.
 const albumAcquisitionCache = new WeakMap();
+const ALBUM_ACQUISITION_CACHE_TTL_MS = 5 * 60 * 1000;
+const ALBUM_ACQUISITION_CACHE_FALLBACK_TTL_MS = 30 * 1000;
+const ALBUM_ACQUISITION_TIMEOUT_MS = 1200;
+function albumAcquisitionFallback(){return {map:new Map(),complete:false};}
+function withAlbumAcquisitionTimeout(promise, timeoutMs = ALBUM_ACQUISITION_TIMEOUT_MS) {
+  return Promise.race([
+    promise,
+    new Promise((resolve)=>setTimeout(()=>resolve(albumAcquisitionFallback()), timeoutMs))
+  ]).catch((error)=>{
+    console.error("album acquisition metadata timed out", error);
+    return albumAcquisitionFallback();
+  });
+}
 function albumCaseAcquisitionSources(liveops) {
   const result=new Map();
   const add=(kind,id,type,guaranteeOnly=false)=>{
@@ -44930,7 +44943,7 @@ async function albumAcquisitionSources(env) {
   const cached=albumAcquisitionCache.get(env.DB),now=Date.now();
   if(cached?.promise)return cached.promise;
   if(cached?.value&&cached.expires>now)return cached.value;
-  const entry={promise:null,value:null,expires:0};
+  const entry={promise:null,value:cached?.value||null,expires:cached?.expires||0};
   const read=async()=>{
     let complete=true;
     const optional=async(label,fn,fallback)=>{try{return await fn();}catch(error){complete=false;console.error("album source metadata unavailable",label,error?.message||error);return fallback;}};
@@ -45001,19 +45014,20 @@ async function albumAcquisitionSources(env) {
     }
     return {map,complete};
   };
-  entry.promise=read().then(value=>{entry.value=value;entry.expires=Date.now()+(value.complete?15000:0);return value;}).finally(()=>{entry.promise=null;});
+  entry.promise=read().then(value=>{entry.value=value;entry.expires=Date.now()+(value.complete?ALBUM_ACQUISITION_CACHE_TTL_MS:ALBUM_ACQUISITION_CACHE_FALLBACK_TTL_MS);return value;}).finally(()=>{entry.promise=null;});
   albumAcquisitionCache.set(env.DB,entry);return entry.promise;
 }
 
 async function albumPlayerState(env,telegramId){
   await ensureAlbumSchema(env);await ensureCasePlayerState(env,String(telegramId),{});
+  const acquisitionPromise = withAlbumAcquisitionTimeout(albumAcquisitionSources(env));
   const [collectionsRes,itemsRes,milestonesRes,claimsRes,caseState,catalog,acquisition]=await Promise.all([
     env.DB.prepare(`SELECT * FROM album_collections WHERE status='published' ORDER BY sort_order ASC,published_at ASC,collection_id ASC`).all(),
     env.DB.prepare(`SELECT i.* FROM album_collection_items i JOIN album_collections c ON c.collection_id=i.collection_id WHERE c.status='published' ORDER BY i.collection_id,i.sort_order,i.item_kind,i.item_id`).all(),
     env.DB.prepare(`SELECT m.* FROM album_milestones m JOIN album_collections c ON c.collection_id=m.collection_id WHERE c.status='published' AND m.enabled=1 ORDER BY m.collection_id,m.threshold_percent,m.sort_order,m.milestone_id`).all(),
     env.DB.prepare(`SELECT * FROM album_milestone_claims WHERE telegram_id=?`).bind(String(telegramId)).all(),
     env.DB.prepare(`SELECT owned_avatars_json,owned_frames_json,owned_trails_json,owned_skins_json,owned_music_json FROM case_player_state WHERE telegram_id=? LIMIT 1`).bind(String(telegramId)).first(),
-    albumCatalogSnapshot(env),albumAcquisitionSources(env)
+    albumCatalogSnapshot(env),acquisitionPromise
   ]);
   const owned={
     avatar:albumOwnedSet(caseState?.owned_avatars_json),frame:albumOwnedSet(caseState?.owned_frames_json),trail:albumOwnedSet(caseState?.owned_trails_json),
