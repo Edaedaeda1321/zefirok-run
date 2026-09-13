@@ -13,10 +13,11 @@ const REQUIRED_RULES = Object.freeze([
   'package.json', 'package-lock.json',
   '*.zip', '*.patch', '*.diff', '*_test.html', '*_testing*.html', '*New_Version*.html',
   'BASE_COMMIT.txt', 'CODEX_PROMPT.txt', 'PROMPT_FOR_CODEX.txt', 'DAILY_ACTIVITY_UPDATE.txt',
-  'PATCH_NOTES.txt', 'CHANGELOG.md', 'README*', 'THIRD_PARTY_NOTICES.md'
+  'PATCH_NOTES.txt', 'CHANGELOG.md', 'README*', 'THIRD_PARTY_NOTICES.md',
+  'profile.html', 'candidate-console.html', 'candidates/'
 ]);
 
-// test-project.html is an active owner staging surface, not an obsolete test copy.
+// test-project.html is an active owner staging surface. Legacy profile and local Candidate Pipeline are excluded by .assetsignore.
 const REQUIRED_PUBLIC_ROOT_FILES = Object.freeze([
   'index.html', 'battle-pass.html', 'rating.html', 'referrals.html', 'achievements.html',
   'album.html', 'legal.html', 'owner.html', 'staff-qr.html', 'test-project.html', 'asset-cache-sw.js'

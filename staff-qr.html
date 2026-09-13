@@ -164,7 +164,7 @@ button{-webkit-tap-highlight-color:transparent}
 </head>
 <body>
 <section class="access-gate" id="accessGate" aria-live="polite">
-  <div class="gate-icon"><img src="/assets/ui/icon_closed.png" alt=""></div>
+  <div class="gate-icon"><img src="/assets/ui/icon_closed.webp" alt=""></div>
   <h1 id="gateTitle">Проверяем доступ</h1>
   <p id="gateText">Сканер откроется только сотруднику из рабочего списка с активной сессией.</p>
   <button class="gate-close" id="closeGate" hidden>Закрыть</button>
@@ -345,18 +345,34 @@ button{-webkit-tap-highlight-color:transparent}
     confirmUntil=0;
     if(r.status==='active'&&!storageGet(REDEEM_TIP_KEY))setTimeout(showRedeemTip,260);
   }
-  async function api(path,payload,accessProbe){
+  var STAFF_API_TIMEOUT_MS=8000;
+  async function api(path,payload,accessProbe,timeoutMs){
     if(!accessProbe&&!authorized)throw new Error('Доступ к сканеру не подтверждён.');
-    var response=await fetch(path,{
-      method:'POST',
-      headers:{'Content-Type':'application/json'},
-      body:JSON.stringify(Object.assign({initData:tg&&tg.initData||''},payload||{})),
-      cache:'no-store',
-      credentials:'same-origin'
-    });
-    var data=await response.json().catch(function(){return null});
-    if(!response.ok||!data||!data.ok)throw new Error(data&&data.error||'Сервис временно недоступен.');
-    return data;
+    var controller=new AbortController();
+    var deadline=Math.max(1200,Number(timeoutMs||STAFF_API_TIMEOUT_MS));
+    var timer=setTimeout(function(){controller.abort()},deadline);
+    try{
+      var response=await fetch(path,{
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body:JSON.stringify(Object.assign({initData:tg&&tg.initData||''},payload||{})),
+        cache:'no-store',
+        credentials:'same-origin',
+        signal:controller.signal
+      });
+      var data=await response.json().catch(function(){return null});
+      if(!response.ok||!data||!data.ok){var serverError=new Error(data&&data.error||'Сервис временно недоступен.');serverError.status=response.status;serverError.code=String(data&&data.code||'');throw serverError}
+      return data;
+    }catch(error){
+      if(error&&error.name==='AbortError'){var timeoutError=new Error('Сервер отвечает дольше обычного. Проверяем итог операции…');timeoutError.code='REQUEST_TIMEOUT';timeoutError.timeout=true;timeoutError.outcomeUnknown=true;throw timeoutError}
+      throw error;
+    }finally{clearTimeout(timer)}
+  }
+  async function reconcileRedeemOutcome(code){
+    try{
+      var checked=await api('/api/staff/rewards/lookup',{code:code},false,5000);
+      return checked&&checked.reward||null;
+    }catch(error){return null}
   }
   async function verifyAccess(silent){
     if(accessCheckBusy)return;
@@ -366,7 +382,10 @@ button{-webkit-tap-highlight-color:transparent}
       if(!tg||!tg.initData)throw new Error('Откройте сканер только кнопкой из рабочей панели Telegram-бота.');
       var data=await api('/api/staff/qr/access',{},true);
       allowAccess(data.staff||{});
-    }catch(e){denyAccess(e.message||String(e))}
+    }catch(e){
+      if(silent&&e&&e.timeout){setStatus('Связь с сервером временно нестабильна. Доступ не сбрасываем, повторим проверку автоматически.');}
+      else denyAccess(e.message||String(e));
+    }
     finally{accessCheckBusy=false}
   }
   async function lookup(value){
@@ -536,6 +555,24 @@ button{-webkit-tap-highlight-color:transparent}
       try{tg&&tg.HapticFeedback&&tg.HapticFeedback.notificationOccurred('success')}catch(e){}
     }catch(e){
       if(/сессия|сотрудник|доступ/i.test(e.message||'')){denyAccess(e.message);return}
+      if(e&&e.outcomeUnknown&&current&&current.code){
+        setStatus('Связь прервалась после подтверждения. Проверяем статус кода…');
+        var reconciled=await reconcileRedeemOutcome(current.code);
+        if(reconciled&&reconciled.status==='used'){
+          var before=current;current=reconciled;
+          el('badge').textContent='Выдана';el('badge').className='badge used';
+          el('resultSub').textContent='Сервер подтвердил, что награда уже списана.';
+          redeem.textContent='Награда выдана';redeem.className='redeem-btn done';redeem.disabled=true;
+          nextScan.classList.add('show');addRecentOperation(before);setStatus('Готово. Итог операции восстановлен после обрыва связи.','ok');
+          return;
+        }
+        if(reconciled&&reconciled.status==='active'){
+          current=reconciled;redeem.disabled=false;redeem.textContent='Подтвердить выдачу';redeem.className='redeem-btn confirm';confirmUntil=Date.now()+4500;
+          setStatus('Сервер подтвердил: код ещё активен. Можно безопасно повторить подтверждение.');return;
+        }
+        redeem.disabled=false;redeem.textContent='Проверить ещё раз';redeem.className='redeem-btn';confirmUntil=0;
+        setStatus('Не удалось однозначно подтвердить результат. Не выдавайте повторно — сначала снова проверьте этот код.','bad');return;
+      }
       redeem.disabled=false;redeem.textContent='Выдать награду';redeem.className='redeem-btn';confirmUntil=0;setStatus(e.message||String(e),'bad');
     }
   });

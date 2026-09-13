@@ -254,7 +254,7 @@ const awaiting=m=>['pending','processing','delivering'].includes(status(m));
 const done=m=>status(m)==='claimed';
 const plural=(v,one,few,many)=>{const x=whole(v)%100,y=x%10;return x>10&&x<20?many:y===1?one:y>=2&&y<=4?few:many;};
 function icon(name){
- if(name==='lock')return '<img class="az-icon az-lock-icon" src="/assets/ui/icon_closed.png" alt="" aria-hidden="true" loading="lazy" decoding="async">';
+ if(name==='lock')return '<img class="az-icon az-lock-icon" src="/assets/ui/icon_closed.webp" alt="" aria-hidden="true" loading="lazy" decoding="async">';
  const paths={arrow:'<path d="m9 5 7 7-7 7"/>',check:'<path d="m5 12 4 4L19 6"/>',refresh:'<path d="M20 7v5h-5M4 17v-5h5M6 7a7 7 0 0 1 12-2l2 3M4 16l2 3a7 7 0 0 0 12-2"/>',back:'<path d="m14 5-7 7 7 7"/>'};
  return `<svg class="az-icon" viewBox="0 0 24 24" aria-hidden="true">${paths[name]||paths.arrow}</svg>`;
 }

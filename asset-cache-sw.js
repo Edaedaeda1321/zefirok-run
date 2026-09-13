@@ -1,10 +1,18 @@
 /* Sweet Run static asset cache.
  * Dynamic /api data is deliberately never cached here.
  */
-const CACHE_VERSION = "20260910-1";
+function cacheVersionFromRegistration() {
+  try {
+    const raw = String(new URL(self.location.href).searchParams.get("v") || "").trim();
+    if (/^[A-Za-z0-9._-]{8,96}$/.test(raw)) return raw;
+  } catch {}
+  return "unversioned-safe";
+}
+const CACHE_VERSION = cacheVersionFromRegistration();
 const CORE_CACHE = `zefirok-core-${CACHE_VERSION}`;
 const RUNTIME_CACHE = `zefirok-assets-${CACHE_VERSION}`;
 const CACHE_PREFIXES = ["zefirok-core-", "zefirok-assets-"];
+const CACHE_BUILD_SOURCE = "assets/images-manifest.json#catalogHash";
 
 const CORE_ASSETS = Object.freeze([
   "/index.html",

@@ -107,7 +107,6 @@ body.zefirok-run-expanded>iframe[data-run-expanded="true"]{width:100%!important;
   const TEST_PROJECT_MODE = TEST_PROJECT_QUERY.get("test_project") === "1";
   const TEST_PROJECT_DEVICE_LAB = TEST_PROJECT_MODE && TEST_PROJECT_QUERY.get("device_lab") === "1";
   const TEST_PROJECT_OWNER_SESSION_KEY = "zefirok-owner-session-v1";
-  const STATIC_ASSET_CACHE_BUILD = "20260910-1";
   const STATIC_ASSET_WARM_URLS = Object.freeze([
     "/assets/optimized/v0.79.5/iconScore.webp?v=0.79.5",
     "/assets/optimized/v0.79.5/iconRecord.webp?v=0.79.5",
@@ -145,11 +144,32 @@ body.zefirok-run-expanded>iframe[data-run-expanded="true"]{width:100%!important;
     }
   }
 
+  let staticAssetCacheBuildPromise = null;
+  function resolveStaticAssetCacheBuild() {
+    if (staticAssetCacheBuildPromise) return staticAssetCacheBuildPromise;
+    staticAssetCacheBuildPromise = (async () => {
+      const controller = new AbortController();
+      const timer = window.setTimeout(() => controller.abort(), 3500);
+      try {
+        const response = await fetch("/assets/images-manifest.json", { cache: "no-store", credentials: "same-origin", signal: controller.signal });
+        if (!response.ok) throw new Error(`asset manifest HTTP ${response.status}`);
+        const manifest = await response.json();
+        const hash = String(manifest?.catalogHash || "").trim().toLowerCase();
+        if (!/^[a-f0-9]{12,64}$/.test(hash)) throw new Error("asset manifest catalogHash is invalid");
+        return `catalog-${hash}`;
+      } finally {
+        window.clearTimeout(timer);
+      }
+    })().catch(error => { staticAssetCacheBuildPromise = null; throw error; });
+    return staticAssetCacheBuildPromise;
+  }
+
   function installStaticAssetCache() {
     if (TEST_PROJECT_MODE || !("serviceWorker" in navigator) || !/^https?:$/i.test(location.protocol)) return;
     const start = async () => {
       try {
-        const registration = await navigator.serviceWorker.register(`/asset-cache-sw.js?v=${encodeURIComponent(STATIC_ASSET_CACHE_BUILD)}`, { scope: "/", updateViaCache: "none" });
+        const cacheBuild = await resolveStaticAssetCacheBuild();
+        const registration = await navigator.serviceWorker.register(`/asset-cache-sw.js?v=${encodeURIComponent(cacheBuild)}`, { scope: "/", updateViaCache: "none" });
         const ready = await navigator.serviceWorker.ready;
         const target = navigator.serviceWorker.controller || ready?.active || registration?.active || registration?.waiting || registration?.installing;
         try { target?.postMessage?.({ type: "zefirok-warm-assets", urls: STATIC_ASSET_WARM_URLS }); } catch {}

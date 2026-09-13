@@ -16,7 +16,8 @@ const steps=[
   ['live content assets','node',['scripts/check-live-content-assets.mjs']],
   ['live content authority','node',['scripts/check-live-content-authority.mjs']],
   ['operation system','node',['scripts/check-operation-system.mjs']],
-  ['P1 read paths','node',['scripts/check-p1-read-paths.mjs']]
+  ['P1 read paths','node',['scripts/check-p1-read-paths.mjs']],
+  ['P2 hardening','node',['scripts/check-p2-hardening.mjs']]
 ];
 if(!skipD1)steps.push(['D1 integration','node',['scripts/check-d1-integration.mjs']]);
 
