@@ -919,32 +919,46 @@ function runBoosterCatalogItems() {
   return CASE_BOOSTER_TYPES.map((id) => runBoosterDefinition(id)).filter(Boolean);
 }
 
-function seasonPassProgressionView() {
+function seasonPassOverflowSettings(source = null) {
+  const outer = source || {};
+  const row = outer.progression || outer;
+  const nestedReward = row.overflowReward || outer.overflowReward || {};
+  const stepXp = Math.max(1, Math.min(5000000, seasonPassInteger(row.overflow_step_xp ?? row.overflowStepXp ?? outer.overflow_step_xp ?? outer.overflowStepXp, SEASON_PASS_OVERFLOW_LEVEL_XP)));
+  const type = String(row.overflow_reward_type ?? row.overflowRewardType ?? nestedReward.type ?? "case") === "seasonal_case" ? "seasonal_case" : "case";
+  const itemId = String(row.overflow_reward_item_id ?? row.overflowRewardItemId ?? nestedReward.itemId ?? "gold").trim() || "gold";
+  const title = String(row.overflow_reward_title ?? row.overflowRewardTitle ?? nestedReward.title ?? "Золотой кейс").trim() || "Кейс";
+  const imageUrl = String(row.overflow_reward_image_url ?? row.overflowRewardImageUrl ?? nestedReward.imageUrl ?? "/assets/cases/gold_closed.webp").trim() || "/assets/cases/gold_closed.webp";
+  return {stepXp,reward:{type,itemId,title,imageUrl,amount:1}};
+}
+
+function seasonPassProgressionView(source = null) {
+  const overflow = seasonPassOverflowSettings(source);
   return {
     maxLevel:SEASON_PASS_MAX_LEVEL,
     level50StartXp:SEASON_PASS_LEVEL_START_XP[SEASON_PASS_MAX_LEVEL - 1],
     level50CompleteXp:SEASON_PASS_LEVEL_50_COMPLETE_XP,
-    overflowStepXp:SEASON_PASS_OVERFLOW_LEVEL_XP,
+    overflowStepXp:overflow.stepXp,
     overflowAvailableToAll:true,
     existingXpPolicy:'keep_raw_xp_never_reduce',
-    balanceVersion:'v4-release',
-    overflowReward:{type:"case",itemId:"gold",title:"Золотой кейс",imageUrl:"/assets/cases/gold_closed.webp"}
+    balanceVersion:'v5-overflow-liveops',
+    overflowReward:overflow.reward
   };
 }
 
-function seasonPassOverflowView(xpValue, claimedValue = 0) {
+function seasonPassOverflowView(xpValue, claimedValue = 0, source = null) {
   const xp = Math.max(0, Math.floor(Number(xpValue) || 0));
   const claimed = Math.max(0, Math.floor(Number(claimedValue) || 0));
+  const config = seasonPassOverflowSettings(source);
   const overflowXp = Math.max(0, xp - SEASON_PASS_LEVEL_50_COMPLETE_XP);
-  const earned = Math.floor(overflowXp / SEASON_PASS_OVERFLOW_LEVEL_XP);
+  const earned = Math.floor(overflowXp / config.stepXp);
   return {
     unlocked:xp >= SEASON_PASS_LEVEL_50_COMPLETE_XP,
     baseXp:SEASON_PASS_LEVEL_50_COMPLETE_XP,
-    stepXp:SEASON_PASS_OVERFLOW_LEVEL_XP,
+    stepXp:config.stepXp,
     xp:overflowXp,
-    xpWithin:overflowXp % SEASON_PASS_OVERFLOW_LEVEL_XP,
+    xpWithin:overflowXp % config.stepXp,
     earned,claimed,available:Math.max(0,earned-claimed),
-    reward:{type:"case",itemId:"gold",title:"Золотой кейс",imageUrl:"/assets/cases/gold_closed.webp"}
+    reward:config.reward
   };
 }
 
@@ -4869,6 +4883,23 @@ function playerGiftRewardView(reward) {
   return { ...normalized, label: safeRewardDescription(normalized) };
 }
 
+async function playerGiftRewardViewsWithAssets(env, rewards) {
+  const views = normalizePlayerGiftRewards(Array.isArray(rewards) ? rewards : []).map(playerGiftRewardView).filter(Boolean);
+  const ids = [...new Set(views.filter((item)=>item.kind === "seasonal_case" && item.id).map((item)=>String(item.id)))];
+  if (!ids.length) return views;
+  const placeholders = ids.map(()=>"?").join(",");
+  const rows = await env.DB.prepare(`SELECT case_id,title,closed_image_url FROM season_pass_case_definitions WHERE case_id IN (${placeholders})`).bind(...ids).all();
+  const byId = new Map((rows.results || []).map((row)=>[String(row.case_id),row]));
+  return views.map((item)=>{
+    if (item.kind !== "seasonal_case") return item;
+    const definition = byId.get(String(item.id));
+    if (!definition) return item;
+    const baseTitle = String(definition.title || "Сезонный кейс");
+    const amount = Math.max(1, Number(item.amount || 1));
+    return {...item,title:baseTitle,label:amount === 1 ? baseTitle : `${amount} × ${baseTitle}`,imageUrl:String(definition.closed_image_url || SYSTEM_IMAGE_FALLBACK)};
+  });
+}
+
 function playerMailPreviewText(value, fallback = "") {
   const compact = String(value || fallback || "").replace(/\s+/g, " ").trim();
   return compact.slice(0, 120);
@@ -5148,8 +5179,12 @@ async function playerMailV3StatePayload(env, telegramId) {
     env.DB.prepare(`SELECT SUM(CASE WHEN read_at=0 THEN 1 ELSE 0 END) AS unread_count,SUM(CASE WHEN reward_state IN ('available','claiming') THEN 1 ELSE 0 END) AS pending_count
       FROM player_mail_v3 WHERE telegram_id=? AND source_type<>'season_pass_task' AND mail_kind<>'season_pass_task' AND (expires_at=0 OR expires_at>?)`).bind(id,now).first()
   ]);
+  const rawPrimary=(rows.results||[]).map((row)=>{try{return JSON.parse(String(row.primary_reward_json||"null"));}catch{return null;}});
+  const enrichedPrimary=await playerGiftRewardViewsWithAssets(env,rawPrimary);
+  let primaryIndex=0,enrichedIndex=0;
   const items=(rows.results||[]).map((row)=>{
-    let primaryReward=null;try{primaryReward=playerGiftRewardView(JSON.parse(String(row.primary_reward_json||"null")));}catch{}
+    const raw=rawPrimary[primaryIndex++],baseReward=raw?playerGiftRewardView(raw):null;
+    const primaryReward=baseReward ? enrichedPrimary[enrichedIndex++] || baseReward : null;
     return {
       id:String(row.mail_id||""),kind:String(row.mail_kind||"message"),title:String(row.title||"Письмо от Зеффи"),preview:String(row.preview_text||""),
       imageUrl:String(row.image_url||""),status:playerMailV3LegacyStatus(row.reward_state),rewardState:String(row.reward_state||"none"),createdAt:Number(row.created_at||0),
@@ -5176,7 +5211,7 @@ async function playerMailV3LetterPayload(env, telegramId, mailId) {
   const row=await env.DB.prepare(`SELECT * FROM player_mail_v3 WHERE telegram_id=? AND mail_id=? AND source_type<>'season_pass_task' AND mail_kind<>'season_pass_task' AND (expires_at=0 OR expires_at>?) LIMIT 1`).bind(id,mid,now).first();
   if(!row) return null;
   const rewardRows=await env.DB.prepare(`SELECT reward_kind,reward_id,amount,reward_json FROM player_mail_rewards_v3 WHERE telegram_id=? AND mail_id=? ORDER BY reward_index`).bind(id,mid).all();
-  const rewards=playerMailV3RewardsFromRows(rewardRows.results || []).map(playerGiftRewardView).filter(Boolean);
+  const rewards=await playerGiftRewardViewsWithAssets(env,playerMailV3RewardsFromRows(rewardRows.results || []));
   return {
     id:String(row.mail_id||""),kind:String(row.mail_kind||"message"),title:String(row.title||"Письмо от Зеффи"),preview:String(row.preview_text||""),
     message:String(row.body_text||""),body:String(row.body_text||""),reason:String(row.reason||""),imageUrl:String(row.image_url||""),
@@ -31386,7 +31421,7 @@ async function reconcileSeasonPassBalanceV3AllPlayers(env, seasonId) {
   return { ok:true, skipped:false, players:Number(before?.count||0) };
 }
 
-const SEASON_PASS_SCHEMA_RUNTIME_VERSION = '2026-08-18-story-visual-v2';
+const SEASON_PASS_SCHEMA_RUNTIME_VERSION = '2026-09-14-overflow-liveops-v1';
 const SEASON_PASS_SCHEMA_MARKER_KEY = `season-pass:schema-ready:${SEASON_PASS_SCHEMA_RUNTIME_VERSION}`;
 
 async function seasonPassSchemaMarkerReady(env) {
@@ -31431,7 +31466,7 @@ async function seasonPassSchemaQuickCheck(env) {
     const caseDefinitionColumns = names(caseDefinitionInfo);
     const casePlayerColumns = names(casePlayerInfo);
     const leaderboardRunColumns = names(leaderboardRunInfo);
-    return seasonColumns.has('asset_key') && seasonColumns.has('claim_grace_ends_at') && seasonColumns.has('elite_plus_benefits_json')
+    return seasonColumns.has('asset_key') && seasonColumns.has('claim_grace_ends_at') && seasonColumns.has('elite_plus_benefits_json') && seasonColumns.has('overflow_step_xp') && seasonColumns.has('overflow_reward_type') && seasonColumns.has('overflow_reward_item_id') && seasonColumns.has('overflow_reward_title') && seasonColumns.has('overflow_reward_image_url')
       && storyColumns.has('actions_json') && storyColumns.has('pages_json') && storyColumns.has('unlock_at')
       && storyColumns.has('push_enabled') && storyColumns.has('push_text') && storyColumns.has('reward_json')
       && progressColumns.has('visual_notice_at') && progressColumns.has('notified_at')
@@ -31484,6 +31519,9 @@ async function ensureSeasonPassSchema(env) {
         elite_price_points INTEGER NOT NULL DEFAULT 0, elite_price_treats INTEGER NOT NULL DEFAULT 0, elite_price_coffee INTEGER NOT NULL DEFAULT 0,
         elite_plus_price_points INTEGER NOT NULL DEFAULT 0, elite_plus_price_treats INTEGER NOT NULL DEFAULT 0, elite_plus_price_coffee INTEGER NOT NULL DEFAULT 0,
         elite_plus_benefits_json TEXT NOT NULL DEFAULT '{}',
+        overflow_step_xp INTEGER NOT NULL DEFAULT 1500, overflow_reward_type TEXT NOT NULL DEFAULT 'case',
+        overflow_reward_item_id TEXT NOT NULL DEFAULT 'gold', overflow_reward_title TEXT NOT NULL DEFAULT 'Золотой кейс',
+        overflow_reward_image_url TEXT NOT NULL DEFAULT '/assets/cases/gold_closed.webp',
         updated_at INTEGER NOT NULL, updated_by TEXT NOT NULL DEFAULT ''
       )`),
       env.DB.prepare(`CREATE TABLE IF NOT EXISTS season_pass_rewards (
@@ -31663,6 +31701,11 @@ async function ensureSeasonPassSchema(env) {
     if (!seasonColumns.has('elite_plus_benefits_json')) {
       await env.DB.prepare(`ALTER TABLE season_pass_seasons ADD COLUMN elite_plus_benefits_json TEXT NOT NULL DEFAULT '{}'`).run();
     }
+    if (!seasonColumns.has('overflow_step_xp')) await env.DB.prepare(`ALTER TABLE season_pass_seasons ADD COLUMN overflow_step_xp INTEGER NOT NULL DEFAULT 1500`).run();
+    if (!seasonColumns.has('overflow_reward_type')) await env.DB.prepare(`ALTER TABLE season_pass_seasons ADD COLUMN overflow_reward_type TEXT NOT NULL DEFAULT 'case'`).run();
+    if (!seasonColumns.has('overflow_reward_item_id')) await env.DB.prepare(`ALTER TABLE season_pass_seasons ADD COLUMN overflow_reward_item_id TEXT NOT NULL DEFAULT 'gold'`).run();
+    if (!seasonColumns.has('overflow_reward_title')) await env.DB.prepare(`ALTER TABLE season_pass_seasons ADD COLUMN overflow_reward_title TEXT NOT NULL DEFAULT 'Золотой кейс'`).run();
+    if (!seasonColumns.has('overflow_reward_image_url')) await env.DB.prepare(`ALTER TABLE season_pass_seasons ADD COLUMN overflow_reward_image_url TEXT NOT NULL DEFAULT '/assets/cases/gold_closed.webp'`).run();
     const runInfo = await env.DB.prepare(`PRAGMA table_info(leaderboard_runs)`).all();
     const runColumns = new Set((runInfo.results || []).map((row) => String(row.name || '')));
     if (!runColumns.has('run_treats')) await env.DB.prepare(`ALTER TABLE leaderboard_runs ADD COLUMN run_treats INTEGER NOT NULL DEFAULT 0`).run();
@@ -31841,7 +31884,8 @@ function seasonPassCaseGrantStatement(env, details) {
   const seasonId = String(details?.seasonId || '');
   const telegramId = String(details?.telegramId || '');
   const level = Math.max(1, Math.floor(Number(details?.level) || 1));
-  const lane = String(details?.lane || 'free') === 'premium' ? 'premium' : 'free';
+  const laneRaw=String(details?.lane||'free');
+  const lane=['free','premium','overflow'].includes(laneRaw)?laneRaw:'free';
   const caseType = normalizeCaseType(details?.caseType) || 'small';
   const seasonTitle = String(details?.seasonTitle || 'Сезонный пропуск');
   const rewardTitle = String(details?.rewardTitle || `${seasonTitle}: уровень ${level}`);
@@ -32022,7 +32066,7 @@ function seasonPassSeasonFromRow(row, fallback, nowMs = Date.now()) {
     serverTime:new Date(nowMs).toISOString(),
     assetBase:'/assets/season-pass/', baseRunXp:Math.max(1,seasonPassInteger(row.base_run_xp,100)), levelPricePoints:seasonPassInteger(row.level_price_points,DEFAULT_SEASON_PASS_LEVEL_PRICE_POINTS),
     visuals:seasonVisualsView(row.visuals_json),
-    progression:seasonPassProgressionView(),
+    progression:seasonPassProgressionView(row),
     prices:{
       elite:{points:seasonPassInteger(row.elite_price_points,DEFAULT_SEASON_PASS_ELITE_PRICE.points),treats:seasonPassInteger(row.elite_price_treats,DEFAULT_SEASON_PASS_ELITE_PRICE.treats),coffee:seasonPassInteger(row.elite_price_coffee,DEFAULT_SEASON_PASS_ELITE_PRICE.coffee)},
       elite_plus:{points:seasonPassInteger(row.elite_plus_price_points,DEFAULT_SEASON_PASS_ELITE_PLUS_PRICE.points),treats:seasonPassInteger(row.elite_plus_price_treats,DEFAULT_SEASON_PASS_ELITE_PLUS_PRICE.treats),coffee:seasonPassInteger(row.elite_plus_price_coffee,DEFAULT_SEASON_PASS_ELITE_PLUS_PRICE.coffee)}
@@ -33461,25 +33505,25 @@ async function buildSeasonPassPayload(env,season,telegramId,player=null){
   const xp=Math.max(0,Number(current?.xp)||0);const level=seasonPassLevelFromXp(xp);const required=SEASON_PASS_LEVEL_XP[level-1]||0;const start=seasonPassXpForLevel(level);
   const deliveredClaims=claimsResult.results||[];
   const overflowClaimed=deliveredClaims.filter(row=>String(row.lane)==='overflow').length;
-  const overflow=seasonPassOverflowView(xp,overflowClaimed);
+  const overflow=seasonPassOverflowView(xp,overflowClaimed,season);
   const [letter,seasonalCases,story,tierActivationNotice,nextSeason]=await Promise.all([seasonPassTeaserForPlayer(env,season,telegramId,current),seasonPassSeasonalCaseInventory(env,telegramId),seasonPassStoryForPlayer(env,season,telegramId,current),pendingSeasonPassTierActivationNotice(env,telegramId,season),seasonPassNextPublicSchedule(env,season).catch(error=>{console.error("next season schedule unavailable",error);return null;})]);
   const catchUp=seasonPassCatchUpView(season,current);
   const finale=await seasonPassFinaleForPlayer(env,season,telegramId,current,summary,story,letter);
   const availablePoints=(profileRow?.wallet_override==null?Number(profileRow?.wallet||0):Number(profileRow?.wallet_override||0))+Number(profileRow?.pending_wallet||0);
   const availableTreats=(profileRow?.treats_override==null?Number(profileRow?.treats||0):Number(profileRow?.treats_override||0))+Number(profileRow?.pending_treats||0);
   const availableCoffee=(profileRow?.coffee_override==null?Number(profileRow?.coffee||0):Number(profileRow?.coffee_override||0))+Number(profileRow?.pending_coffee||0);
-  return {ok:true,serverTime:new Date().toISOString(),nextSeason,season:{...season,progression:seasonPassProgressionView(),tierSettings:seasonPassPublicTierSettings(season),capabilities:seasonPassCapabilities(season)},player:seasonPassPlayerView(current),overflow,catchUp,finale,letter,seasonalCases,story,tierActivationNotice,
+  return {ok:true,serverTime:new Date().toISOString(),nextSeason,season:{...season,progression:seasonPassProgressionView(season),tierSettings:seasonPassPublicTierSettings(season),capabilities:seasonPassCapabilities(season)},player:seasonPassPlayerView(current,season),overflow,catchUp,finale,letter,seasonalCases,story,tierActivationNotice,
     rewards:(rewardsResult.results||[]).map(seasonPassPlayerRewardView),
     claimed:deliveredClaims.filter(row=>String(row.lane)==='free'||String(row.lane)==='premium').map(row=>`${Number(row.level)}:${String(row.lane)}`),entitlements:(entitlementsResult.results||[]).map(row=>String(row.item_id)).filter(item=>!item.startsWith('__system:')),tasks:tasksPayload.tasks,taskPeriods:tasksPayload.periods,taskClaimableCount:seasonPassCapabilities(season).canClaimTasks?tasksPayload.claimableCount:0,summary,
     balance:{points:availablePoints,treats:availableTreats,coffee:availableCoffee}};
 }
 
 
-function seasonPassPlayerView(current){
+function seasonPassPlayerView(current,season=null){
   const xp=Math.max(0,Number(current?.xp)||0);const level=seasonPassLevelFromXp(xp);
-  const overflow=seasonPassOverflowView(xp,0);
+  const overflow=seasonPassOverflowView(xp,0,season);
   const start=seasonPassXpForLevel(level);
-  const required=overflow.unlocked?SEASON_PASS_OVERFLOW_LEVEL_XP:(SEASON_PASS_LEVEL_XP[level-1]||0);
+  const required=overflow.unlocked?overflow.stepXp:(SEASON_PASS_LEVEL_XP[level-1]||0);
   const within=overflow.unlocked?overflow.xpWithin:Math.max(0,Math.min(required,xp-start));
   return {xp,level,displayLevel:overflow.unlocked?'50+':String(level),xpWithin:within,xpRequired:required,premiumTier:String(current?.premium_tier||'none'),elitePlusBonusGranted:Number(current?.elite_plus_bonus_granted||0)===1,revision:Number(current?.revision||0)};
 }
@@ -33518,12 +33562,12 @@ async function buildSeasonPassMutationPayload(env,season,telegramId,options={}){
   const entitlementsPromise=options.includeEntitlements?env.DB.prepare(`SELECT item_id FROM season_pass_entitlements WHERE season_id=? AND telegram_id=? ORDER BY item_id`).bind(season.id,String(telegramId)).all():Promise.resolve(null);
   const tasksPromise=options.includeTasks?buildSeasonPassTasksPayload(env,season,String(telegramId),options.premiumTier):Promise.resolve(null);
   const [player,profileRow,claimsResult,entitlementsResult,tasksPayload]=await Promise.all([playerPromise,profilePromise,claimsPromise,entitlementsPromise,tasksPromise]);
-  const payload={ok:true,season:{id:season.id,title:season.title,status:season.status,startsAt:season.startsAt,endsAt:season.endsAt,claimGraceEndsAt:season.claimGraceEndsAt,claimWindowOpen:season.claimWindowOpen,baseRunXp:season.baseRunXp,levelPricePoints:season.levelPricePoints,prices:season.prices,progression:seasonPassProgressionView(),tierSettings:seasonPassPublicTierSettings(season),capabilities:seasonPassCapabilities(season)},player:seasonPassPlayerView(player),balance:{
+  const payload={ok:true,season:{id:season.id,title:season.title,status:season.status,startsAt:season.startsAt,endsAt:season.endsAt,claimGraceEndsAt:season.claimGraceEndsAt,claimWindowOpen:season.claimWindowOpen,baseRunXp:season.baseRunXp,levelPricePoints:season.levelPricePoints,prices:season.prices,progression:seasonPassProgressionView(season),tierSettings:seasonPassPublicTierSettings(season),capabilities:seasonPassCapabilities(season)},player:seasonPassPlayerView(player,season),balance:{
     points:(profileRow?.wallet_override==null?Number(profileRow?.wallet||0):Number(profileRow?.wallet_override||0))+Number(profileRow?.pending_wallet||0),
     treats:(profileRow?.treats_override==null?Number(profileRow?.treats||0):Number(profileRow?.treats_override||0))+Number(profileRow?.pending_treats||0),
     coffee:(profileRow?.coffee_override==null?Number(profileRow?.coffee||0):Number(profileRow?.coffee_override||0))+Number(profileRow?.pending_coffee||0)
   }};
-  if(options.includeClaims){const rows=claimsResult?.results||[];payload.claimed=rows.filter(row=>String(row.lane)==='free'||String(row.lane)==='premium').map(row=>`${Number(row.level)}:${String(row.lane)}`);payload.overflow=seasonPassOverflowView(player?.xp,rows.filter(row=>String(row.lane)==='overflow').length);}
+  if(options.includeClaims){const rows=claimsResult?.results||[];payload.claimed=rows.filter(row=>String(row.lane)==='free'||String(row.lane)==='premium').map(row=>`${Number(row.level)}:${String(row.lane)}`);payload.overflow=seasonPassOverflowView(player?.xp,rows.filter(row=>String(row.lane)==='overflow').length,season);}
   if(options.includeEntitlements)payload.entitlements=(entitlementsResult?.results||[]).map(row=>String(row.item_id)).filter(item=>!item.startsWith('__system:'));
   if(options.includeTasks&&tasksPayload){payload.tasks=tasksPayload.tasks;payload.taskPeriods=tasksPayload.periods;payload.taskClaimableCount=seasonPassCapabilities(season).canClaimTasks?tasksPayload.claimableCount:0;}
   const [story,tierActivationNotice]=await Promise.all([seasonPassStoryForPlayer(env,season,String(telegramId),player),pendingSeasonPassTierActivationNotice(env,String(telegramId),season)]);
@@ -33570,7 +33614,7 @@ async function seasonPassAttentionForPlayer(env,season,telegramId,player=null){
   const seasonalCasesPromise=env.DB.prepare(`SELECT COUNT(*) AS count FROM season_pass_case_grants g JOIN season_pass_case_definitions d ON d.case_id=g.case_id WHERE g.telegram_id=? AND g.status IN ('pending','opening') AND d.enabled=1 AND d.release_at<=?`).bind(id,Math.floor(Date.now()/1000)).first();
   const [rewardRows,overflowRow,taskRow,seasonalCaseRow]=await Promise.all([rewardPromise,overflowPromise,tasksPromise,seasonalCasesPromise]);
   const rewardCount=(rewardRows.results||[]).filter((row)=>seasonPassPlayerRewardView(row).enabled!==false).length;
-  const overflowCount=capabilities.canClaimRewards?Math.max(0,Number(seasonPassOverflowView(current?.xp,Number(overflowRow?.count||0))?.available||0)):0;
+  const overflowCount=capabilities.canClaimRewards?Math.max(0,Number(seasonPassOverflowView(current?.xp,Number(overflowRow?.count||0),season)?.available||0)):0;
   const taskCount=capabilities.canClaimTasks?Math.max(0,Number(taskRow?.count||0)):0;const seasonalCaseCount=Math.max(0,Number(seasonalCaseRow?.count||0));
   return {claimableCount:rewardCount+taskCount+overflowCount+seasonalCaseCount,rewardCount,taskCount,overflowCount,seasonalCaseCount};
 }
@@ -33617,10 +33661,10 @@ function seasonPassRewardMutationEnvelope(ctx,extra={}){
       id:ctx.season.id,
       status:ctx.season.status,
       claimWindowOpen:ctx.season.claimWindowOpen,
-      progression:seasonPassProgressionView(),
+      progression:seasonPassProgressionView(ctx.season.progression || ctx.season),
       capabilities:seasonPassCapabilities(ctx.season)
     },
-    player:seasonPassPlayerView(ctx.player),
+    player:seasonPassPlayerView(ctx.player,ctx.season),
     ...extra
   };
 }
@@ -33886,7 +33930,7 @@ async function seasonPassTaskFastMutationState(env,season,telegramId){
   ]);
   const catchUp=seasonPassCatchUpView(season,player);
   const finale=Math.max(0,Number(player?.xp)||0)>=SEASON_PASS_LEVEL_50_COMPLETE_XP?await seasonPassFinaleForPlayer(env,season,String(telegramId),player):null;
-  return {player:seasonPassPlayerView(player),overflow:seasonPassOverflowView(player?.xp,Number(overflowClaims?.count||0)),catchUp,...(finale?{finale}: {})};
+  return {player:seasonPassPlayerView(player,season),overflow:seasonPassOverflowView(player?.xp,Number(overflowClaims?.count||0),season),catchUp,...(finale?{finale}: {})};
 }
 
 async function claimSeasonPassTask(request,env,executionCtx=null){
@@ -33902,7 +33946,7 @@ async function claimSeasonPassTask(request,env,executionCtx=null){
     const fastState=await seasonPassTaskFastMutationState(env,ctx.season,ctx.telegramId);
     return jsonResponse({
       ok:true,
-      season:{id:ctx.season.id,status:ctx.season.status,claimWindowOpen:ctx.season.claimWindowOpen,progression:seasonPassProgressionView(),capabilities:seasonPassCapabilities(ctx.season)},
+      season:{id:ctx.season.id,status:ctx.season.status,claimWindowOpen:ctx.season.claimWindowOpen,progression:seasonPassProgressionView(ctx.season),capabilities:seasonPassCapabilities(ctx.season)},
       player:fastState.player,overflow:fastState.overflow,catchUp:fastState.catchUp,...(fastState.finale?{finale:fastState.finale}:{}),
       taskUpdate:{id:task.id,periodKey:task.periodKey,claimed:true,complete:true,progress:Math.max(Number(task.progress)||0,Number(task.target)||1)},
       taskClaimableDelta:-1,
@@ -33918,7 +33962,7 @@ async function claimAllSeasonPassTasks(request,env,executionCtx=null){
     const tasksPayload=await buildSeasonPassTasksPayload(env,ctx.season,ctx.telegramId,ctx.player.premium_tier);const ready=tasksPayload.tasks.filter(task=>task.complete&&!task.claimed&&!task.locked);const now=Math.floor(Date.now()/1000);
     const taskPremiumMultiplier=await seasonPassHasXpX2(env,ctx.season.id,ctx.telegramId,ctx.player)?2:seasonPassTaskXpMultiplierForPlayer(ctx.season,ctx.player);
     const taskXpMultiplier=seasonPassEarnedXpMultiplierView(ctx.season,ctx.player,taskPremiumMultiplier,now*1000).multiplier;
-    if(!ready.length){await cancelQueuedSeasonPassTaskNotifications(env,ctx.telegramId,'season-task-already-claimed');const fastState=await seasonPassTaskFastMutationState(env,ctx.season,ctx.telegramId);return jsonResponse({ok:true,season:{id:ctx.season.id,status:ctx.season.status,claimWindowOpen:ctx.season.claimWindowOpen,progression:seasonPassProgressionView(),capabilities:seasonPassCapabilities(ctx.season)},player:fastState.player,overflow:fastState.overflow,catchUp:fastState.catchUp,...(fastState.finale?{finale:fastState.finale}:{}),receivedTasks:[],taskUpdates:[],taskClaimableDelta:0,totalXp:0,stale:true});}
+    if(!ready.length){await cancelQueuedSeasonPassTaskNotifications(env,ctx.telegramId,'season-task-already-claimed');const fastState=await seasonPassTaskFastMutationState(env,ctx.season,ctx.telegramId);return jsonResponse({ok:true,season:{id:ctx.season.id,status:ctx.season.status,claimWindowOpen:ctx.season.claimWindowOpen,progression:seasonPassProgressionView(ctx.season),capabilities:seasonPassCapabilities(ctx.season)},player:fastState.player,overflow:fastState.overflow,catchUp:fastState.catchUp,...(fastState.finale?{finale:fastState.finale}:{}),receivedTasks:[],taskUpdates:[],taskClaimableDelta:0,totalXp:0,stale:true});}
     const predicates=ready.map(()=>`(task_id=? AND period_key=?)`).join(' OR ');const pairBinds=ready.flatMap(task=>[String(task.id),String(task.periodKey)]);
     const valueSql=ready.map(()=>`(?,?,?,?,?,'pending',?)`).join(',');
     const valueBinds=ready.flatMap(task=>[ctx.season.id,ctx.telegramId,String(task.id),String(task.periodKey),Math.max(1,Number(task.xp)||1)*taskXpMultiplier,now]);
@@ -33954,7 +33998,7 @@ async function claimAllSeasonPassTasks(request,env,executionCtx=null){
     const fastState=await seasonPassTaskFastMutationState(env,ctx.season,ctx.telegramId);
     return jsonResponse({
       ok:true,
-      season:{id:ctx.season.id,status:ctx.season.status,claimWindowOpen:ctx.season.claimWindowOpen,progression:seasonPassProgressionView(),capabilities:seasonPassCapabilities(ctx.season)},
+      season:{id:ctx.season.id,status:ctx.season.status,claimWindowOpen:ctx.season.claimWindowOpen,progression:seasonPassProgressionView(ctx.season),capabilities:seasonPassCapabilities(ctx.season)},
       player:fastState.player,overflow:fastState.overflow,catchUp:fastState.catchUp,...(fastState.finale?{finale:fastState.finale}:{}),
       receivedTasks,
       taskUpdates:ready.map(task=>({id:task.id,periodKey:task.periodKey,claimed:true,complete:true})),
@@ -33969,52 +34013,26 @@ async function claimSeasonPassOverflow(request,env){
     const ctx=await seasonPassRequestContext(request,env);
     const capabilities=seasonPassCapabilities(ctx.season);
     if(!capabilities.canClaimRewards)throw new ApiError(409,'Получение бонусных наград сейчас недоступно.');
-    // 50+ is intentionally universal: Free, Elite and Elite+ all use the same overflow reward lane.
-    // Premium tiers only change XP earning speed and premium task/reward access.
     const player=await env.DB.prepare(`SELECT * FROM season_pass_players WHERE season_id=? AND telegram_id=? LIMIT 1`).bind(ctx.season.id,ctx.telegramId).first()||ctx.player;
     const claimedRow=await env.DB.prepare(`SELECT COUNT(*) AS count FROM season_pass_claims WHERE season_id=? AND telegram_id=? AND lane='overflow' AND status='delivered'`).bind(ctx.season.id,ctx.telegramId).first();
-    const overflow=seasonPassOverflowView(player?.xp,Number(claimedRow?.count||0));
-    if(!overflow.unlocked||overflow.available<=0)throw new ApiError(409,'Бонусный золотой кейс ещё не открыт.');
-    const requestedAll=ctx.body?.all!==false;
-    const take=Math.max(1,Math.min(requestedAll?overflow.available:1,50));
-    const now=Math.floor(Date.now()/1000);
+    const overflow=seasonPassOverflowView(player?.xp,Number(claimedRow?.count||0),ctx.season.progression || ctx.season);
+    const configured=overflow.reward||seasonPassOverflowSettings(ctx.season.progression||ctx.season).reward;
+    if(!overflow.unlocked||overflow.available<=0)throw new ApiError(409,'Бонусная награда бесконечной линии ещё не открыта.');
+    const requestedAll=ctx.body?.all!==false,take=Math.max(1,Math.min(requestedAll?overflow.available:1,50));
     const received=[];
-    let busyCount=0;
     for(let offset=1;offset<=take;offset+=1){
-      const index=overflow.claimed+offset;
-      const level=SEASON_PASS_MAX_LEVEL+index;
-      const reward={level,lane:'overflow',rewardType:'case',amount:1,itemId:'gold',title:`Золотой кейс · 50+${index}`,imageUrl:'/assets/cases/gold_closed.webp'};
-      const grantId=`sp_overflow_${ctx.season.id}_${ctx.telegramId}_${index}`.replace(/[^A-Za-z0-9_-]/g,'_').slice(0,120);
-      const reserved=await env.DB.prepare(`INSERT OR IGNORE INTO season_pass_claims(season_id,telegram_id,level,lane,status,reward_json,claimed_at,delivered_at,error_text) VALUES(?,?,?,'overflow','pending',?,?,0,'')`).bind(ctx.season.id,ctx.telegramId,level,JSON.stringify(reward),now).run();
-      if(Number(reserved?.meta?.changes||0)<1){
-        const existing=await env.DB.prepare(`SELECT status,claimed_at FROM season_pass_claims WHERE season_id=? AND telegram_id=? AND level=? AND lane='overflow' LIMIT 1`).bind(ctx.season.id,ctx.telegramId,level).first();
-        const status=String(existing?.status||'');
-        const stale=(status==='pending'&&now-Number(existing?.claimed_at||now)>=24)||status==='failed';
-        if(stale){
-          const recovered=await env.DB.prepare(`UPDATE season_pass_claims SET status='pending',reward_json=?,claimed_at=?,delivered_at=0,error_text='' WHERE season_id=? AND telegram_id=? AND level=? AND lane='overflow' AND (status='failed' OR (status='pending' AND claimed_at<=?))`).bind(JSON.stringify(reward),now,ctx.season.id,ctx.telegramId,level,now-24).run();
-          if(Number(recovered?.meta?.changes||0)<1){busyCount+=1;continue;}
-        }else{busyCount+=1;continue;}
-      }
-      try{
-        await env.DB.batch([
-          env.DB.prepare(`INSERT OR IGNORE INTO granted_cases(id,telegram_id,case_type,status,granted_by,reason,rewards_json,created_at) VALUES(?,?,'gold','pending','season-pass',?,'[]',?)`).bind(grantId,ctx.telegramId,`${ctx.season.title}: бонусный уровень 50+${index}`,now),
-          env.DB.prepare(`UPDATE season_pass_claims SET status='delivered',delivered_at=?,error_text='' WHERE season_id=? AND telegram_id=? AND level=? AND lane='overflow' AND status='pending'`).bind(now,ctx.season.id,ctx.telegramId,level)
-        ]);
-        received.push(reward);
-      }catch(deliveryError){
-        await env.DB.prepare(`UPDATE season_pass_claims SET status='failed',error_text=? WHERE season_id=? AND telegram_id=? AND level=? AND lane='overflow' AND status='pending'`).bind(String(deliveryError?.message||deliveryError).slice(0,500),ctx.season.id,ctx.telegramId,level).run().catch(()=>{});
-        throw deliveryError;
-      }
+      const index=overflow.claimed+offset,level=SEASON_PASS_MAX_LEVEL+index;
+      const storedItemId=configured.type==='seasonal_case'?`${SEASON_PASS_SEASONAL_CASE_PREFIX}${configured.itemId}`:normalizeCaseType(configured.itemId||'gold');
+      const reward={level,lane:'overflow',reward_type:'case',rewardType:configured.type,amount:1,item_id:storedItemId,itemId:configured.itemId,title:`${configured.title} · 50+${index}`,image_url:configured.imageUrl,imageUrl:configured.imageUrl};
+      const result=await grantSeasonPassReward(env,ctx,reward);
+      if(!result.repeated)received.push(reward);
     }
-    const deliveredCount=received.length;
-    if(!deliveredCount){
-      if(busyCount>0)throw new ApiError(409,'Бонусная награда уже обрабатывается. Повторите через несколько секунд.');
-      throw new ApiError(409,'Бонусный золотой кейс уже получен.');
-    }
-    try{await recordPlayerTimeline(env,ctx.telegramId,'season_pass_overflow',`получил ${deliveredCount} бонусн${deliveredCount===1?'ый':'ых'} золот${deliveredCount===1?'ой кейс':'ых кейса'} после 50 уровня`,{seasonId:ctx.season.id,count:deliveredCount,levels:received.map(item=>item.level)},`season_pass_overflow_${ctx.season.id}_${ctx.telegramId}_${received[0]?.level}_${received[received.length-1]?.level}`,ctx.auth.user,now);}catch(error){console.error('season pass overflow timeline failed',error);}
+    if(!received.length)throw new ApiError(409,'Бонусная награда уже получена или обрабатывается.');
+    const now=Math.floor(Date.now()/1000),deliveredCount=received.length;
+    try{await recordPlayerTimeline(env,ctx.telegramId,'season_pass_overflow',`получил ${deliveredCount} наград бесконечной линии «${configured.title}»`,{seasonId:ctx.season.id,count:deliveredCount,rewardType:configured.type,itemId:configured.itemId,levels:received.map(item=>item.level)},`season_pass_overflow_${ctx.season.id}_${ctx.telegramId}_${received[0]?.level}_${received[received.length-1]?.level}`,ctx.auth.user,now);}catch(error){console.error('season pass overflow timeline failed',error);}
     const payload=await buildSeasonPassMutationPayload(env,ctx.season,ctx.telegramId,{includeClaims:true});
-    return jsonResponse({...payload,overflowReceived:deliveredCount,received:[{level:'50+',lane:'overflow',rewardType:'case',amount:deliveredCount,itemId:'gold',title:deliveredCount===1?'Золотой кейс':`Золотой кейс ×${deliveredCount}`,imageUrl:'/assets/cases/gold_closed.webp'}]});
-  }catch(error){if(error instanceof ApiError)return jsonResponse({ok:false,error:error.message},error.status);console.error('claimSeasonPassOverflow failed',error);return jsonResponse({ok:false,error:'Не удалось получить бонусный золотой кейс.'},500);}
+    return jsonResponse({...payload,overflowReceived:deliveredCount,received:[{level:'50+',lane:'overflow',rewardType:configured.type,amount:deliveredCount,itemId:configured.itemId,title:deliveredCount===1?configured.title:`${configured.title} ×${deliveredCount}`,imageUrl:configured.imageUrl}]});
+  }catch(error){if(error instanceof ApiError)return jsonResponse({ok:false,error:error.message},error.status);console.error('claimSeasonPassOverflow failed',error);return jsonResponse({ok:false,error:'Не удалось получить награду бесконечной линии.'},500);}
 }
 
 function seasonPassInteger(value, fallback = 0) {
@@ -45547,6 +45565,7 @@ const OWNER_CC_ENDPOINT_TARGET = Object.freeze({
   "/api/owner/season-pass/asset-key": "live",
   "/api/owner/season-pass/visuals": "live",
   "/api/owner/season-pass/reward": "staged_content",
+  "/api/owner/season-pass/overflow": "live",
   "/api/owner/season-pass/story/save": "live",
   "/api/owner/season-pass/story/delete": "live",
   "/api/owner/season-pass/story/toggle": "live",
@@ -45779,6 +45798,7 @@ async function handleOwnerPanelApi(request, env, path, executionCtx = null) {
     if (path === "/api/owner/season-pass/asset-key") return jsonResponse(await ownerPanelSaveSeasonPassAssetKey(env, ctx));
     if (path === "/api/owner/season-pass/visuals") return jsonResponse(await ownerPanelSaveSeasonPassVisuals(env, ctx));
     if (path === "/api/owner/season-pass/reward") return jsonResponse(await ownerPanelSetSeasonPassReward(env, ctx));
+    if (path === "/api/owner/season-pass/overflow") return jsonResponse(await ownerPanelSaveSeasonPassOverflow(env, ctx));
     if (path === "/api/owner/season-pass/story/save") return jsonResponse(await ownerPanelSaveSeasonPassStory(env, ctx));
     if (path === "/api/owner/season-pass/story/delete") return jsonResponse(await ownerPanelDeleteSeasonPassStory(env, ctx));
     if (path === "/api/owner/season-pass/story/toggle") return jsonResponse(await ownerPanelToggleSeasonPassStory(env, ctx));
@@ -46218,8 +46238,8 @@ async function ownerPanelPlayer(env, ctx) {
         level: seasonPassLevelFromXp(passXp),
         displayLevel: passXp>=SEASON_PASS_LEVEL_50_COMPLETE_XP ? "50+" : String(seasonPassLevelFromXp(passXp)),
         xp: passXp,
-        overflow: seasonPassOverflowView(passXp,0),
-        progression: seasonPassProgressionView(),
+        overflow: seasonPassOverflowView(passXp,0,seasonPass),
+        progression: seasonPassProgressionView(seasonPass),
         tier: String(passPlayer?.premium_tier || "none"),
         seasonalCases: Array.isArray(seasonalCaseCatalog) ? seasonalCaseCatalog : [],
         prices: {
@@ -46398,7 +46418,7 @@ async function ownerPanelGrantSeasonPassXp(env,ctx,telegramId,amount,reason){
     env.DB.prepare(`UPDATE season_pass_players SET xp=xp+?,revision=revision+1,updated_at=? WHERE season_id=? AND telegram_id=?`).bind(amount,now,season.id,telegramId),
     bumpPlayerAccountRevisionStatement(env, telegramId, now)
   ],{ok:true,grantType:"season_pass_xp",sourceId,seasonId:String(season.id),amount,beforeXp,afterXp:beforeXp+amount,message:`\u041d\u0430\u0447\u0438\u0441\u043b\u0435\u043d\u043e ${amount.toLocaleString("ru-RU")} XP \u0441\u0435\u0437\u043e\u043d\u043d\u043e\u0433\u043e \u043f\u0440\u043e\u043f\u0443\u0441\u043a\u0430.`});
-  const afterXp=beforeXp+amount;const afterLevel=seasonPassLevelFromXp(afterXp);const overflow=seasonPassOverflowView(afterXp,0);
+  const afterXp=beforeXp+amount;const afterLevel=seasonPassLevelFromXp(afterXp);const overflow=seasonPassOverflowView(afterXp,0,season);
   try{await recordPlayerTimeline(env,telegramId,'season_pass_owner_xp',`получил ${amount.toLocaleString('ru-RU')} XP сезонного пропуска от владельца`,{seasonId:season.id,beforeXp,afterXp,level:afterLevel,reason},sourceId,ctx.user,now);}catch(error){console.error('owner season pass xp timeline failed',error);}
   await logStaffAction(env,ctx.user,ctx.access,'owner_panel_season_pass_xp_grant',telegramId,'season_pass',beforeXp,afterXp,{seasonId:season.id,seasonTitle:String(season.title||''),amount,level:afterLevel,displayLevel:overflow.unlocked?'50+':String(afterLevel),reason,sourceId});
   try{const subscriber=await env.DB.prepare(`SELECT chat_id FROM bot_subscribers WHERE telegram_id=? AND active=1 LIMIT 1`).bind(telegramId).first();if(subscriber?.chat_id){const send=sendTelegramMessage(env,subscriber.chat_id,`<b>⚡ Начислен XP сезонного пропуска</b>\n\n+<b>${amount.toLocaleString('ru-RU')} XP</b> · ${escapeHtml(String(season.title||'Сезонный пропуск'))}${reason?`\nПричина: ${escapeHtml(reason)}`:''}`,{inline_keyboard:[[{text:'🎟 Открыть пропуск',web_app:{url:configuredSeasonPassTasksUrl(env)}}]]});if(ctx.executionCtx?.waitUntil)ctx.executionCtx.waitUntil(send);else await send;}}catch(error){console.error('owner season pass xp notification failed',error);}
@@ -47356,7 +47376,7 @@ async function ownerPanelSeasonPass(env, ctx) {
   const seasonRows=seasonsResult.results||[],seasonMap=new Map(seasonRows.map(row=>[String(row.season_id),seasonPassSeasonFromRow(row,configuredSeasonPassState(env,nowMs),nowMs)])),caseItemsById=new Map();for(const row of [...(caseItemsResult.results||[]),...(caseSpecialItemsResult.results||[]),...(caseResourceItemsResult.results||[])]){const id=String(row.case_id),kind=String(row.reward_kind),itemId=String(row.item_id),list=caseItemsById.get(id)||[];list.push({key:String(row.item_key),kind,itemId,amount:Math.max(1,Number(row.amount||1)),weight:Number(row.weight||1),rarity:String(row.rarity||''),title:String(row.title||''),imageUrl:SEASON_PASS_COSMETIC_KINDS.includes(kind)?liveOpsCanonicalContentImage(kind,itemId,row.image_url):String(row.image_url||''),enabled:Number(row.enabled||0)===1,resource:SEASON_PASS_SEASONAL_CASE_RESOURCE_KINDS.includes(kind)});caseItemsById.set(id,list);}
   const seasonalCases=(caseDefinitionsResult.results||[]).map(row=>{const view=ownerPanelSeasonalCaseView(row,seasonMap),isSelected=String(view.seasonId||'')===String(selected.id);view.itemsLoaded=isSelected;if(!isSelected){view.items=[];return view;}const items=(caseItemsById.get(view.caseId)||[]).slice(),known=new Set(items.map(item=>`${item.kind}:${item.itemId}`));for(const [kind,catalog] of Object.entries(liveops?.content||{})){for(const [itemId,item] of Object.entries(catalog||{})){const seasonalRoute=liveContentRoute(item,'seasonal_case',view.caseId);if(item?.enabled!==true||!seasonalRoute||!view.seasonId||String(item.seasonId||'')!==String(view.seasonId))continue;const key=`${kind}:${itemId}`;if(known.has(key))continue;items.push({key:`live:${key}`,kind,itemId,weight:Math.max(.01,Number(seasonalRoute.weight)||1),rarity:String(item.rarity||''),title:String(item.title||itemId),imageUrl:String(item.imageUrl||''),enabled:true,liveContent:true});known.add(key);}}view.items=items;return view;});
   const selectedSeasonalCase=seasonalCases.find(item=>item.seasonId===selected.id)||null,futureReleaseRules=await readLiveContentReleaseRules(env).catch(()=>new Map()),storyStatsMap=new Map((storyStatsResult.results||[]).map(row=>[String(row.event_id),{seen:Number(row.seen||0),completed:Number(row.completed||0),notified:Number(row.notified||0)}])),storyEvents=(storyEventsResult.results||[]).map(row=>({...seasonPassStoryEventView(row),reward:seasonPassStoryRewardConfig(row),stats:storyStatsMap.get(String(row.event_id))||{seen:0,completed:0,notified:0}})),lastReserved=Math.max(Math.floor(nowMs/1000)+3600,...seasonRows.map(row=>Math.max(Number(row.ends_at||0),Number(row.claim_grace_ends_at||0)))),suggestedStart=lastReserved+60,suggestedEnd=suggestedStart+30*24*3600;
-  return {ok:true,selected,seasons:seasonRows.map(row=>seasonPassSeasonFromRow(row,configuredSeasonPassState(env,nowMs),nowMs)),rewards:(rewardsResult.results||[]).map(ownerPanelSeasonPassRewardView),tasks:(tasksResult.results||[]).map(row=>({id:String(row.task_id),period:String(row.period),premium:Number(row.premium||0)===1,metric:String(row.metric),target:Number(row.target||0),xp:Number(row.xp_reward||0),title:String(row.title||''),description:String(row.description||''),enabled:Number(row.enabled||0)===1})),catalogs:ownerPanelSeasonPassCosmeticCatalogs(liveops,futureReleaseRules,seasonMap),teaser:{seasonId:selected.id,targetSeasonId:String(teaserRow?.target_season_id||''),enabled:Number(teaserRow?.enabled||0)===1,unlockLevel:Number(teaserRow?.unlock_level||50),envelopeTitle:String(teaserRow?.envelope_title||'Вам письмо'),title:String(teaserRow?.title||''),previewText:String(teaserRow?.preview_text||''),bodyText:String(teaserRow?.body_text||''),imageUrl:String(teaserRow?.image_url||''),pushText:String(teaserRow?.push_text||''),stats:{unlocked:Number(teaserStats?.unlocked||0),notified:Number(teaserStats?.notified||0),opened:Number(teaserStats?.opened||0)}},storyEvents,seasonalCase:selectedSeasonalCase,seasonalCases,createSuggestion:{startsAt:suggestedStart,endsAt:suggestedEnd},progression:seasonPassProgressionView(),tariffPurchases:Number(tariffPurchases?.count||0),stats:{players:Number(stats?.players||0),elite:Number(stats?.elite||0),elitePlus:Number(stats?.elite_plus||0),maxXp:Number(stats?.max_xp||0)}};
+  return {ok:true,selected,seasons:seasonRows.map(row=>seasonPassSeasonFromRow(row,configuredSeasonPassState(env,nowMs),nowMs)),rewards:(rewardsResult.results||[]).map(ownerPanelSeasonPassRewardView),tasks:(tasksResult.results||[]).map(row=>({id:String(row.task_id),period:String(row.period),premium:Number(row.premium||0)===1,metric:String(row.metric),target:Number(row.target||0),xp:Number(row.xp_reward||0),title:String(row.title||''),description:String(row.description||''),enabled:Number(row.enabled||0)===1})),catalogs:ownerPanelSeasonPassCosmeticCatalogs(liveops,futureReleaseRules,seasonMap),teaser:{seasonId:selected.id,targetSeasonId:String(teaserRow?.target_season_id||''),enabled:Number(teaserRow?.enabled||0)===1,unlockLevel:Number(teaserRow?.unlock_level||50),envelopeTitle:String(teaserRow?.envelope_title||'Вам письмо'),title:String(teaserRow?.title||''),previewText:String(teaserRow?.preview_text||''),bodyText:String(teaserRow?.body_text||''),imageUrl:String(teaserRow?.image_url||''),pushText:String(teaserRow?.push_text||''),stats:{unlocked:Number(teaserStats?.unlocked||0),notified:Number(teaserStats?.notified||0),opened:Number(teaserStats?.opened||0)}},storyEvents,seasonalCase:selectedSeasonalCase,seasonalCases,createSuggestion:{startsAt:suggestedStart,endsAt:suggestedEnd},progression:seasonPassProgressionView(selectedRow),tariffPurchases:Number(tariffPurchases?.count||0),stats:{players:Number(stats?.players||0),elite:Number(stats?.elite||0),elitePlus:Number(stats?.elite_plus||0),maxXp:Number(stats?.max_xp||0)}};
 }
 
 function ownerPanelSeasonPassRewardPresentation(typeValue, amountValue, itemValue) {
@@ -47393,6 +47413,36 @@ function ownerPanelSeasonPassRewardPresentation(typeValue, amountValue, itemValu
   if (amount == null) throw new ApiError(400, "Количество должно быть целым числом больше нуля.");
   const title = type === "points" ? `${amount.toLocaleString("ru-RU")} очков` : type === "treats" ? `${amount.toLocaleString("ru-RU")} зефира` : `${amount.toLocaleString("ru-RU")} кофе`;
   return { rewardType:type,publicRewardType:type,amount,itemId:"",title,imageUrl:ownerPanelRewardAsset(type) };
+}
+
+async function ownerPanelSaveSeasonPassOverflow(env, ctx) {
+  await ensureSeasonPassSchema(env);
+  const seasonId=String(ctx.body?.seasonId||'').trim();
+  const seasonRow=seasonId?await env.DB.prepare(`SELECT * FROM season_pass_seasons WHERE season_id=? LIMIT 1`).bind(seasonId).first():null;
+  if(!seasonRow)throw new ApiError(404,'Сезонный пропуск не найден.');
+  const stepXp=ownerPanelInteger(ctx.body?.stepXp,1,5000000);
+  if(stepXp==null)throw new ApiError(400,'XP бесконечной линии должно быть целым числом от 1 до 5 000 000.');
+  const rewardType=String(ctx.body?.rewardType||'case').trim()==='seasonal_case'?'seasonal_case':'case';
+  let itemId='',title='',imageUrl='';
+  if(rewardType==='seasonal_case'){
+    itemId=String(ctx.body?.rewardItemId||'').trim();
+    const definition=itemId?await env.DB.prepare(`SELECT case_id,season_id,title,closed_image_url FROM season_pass_case_definitions WHERE case_id=? LIMIT 1`).bind(itemId).first():null;
+    if(!definition)throw new ApiError(400,'Выберите существующий сезонный кейс.');
+    title=String(definition.title||'Сезонный кейс');
+    imageUrl=String(definition.closed_image_url||SYSTEM_IMAGE_FALLBACK);
+  }else{
+    itemId=normalizeCaseType(ctx.body?.rewardItemId||'gold');
+    if(!itemId)throw new ApiError(400,'Выберите существующий обычный кейс.');
+    const labels={small:'Обычный кейс',sweet:'Серебряный кейс',gold:'Золотой кейс',mythic:'Мифический кейс',legendary:'Легендарный кейс',alex:'Кейс Алекса'};
+    title=labels[itemId]||'Кейс';
+    imageUrl=ownerPanelCaseAsset(itemId);
+  }
+  const before=seasonPassProgressionView(seasonRow),now=Math.floor(Date.now()/1000);
+  await env.DB.prepare(`UPDATE season_pass_seasons SET overflow_step_xp=?,overflow_reward_type=?,overflow_reward_item_id=?,overflow_reward_title=?,overflow_reward_image_url=?,updated_at=?,updated_by=? WHERE season_id=?`).bind(stepXp,rewardType,itemId,title,imageUrl,now,String(ctx.user.id),seasonId).run();
+  const updated={...seasonRow,overflow_step_xp:stepXp,overflow_reward_type:rewardType,overflow_reward_item_id:itemId,overflow_reward_title:title,overflow_reward_image_url:imageUrl};
+  const progression=seasonPassProgressionView(updated);
+  await logStaffAction(env,ctx.user,ctx.access,'owner_panel_season_pass_overflow',null,'season_pass',seasonId,null,{before,after:progression});
+  return {ok:true,seasonId,progression};
 }
 
 async function ownerPanelSetSeasonPassReward(env, ctx) {

@@ -22210,9 +22210,12 @@ function createTutorialDeck(layer, mount, options, words) {
       }
 
       function giftRewardImageSource(reward) {
+        const explicit = String(reward?.imageUrl || reward?.image_url || &quot;&quot;).trim();
+        if (explicit) return explicit;
         const kind = String(reward?.kind || &quot;&quot;).trim().toLowerCase();
         const id = String(reward?.id || &quot;&quot;).trim();
         if (kind === &quot;case&quot;) return caseImageSource(id || &quot;small&quot;, false);
+        if (kind === &quot;seasonal_case&quot;) return &quot;/assets/season-pass/season.webp?v=07939&quot;;
         const resourceKind = kind === &quot;zefir&quot; ? &quot;treats&quot; : kind;
         if ([&quot;points&quot;,&quot;treats&quot;,&quot;coffee&quot;].includes(resourceKind)) return caseResourceImage(resourceKind);
         if (kind === &quot;booster&quot;) return CASE_BOOSTER_CATALOG[id]?.src || &quot;/assets/ui/icon_busters.webp&quot;;
@@ -30492,9 +30495,19 @@ html &gt; body.zefirok-game-expanded{height:var(--zefirok-visible-height,100dvh)
   function renderStep(){
     if(!active)return;const step=active.steps[active.index];if(!step){finish(true);return}const target=targetOf(step);
     if(!visible(target)){retryLayout();return}
-    try{target.scrollIntoView({block:&#x27;center&#x27;,inline:&#x27;nearest&#x27;,behavior:&#x27;smooth&#x27;})}catch{}
-    kicker.textContent=step.kicker||&#x27;Подсказка&#x27;;title.textContent=step.title||&#x27;&#x27;;copy.textContent=step.copy||&#x27;&#x27;;action.textContent=step.button||&#x27;Дальше&#x27;;action.hidden=Boolean(step.allow&amp;&amp;!step.button);skip.hidden=false;
-    layer.hidden=false;layer.setAttribute(&#x27;aria-hidden&#x27;,&#x27;false&#x27;);window.setTimeout(scheduleLayout,80);scheduleLayout();
+    const profileStep=active.id===&#x27;profile&#x27;;
+    if(profileStep){
+      // The profile guide starts below the fold. Move to the exact section first,
+      // then reveal the coach so the player never sees an empty/top-page spotlight.
+      layer.hidden=true;layer.setAttribute(&#x27;aria-hidden&#x27;,&#x27;true&#x27;);
+      try{target.scrollIntoView({block:&#x27;center&#x27;,inline:&#x27;nearest&#x27;,behavior:&#x27;auto&#x27;})}catch{}
+    }else try{target.scrollIntoView({block:&#x27;center&#x27;,inline:&#x27;nearest&#x27;,behavior:&#x27;smooth&#x27;})}catch{}
+    const reveal=()=&gt;{
+      if(!active||active.steps[active.index]!==step)return;
+      kicker.textContent=step.kicker||&#x27;Подсказка&#x27;;title.textContent=step.title||&#x27;&#x27;;copy.textContent=step.copy||&#x27;&#x27;;action.textContent=step.button||&#x27;Дальше&#x27;;action.hidden=Boolean(step.allow&amp;&amp;!step.button);skip.hidden=false;
+      layer.hidden=false;layer.setAttribute(&#x27;aria-hidden&#x27;,&#x27;false&#x27;);scheduleLayout();window.setTimeout(scheduleLayout,80);
+    };
+    if(profileStep)window.requestAnimationFrame(()=&gt;window.requestAnimationFrame(reveal));else reveal();
   }
   function lockCoachScroll(){
     if(root.dataset.contextCoachScrollLock===&#x27;1&#x27;)return;
