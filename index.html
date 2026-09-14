@@ -18336,7 +18336,11 @@ function createTutorialDeck(layer, mount, options, words) {
           state.wallet += credited.points;
           state.treats += credited.treats;
           state.coffee += credited.coffee;
-          consumeLocalCaseBoosterRun(credited, state.caseRunId);
+          // Reward-booster charges are server-authoritative. The protected run
+          // settlement decrements exactly the booster snapshot captured for this
+          // run and returns the canonical remaining count. Do not mutate the
+          // active booster locally here: the legacy local queue could race the
+          // settlement and restore a stale pre-settlement charge.
           state.completedRuns = sanitizeGameNumber(Number(state.completedRuns || 0) + 1);
           const runXpEarned = profileRunQualifiesForXp(state.time, earned) ? profileRunXpReward() : 0;
           if (runXpEarned &gt; 0) state.profileXp = sanitizeGameNumber(Number(state.profileXp || 0) + runXpEarned);
@@ -21161,26 +21165,6 @@ function createTutorialDeck(layer, mount, options, words) {
         }
       }
 
-      function consumeLocalCaseBoosterRun(credited, runId) {
-        const appliedTypes = (Array.isArray(credited?.boosterTypes) ? credited.boosterTypes : [credited?.boosterType])
-          .map((type) =&gt; String(type || &quot;&quot;))
-          .filter((type) =&gt; CASE_REWARD_BOOSTER_TYPES.includes(type));
-        if (!appliedTypes.length) return null;
-        const active = normalizeActiveCaseBoosters(state.activeCaseBoosters, state.activeCaseBooster);
-        const runsLeft = {};
-        for (const type of appliedTypes) {
-          if (Number(active[type] || 0) &lt;= 0) continue;
-          active[type] = Math.max(0, Number(active[type] || 0) - 1);
-          runsLeft[type] = active[type];
-        }
-        state.activeCaseBoosters = active;
-        state.activeCaseBooster = legacyActiveCaseBooster(active);
-        const validRunId = /^[A-Za-z0-9_-]{12,96}$/.test(String(runId || &quot;&quot;)) ? String(runId) : makeCaseRunId();
-        state.pendingBoosterRuns = normalizePendingBoosterRuns([...(state.pendingBoosterRuns || []), validRunId]);
-        renderActiveRunBooster(); renderCaseHub();
-        return { types: appliedTypes, runsLeft };
-      }
-
       async function flushPendingCaseBoosterRuns() {
         if (!telegramProfile?.initData) return false;
         const queue = normalizePendingBoosterRuns(state.pendingBoosterRuns);
@@ -21189,7 +21173,14 @@ function createTutorialDeck(layer, mount, options, words) {
             const data = await caseApiRequest(CASE_API_CONSUME_RUN_PATH, { runId });
             antiCheatWithTrustedChange(&quot;case-run-consumed&quot;, () =&gt; {
               state.pendingBoosterRuns = normalizePendingBoosterRuns(state.pendingBoosterRuns).filter(id =&gt; id !== runId);
-              applyServerCasePayload(data);
+              // A protected session in status=started is owned by the run
+              // settlement. Its /consume-run payload is intentionally
+              // pre-settlement and must never overwrite the client with that
+              // stale active-booster count. Drop only the obsolete legacy queue
+              // marker; submitLeaderboardRun/retryPendingLeaderboardRun will
+              // apply the canonical post-settlement booster state.
+              if (!data?.deferredToRunSettlement) applyServerCasePayload(data);
+              else saveProgress();
             });
           } catch (error) {
             console.warn(&quot;Case booster sync failed&quot;, error);

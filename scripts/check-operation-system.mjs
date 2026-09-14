@@ -255,6 +255,21 @@ assert(boosterHelpers.caseActiveBoosterConflict({coffee:2}, 'treats') === 'coffe
 assert(boosterHelpers.caseActiveBoosterConflict({shield:1}, 'pause') === 'shield', 'run helper does not block another run helper');
 assert(boosterHelpers.caseActiveBoosterConflict({coffee:2}, 'shield') === '', 'different booster groups incorrectly block each other');
 
+// Reward booster charges are committed exactly once by authoritative run settlement.
+// The removed legacy local-consume path used to race /consume-run startup cleanup
+// and could restore a stale pre-settlement charge after the expected final run.
+const endGameBoosterFlow = section(index, 'function endGame() {', 'function showModal(title, text)');
+assert(!endGameBoosterFlow.includes('consumeLocalCaseBoosterRun('), 'endGame still consumes a reward booster locally before server settlement');
+assert(!index.includes('function consumeLocalCaseBoosterRun('), 'legacy local reward-booster consumption helper is still present');
+const pendingBoosterFlush = section(index, 'async function flushPendingCaseBoosterRuns() {', 'function caseRunWord(value)');
+assert(pendingBoosterFlush.includes('if (!data?.deferredToRunSettlement) applyServerCasePayload(data);'), 'legacy booster cleanup can still apply stale pre-settlement active state');
+assert(pendingBoosterFlush.includes('else saveProgress();'), 'deferred protected-session cleanup does not persist removal of the obsolete legacy queue marker');
+const consumeBoosterRun = extractNamedFunction(worker, 'consumeCaseBoosterRun');
+assert(consumeBoosterRun.includes('deferredToRunSettlement: true'), 'server no longer marks protected booster consumption as owned by run settlement');
+const deferredBoosterConsume = section(consumeBoosterRun, 'if (String(session.status || "") === "started") {', 'const ensured = await ensureCasePlayerState');
+assert(!deferredBoosterConsume.includes('buildCasePayload('), 'deferred protected-session consume still returns stale pre-settlement case state');
+assert(deferredBoosterConsume.includes('jsonResponse({ ok: true, deferredToRunSettlement: true })'), 'deferred protected-session consume does not use the minimal no-state response');
+
 // FullScreen run HUD must surface reward x2 state without relying on the legacy
 // bottom pill, and the settled result must state how many boosted runs remain.
 assert(index.includes('data-run-focus-booster'), 'fullscreen x2 booster HUD slot is missing');

@@ -12337,8 +12337,12 @@ async function consumeCaseBoosterRun(request, env) {
     if (session) {
       if (String(session.telegram_id || "") !== telegramId) throw new ApiError(409, "Этот идентификатор забега уже используется.");
       if (String(session.status || "") === "started") {
-        const payload = await buildCasePayload(env, telegramId, {});
-        return jsonResponse({ ...payload, deferredToRunSettlement: true });
+        // The protected run settlement owns the booster charge. Do not return
+        // caseState here: legacy clients used to apply this pre-settlement
+        // snapshot and could resurrect the charge they had just consumed
+        // locally. A minimal deferred response is safe for both old and new
+        // clients; the canonical booster state arrives with run settlement.
+        return jsonResponse({ ok: true, deferredToRunSettlement: true });
       }
     }
 
