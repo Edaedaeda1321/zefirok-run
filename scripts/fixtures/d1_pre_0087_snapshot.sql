@@ -79,6 +79,32 @@ INSERT INTO reward_delivery_queue(telegram_id,source_type,source_id,reward_kind,
 -- Operational tables that already exist in a real pre-0088 production schema.
 -- They are included in the old-schema fixture so migration 0088 is exercised
 -- against the same table families it indexes/archives.
+CREATE TABLE game_case_drop_settings(
+ config_id TEXT PRIMARY KEY,
+ enabled INTEGER NOT NULL DEFAULT 0 CHECK(enabled IN (0,1)),
+ chance_bps INTEGER NOT NULL DEFAULT 700 CHECK(chance_bps BETWEEN 0 AND 10000),
+ weight_small INTEGER NOT NULL DEFAULT 7000 CHECK(weight_small BETWEEN 0 AND 1000000),
+ weight_sweet INTEGER NOT NULL DEFAULT 2200 CHECK(weight_sweet BETWEEN 0 AND 1000000),
+ weight_gold INTEGER NOT NULL DEFAULT 600 CHECK(weight_gold BETWEEN 0 AND 1000000),
+ weight_mythic INTEGER NOT NULL DEFAULT 200 CHECK(weight_mythic BETWEEN 0 AND 1000000),
+ weight_legendary INTEGER NOT NULL DEFAULT 0 CHECK(weight_legendary BETWEEN 0 AND 1000000),
+ spawn_min_ms INTEGER NOT NULL DEFAULT 10000 CHECK(spawn_min_ms BETWEEN 1000 AND 300000),
+ spawn_max_ms INTEGER NOT NULL DEFAULT 35000 CHECK(spawn_max_ms BETWEEN 1000 AND 300000),
+ updated_at INTEGER NOT NULL
+);
+INSERT INTO game_case_drop_settings(config_id,enabled,chance_bps,weight_small,weight_sweet,weight_gold,weight_mythic,weight_legendary,spawn_min_ms,spawn_max_ms,updated_at)
+VALUES ('main',0,700,7000,2200,600,200,0,10000,35000,1700000000);
+CREATE TABLE game_run_case_drops(
+ run_id TEXT PRIMARY KEY,
+ telegram_id TEXT NOT NULL,
+ case_type TEXT NOT NULL CHECK(case_type IN ('small','sweet','gold','mythic','legendary')),
+ spawn_after_ms INTEGER NOT NULL CHECK(spawn_after_ms BETWEEN 1000 AND 600000),
+ caught INTEGER NOT NULL DEFAULT 0 CHECK(caught IN (0,1)),
+ granted INTEGER NOT NULL DEFAULT 0 CHECK(granted IN (0,1)),
+ created_at INTEGER NOT NULL,
+ updated_at INTEGER NOT NULL
+);
+CREATE INDEX idx_game_run_case_drops_player ON game_run_case_drops(telegram_id,created_at DESC);
 CREATE TABLE game_run_sessions(
  run_id TEXT PRIMARY KEY,telegram_id TEXT NOT NULL,started_at_ms INTEGER NOT NULL,expires_at_ms INTEGER NOT NULL,status TEXT NOT NULL DEFAULT 'started',skin_id TEXT NOT NULL DEFAULT 'default',finished_at_ms INTEGER NOT NULL DEFAULT 0,duration_ms INTEGER NOT NULL DEFAULT 0,score INTEGER NOT NULL DEFAULT 0,run_treats INTEGER NOT NULL DEFAULT 0,run_coffee INTEGER NOT NULL DEFAULT 0,booster_points INTEGER NOT NULL DEFAULT 0,booster_treats INTEGER NOT NULL DEFAULT 0,booster_coffee INTEGER NOT NULL DEFAULT 0,booster_shield INTEGER NOT NULL DEFAULT 0,booster_second_chance INTEGER NOT NULL DEFAULT 0,booster_pause INTEGER NOT NULL DEFAULT 0,shield_used INTEGER NOT NULL DEFAULT 0,second_chance_used INTEGER NOT NULL DEFAULT 0,economy_points INTEGER NOT NULL DEFAULT 0,economy_treats INTEGER NOT NULL DEFAULT 0,economy_coffee INTEGER NOT NULL DEFAULT 0,profile_xp INTEGER NOT NULL DEFAULT 0,new_record INTEGER NOT NULL DEFAULT 0,accepted_rating INTEGER NOT NULL DEFAULT 0,season_id TEXT NOT NULL DEFAULT '',created_at INTEGER NOT NULL,updated_at INTEGER NOT NULL);
 CREATE TABLE game_run_live_proofs(run_id TEXT PRIMARY KEY,telegram_id TEXT NOT NULL,seq INTEGER NOT NULL DEFAULT 0,duration_ms INTEGER NOT NULL DEFAULT 0,score INTEGER NOT NULL DEFAULT 0,run_treats INTEGER NOT NULL DEFAULT 0,run_coffee INTEGER NOT NULL DEFAULT 0,last_server_at_ms INTEGER NOT NULL,anchor_duration_ms INTEGER NOT NULL DEFAULT 0,anchor_server_at_ms INTEGER NOT NULL DEFAULT 0,created_at INTEGER NOT NULL,updated_at INTEGER NOT NULL);
