@@ -24,6 +24,13 @@ if(quickAt<0||markerReturn<0||quickAt<markerReturn)fail('Season schema marker/qu
 
 if(!worker.includes('/api/profile/overview'))fail('Consolidated profile overview endpoint missing');
 if(!index.includes('/api/profile/overview'))fail('Profile UI does not use consolidated overview endpoint');
+const overview=between('async function getProfileOverview','async function getReferralState');
+if(!overview.includes('const readOverview=()=>Promise.all(['))fail('Profile overview lost read-only fast path');
+if(!overview.includes("profile-achievement-showcase',achievementShowcasePreviewForPlayer(env,telegramId),350"))fail('Profile overview achievement side-read is no longer bounded tightly');
+if(!worker.includes('/api/cases/open-granted/status'))fail('Granted-case read-only opening status endpoint missing');
+if(!index.includes('CASE_API_OPEN_GRANTED_STATUS_PATH'))fail('Granted-case client status endpoint missing');
+if(!index.includes('persistedGrantedCaseRequest'))fail('Granted-case request identity is not persisted across WebView reloads');
+if(!index.includes('loadCaseState(true, true, true)'))fail('Granted-case recovery is not using fast case state');
 if(!index.includes('controller.abort(), 4000'))fail('Account revision fetch has no bounded timeout');
 if(!worker.includes("startupBounded('cases'"))fail('Startup cases section is not bounded');
 if(!worker.includes("startupBounded('news'"))fail('Startup side sections are not bounded');

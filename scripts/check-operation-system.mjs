@@ -189,7 +189,9 @@ assert(worker.includes('CONSTRAINT case_state_revision_guard_ok CHECK(ok=1)'), '
 assert(index.includes('async function operationApiRequest'), 'client shared operation request helper is missing');
 assert(index.includes('error?.operationCode || error?.code || error?.details?.operationCode'), 'case UI does not recognize normalized STATE_CONFLICT');
 assert(index.includes('error?.operationCode === &quot;STATE_CONFLICT&quot;'), 'granted-case retry logic ignores normalized STATE_CONFLICT');
-assert(index.includes('return loadCaseState(true, false, true);'), 'case opening recovery does not request a read-only state check');
+assert(index.includes('return loadCaseState(true, true, true);'), 'case opening recovery does not request the fast read-only state check');
+assert(worker.includes('/api/cases/open-granted/status'), 'granted-case read-only status endpoint is missing');
+assert(index.includes('CASE_API_OPEN_GRANTED_STATUS_PATH'), 'granted-case client does not poll the read-only status endpoint');
 assert(index.includes('operationContractVersion: 1'), 'client does not send operation contract version');
 assert(index.includes('function operationIssuePresentation'), 'client shared friendly operation state presenter is missing');
 assert(index.includes('Покупки временно недоступны'), 'client friendly purchases-disabled message is missing');
