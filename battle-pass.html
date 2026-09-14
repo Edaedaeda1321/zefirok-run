@@ -1691,6 +1691,7 @@ button{-webkit-tap-highlight-color:transparent}
   display:grid;
   place-items:center;
   justify-self:center;
+  margin:0 auto;
   overflow:hidden
 }
 .reward-featured-art .reward-art{
@@ -4760,7 +4761,7 @@ img[src$="/xp.webp"]{
   <div class="reward-summary-card">
     <header class="reward-summary-head">
       <span class="reward-summary-kicker" id="rewardSummaryKicker">НАГРАДА ПОЛУЧЕНА</span>
-      <div class="summary-icon"><img id="rewardSummarySourceIcon" src="/assets/cases/gold_open.webp" alt=""></div>
+      <div class="summary-icon"><img id="rewardSummarySourceIcon" src="/assets/ui/icon_bp_prize.webp" alt=""></div>
       <h2 id="rewardSummaryTitle">Вот это улов!</h2>
       <p id="rewardSummarySubtitle">Полученные награды уже на аккаунте.</p>
     </header>
@@ -8055,7 +8056,7 @@ img[src$="/xp.webp"]{
     const summaryLayer=el("rewardSummary"),summaryIcon=el("rewardSummarySourceIcon"),summaryKicker=el("rewardSummaryKicker");
     const seasonalSummary=summaryOptions.seasonalCase===true;
     summaryLayer?.classList.toggle("is-seasonal-case",seasonalSummary);
-    if(summaryIcon)summaryIcon.src=String(summaryOptions.caseImage||"/assets/cases/gold_open.webp");
+    if(summaryIcon)summaryIcon.src=String(seasonalSummary&&summaryOptions.caseImage?summaryOptions.caseImage:"/assets/ui/icon_bp_prize.webp");
     if(summaryKicker)summaryKicker.textContent=String(summaryOptions.kicker||(seasonalSummary?"СЕЗОННЫЙ КЕЙС":"НАГРАДА ПОЛУЧЕНА"));
     const overflowRows=original.map(item=>item?.streakProtection).filter(value=>Number(value?.overflowAmount||0)>0);
     const overflow=overflowRows.length?{

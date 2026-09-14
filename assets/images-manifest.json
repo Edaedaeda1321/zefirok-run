@@ -1,8 +1,8 @@
 {
   "version": 2,
   "hashAlgorithm": "sha256",
-  "catalogHash": "ec1140bce08ed8ab",
-  "count": 456,
+  "catalogHash": "e597757ea02f6fb8",
+  "count": 457,
   "images": [
     {
       "fileName": "achievements/background_achivment_panel.webp",
@@ -3315,6 +3315,14 @@
       "path": "/assets/ui/icon_battlepass.webp",
       "hash": "b76958f5dab2",
       "size": 28576
+    },
+    {
+      "fileName": "ui/icon_bp_prize.webp",
+      "label": "Icon bp prize",
+      "folder": "ui",
+      "path": "/assets/ui/icon_bp_prize.webp",
+      "hash": "e615d4370266",
+      "size": 207020
     },
     {
       "fileName": "ui/icon_busters.webp",
