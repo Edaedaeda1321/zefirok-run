@@ -8172,8 +8172,20 @@ async function ensureRunCaseDropSchema(env){
           spawn_after_ms INTEGER NOT NULL CHECK(spawn_after_ms BETWEEN 1000 AND 300000), caught INTEGER NOT NULL DEFAULT 0 CHECK(caught IN (0,1)),
           granted INTEGER NOT NULL DEFAULT 0 CHECK(granted IN (0,1)), created_at INTEGER NOT NULL, updated_at INTEGER NOT NULL)`),
         env.DB.prepare(`CREATE INDEX IF NOT EXISTS idx_game_run_case_drops_player ON game_run_case_drops(telegram_id,created_at DESC)`),
-        env.DB.prepare(`INSERT OR IGNORE INTO game_case_drop_settings(config_id,enabled,chance_bps,weight_small,weight_sweet,weight_gold,weight_mythic,weight_legendary,spawn_min_ms,spawn_max_ms,updated_at) VALUES('main',0,700,7000,2200,600,200,0,10000,35000,unixepoch())`)
+        env.DB.prepare(`INSERT OR IGNORE INTO game_case_drop_settings(config_id,enabled,chance_bps,weight_small,weight_sweet,weight_gold,weight_mythic,weight_legendary,spawn_min_ms,spawn_max_ms,updated_at) VALUES('main',1,5000,9000,500,250,200,50,1000,1000,unixepoch())`)
       ]);
+      // 0091 inserts a policy marker instead of mutating the live row while an
+      // older Worker may still be serving traffic. The new Worker consumes the
+      // marker atomically, so the 50% drop policy only becomes active together
+      // with the server-side 1000-score gate.
+      const policyMarker='runner_case_drop_policy_v2_20260914';
+      const pendingPolicy=await env.DB.prepare(`SELECT config_id FROM game_case_drop_settings WHERE config_id=? LIMIT 1`).bind(policyMarker).first();
+      if(pendingPolicy?.config_id){
+        await env.DB.batch([
+          env.DB.prepare(`UPDATE game_case_drop_settings SET enabled=1,chance_bps=5000,weight_small=9000,weight_sweet=500,weight_gold=250,weight_mythic=200,weight_legendary=50,spawn_min_ms=1000,spawn_max_ms=1000,updated_at=unixepoch() WHERE config_id='main'`),
+          env.DB.prepare(`DELETE FROM game_case_drop_settings WHERE config_id=?`).bind(policyMarker)
+        ]);
+      }
     })().catch(e=>{runCaseDropSchemaPromise=null;throw e;});
   }
   return runCaseDropSchemaPromise;
@@ -8181,9 +8193,9 @@ async function ensureRunCaseDropSchema(env){
 
 function runCaseDropConfigView(row){
   return {
-    enabled:Number(row?.enabled||0)===1, chanceBps:Math.max(0,Math.min(10000,Number(row?.chance_bps ?? 700))),
-    weights:{small:Math.max(0,Number(row?.weight_small||0)),sweet:Math.max(0,Number(row?.weight_sweet||0)),gold:Math.max(0,Number(row?.weight_gold||0)),mythic:Math.max(0,Number(row?.weight_mythic||0)),legendary:Math.max(0,Number(row?.weight_legendary||0))},
-    spawnMinMs:Math.max(1000,Number(row?.spawn_min_ms||10000)),spawnMaxMs:Math.max(1000,Number(row?.spawn_max_ms||35000))
+    enabled:Number(row?.enabled||0)===1, chanceBps:Math.max(0,Math.min(10000,Number(row?.chance_bps ?? 5000))),
+    weights:{small:Math.max(0,Number(row?.weight_small??9000)),sweet:Math.max(0,Number(row?.weight_sweet??500)),gold:Math.max(0,Number(row?.weight_gold??250)),mythic:Math.max(0,Number(row?.weight_mythic??200)),legendary:Math.max(0,Number(row?.weight_legendary??50))},
+    spawnMinMs:Math.max(1000,Number(row?.spawn_min_ms??1000)),spawnMaxMs:Math.max(1000,Number(row?.spawn_max_ms??1000))
   };
 }
 
@@ -8209,6 +8221,7 @@ function rollRunCaseDrop(config){
   const min=Math.max(1000,Number(config.spawnMinMs||10000)), max=Math.max(min,Number(config.spawnMaxMs||35000));
   return {type,spawnAfterMs:Math.round(min+Math.random()*(max-min))};
 }
+const RUN_CASE_DROP_MIN_SCORE = 1000;
 const AUTHORITATIVE_RUN_SESSION_MAX_MS = 2 * 60 * 60 * 1000;
 const AUTHORITATIVE_RUN_CLOCK_GRACE_MS = 7000;
 // A run must prove its progress continuously while the game is actually
@@ -8800,8 +8813,8 @@ async function checkpointAuthoritativeRunSession(request, env) {
       }
       const submittedCaseDropCaught=Boolean(body.caseDropCaught||body.case_drop_caught);
       if(submittedCaseDropCaught){
-        await env.DB.prepare(`UPDATE game_run_case_drops SET caught=1,updated_at=? WHERE run_id=? AND telegram_id=? AND caught=0 AND spawn_after_ms<=?`)
-          .bind(Math.floor(checkpoint.attestedAtMs/1000),runId,telegramId,checkpoint.durationMs).run();
+        await env.DB.prepare(`UPDATE game_run_case_drops SET caught=1,updated_at=? WHERE run_id=? AND telegram_id=? AND caught=0 AND spawn_after_ms<=? AND ?>=?`)
+          .bind(Math.floor(checkpoint.attestedAtMs/1000),runId,telegramId,checkpoint.durationMs,checkpoint.score,RUN_CASE_DROP_MIN_SCORE).run();
       }
       return jsonResponse({ ok: true, checkpoint: {
         runId, seq: checkpoint.proofSeq, durationMs: checkpoint.durationMs, score: checkpoint.score,
@@ -8940,7 +8953,7 @@ async function startAuthoritativeRunSession(request, env) {
             second_chance:Number(session.booster_second_chance||0)===1,
             pause:Number(session.booster_pause||0)===1
           },
-          caseDrop:session.case_drop_type?{type:String(session.case_drop_type),spawnAfterMs:Number(session.case_drop_spawn_after_ms||0),caught:Number(session.case_drop_caught||0)===1}:null
+          caseDrop:session.case_drop_type?{type:String(session.case_drop_type),spawnAfterMs:Number(session.case_drop_spawn_after_ms||0),minScore:RUN_CASE_DROP_MIN_SCORE,caught:Number(session.case_drop_caught||0)===1}:null
         },
         repeated
       });
@@ -11419,7 +11432,7 @@ function rollLevelCase(caseType, sourceState, currentOwnedSkins = [], liveops = 
       }
       return candidates;
     };
-    let candidates=collect(true); if(!candidates.length)candidates=collect(false); if(!candidates.length)return false;
+    const candidates=collect(false); if(!candidates.length)return false;
     let roll=rng()*candidates.reduce((sum,item)=>sum+item.weight,0);let selected=candidates[candidates.length-1];
     for(const item of candidates){roll-=item.weight;if(roll<0){selected=item;break;}}
     return grantSelectedCosmetic(selected,true);
@@ -11461,7 +11474,7 @@ function rollLevelCase(caseType, sourceState, currentOwnedSkins = [], liveops = 
     const rarityMap = {epicCosmetic:"epic",mythicCosmetic:"mythic",legendaryCosmetic:"legendary"};
     if (rarityMap[kind]) {
       const rarity=rarityMap[kind];
-      const success=grantSelectedCosmetic(weightedRarityCosmetic(rarity),false);
+      const success=grantSelectedCosmetic(weightedRarityCosmetic(rarity,{unownedOnly:caseType==="legendary"}),false);
       if(!success){const[min,max]=caseCurrencyRange(caseType,"points",liveops);const amount=caseRandomInt(min,max,rng);points+=amount;rewards.push({kind:"points",amount,fallbackFromUnavailableCategory:kind});incrementPity();continue;}
       if (caseType === "mythic" && ["mythic","legendary"].includes(rarity)) resetMythicPityForHighRarity(rarity); else incrementPity();
       continue;
@@ -11469,7 +11482,7 @@ function rollLevelCase(caseType, sourceState, currentOwnedSkins = [], liveops = 
     const mapping = {avatar:[catalogs.avatar,"ownedAvatars"],frame:[catalogs.frame,"ownedFrames"],trail:[catalogs.trail,"ownedTrails"],skin:[catalogs.skin,"ownedSkins"],music:[catalogs.music,"ownedMusicTracks"]};
     if (mapping[kind]) {
       const [catalog, ownedKey] = mapping[kind];
-      const success = addCosmetic(kind, catalog, ownedKey, CASE_DUPLICATE_COMPENSATION[kind], caseAvailabilityPredicate, {preferUnowned:true,allowDuplicate:caseType!=="legendary"});
+      const success = addCosmetic(kind, catalog, ownedKey, CASE_DUPLICATE_COMPENSATION[kind], caseAvailabilityPredicate, {preferUnowned:caseType==="legendary",allowDuplicate:caseType!=="legendary"});
       if (!success) {const [min,max]=caseCurrencyRange(caseType,"points",liveops);const amount=caseRandomInt(min,max,rng);points+=amount;rewards.push({kind:"points",amount,fallbackFromUnavailableCategory:kind});}
       incrementPity();
     }
@@ -13445,7 +13458,7 @@ async function submitLeaderboardRun(request, env, executionCtx = null) {
     const ratingHidden = Number(testerRow?.exclude_from_rating || 0) === 1 ? 1 : 0;
     const rejectionReason = acceptedToRating ? "" : (!qualifies ? "below_minimum" : (!ratingEntryEnabled ? "rating_disabled" : `season_${String(season.status || "inactive")}`));
     const submittedCaseDropCaught=Boolean(body.caseDropCaught||body.case_drop_caught);
-    const caseDropCaught=Boolean(reservedCaseDrop && (Number(reservedCaseDrop.caught||0)===1 || (submittedCaseDropCaught && metrics.durationMs>=Number(reservedCaseDrop.spawn_after_ms||0))));
+    const caseDropCaught=Boolean(reservedCaseDrop && metrics.score>=RUN_CASE_DROP_MIN_SCORE && (Number(reservedCaseDrop.caught||0)===1 || (submittedCaseDropCaught && metrics.durationMs>=Number(reservedCaseDrop.spawn_after_ms||0))));
     const caseDropType=String(reservedCaseDrop?.case_type||'');
     const caseDropGrantId=`run_case_drop_${runId}`.slice(0,180);
 
