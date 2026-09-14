@@ -7030,9 +7030,10 @@ img[src$="/xp.webp"]{
     const summary=el("seasonStoryArchiveSummary");
     if(summary)summary.textContent=`Прочитано глав: ${archive.length}`;
     el("seasonStoryArchiveList").innerHTML=archive.map((item,index)=>{
-      const pages=storyPages(item),image=storyEscapeHtml(item.imageUrl||pages[0]?.imageUrl||IMAGE_ERROR_FALLBACK),title=storyEscapeHtml(item.title||`Глава ${index+1}`),eventId=storyEscapeHtml(item.eventId||"");
+      const chapterNumber=Math.max(1,Number(item.chapterNumber)||index+1);
+      const pages=storyPages(item),image=storyEscapeHtml(item.imageUrl||pages[0]?.imageUrl||IMAGE_ERROR_FALLBACK),title=storyEscapeHtml(item.title||`Глава ${chapterNumber}`),eventId=storyEscapeHtml(item.eventId||"");
       const reward=item.reward?`<span class="season-story-reward-chip">${prizeIconMarkup()}<span>${storyEscapeHtml(item.reward.title||"Награда")}</span></span>`:"";
-      return `<article class="season-story-archive-item"><img class="season-story-archive-thumb" src="${image}" alt=""><div class="season-story-archive-copy"><span class="season-story-archive-number">ГЛАВА ${index+1}</span><b>${title}</b><div class="season-story-archive-meta"><span>Уровень ${Number(item.unlockLevel||1)}</span><span>${pages.length} стр.</span><span class="is-read">✓ Прочитано</span></div>${reward}</div><button type="button" data-story-archive-event="${eventId}">Читать</button></article>`;
+      return `<article class="season-story-archive-item"><img class="season-story-archive-thumb" src="${image}" alt=""><div class="season-story-archive-copy"><span class="season-story-archive-number">ГЛАВА ${chapterNumber}</span><b>${title}</b><div class="season-story-archive-meta"><span>Уровень ${Number(item.unlockLevel||1)}</span><span>${pages.length} стр.</span><span class="is-read">✓ Прочитано</span></div>${reward}</div><button type="button" data-story-archive-event="${eventId}">Читать</button></article>`;
     }).join("");
     el("seasonStoryArchiveList").querySelectorAll("[data-story-archive-event]").forEach(button=>button.addEventListener("click",()=>{const item=archive.find(x=>String(x.eventId)===String(button.dataset.storyArchiveEvent));closeSeasonStoryArchive();showSeasonStoryEvent(item,{pending:false});}));
     el("seasonStoryArchiveOverlay").hidden=false;document.body.style.overflow="hidden";passSelectHaptic();

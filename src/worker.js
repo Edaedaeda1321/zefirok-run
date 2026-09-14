@@ -355,17 +355,6 @@ function season2StoryPresetEvents(){
   const asset=(name)=>`/assets/letter/pick/${name}`;
   return [
     {
-      key:"chapter-1", sortOrder:10, unlockLevel:1, enabled:true,
-      title:"ГЛАВА I — «После закрытия»",
-      pushText:"После закрытия «Зефирка» выглядит иначе. Открылась первая глава ночной истории.",
-      pages:[
-        {title:"После закрытия",bodyText:"Зеффи оказывается в ночной версии знакомой «Зефирки».\n\nНо сначала всё выглядит скорее удивительно, чем волшебно.\n\nЗа окном ночь. Луна освещает кафе.",imageUrl:asset("season2_pick.webp"),buttonText:"Далее",musicId:""},
-        {title:"Необычный свет",bodyText:"Некоторые зефирки начинают слегка светиться.",imageUrl:"",buttonText:"Далее",musicId:""},
-        {title:"Кафе живёт своей жизнью",bodyText:"Кофейная машина сама готовит чашку кофе.\n\nПо полу появляются маленькие золотые звёздочки.",imageUrl:"",buttonText:"Далее",musicId:""},
-        {title:"Путь света",bodyText:"Зеффи замечает, что с каждой собранной зефиркой вокруг становится немного больше света.",imageUrl:"",buttonText:"Завершить главу",musicId:""}
-      ]
-    },
-    {
       key:"chapter-2", sortOrder:20, unlockLevel:15, enabled:true,
       title:"ГЛАВА II — «Когда кафе засыпает»",
       pushText:"Ночная «Зефирка» меняется всё сильнее. Открылась новая глава истории.",
@@ -435,16 +424,20 @@ const CASE_RARITY_ORDER = Object.freeze({ common: 0, rare: 1, superrare: 2, epic
 // IMPORTANT: category chances and currency ranges are unchanged. This only
 // defines which existing item/booster pool is used after that category wins.
 const CASE_EVERGREEN_ROLE_POLICY = Object.freeze({
-  sweetMaxRarity: "superrare"
+  // Published category probabilities and currency ranges stay untouched.
+  // These floors only curate the cosmetic pool AFTER a cosmetic category wins.
+  // High rarities are still possible through their existing small item weights.
+  sweetMinRarity: "rare",
+  goldMinRarity: "superrare"
 });
 function caseEvergreenItemAllowed(caseType, item) {
   if (!item || item.alexOnly === true || item.achievementOnly === true) return false;
   const type = String(caseType || "small");
   if (type !== "legendary" && item.legendaryOnly === true) return false;
-  if (type === "sweet") {
-    const rarity = String(item.rarity || "common");
-    return (CASE_RARITY_ORDER[rarity] ?? 0) <= (CASE_RARITY_ORDER[CASE_EVERGREEN_ROLE_POLICY.sweetMaxRarity] ?? 2);
-  }
+  const rarity = String(item.rarity || "common");
+  const rank = CASE_RARITY_ORDER[rarity] ?? 0;
+  if (type === "sweet") return rank >= (CASE_RARITY_ORDER[CASE_EVERGREEN_ROLE_POLICY.sweetMinRarity] ?? 1);
+  if (type === "gold") return rank >= (CASE_RARITY_ORDER[CASE_EVERGREEN_ROLE_POLICY.goldMinRarity] ?? 2);
   return true;
 }
 function caseBoosterPoolForType(caseType) {
@@ -15453,12 +15446,12 @@ async function botSeasonTwoStoryState(env, telegramId) {
     LEFT JOIN season_pass_story_progress p ON p.event_id=e.event_id AND p.telegram_id=?
     WHERE e.season_id=?
     ORDER BY e.unlock_level,e.sort_order,e.created_at,e.event_id`).bind(playerId,seasonId).all()).results || [];
-  // Keep already opened chapters in the bot even if an operator later disables
-  // the event. Unseen disabled drafts remain invisible and do not affect numbering.
-  const visibleRows=rows.filter(row=>Number(row.enabled||0)===1||Number(row.seen_at||0)>0||Number(row.completed_at||0)>0);
+  // Disabled/retired events are not player-facing. Keep their DB progress for audit,
+  // but never show them in the bot or let them affect the visible chapter list.
+  const visibleRows=rows.filter(seasonPassStoryEventIsPlayerVisible);
   const all = visibleRows.map((row,index) => {
     const event = seasonPassStoryEventView(row);
-    return { ...event, chapterNumber:index + 1, opened:Number(row.seen_at || 0) > 0 || Number(row.completed_at || 0) > 0 };
+    return { ...event, chapterNumber:seasonPassStoryChapterNumber(row,index + 1), opened:Number(row.seen_at || 0) > 0 || Number(row.completed_at || 0) > 0 };
   });
   return {
     seasonId,
@@ -32781,10 +32774,50 @@ async function ensureSeason3DraftSeasonalCase(env){
   return {ok:true,seeded:true,seasonId,caseId,itemCount:pool.length,presetId};
 }
 
+
+function seasonPassStoryIsLegacyPlaceholder(row){
+  if(!row)return false;
+  const eventId=String(row.event_id||'');
+  const title=String(row.title||'').replace(/[«»]/g,'').trim().toLocaleLowerCase('ru-RU');
+  return Number(row.sort_order||0)===10 && Number(row.unlock_level||0)===1 &&
+    (eventId.endsWith('_s2_chapter-1') || title.includes('после закрытия'));
+}
+function seasonPassStoryEventIsPlayerVisible(row){
+  if(!row||seasonPassStoryIsLegacyPlaceholder(row))return false;
+  return Number(row.enabled||0)===1 || Number(row.seen_at||0)>0 || Number(row.completed_at||0)>0;
+}
+function seasonPassStoryEventIsActive(row){
+  return Boolean(row) && Number(row.enabled||0)===1 && !seasonPassStoryIsLegacyPlaceholder(row);
+}
+function seasonPassStoryChapterNumber(row,fallback=1){
+  const order=Math.max(0,Math.floor(Number(row?.sort_order)||0));
+  if(order>=10&&order%10===0){const n=order/10;if(n>=1&&n<=99)return n;}
+  const match=String(row?.title||'').match(/^\s*ГЛАВА\s+(\d+)/iu);
+  if(match)return Math.max(1,Number(match[1])||fallback);
+  return Math.max(1,Number(fallback)||1);
+}
+async function retireSeason2LegacyStoryPlaceholder(env,seasonId){
+  const id=String(seasonId||'').trim();if(!id)return 0;
+  const now=Math.floor(Date.now()/1000);
+  const result=await env.DB.prepare(`UPDATE season_pass_story_events
+    SET enabled=0,updated_at=?,updated_by=?
+    WHERE season_id=? AND enabled=1 AND sort_order=10 AND unlock_level=1
+      AND (event_id LIKE '%_s2_chapter-1' OR title=?)`)
+    .bind(now,'runtime-season2-story-v2.4-retired',id,'ГЛАВА I — «После закрытия»').run();
+  return Number(result?.meta?.changes||0);
+}
+
 async function ensureSeason2StoryPreset(env){
   const presetId=SEASON2_STORY_PRESET.id;
   const markerRow=await env.DB.prepare(`SELECT preset_id,season_id FROM season_pass_story_presets WHERE preset_id=? LIMIT 1`).bind(presetId).first();
-  if(markerRow?.preset_id){const seasonId=String(markerRow.season_id||'');if(seasonId)await bindSeason2ContentCatalogToSeason(env,seasonId).catch(error=>console.error('season2 content binding failed',error));return {ok:true,seeded:false,reason:'already-seeded',seasonId};}
+  if(markerRow?.preset_id){
+    const seasonId=String(markerRow.season_id||'');
+    if(seasonId){
+      await retireSeason2LegacyStoryPlaceholder(env,seasonId).catch(error=>console.error('season2 legacy story retirement failed',error));
+      await bindSeason2ContentCatalogToSeason(env,seasonId).catch(error=>console.error('season2 content binding failed',error));
+    }
+    return {ok:true,seeded:false,reason:'already-seeded',seasonId};
+  }
 
   const now=Math.floor(Date.now()/1000);
   const candidates=(await env.DB.prepare(`SELECT season_id,title,starts_at,ends_at,manual_status FROM season_pass_seasons WHERE starts_at>? AND COALESCE(manual_status,'')<>'ended' ORDER BY starts_at ASC,season_id ASC LIMIT 100`).bind(now).all()).results||[];
@@ -32973,15 +33006,15 @@ async function seasonPassStoryForPlayer(env,season,telegramId,player){
     LEFT JOIN season_pass_story_manual_unlocks mu ON mu.event_id=e.event_id AND mu.telegram_id=?
     WHERE e.season_id=?
     ORDER BY e.unlock_level,e.sort_order,e.created_at,e.event_id`).bind(String(telegramId),String(telegramId),String(season.id)).all()).results||[];
-  const archive=rows.filter(row=>Number(row.completed_at||0)>0).map(seasonPassStoryEventView);
-  const firstIncomplete=rows.find(row=>Number(row.enabled||0)===1&&Number(row.completed_at||0)<=0)||null;
+  const archive=rows.filter(row=>seasonPassStoryEventIsPlayerVisible(row)&&Number(row.completed_at||0)>0).map((row,index)=>({...seasonPassStoryEventView(row),chapterNumber:seasonPassStoryChapterNumber(row,index+1)}));
+  const firstIncomplete=rows.find(row=>seasonPassStoryEventIsActive(row)&&Number(row.completed_at||0)<=0)||null;
   const normalUnlocked=firstIncomplete&&Number(firstIncomplete.unlock_level||1)<=level&&(Number(firstIncomplete.unlock_at||0)<=0||Number(firstIncomplete.unlock_at||0)<=now);
   const manualUnlocked=firstIncomplete&&Number(firstIncomplete.manual_unlocked_at||0)>0;
   const pendingRow=(normalUnlocked||manualUnlocked)?firstIncomplete:null;
   const pendingId=String(pendingRow?.event_id||'');
-  const timeline=rows.filter(row=>Number(row.enabled||0)===1).map((row,index)=>{
+  const timeline=rows.filter(seasonPassStoryEventIsActive).map((row,index)=>{
     const eventId=String(row.event_id||''),completedAt=Math.max(0,Number(row.completed_at||0)),available=Boolean(pendingId&&eventId===pendingId),status=completedAt>0?'read':available?'available':'locked';
-    return {eventId,chapterNumber:index+1,unlockLevel:Math.max(1,Math.min(50,Number(row.unlock_level)||1)),unlockAt:Math.max(0,Number(row.unlock_at)||0),status,title:status==='locked'?'':String(row.title||''),completedAt};
+    return {eventId,chapterNumber:seasonPassStoryChapterNumber(row,index+1),unlockLevel:Math.max(1,Math.min(50,Number(row.unlock_level)||1)),unlockAt:Math.max(0,Number(row.unlock_at)||0),status,title:status==='locked'?'':String(row.title||''),completedAt};
   });
   return {seasonId:String(season.id),pending:seasonPassStoryEventView(pendingRow),archive,timeline,availableCount:pendingRow?1:0};
 }
