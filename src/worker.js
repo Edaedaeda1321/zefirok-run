@@ -2227,15 +2227,15 @@ export default {
       }
 
       if (url.pathname === "/api/cases/open" && request.method === "POST") {
-        return await withPlayerApiPerformance(env, ctx, "case_open_level", () => openLevelCase(request, env, ctx));
+        return await withPlayerApiPerformance(env, ctx, "case_open_level", () => openLevelCase(request, env, ctx), request);
       }
 
       if (url.pathname === "/api/cases/open-granted" && request.method === "POST") {
-        return await withPlayerApiPerformance(env, ctx, "case_open_granted", () => openGrantedCase(request, env, ctx));
+        return await withPlayerApiPerformance(env, ctx, "case_open_granted", () => openGrantedCase(request, env, ctx), request);
       }
 
       if (url.pathname === "/api/cases/open-granted/status" && request.method === "POST") {
-        return await withPlayerApiPerformance(env, ctx, "case_open_granted_status", () => getGrantedCaseOpeningStatus(request, env));
+        return await withPlayerApiPerformance(env, ctx, "case_open_granted_status", () => getGrantedCaseOpeningStatus(request, env), request);
       }
 
       if (url.pathname === "/api/cases/purchase" && request.method === "POST") {
@@ -12212,7 +12212,7 @@ async function openGrantedCase(request, env, ctx = null) {
     );
     const background = Promise.allSettled([
       recordCaseRewardsAnalytics(env, telegramId, rolled.rewards, "granted_case", claimedId, now),
-      recordPlayerTimeline(env, telegramId, "case_open", caseTimelineSuccessTitle(auth.user,telegramId,`Подарочный ${LEVEL_CASE_CONFIG[caseType]?.title||caseType}`,rolled.rewards), { caseType, grantId: claimedId, rewards: rolled.rewards }, `grant_case_${claimedId}`, auth.user, now)
+      recordPlayerTimeline(env, telegramId, "case_open", caseTimelineSuccessTitle(auth.user,telegramId,`Подарочный ${LEVEL_CASE_CONFIG[caseType]?.title||caseType}`,rolled.rewards), { caseType, grantId: claimedId, requestId: requestId || openingClaimToken, rewards: rolled.rewards }, `grant_case_${claimedId}`, auth.user, now)
     ]);
     if (ctx?.waitUntil) ctx.waitUntil(background); else void background;
     try{
@@ -18845,7 +18845,7 @@ function playerApiFailurePath(request, area = "") {
   return String(area || "").slice(0, 64);
 }
 async function playerApiRequestHint(requestCopy) {
-  const fallback = { telegramId: "", username: "" };
+  const fallback = { telegramId: "", username: "", requestId: "", caseType: "", caseId: "", grantId: "", level: 0 };
   if (!requestCopy) return fallback;
   try {
     const type = String(requestCopy.headers?.get?.("content-type") || "").toLowerCase();
@@ -18864,7 +18864,15 @@ async function playerApiRequestHint(requestCopy) {
       if (/^[A-Za-z0-9_]{1,32}$/.test(parsedUsername)) username = parsedUsername;
     }
     if (!/^\d{4,20}$/.test(telegramId)) telegramId = "";
-    return { telegramId, username };
+    const cleanId=(value,max=96)=>String(value||"").replace(/[^A-Za-z0-9_-]/g,"").slice(0,max);
+    return {
+      telegramId, username,
+      requestId:cleanId(body?.requestId||body?.openRequestId||body?.operationId),
+      caseType:cleanId(body?.caseType,32),
+      caseId:cleanId(body?.caseId,96),
+      grantId:cleanId(body?.grantId,120),
+      level:Math.max(0,Math.min(999,Math.floor(Number(body?.level||0))))
+    };
   } catch {
     return fallback;
   }
@@ -18884,7 +18892,7 @@ async function playerApiResponseFailure(response) {
   } catch {}
   return { code, reason: (reason || String(response?.statusText || "") || `HTTP ${Number(response?.status || 0)}`).replace(/\s+/g, " ").slice(0, 80) };
 }
-function playerApiFailureSampleText({ status = 0, telegramId = "", username = "", path = "", code = "", reason = "", traceId = "" } = {}) {
+function playerApiFailureSampleText({ status = 0, telegramId = "", username = "", path = "", code = "", reason = "", traceId = "", requestId = "", caseType = "", caseId = "", grantId = "", level = 0 } = {}) {
   return JSON.stringify({
     s: Math.max(0, Math.floor(Number(status) || 0)),
     p: String(telegramId || "").slice(0, 20),
@@ -18892,7 +18900,12 @@ function playerApiFailureSampleText({ status = 0, telegramId = "", username = ""
     e: String(path || "").slice(0, 64),
     c: String(code || "").slice(0, 30),
     r: String(reason || "").replace(/\s+/g, " ").slice(0, 80),
-    x: String(traceId || "").slice(0, 12)
+    x: String(traceId || "").slice(0, 12),
+    rq: String(requestId || "").replace(/[^A-Za-z0-9_-]/g, "").slice(0, 96),
+    ct: String(caseType || "").replace(/[^A-Za-z0-9_-]/g, "").slice(0, 32),
+    ci: String(caseId || "").replace(/[^A-Za-z0-9_-]/g, "").slice(0, 96),
+    g: String(grantId || "").replace(/[^A-Za-z0-9_-]/g, "").slice(0, 120),
+    l: Math.max(0, Math.min(999, Math.floor(Number(level) || 0)))
   });
 }
 function logPlayerApiFailure(meta) {
@@ -18904,7 +18917,12 @@ function logPlayerApiFailure(meta) {
     username: String(meta?.username || ""),
     code: String(meta?.code || ""),
     reason: String(meta?.reason || "").slice(0, 180),
-    traceId: String(meta?.traceId || "")
+    traceId: String(meta?.traceId || ""),
+    requestId: String(meta?.requestId || ""),
+    caseType: String(meta?.caseType || ""),
+    caseId: String(meta?.caseId || ""),
+    grantId: String(meta?.grantId || ""),
+    level: Math.max(0, Math.floor(Number(meta?.level || 0)))
   };
   const line = JSON.stringify(payload);
   if (payload.status >= 500 || payload.status === 0) console.error("Player API failure", line);
@@ -18915,7 +18933,7 @@ function playerNetworkDiagnosticNumber(value, max = 60000) {
   const number = Number(value || 0);
   return Number.isFinite(number) ? Math.max(0, Math.min(max, number)) : 0;
 }
-function playerNetworkDiagnosticSampleText({ telegramId = "", username = "", endpoint = "", code = "", reason = "", traceId = "", online = true, effectiveType = "", rtt = 0, downlink = 0, serverMs = 0, networkMs = 0, timeoutMs = 0, count = 1 } = {}) {
+function playerNetworkDiagnosticSampleText({ telegramId = "", username = "", endpoint = "", code = "", reason = "", traceId = "", online = true, effectiveType = "", rtt = 0, downlink = 0, serverMs = 0, networkMs = 0, timeoutMs = 0, count = 1, requestId = "", caseType = "", caseId = "", grantId = "", level = 0 } = {}) {
   return JSON.stringify({
     s: 0,
     p: String(telegramId || "").slice(0, 20),
@@ -18931,7 +18949,12 @@ function playerNetworkDiagnosticSampleText({ telegramId = "", username = "", end
     dl: Math.round(playerNetworkDiagnosticNumber(downlink, 10000) * 10) / 10,
     sm: Math.round(playerNetworkDiagnosticNumber(serverMs)),
     nm: Math.round(playerNetworkDiagnosticNumber(networkMs)),
-    tm: Math.round(playerNetworkDiagnosticNumber(timeoutMs))
+    tm: Math.round(playerNetworkDiagnosticNumber(timeoutMs)),
+    rq: String(requestId || "").replace(/[^A-Za-z0-9_-]/g, "").slice(0, 96),
+    ct: String(caseType || "").replace(/[^A-Za-z0-9_-]/g, "").slice(0, 32),
+    ci: String(caseId || "").replace(/[^A-Za-z0-9_-]/g, "").slice(0, 96),
+    g: String(grantId || "").replace(/[^A-Za-z0-9_-]/g, "").slice(0, 120),
+    l: Math.max(0, Math.min(999, Math.floor(Number(level) || 0)))
   });
 }
 async function recordPlayerNetworkDiagnosticSample(env, durationMs, errorText, createdAt = 0) {
@@ -18973,14 +18996,19 @@ async function ingestPlayerNetworkDiagnostics(request, env, ctx) {
     const online = item?.online !== false;
     const count = Math.max(1, Math.min(99, Math.floor(Number(item?.count || 1))));
     const reason = String(item?.reason || "Сетевой запрос не завершён").replace(/\s+/g, " ").slice(0, 80);
+    const requestId = String(item?.requestId || "").replace(/[^A-Za-z0-9_-]/g, "").slice(0, 96);
+    const caseType = String(item?.caseType || "").replace(/[^A-Za-z0-9_-]/g, "").slice(0, 32);
+    const caseId = String(item?.caseId || "").replace(/[^A-Za-z0-9_-]/g, "").slice(0, 96);
+    const grantId = String(item?.grantId || "").replace(/[^A-Za-z0-9_-]/g, "").slice(0, 120);
+    const level = Math.max(0, Math.min(999, Math.floor(Number(item?.level || 0))));
     const sampleText = playerNetworkDiagnosticSampleText({
       telegramId, username, endpoint, code, reason, traceId, online, effectiveType,
-      rtt: item?.rtt, downlink: item?.downlink, serverMs, networkMs, timeoutMs, count
+      rtt: item?.rtt, downlink: item?.downlink, serverMs, networkMs, timeoutMs, count, requestId, caseType, caseId, grantId, level
     });
     const eventAtMs = Number(item?.at || 0);
     const eventAt = Number.isFinite(eventAtMs) && eventAtMs > 0 ? Math.floor(eventAtMs / 1000) : Math.floor(Date.now() / 1000);
     tasks.push(recordPlayerNetworkDiagnosticSample(env, durationMs, sampleText, eventAt));
-    console.warn("Player network issue", JSON.stringify({ endpoint, telegramId, username, code, durationMs, timeoutMs, serverMs, networkMs, online, effectiveType, rtt: Math.round(playerNetworkDiagnosticNumber(item?.rtt, 60000)), downlink: Math.round(playerNetworkDiagnosticNumber(item?.downlink, 10000) * 10) / 10, count, traceId }));
+    console.warn("Player network issue", JSON.stringify({ endpoint, telegramId, username, code, durationMs, timeoutMs, serverMs, networkMs, online, effectiveType, rtt: Math.round(playerNetworkDiagnosticNumber(item?.rtt, 60000)), downlink: Math.round(playerNetworkDiagnosticNumber(item?.downlink, 10000) * 10) / 10, count, traceId, requestId, caseType, caseId, grantId, level }));
     accepted += 1;
   }
   if (tasks.length) {
@@ -19008,7 +19036,7 @@ async function withPlayerApiPerformance(env, ctx, area, handler, request = null)
     if (!success) {
       const [hint, failure] = await Promise.all([playerApiRequestHint(requestCopy), playerApiResponseFailure(response)]);
       const traceId = playerApiFailureTraceId();
-      const meta = { area, path, status: response.status, telegramId: hint.telegramId, username: hint.username, code: failure.code, reason: failure.reason, traceId };
+      const meta = { area, path, status: response.status, ...hint, code: failure.code, reason: failure.reason, traceId };
       errorText = playerApiFailureSampleText(meta);
       headers.set("X-Zefirok-Trace-Id", traceId);
       logPlayerApiFailure(meta);
@@ -19020,14 +19048,14 @@ async function withPlayerApiPerformance(env, ctx, area, handler, request = null)
     const status = Math.max(0, Math.floor(Number(error?.status) || 0));
     const hint = await playerApiRequestHint(requestCopy);
     const traceId = playerApiFailureTraceId();
-    const meta = { area, path, status, telegramId: hint.telegramId, username: hint.username, code: String(error?.code || "").slice(0, 30), reason: String(error?.message || error), traceId };
+    const meta = { area, path, status, ...hint, code: String(error?.code || "").slice(0, 30), reason: String(error?.message || error), traceId };
     errorText = playerApiFailureSampleText(meta);
     logPlayerApiFailure(meta);
     throw error;
   } finally {
     const durationMs = Math.max(0, Date.now() - startedAt);
     if (shouldPersistPlayerApiPerformance(success, durationMs)) {
-      const task = recordV67PerformanceSample(env, `player:${area}`, durationMs, success, errorText);
+      const task = recordV67PerformanceSample(env, `player:${area}`, durationMs, success, errorText, 700);
       if (ctx?.waitUntil) ctx.waitUntil(Promise.resolve(task).catch(() => {}));
       else void Promise.resolve(task).catch(() => {});
     }
@@ -33447,7 +33475,7 @@ async function openSeasonPassSeasonalCase(request,env,executionCtx=null){
     caseOpenAudit.opened=true;
     const caseTaskStatements=taskEvent?[...seasonPassCaseProgressReconcileStatements(env,ctx.telegramId,taskEvent,now),...(taskEvent.notificationStatements||[])]:[];
     const [inventory]=await Promise.all([seasonPassSeasonalCaseInventory(env,ctx.telegramId),caseTaskStatements.length?env.DB.batch(caseTaskStatements):Promise.resolve([])]);
-    seasonPassBackgroundWork(executionCtx,recordPlayerTimeline(env,ctx.telegramId,'seasonal_case_open',caseTimelineSuccessTitle(ctx.auth.user,ctx.telegramId,`Сезонный кейс «${String(definition.title||caseId)}»`,rewards),{caseId,grantId,rewards},`seasonal_case_${grantId}`,ctx.auth.user,now),'seasonal case timeline failed');
+    seasonPassBackgroundWork(executionCtx,recordPlayerTimeline(env,ctx.telegramId,'seasonal_case_open',caseTimelineSuccessTitle(ctx.auth.user,ctx.telegramId,`Сезонный кейс «${String(definition.title||caseId)}»`,rewards),{caseId,grantId,requestId,rewards},`seasonal_case_${grantId}`,ctx.auth.user,now),'seasonal case timeline failed');
     seasonPassBackgroundWork(executionCtx,deliverSeasonPassTaskNotificationsForRows(env,ctx.telegramId,taskEvent?.season||ctx.season,taskEvent?.taskRows||[]),'seasonal case task notification failed');
     return jsonResponse({ok:true,case:{caseId,grantId,title:String(snapshot?.title||definition.title||'Сезонный кейс'),imageUrl:String(snapshot?.openImageUrl||snapshot?.imageUrl||definition.open_image_url||definition.closed_image_url||''),rewards},seasonalCases:inventory});
   }catch(error){if(grantId&&token){try{await env.DB.prepare(`UPDATE season_pass_case_grants SET status='pending',opening_started_at=0,opening_token='',open_request_id='' WHERE grant_id=? AND status='opening' AND opening_started_at=? AND opening_token=? AND open_request_id=?`).bind(grantId,openingStartedAt,token,requestId).run();}catch{}}const text=String(error?.message||error),guardConflict=text.includes('season_pass_case_opening_guard_ok');const publicReason=error instanceof ApiError?error.message:(guardConflict?'Открытие было восстановлено после задержки. Повторите действие.':'Не удалось открыть сезонный кейс.');seasonPassBackgroundWork(executionCtx,recordCaseOpenFailureTimeline(env,caseOpenAudit,publicReason),'seasonal case failure timeline failed');if(error instanceof ApiError)return jsonResponse({ok:false,error:error.message},error.status);if(guardConflict)return jsonResponse({ok:false,error:'Открытие было восстановлено после задержки. Повторите действие.'},409);console.error('openSeasonPassSeasonalCase failed',error);return jsonResponse({ok:false,error:'Не удалось открыть сезонный кейс.'},500);}
@@ -37184,10 +37212,11 @@ function v67PerformanceArea(data) {
     .slice(0,80);
 }
 
-async function recordV67PerformanceSample(env, area, durationMs, success, errorText = "") {
+async function recordV67PerformanceSample(env, area, durationMs, success, errorText = "", errorTextLimit = 300) {
   try {
+    const textLimit=Math.max(100,Math.min(700,Math.floor(Number(errorTextLimit)||300)));
     await env.DB.prepare(`INSERT INTO admin_performance_samples(area,duration_ms,success,error_text,created_at) VALUES(?,?,?,?,?)`)
-      .bind(v67PerformanceArea(area),Math.max(0,Math.round(Number(durationMs)||0)),success?1:0,String(errorText||"").slice(0,300),Math.floor(Date.now()/1000)).run();
+      .bind(v67PerformanceArea(area),Math.max(0,Math.round(Number(durationMs)||0)),success?1:0,String(errorText||"").slice(0,textLimit),Math.floor(Date.now()/1000)).run();
   } catch (error) {
     console.warn("Performance sample write failed", String(error?.message || error));
   }
@@ -39798,7 +39827,7 @@ async function ownerPanelV85Player360(env,ctx){
   const telegramId=String(ctx.body?.telegramId||"").trim();if(!/^\d{4,20}$/.test(telegramId))throw new ApiError(400,"Некорректный Telegram ID.");
   const exists=await env.DB.prepare(`SELECT telegram_id FROM admin_profile_state WHERE telegram_id=? LIMIT 1`).bind(telegramId).first();if(!exists)throw new ApiError(404,"Игрок не найден.");
   const now=Math.floor(Date.now()/1000),week=now-7*86400;
-  const [runStats,cases,purchases,promos,physical,rewardQueue,campaigns,notifications,tickets,fraud,notes,timeline,moderation,moderationHistory,legal,gifts,grantedCases,seasonalCases] = await Promise.all([
+  const [runStats,cases,purchases,promos,physical,rewardQueue,campaigns,notifications,tickets,fraud,notes,timeline,moderation,moderationHistory,legal,gifts,grantedCases,seasonalCases,caseTimeline,caseNetworkDiagnostics,caseApiDiagnostics] = await Promise.all([
     env.DB.prepare(`SELECT COUNT(*) AS total,SUM(CASE WHEN accepted=1 THEN 1 ELSE 0 END) AS accepted,SUM(CASE WHEN accepted=0 THEN 1 ELSE 0 END) AS rejected,ROUND(AVG(CASE WHEN accepted=1 THEN score END),1) AS avg_score,MAX(created_at) AS last_run,MIN(created_at) AS first_run,SUM(CASE WHEN accepted=1 AND created_at>=? THEN 1 ELSE 0 END) AS runs7 FROM leaderboard_runs WHERE telegram_id=?`).bind(week,telegramId).first(),
     env.DB.prepare(`SELECT (SELECT COUNT(*) FROM level_case_openings WHERE telegram_id=?)+(SELECT COUNT(*) FROM granted_cases WHERE telegram_id=? AND status='opened') AS opened`).bind(telegramId,telegramId).first(),
     env.DB.prepare(`SELECT (SELECT COUNT(*) FROM granted_cases WHERE telegram_id=? AND granted_by='shop')+(SELECT COUNT(*) FROM shop_stock_consumptions WHERE telegram_id=? AND category='skins') AS count`).bind(telegramId,telegramId).first(),
@@ -39816,9 +39845,12 @@ async function ownerPanelV85Player360(env,ctx){
     ownerLegalPlayerSnapshot(env,telegramId),
     env.DB.prepare(`SELECT m.mail_id,m.mail_kind,m.title,m.preview_text,m.body_text,m.image_url,m.reason,m.reward_state,m.read_at,m.created_at,m.updated_at,m.claimed_at,COALESCE((SELECT json_group_array(json(r.reward_json)) FROM player_mail_rewards_v3 r WHERE r.telegram_id=m.telegram_id AND r.mail_id=m.mail_id),'[]') AS rewards_json FROM player_mail_v3 m WHERE m.telegram_id=? ORDER BY m.created_at DESC LIMIT 16`).bind(telegramId).all(),
     env.DB.prepare(`SELECT id,case_type,status,granted_by,reason,rewards_json,created_at,opened_at,opening_started_at,opening_token FROM granted_cases WHERE telegram_id=? ORDER BY created_at DESC LIMIT 16`).bind(telegramId).all(),
-    env.DB.prepare(`SELECT grant_id,case_id,source_season_id,status,granted_by,rewards_json,created_at,opened_at,opening_started_at,opening_token,open_request_id FROM season_pass_case_grants WHERE telegram_id=? ORDER BY created_at DESC LIMIT 16`).bind(telegramId).all()
+    env.DB.prepare(`SELECT grant_id,case_id,source_season_id,status,granted_by,rewards_json,created_at,opened_at,opening_started_at,opening_token,open_request_id FROM season_pass_case_grants WHERE telegram_id=? ORDER BY created_at DESC LIMIT 16`).bind(telegramId).all(),
+    env.DB.prepare(`SELECT id,event_type,title,details_json,source_id,actor_name,created_at FROM player_timeline_events WHERE telegram_id=? AND created_at>=? AND event_type IN ('case_open','seasonal_case_open','case_open_failed') ORDER BY created_at DESC,id DESC LIMIT 80`).bind(telegramId,now-7*86400).all(),
+    env.DB.prepare(`SELECT id,duration_ms,error_text,created_at FROM admin_performance_samples WHERE area=? AND created_at>=? AND json_valid(error_text)=1 AND CAST(COALESCE(json_extract(error_text,'$.p'),'') AS TEXT)=? AND CAST(COALESCE(json_extract(error_text,'$.e'),'') AS TEXT) IN ('/api/cases/open','/api/cases/open-granted','/api/cases/open-granted/status','/api/battle-pass/seasonal-case/open','/api/battle-pass/seasonal-case/status') ORDER BY created_at DESC,id DESC LIMIT 80`).bind(v67PerformanceArea("player:network"),now-7*86400,telegramId).all(),
+    env.DB.prepare(`SELECT id,area,duration_ms,success,error_text,created_at FROM admin_performance_samples WHERE area IN (?,?,?,?,?) AND created_at>=? AND json_valid(error_text)=1 AND CAST(COALESCE(json_extract(error_text,'$.p'),'') AS TEXT)=? ORDER BY created_at DESC,id DESC LIMIT 80`).bind(v67PerformanceArea("player:case_open_level"),v67PerformanceArea("player:case_open_granted"),v67PerformanceArea("player:case_open_granted_status"),v67PerformanceArea("player:season_case_open"),v67PerformanceArea("player:season_case_status"),now-7*86400,telegramId).all()
   ]);
-  return {ok:true,telegramId,stats:{runs:Number(runStats?.total||0),accepted:Number(runStats?.accepted||0),rejected:Number(runStats?.rejected||0),runs7:Number(runStats?.runs7||0),avgScore:Number(runStats?.avg_score||0),firstRunAt:Number(runStats?.first_run||0),lastRunAt:Number(runStats?.last_run||0),casesOpened:Number(cases?.opened||0),purchases:Number(purchases?.count||0),promoUses:(promos.results||[]).length,physicalRewards:(physical.results||[]).length},promos:(promos.results||[]).map(r=>({code:String(r.code||""),status:String(r.status||""),createdAt:Number(r.created_at||0)})),physical:(physical.results||[]).map(r=>({code:String(r.code||""),productId:String(r.product_id||""),productName:String(r.product_name||""),status:String(r.status||""),createdAt:Number(r.created_at||0),redeemedAt:Number(r.redeemed_at||0)})),rewards:(rewardQueue.results||[]).map(r=>({id:Number(r.id||0),sourceType:String(r.source_type||""),sourceId:String(r.source_id||""),kind:String(r.reward_kind||""),rewardId:String(r.reward_id||""),amount:Number(r.amount||0),reason:String(r.reason||""),status:String(r.status||""),attempts:Number(r.attempts||0),error:String(r.last_error||""),createdAt:Number(r.created_at||0),updatedAt:Number(r.updated_at||0),deliveredAt:Number(r.delivered_at||0),claimedAt:Number(r.claimed_at||0),leaseUntil:Number(r.lease_until||0)})),campaigns:(campaigns.results||[]).map(r=>({id:String(r.campaign_id||""),title:String(r.title||""),status:String(r.status||""),processedAt:Number(r.processed_at||0),deliveredAt:Number(r.delivered_at||0),error:String(r.delivery_error||""),createdAt:Number(r.created_at||0)})),notifications:(notifications.results||[]).map(r=>({category:String(r.category||""),sentAt:Number(r.sent_at||0)})),tickets:(tickets.results||[]).map(r=>({id:Number(r.id||0),category:String(r.category||""),description:String(r.description||""),status:String(r.status||""),resolution:String(r.resolution||""),createdAt:Number(r.created_at||0),updatedAt:Number(r.updated_at||0),closedAt:Number(r.closed_at||0)})),fraud:(fraud.results||[]).map(r=>({id:Number(r.id||0),type:String(r.alert_type||""),severity:String(r.severity||""),title:String(r.title||""),status:String(r.status||""),resolution:String(r.resolution||""),createdAt:Number(r.created_at||0),updatedAt:Number(r.updated_at||0)})),notes:(notes.results||[]).map(r=>({id:Number(r.id||0),text:String(r.note_text||""),createdBy:String(r.created_by_name||r.created_by||""),createdAt:Number(r.created_at||0)})),timeline:(timeline.results||[]).map(r=>({id:Number(r.id||0),type:String(r.event_type||""),title:String(r.title||""),details:ownerV8SafeJson(r.details_json,{}),sourceId:String(r.source_id||""),actor:String(r.actor_name||""),createdAt:Number(r.created_at||0)})),gifts:(gifts.results||[]).map(r=>({id:String(r.mail_id||""),kind:String(r.mail_kind||""),title:String(r.title||""),preview:String(r.preview_text||""),message:String(r.body_text||""),imageUrl:String(r.image_url||""),reason:String(r.reason||""),rewards:ownerV8SafeJson(r.rewards_json,[]),status:playerMailV3LegacyStatus(r.reward_state),rewardState:String(r.reward_state||"none"),readAt:Number(r.read_at||0),createdAt:Number(r.created_at||0),updatedAt:Number(r.updated_at||0),claimedAt:Number(r.claimed_at||0)})),cases:(grantedCases.results||[]).map(r=>({id:String(r.id||""),caseType:String(r.case_type||""),status:String(r.status||""),grantedBy:String(r.granted_by||""),reason:String(r.reason||""),rewards:ownerV8SafeJson(r.rewards_json,[]),createdAt:Number(r.created_at||0),openedAt:Number(r.opened_at||0),openingStartedAt:Number(r.opening_started_at||0),openingToken:String(r.opening_token||""),requestId:String(r.opening_token||"")})),seasonalCases:(seasonalCases.results||[]).map(r=>({id:String(r.grant_id||""),caseId:String(r.case_id||""),seasonId:String(r.source_season_id||""),status:String(r.status||""),grantedBy:String(r.granted_by||""),rewards:ownerV8SafeJson(r.rewards_json,[]),createdAt:Number(r.created_at||0),openedAt:Number(r.opened_at||0),openingStartedAt:Number(r.opening_started_at||0),openingToken:String(r.opening_token||""),requestId:String(r.open_request_id||"")})),legal,moderation:{blocked:Boolean(moderation?.blocked),reason:String(moderation?.blockReason||""),type:String(moderation?.blockType||""),until:Number(moderation?.blockedUntil||0)},moderationHistory:(moderationHistory.results||[]).map(r=>({id:Number(r.id||0),action:String(r.action||""),reason:String(r.reason||""),actor:String(r.actor_name||""),createdAt:Number(r.created_at||0),blockType:String(r.block_type||""),blockedUntil:Number(r.blocked_until||0)}))};
+  return {ok:true,telegramId,stats:{runs:Number(runStats?.total||0),accepted:Number(runStats?.accepted||0),rejected:Number(runStats?.rejected||0),runs7:Number(runStats?.runs7||0),avgScore:Number(runStats?.avg_score||0),firstRunAt:Number(runStats?.first_run||0),lastRunAt:Number(runStats?.last_run||0),casesOpened:Number(cases?.opened||0),purchases:Number(purchases?.count||0),promoUses:(promos.results||[]).length,physicalRewards:(physical.results||[]).length},promos:(promos.results||[]).map(r=>({code:String(r.code||""),status:String(r.status||""),createdAt:Number(r.created_at||0)})),physical:(physical.results||[]).map(r=>({code:String(r.code||""),productId:String(r.product_id||""),productName:String(r.product_name||""),status:String(r.status||""),createdAt:Number(r.created_at||0),redeemedAt:Number(r.redeemed_at||0)})),rewards:(rewardQueue.results||[]).map(r=>({id:Number(r.id||0),sourceType:String(r.source_type||""),sourceId:String(r.source_id||""),kind:String(r.reward_kind||""),rewardId:String(r.reward_id||""),amount:Number(r.amount||0),reason:String(r.reason||""),status:String(r.status||""),attempts:Number(r.attempts||0),error:String(r.last_error||""),createdAt:Number(r.created_at||0),updatedAt:Number(r.updated_at||0),deliveredAt:Number(r.delivered_at||0),claimedAt:Number(r.claimed_at||0),leaseUntil:Number(r.lease_until||0)})),campaigns:(campaigns.results||[]).map(r=>({id:String(r.campaign_id||""),title:String(r.title||""),status:String(r.status||""),processedAt:Number(r.processed_at||0),deliveredAt:Number(r.delivered_at||0),error:String(r.delivery_error||""),createdAt:Number(r.created_at||0)})),notifications:(notifications.results||[]).map(r=>({category:String(r.category||""),sentAt:Number(r.sent_at||0)})),tickets:(tickets.results||[]).map(r=>({id:Number(r.id||0),category:String(r.category||""),description:String(r.description||""),status:String(r.status||""),resolution:String(r.resolution||""),createdAt:Number(r.created_at||0),updatedAt:Number(r.updated_at||0),closedAt:Number(r.closed_at||0)})),fraud:(fraud.results||[]).map(r=>({id:Number(r.id||0),type:String(r.alert_type||""),severity:String(r.severity||""),title:String(r.title||""),status:String(r.status||""),resolution:String(r.resolution||""),createdAt:Number(r.created_at||0),updatedAt:Number(r.updated_at||0)})),notes:(notes.results||[]).map(r=>({id:Number(r.id||0),text:String(r.note_text||""),createdBy:String(r.created_by_name||r.created_by||""),createdAt:Number(r.created_at||0)})),timeline:(timeline.results||[]).map(r=>({id:Number(r.id||0),type:String(r.event_type||""),title:String(r.title||""),details:ownerV8SafeJson(r.details_json,{}),sourceId:String(r.source_id||""),actor:String(r.actor_name||""),createdAt:Number(r.created_at||0)})),caseAuditTimeline:(caseTimeline.results||[]).map(r=>({id:Number(r.id||0),type:String(r.event_type||""),title:String(r.title||""),details:ownerV8SafeJson(r.details_json,{}),sourceId:String(r.source_id||""),actor:String(r.actor_name||""),createdAt:Number(r.created_at||0)})),gifts:(gifts.results||[]).map(r=>({id:String(r.mail_id||""),kind:String(r.mail_kind||""),title:String(r.title||""),preview:String(r.preview_text||""),message:String(r.body_text||""),imageUrl:String(r.image_url||""),reason:String(r.reason||""),rewards:ownerV8SafeJson(r.rewards_json,[]),status:playerMailV3LegacyStatus(r.reward_state),rewardState:String(r.reward_state||"none"),readAt:Number(r.read_at||0),createdAt:Number(r.created_at||0),updatedAt:Number(r.updated_at||0),claimedAt:Number(r.claimed_at||0)})),cases:(grantedCases.results||[]).map(r=>({id:String(r.id||""),caseType:String(r.case_type||""),status:String(r.status||""),grantedBy:String(r.granted_by||""),reason:String(r.reason||""),rewards:ownerV8SafeJson(r.rewards_json,[]),createdAt:Number(r.created_at||0),openedAt:Number(r.opened_at||0),openingStartedAt:Number(r.opening_started_at||0),openingToken:String(r.opening_token||""),requestId:String(r.opening_token||"")})),seasonalCases:(seasonalCases.results||[]).map(r=>({id:String(r.grant_id||""),caseId:String(r.case_id||""),seasonId:String(r.source_season_id||""),status:String(r.status||""),grantedBy:String(r.granted_by||""),rewards:ownerV8SafeJson(r.rewards_json,[]),createdAt:Number(r.created_at||0),openedAt:Number(r.opened_at||0),openingStartedAt:Number(r.opening_started_at||0),openingToken:String(r.opening_token||""),requestId:String(r.open_request_id||"")})),networkDiagnostics:(caseNetworkDiagnostics.results||[]).map(r=>{const x=ownerV8SafeJson(r.error_text,{});return{id:Number(r.id||0),endpoint:String(x.e||""),code:String(x.c||""),reason:String(x.r||""),traceId:String(x.x||""),durationMs:Number(r.duration_ms||0),timeoutMs:Number(x.tm||0),serverMs:Number(x.sm||0),networkMs:Number(x.nm||0),online:Number(x.o??1)!==0,effectiveType:String(x.n||""),rtt:Number(x.rt||0),downlink:Number(x.dl||0),count:Number(x.q||1),requestId:String(x.rq||""),caseType:String(x.ct||""),caseId:String(x.ci||""),grantId:String(x.g||""),level:Number(x.l||0),createdAt:Number(r.created_at||0)};}),apiDiagnostics:(caseApiDiagnostics.results||[]).map(r=>{const x=ownerV8SafeJson(r.error_text,{});return{id:Number(r.id||0),area:String(r.area||""),endpoint:String(x.e||""),status:Number(x.s||0),code:String(x.c||""),reason:String(x.r||""),traceId:String(x.x||""),durationMs:Number(r.duration_ms||0),requestId:String(x.rq||""),caseType:String(x.ct||""),caseId:String(x.ci||""),grantId:String(x.g||""),level:Number(x.l||0),createdAt:Number(r.created_at||0)};}),legal,moderation:{blocked:Boolean(moderation?.blocked),reason:String(moderation?.blockReason||""),type:String(moderation?.blockType||""),until:Number(moderation?.blockedUntil||0)},moderationHistory:(moderationHistory.results||[]).map(r=>({id:Number(r.id||0),action:String(r.action||""),reason:String(r.reason||""),actor:String(r.actor_name||""),createdAt:Number(r.created_at||0),blockType:String(r.block_type||""),blockedUntil:Number(r.blocked_until||0)}))};
 }
 async function ownerPanelV85PlayerNoteSave(env,ctx){await ensureControlCenterV85Schema(env);const id=String(ctx.body?.telegramId||"").trim(),text=String(ctx.body?.text||"").trim().slice(0,1200);if(!/^\d{4,20}$/.test(id)||text.length<2)throw new ApiError(400,"Выберите игрока и укажите заметку.");const now=Math.floor(Date.now()/1000);const result=await env.DB.prepare(`INSERT INTO player_notes(telegram_id,note_text,created_by,created_by_name,created_at,deleted_at,deleted_by) VALUES(?,?,?,?,?,0,'')`).bind(id,text,String(ctx.user.id),telegramDisplayName(ctx.user),now).run();await logStaffAction(env,ctx.user,ctx.access,"owner_panel_player_note",id,"player_note",null,Number(result.meta?.last_row_id||0),{text});return {ok:true,id:Number(result.meta?.last_row_id||0)};}
 async function ownerPanelV85PlayerNoteDelete(env,ctx){await ensureControlCenterV85Schema(env);const noteId=ownerPanelInteger(ctx.body?.noteId,1,999999999);if(noteId==null)throw new ApiError(400,"Некорректная заметка.");const row=await env.DB.prepare(`SELECT * FROM player_notes WHERE id=? AND deleted_at=0 LIMIT 1`).bind(noteId).first();if(!row)throw new ApiError(404,"Заметка не найдена.");await env.DB.prepare(`UPDATE player_notes SET deleted_at=?,deleted_by=? WHERE id=? AND deleted_at=0`).bind(Math.floor(Date.now()/1000),String(ctx.user.id),noteId).run();await logStaffAction(env,ctx.user,ctx.access,"owner_panel_player_note_delete",String(row.telegram_id),"player_note",noteId,null,{});return {ok:true};}
