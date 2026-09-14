@@ -11755,6 +11755,8 @@ async function replayLevelCaseOpening(env, telegramId, row, liveops) {
 }
 
 async function openLevelCase(request, env, ctx = null) {
+  // CASE_OPEN_AUDIT_LEVEL_V1
+  const caseOpenAudit={telegramId:'',actor:null,kind:'level',caseType:'',label:'Кейс уровня',level:0,requestId:'',grantId:'',caseId:'',sourceId:'',opened:false};
   try {
     requireDatabase(env);
     requireBotToken(env);
@@ -11763,6 +11765,7 @@ async function openLevelCase(request, env, ctx = null) {
     const telegramId = String(auth.user.id);
     const requestedLevel = Math.floor(Number(body.level || 0));
     const caseType = LEVEL_CASE_SCHEDULE[requestedLevel];
+    caseOpenAudit.telegramId=telegramId;caseOpenAudit.actor=auth.user;caseOpenAudit.level=requestedLevel;caseOpenAudit.caseType=String(caseType||'');caseOpenAudit.label=`${LEVEL_CASE_CONFIG[caseType]?.title||caseType||'Кейс'} за уровень ${requestedLevel}`;caseOpenAudit.sourceId=`case_open_failed_level_${telegramId}_${requestedLevel}_${Math.floor(Date.now()/60000)}`;
     if (!caseType) throw new ApiError(400, "На этом уровне кейс не выдаётся.");
     const now = Math.floor(Date.now() / 1000);
     const [liveops, existing] = await Promise.all([
@@ -11839,6 +11842,7 @@ async function openLevelCase(request, env, ctx = null) {
       }
     }
     if (!committed) throw lastRevisionConflict || new Error("Case state commit did not finish");
+    caseOpenAudit.opened=true;
     const { rolled, taskEvent } = committed;
     const opened = {
       level: requestedLevel,
@@ -11857,7 +11861,7 @@ async function openLevelCase(request, env, ctx = null) {
     );
     const background = Promise.allSettled([
       recordCaseRewardsAnalytics(env, telegramId, rolled.rewards, "level_case", `level_${requestedLevel}`, now),
-      recordPlayerTimeline(env, telegramId, "case_open", `открыл ${LEVEL_CASE_CONFIG[caseType]?.title || caseType} за уровень ${requestedLevel}`, { caseType, level: requestedLevel, rewards: rolled.rewards }, `level_case_${requestedLevel}`, auth.user, now)
+      recordPlayerTimeline(env, telegramId, "case_open", caseTimelineSuccessTitle(auth.user,telegramId,`${LEVEL_CASE_CONFIG[caseType]?.title||caseType} за уровень ${requestedLevel}`,rolled.rewards), { caseType, level: requestedLevel, rewards: rolled.rewards }, `level_case_${requestedLevel}`, auth.user, now)
     ]);
     if (ctx?.waitUntil) ctx.waitUntil(background); else void background;
     return jsonResponse(buildFastCaseOpenPayload({
@@ -11871,6 +11875,8 @@ async function openLevelCase(request, env, ctx = null) {
       operation: operationSuccessMeta(`level:${requestedLevel}`,"level_case_open",false)
     }));
   } catch (error) {
+    const publicReason=error instanceof ApiError?error.message:"Не удалось подтвердить результат открытия кейса. Сначала обновите состояние.";
+    scheduleRunSettlementBackground(ctx,recordCaseOpenFailureTimeline(env,caseOpenAudit,publicReason),"level case failure timeline failed");
     if (error instanceof ApiError) return operationErrorResponse(error,"Не удалось открыть кейс.",{operationKind:"level_case_open"});
     console.error("openLevelCase failed", error);
     return caseFailureResponse(error, "Не удалось подтвердить результат открытия кейса. Сначала обновите состояние.");
@@ -12065,6 +12071,8 @@ async function getGrantedCaseOpeningStatus(request,env){
 }
 
 async function openGrantedCase(request, env, ctx = null) {
+  // CASE_OPEN_AUDIT_GRANTED_V1
+  const caseOpenAudit={telegramId:'',actor:null,kind:'granted',caseType:'',label:'Подарочный кейс',level:0,requestId:'',grantId:'',caseId:'',sourceId:'',opened:false};
   let claimedId = "";
   let openingClaimAt = 0;
   let openingClaimToken = "";
@@ -12078,6 +12086,7 @@ async function openGrantedCase(request, env, ctx = null) {
     const caseType = normalizeCaseType(body.caseType);
     if (!caseType) throw new ApiError(400, "Неизвестный тип кейса.");
     const requestId = String(body.requestId || '').replace(/[^A-Za-z0-9_-]/g, '').slice(0, 96);
+    caseOpenAudit.telegramId=telegramId;caseOpenAudit.actor=auth.user;caseOpenAudit.caseType=caseType;caseOpenAudit.requestId=requestId;caseOpenAudit.label=`Подарочный ${LEVEL_CASE_CONFIG[caseType]?.title||caseType||'кейс'}`;caseOpenAudit.sourceId=`case_open_failed_granted_${telegramId}_${requestId||caseType}_${Math.floor(Date.now()/60000)}`;
     if (requestId) {
       const existingRequest = await grantedCaseExistingRequestPayload(env, telegramId, requestId);
       if (existingRequest) return jsonResponse({...existingRequest,operation:existingRequest.pending?{id:requestId,kind:"granted_case_open",state:"processing",code:"PROCESSING"}:operationSuccessMeta(requestId,"granted_case_open",true)}, existingRequest.pending ? 202 : 200);
@@ -12098,7 +12107,7 @@ async function openGrantedCase(request, env, ctx = null) {
       if (opening) throw new ApiError(409, "Этот кейс уже открывается. Если соединение оборвалось, повторите попытку через пару минут.");
       throw new ApiError(409, "Подарочных кейсов этого типа нет.");
     }
-    claimedId = String(gift.id);
+    claimedId = String(gift.id);caseOpenAudit.grantId=claimedId;
     const claim = await env.DB.prepare(
       `UPDATE granted_cases SET status = 'opening',opening_started_at=?,opening_token=? WHERE id = ? AND telegram_id = ? AND status = 'pending'`
     ).bind(now, openingClaimToken, claimedId, telegramId).run();
@@ -12177,6 +12186,7 @@ async function openGrantedCase(request, env, ctx = null) {
       }
     }
     if (!committed) throw new Error("Granted case state commit did not finish");
+    caseOpenAudit.opened=true;
     const { rolled, taskEvent, alexCollection, alexCollectionRewardGranted } = committed;
     const opened = {
       grantId: claimedId,
@@ -12202,7 +12212,7 @@ async function openGrantedCase(request, env, ctx = null) {
     );
     const background = Promise.allSettled([
       recordCaseRewardsAnalytics(env, telegramId, rolled.rewards, "granted_case", claimedId, now),
-      recordPlayerTimeline(env, telegramId, "case_open", `открыл ${LEVEL_CASE_CONFIG[caseType]?.title || caseType}`, { caseType, grantId: claimedId, rewards: rolled.rewards }, `grant_case_${claimedId}`, auth.user, now)
+      recordPlayerTimeline(env, telegramId, "case_open", caseTimelineSuccessTitle(auth.user,telegramId,`Подарочный ${LEVEL_CASE_CONFIG[caseType]?.title||caseType}`,rolled.rewards), { caseType, grantId: claimedId, rewards: rolled.rewards }, `grant_case_${claimedId}`, auth.user, now)
     ]);
     if (ctx?.waitUntil) ctx.waitUntil(background); else void background;
     try{
@@ -12232,8 +12242,11 @@ async function openGrantedCase(request, env, ctx = null) {
     if (claimedId) {
       try { await env.DB.prepare(`UPDATE granted_cases SET status = 'pending',opening_started_at=0,opening_token='' WHERE id = ? AND status = 'opening' AND opening_started_at=? AND opening_token=?`).bind(claimedId,openingClaimAt,openingClaimToken).run(); } catch {}
     }
+    const guardConflict=String(error?.message || error).includes('granted_case_opening_guard_ok');
+    const publicReason=error instanceof ApiError?error.message:(guardConflict?'Попытка открытия устарела. Повторите открытие кейса.':'Не удалось подтвердить результат открытия подарочного кейса. Сначала обновите состояние.');
+    scheduleRunSettlementBackground(ctx,recordCaseOpenFailureTimeline(env,caseOpenAudit,publicReason),"granted case failure timeline failed");
     if (error instanceof ApiError) return operationErrorResponse(error,"Не удалось открыть подарочный кейс.",{operationId:openingClaimToken,operationKind:"granted_case_open"});
-    if (String(error?.message || error).includes('granted_case_opening_guard_ok')) return operationErrorResponse(playerOperationError(409,'Попытка открытия устарела. Повторите открытие кейса.',{code:'STATE_CONFLICT',operationCode:'STATE_CONFLICT',retryable:true,operationId:openingClaimToken,operationKind:'granted_case_open'}),'Попытка открытия устарела.');
+    if (guardConflict) return operationErrorResponse(playerOperationError(409,'Попытка открытия устарела. Повторите открытие кейса.',{code:'STATE_CONFLICT',operationCode:'STATE_CONFLICT',retryable:true,operationId:openingClaimToken,operationKind:'granted_case_open'}),'Попытка открытия устарела.');
     console.error("openGrantedCase failed", error);
     return caseFailureResponse(error, "Не удалось подтвердить результат открытия подарочного кейса. Сначала обновите состояние.");
   }
@@ -29306,6 +29319,43 @@ async function recordPlayerTimeline(env, telegramId, eventType, title, details =
   }
 }
 
+// CASE_OPEN_TIMELINE_OBSERVABILITY_V1
+function caseTimelinePlayerName(actor,telegramId){
+  const value=String(actor?telegramDisplayName(actor):'').trim();
+  return value||`Игрок ${String(telegramId||'').trim()||'—'}`;
+}
+function caseTimelineRewardLabel(reward){
+  if(!reward||typeof reward!=='object')return 'неизвестная награда';
+  const kind=String(reward.kind||reward.type||'').trim();
+  const amount=Math.max(0,Number(reward.amount||0));
+  const itemId=String(reward.itemId||reward.item_id||reward.id||'').trim();
+  if(kind==='points')return `${amount.toLocaleString('ru-RU')} очков`;
+  if(kind==='treats'||kind==='zefir')return `${amount.toLocaleString('ru-RU')} зефира`;
+  if(kind==='coffee')return `${amount.toLocaleString('ru-RU')} кофе`;
+  if(kind==='case')return String(reward.title||LEVEL_CASE_CONFIG[itemId]?.title||itemId||'кейс');
+  if(String(reward.title||'').trim())return String(reward.title).trim();
+  return String(timelineRewardTitle(reward)).replace(/^получил\s+/i,'').trim()||'награда';
+}
+function caseTimelineRewardSummary(rewards){
+  const list=(Array.isArray(rewards)?rewards:[rewards]).filter(Boolean);
+  if(!list.length)return 'без награды';
+  return list.map(caseTimelineRewardLabel).join(', ').slice(0,420);
+}
+function caseTimelineSuccessTitle(actor,telegramId,label,rewards){
+  return `${caseTimelinePlayerName(actor,telegramId)}: ${String(label||'Кейс')} открыт — получено: ${caseTimelineRewardSummary(rewards)}`.slice(0,300);
+}
+function caseTimelineFailureTitle(audit,reason){
+  const suffix=audit?.opened?'открыт, но ответ завершился ошибкой':'не открыт';
+  return `${caseTimelinePlayerName(audit?.actor,audit?.telegramId)}: ${String(audit?.label||'Кейс')} ${suffix} — причина: ${String(reason||'Неизвестная ошибка')}`.slice(0,300);
+}
+function recordCaseOpenFailureTimeline(env,audit,reason,createdAt=Math.floor(Date.now()/1000)){
+  if(!audit?.telegramId)return Promise.resolve(null);
+  const safeReason=String(reason||'Не удалось открыть кейс.').replace(/\s+/g,' ').trim().slice(0,220);
+  const details={status:'failed',kind:String(audit.kind||'case'),caseType:String(audit.caseType||''),caseId:String(audit.caseId||''),grantId:String(audit.grantId||''),requestId:String(audit.requestId||''),level:Number(audit.level||0),opened:Boolean(audit.opened),reason:safeReason};
+  const sourceId=String(audit.sourceId||`case_open_failed_${audit.kind||'case'}_${audit.telegramId}_${Math.floor(Number(createdAt||0)/60)}`).slice(0,180);
+  return recordPlayerTimeline(env,audit.telegramId,'case_open_failed',caseTimelineFailureTitle(audit,safeReason),details,sourceId,audit.actor,createdAt);
+}
+
 function timelineRewardTitle(reward) {
   if (!reward || typeof reward !== "object") return "неизвестная награда";
   if (["avatar", "frame", "trail", "skin"].includes(String(reward.kind))) {
@@ -33324,12 +33374,16 @@ function seasonPassSeasonalCaseWeightedPick(items,groupChances=null,rng=Math.ran
 }
 
 async function openSeasonPassSeasonalCase(request,env,executionCtx=null){
+  // CASE_OPEN_AUDIT_SEASONAL_V1
+  const caseOpenAudit={telegramId:'',actor:null,kind:'seasonal',caseType:'',label:'Сезонный кейс',level:0,requestId:'',grantId:'',caseId:'',sourceId:'',opened:false};
   let grantId='',token='',requestId='',openingStartedAt=0;
   try{
     const ctx=await seasonPassRequestContext(request,env);await ensureSeasonPassCaseOperationSchema(env);const caseId=String(ctx.body?.caseId||'').trim();requestId=String(ctx.body?.requestId||'').trim();if(!caseId)throw new ApiError(400,'Не выбран сезонный кейс.');if(!/^[A-Za-z0-9_-]{12,100}$/.test(requestId))throw new ApiError(400,'Некорректный идентификатор открытия.');
+    caseOpenAudit.telegramId=ctx.telegramId;caseOpenAudit.actor=ctx.auth.user;caseOpenAudit.caseId=caseId;caseOpenAudit.requestId=requestId;caseOpenAudit.sourceId=`case_open_failed_seasonal_${ctx.telegramId}_${requestId||caseId}`;
     const now=Math.floor(Date.now()/1000);
     const taskEventPromise=prepareSeasonPassTaskProgressEvent(env,ctx.telegramId,{cases_opened:1},now,{season:ctx.season,player:ctx.player}).catch((error)=>{console.error('seasonal case task progress prepare failed',error);return null;});
     const definition=await env.DB.prepare(`SELECT d.*,s.title AS season_title FROM season_pass_case_definitions d LEFT JOIN season_pass_seasons s ON s.season_id=d.season_id WHERE d.case_id=? LIMIT 1`).bind(caseId).first();
+    caseOpenAudit.label=`Сезонный кейс «${String(definition?.title||caseId||'Сезонный кейс')}»`;
     if(!definition||!Number(definition.enabled||0)||Number(definition.release_at||0)>now)throw new ApiError(409,'Этот сезонный кейс пока недоступен.');
     let existingRequest=await env.DB.prepare(`SELECT grant_id,status,rewards_json,snapshot_json,opened_at,opening_started_at,opening_token FROM season_pass_case_grants WHERE telegram_id=? AND case_id=? AND open_request_id=? ORDER BY created_at,grant_id LIMIT 1`).bind(ctx.telegramId,caseId,requestId).first();
     if(String(existingRequest?.status||'')==='opened'){const previousRewards=safeJson(existingRequest.rewards_json,[]),previousSnapshot=safeJson(existingRequest.snapshot_json,{}),inventory=await seasonPassSeasonalCaseInventory(env,ctx.telegramId);return jsonResponse({ok:true,repeated:true,case:{caseId,grantId:String(existingRequest.grant_id||''),title:String(previousSnapshot?.title||definition.title||'Сезонный кейс'),imageUrl:String(previousSnapshot?.openImageUrl||previousSnapshot?.imageUrl||definition.open_image_url||definition.closed_image_url||''),rewards:Array.isArray(previousRewards)?previousRewards:[]},seasonalCases:inventory});}
@@ -33337,7 +33391,7 @@ async function openSeasonPassSeasonalCase(request,env,executionCtx=null){
     const staleCutoff=now-120;await env.DB.prepare(`UPDATE season_pass_case_grants SET status='pending',opening_started_at=0,opening_token='',open_request_id='' WHERE telegram_id=? AND case_id=? AND status='opening' AND (opening_started_at=0 OR opening_started_at<=?)`).bind(ctx.telegramId,caseId,staleCutoff).run();
     const grant=await env.DB.prepare(`SELECT grant_id,snapshot_json FROM season_pass_case_grants WHERE telegram_id=? AND case_id=? AND status='pending' ORDER BY created_at,grant_id LIMIT 1`).bind(ctx.telegramId,caseId).first();
     if(!grant?.grant_id)throw new ApiError(409,'Сезонных кейсов этого типа нет.');
-    grantId=String(grant.grant_id);token=crypto.randomUUID().replace(/-/g,'');openingStartedAt=now;
+    grantId=String(grant.grant_id);caseOpenAudit.grantId=grantId;token=crypto.randomUUID().replace(/-/g,'');openingStartedAt=now;
     const claim=await env.DB.prepare(`UPDATE season_pass_case_grants SET status='opening',opening_started_at=?,opening_token=?,open_request_id=? WHERE grant_id=? AND telegram_id=? AND status='pending'`).bind(now,token,requestId,grantId,ctx.telegramId).run();
     if(Number(claim?.meta?.changes||0)<1)return jsonResponse({ok:true,pending:true,requestId,retryAfterMs:700},202);
     await ensureAchievementConfigSchema(env);
@@ -33390,12 +33444,13 @@ async function openSeasonPassSeasonalCase(request,env,executionCtx=null){
     statements.push(env.DB.prepare(`UPDATE season_pass_case_grants SET status='opened',rewards_json=?,opened_at=?,opening_started_at=0,opening_token='' WHERE grant_id=? AND telegram_id=? AND status='opening' AND opening_started_at=? AND opening_token=? AND open_request_id=?`).bind(JSON.stringify(rewards),now,grantId,ctx.telegramId,openingStartedAt,token,requestId));
     statements.push(env.DB.prepare(`DELETE FROM season_pass_case_opening_guards WHERE guard_id=?`).bind(openingGuardId));
     const batch=await env.DB.batch(statements);const finalized=Number(batch?.[batch.length-2]?.meta?.changes||0)>0;if(!finalized)throw new ApiError(409,'Состояние кейса изменилось. Повторите открытие.');
+    caseOpenAudit.opened=true;
     const caseTaskStatements=taskEvent?[...seasonPassCaseProgressReconcileStatements(env,ctx.telegramId,taskEvent,now),...(taskEvent.notificationStatements||[])]:[];
     const [inventory]=await Promise.all([seasonPassSeasonalCaseInventory(env,ctx.telegramId),caseTaskStatements.length?env.DB.batch(caseTaskStatements):Promise.resolve([])]);
-    seasonPassBackgroundWork(executionCtx,recordPlayerTimeline(env,ctx.telegramId,'seasonal_case_open',`открыл сезонный кейс «${String(definition.title||caseId)}»`,{caseId,grantId,rewards},`seasonal_case_${grantId}`,ctx.auth.user,now),'seasonal case timeline failed');
+    seasonPassBackgroundWork(executionCtx,recordPlayerTimeline(env,ctx.telegramId,'seasonal_case_open',caseTimelineSuccessTitle(ctx.auth.user,ctx.telegramId,`Сезонный кейс «${String(definition.title||caseId)}»`,rewards),{caseId,grantId,rewards},`seasonal_case_${grantId}`,ctx.auth.user,now),'seasonal case timeline failed');
     seasonPassBackgroundWork(executionCtx,deliverSeasonPassTaskNotificationsForRows(env,ctx.telegramId,taskEvent?.season||ctx.season,taskEvent?.taskRows||[]),'seasonal case task notification failed');
     return jsonResponse({ok:true,case:{caseId,grantId,title:String(snapshot?.title||definition.title||'Сезонный кейс'),imageUrl:String(snapshot?.openImageUrl||snapshot?.imageUrl||definition.open_image_url||definition.closed_image_url||''),rewards},seasonalCases:inventory});
-  }catch(error){if(grantId&&token){try{await env.DB.prepare(`UPDATE season_pass_case_grants SET status='pending',opening_started_at=0,opening_token='',open_request_id='' WHERE grant_id=? AND status='opening' AND opening_started_at=? AND opening_token=? AND open_request_id=?`).bind(grantId,openingStartedAt,token,requestId).run();}catch{}}if(error instanceof ApiError)return jsonResponse({ok:false,error:error.message},error.status);const text=String(error?.message||error);if(text.includes('season_pass_case_opening_guard_ok'))return jsonResponse({ok:false,error:'Открытие было восстановлено после задержки. Повторите действие.'},409);console.error('openSeasonPassSeasonalCase failed',error);return jsonResponse({ok:false,error:'Не удалось открыть сезонный кейс.'},500);}
+  }catch(error){if(grantId&&token){try{await env.DB.prepare(`UPDATE season_pass_case_grants SET status='pending',opening_started_at=0,opening_token='',open_request_id='' WHERE grant_id=? AND status='opening' AND opening_started_at=? AND opening_token=? AND open_request_id=?`).bind(grantId,openingStartedAt,token,requestId).run();}catch{}}const text=String(error?.message||error),guardConflict=text.includes('season_pass_case_opening_guard_ok');const publicReason=error instanceof ApiError?error.message:(guardConflict?'Открытие было восстановлено после задержки. Повторите действие.':'Не удалось открыть сезонный кейс.');seasonPassBackgroundWork(executionCtx,recordCaseOpenFailureTimeline(env,caseOpenAudit,publicReason),'seasonal case failure timeline failed');if(error instanceof ApiError)return jsonResponse({ok:false,error:error.message},error.status);if(guardConflict)return jsonResponse({ok:false,error:'Открытие было восстановлено после задержки. Повторите действие.'},409);console.error('openSeasonPassSeasonalCase failed',error);return jsonResponse({ok:false,error:'Не удалось открыть сезонный кейс.'},500);}
 }
 
 async function processSeasonPassTeaserNotifications(env){
