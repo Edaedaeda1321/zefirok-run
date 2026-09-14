@@ -19396,7 +19396,8 @@ function createTutorialDeck(layer, mount, options, words) {
             diagnostic.reason,
             diagnostic.durationMs,
             diagnostic.timeoutMs,
-            diagnostic.serverMs
+            diagnostic.serverMs,
+            diagnostic
           );
           return;
         }
@@ -20124,7 +20125,25 @@ function createTutorialDeck(layer, mount, options, words) {
         };
       }
 
-      function queuePlayerNetworkDiagnostic(path, code, reason, durationMs, timeoutMs, serverMs = 0) {
+      function playerNetworkDiagnosticContext(source = {}) {
+        const data = source &amp;&amp; typeof source === &quot;object&quot; ? source : {};
+        const cleanId = (value, max = 96) =&gt; String(value || &quot;&quot;).replace(/[^A-Za-z0-9_-]/g, &quot;&quot;).slice(0, max);
+        return {
+          requestId: cleanId(data.requestId || data.openRequestId || data.operationId),
+          caseType: cleanId(data.caseType, 32),
+          caseId: cleanId(data.caseId, 96),
+          grantId: cleanId(data.grantId, 120),
+          level: Math.max(0, Math.min(999, Math.floor(Number(data.level || 0))))
+        };
+      }
+
+      function playerNetworkRequestContext(init = {}) {
+        if (typeof init?.body !== &quot;string&quot; || !init.body) return playerNetworkDiagnosticContext();
+        try { return playerNetworkDiagnosticContext(JSON.parse(init.body)); }
+        catch (error) { return playerNetworkDiagnosticContext(); }
+      }
+
+      function queuePlayerNetworkDiagnostic(path, code, reason, durationMs, timeoutMs, serverMs = 0, context = {}) {
         if (TEST_PROJECT_MODE) return;
         const endpoint = playerNetworkEndpoint(path);
         if (!endpoint || endpoint === NETWORK_DIAGNOSTIC_PATH) return;
@@ -20132,7 +20151,8 @@ function createTutorialDeck(layer, mount, options, words) {
         const network = playerNetworkConnectionSnapshot();
         const queue = playerNetworkDiagnosticEvents();
         const normalizedCode = String(code || &quot;NETWORK_FETCH_FAILED&quot;).slice(0, 30);
-        const previous = [...queue].reverse().find((item) =&gt; item?.endpoint === endpoint &amp;&amp; item?.code === normalizedCode &amp;&amp; now - Number(item?.at || 0) &lt; 60000);
+        const operation = playerNetworkDiagnosticContext(context);
+        const previous = [...queue].reverse().find((item) =&gt; item?.endpoint === endpoint &amp;&amp; item?.code === normalizedCode &amp;&amp; String(item?.requestId || &quot;&quot;) === operation.requestId &amp;&amp; String(item?.caseId || &quot;&quot;) === operation.caseId &amp;&amp; String(item?.caseType || &quot;&quot;) === operation.caseType &amp;&amp; now - Number(item?.at || 0) &lt; 60000);
         const totalMs = Math.max(0, Math.min(60000, Math.round(Number(durationMs || 0))));
         const serverDuration = Math.max(0, Math.min(60000, Math.round(Number(serverMs || 0))));
         const event = previous || {
@@ -20150,7 +20170,12 @@ function createTutorialDeck(layer, mount, options, words) {
           rtt: 0,
           downlink: 0,
           saveData: false,
-          count: 0
+          count: 0,
+          requestId: &quot;&quot;,
+          caseType: &quot;&quot;,
+          caseId: &quot;&quot;,
+          grantId: &quot;&quot;,
+          level: 0
         };
         event.reason = String(reason || &quot;Сетевой запрос не завершён&quot;).replace(/\s+/g, &quot; &quot;).slice(0, 90);
         event.at = now;
@@ -20164,6 +20189,11 @@ function createTutorialDeck(layer, mount, options, words) {
         event.downlink = network.downlink;
         event.saveData = network.saveData;
         event.count = Math.min(99, Math.max(1, Number(event.count || 0) + 1));
+        event.requestId = operation.requestId;
+        event.caseType = operation.caseType;
+        event.caseId = operation.caseId;
+        event.grantId = operation.grantId;
+        event.level = operation.level;
         if (!previous) queue.push(event);
         while (queue.length &gt; PLAYER_NETWORK_DIAGNOSTIC_MAX) queue.shift();
         savePlayerNetworkDiagnosticEvents();
@@ -20210,6 +20240,7 @@ function createTutorialDeck(layer, mount, options, words) {
         const controller = new AbortController();
         const deadlineMs = Math.max(1000, Number(timeoutMs || 6500));
         const startedAt = performance.now();
+        const diagnosticContext = playerNetworkRequestContext(init);
         let deadlineReached = false;
         const timeout = window.setTimeout(() =&gt; { deadlineReached = true; controller.abort(); }, deadlineMs);
         try {
@@ -20221,7 +20252,7 @@ function createTutorialDeck(layer, mount, options, words) {
           const serverMs = Math.max(0, Number(response.headers.get(&quot;X-Zefirok-Server-Ms&quot;) || 0));
           const estimatedNetworkMs = serverMs &gt; 0 ? Math.max(0, durationMs - serverMs) : 0;
           if (response.ok &amp;&amp; serverMs &gt; 0 &amp;&amp; durationMs &gt;= 2500 &amp;&amp; estimatedNetworkMs &gt;= 1500) {
-            queuePlayerNetworkDiagnostic(path, &quot;NETWORK_SLOW&quot;, &quot;Сервер ответил быстрее, чем запрос дошёл до клиента&quot;, durationMs, deadlineMs, serverMs);
+            queuePlayerNetworkDiagnostic(path, &quot;NETWORK_SLOW&quot;, &quot;Сервер ответил быстрее, чем запрос дошёл до клиента&quot;, durationMs, deadlineMs, serverMs, diagnosticContext);
           }
           void flushPlayerNetworkDiagnostics();
           return response;
@@ -20237,7 +20268,7 @@ function createTutorialDeck(layer, mount, options, words) {
               : aborted
                 ? &quot;Сетевой запрос был прерван&quot;
                 : String(error?.message || &quot;Не удалось выполнить сетевой запрос&quot;);
-          queuePlayerNetworkDiagnostic(path, code, reason, durationMs, deadlineMs, 0);
+          queuePlayerNetworkDiagnostic(path, code, reason, durationMs, deadlineMs, 0, diagnosticContext);
           if (aborted) {
             const timeoutError = new Error(deadlineReached ? &quot;Сервер отвечает слишком долго. Повторите действие.&quot; : &quot;Запрос был прерван. Повторите действие.&quot;);
             timeoutError.code = deadlineReached ? &quot;REQUEST_TIMEOUT&quot; : &quot;REQUEST_ABORTED&quot;;
@@ -20943,12 +20974,25 @@ function createTutorialDeck(layer, mount, options, words) {
         caseLayer.classList.remove(&quot;is-info-view&quot;, &quot;is-opening-busy&quot;);
         caseLayer.classList.add(&quot;case-xp-active&quot;);
         const offline = navigator.onLine === false;
-        const stateConflict = String(error?.operationCode || error?.code || error?.details?.operationCode || error?.details?.code || &quot;&quot;) === &quot;STATE_CONFLICT&quot;;
-        const statusPill = stateConflict ? &quot;Состояние обновилось&quot; : (offline ? &quot;Нет соединения&quot; : &quot;Связь прервалась&quot;);
-        const statusTitle = stateConflict ? &quot;Кейс изменился на сервере&quot; : &quot;Не удалось проверить открытие&quot;;
+        const errorStatus = Math.max(0, Number(error?.status || 0));
+        const errorCode = String(error?.operationCode || error?.code || error?.details?.operationCode || error?.details?.code || &quot;&quot;);
+        const stateConflict = errorCode === &quot;STATE_CONFLICT&quot;;
+        const networkFailure = offline || Boolean(error?.timeout) || [&quot;REQUEST_TIMEOUT&quot;,&quot;REQUEST_ABORTED&quot;,&quot;NETWORK_TIMEOUT&quot;,&quot;NETWORK_FETCH_FAILED&quot;,&quot;NETWORK_ABORTED&quot;,&quot;NETWORK_OFFLINE&quot;].includes(errorCode) || (errorStatus === 0 &amp;&amp; (String(error?.name || &quot;&quot;) === &quot;TypeError&quot; || /fetch|network|load failed/i.test(String(error?.message || &quot;&quot;))));
+        const serverFailure = errorStatus &gt;= 500;
+        const serverRejected = errorStatus &gt;= 400 &amp;&amp; errorStatus &lt; 500;
+        const statusPill = stateConflict ? &quot;Состояние обновилось&quot; : offline ? &quot;Нет соединения&quot; : serverFailure ? &quot;Ошибка сервера&quot; : serverRejected ? &quot;Сервер отклонил запрос&quot; : networkFailure ? &quot;Связь прервалась&quot; : &quot;Результат не подтверждён&quot;;
+        const statusTitle = stateConflict ? &quot;Кейс изменился на сервере&quot; : serverFailure ? &quot;Сервис кейсов ответил ошибкой&quot; : serverRejected ? &quot;Сервер не подтвердил открытие&quot; : networkFailure ? &quot;Не удалось проверить открытие&quot; : &quot;Результат открытия не подтверждён&quot;;
         const statusCopy = stateConflict
           ? &quot;Защитная проверка остановила устаревшую операцию. Сначала обновим состояние, затем продолжим только после сверки.&quot;
-          : (offline ? &quot;Подключись к интернету — после этого мы проверим эту же попытку.&quot; : &quot;Сначала проверим, успел ли сервер завершить именно это открытие.&quot;);
+          : offline
+            ? &quot;Подключись к интернету — после этого мы проверим эту же попытку.&quot;
+            : serverFailure
+              ? &quot;Сервер вернул ошибку. Мы не создаём второе открытие — повторная проверка сверит эту же попытку.&quot;
+              : serverRejected
+                ? &quot;Сервер отклонил эту попытку. Повторная проверка сверит текущее состояние без нового открытия.&quot;
+                : networkFailure
+                  ? &quot;Сначала проверим, успел ли сервер завершить именно это открытие.&quot;
+                  : &quot;Не создаём новую попытку, пока не сверим результат этой операции с сервером.&quot;;
         caseContentEl.innerHTML = `&lt;div class=&quot;case-xp-shell case-xp-status is-network&quot; data-case-theme=&quot;${escapePurchaseText(type)}&quot;&gt;
           &lt;div class=&quot;case-xp-network-mark&quot; aria-hidden=&quot;true&quot;&gt;&lt;i&gt;&lt;/i&gt;&lt;i&gt;&lt;/i&gt;&lt;i&gt;&lt;/i&gt;&lt;/div&gt;
           &lt;div class=&quot;case-xp-status-case&quot;&gt;${caseImageMarkup(type, false, &quot;case-xp-status-case-img&quot;)}&lt;/div&gt;
