@@ -11261,7 +11261,10 @@ body { min-height: var(--zefirok-app-height, 100dvh); }
   setTimeout(resetRatingScroll, 80);
   postToHost({ type: "zefirok-rating-ready", build: BUILD });
 
-  void Promise.all([refresh("season", true), refresh("all_time", true)]);
+  // First paint only needs the selected tab. Loading both modes in parallel sent
+  // two full leaderboard requests and made the initial season view compete for D1.
+  // The all-time tab is loaded lazily by its existing tab handler.
+  void refresh("season", true);
 
   setInterval(() => {
     for (const data of Object.values(cache)) {

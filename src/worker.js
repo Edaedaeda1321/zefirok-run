@@ -13060,7 +13060,10 @@ async function leaderboardState(request, env) {
     const auth = await validateTelegramInitData(String(body.initData || ""), env);
     const mode = String(body.mode || "season") === "all_time" ? "all_time" : "season";
     const season = await selectLeaderboardSeasonForState(env);
-    if (mode === "season" && String(season?.status||"") === "active") await maybeRepairLeaderboardIntegrity(env,season,{recoverTransient:true,notifyLeaderChange:true});
+    // Public rating reads must stay read-only and fast. Full integrity recovery scans
+    // authoritative run history and can touch many D1 tables. Scheduled cron and
+    // explicit Control Center recovery already cover that maintenance work. Running
+    // it synchronously here made normal rating opens wait on repair and time out.
     if (mode === "all_time") await ensureLeaderboardAllTimeBestScoreMode(env);
     return jsonResponse(await buildLeaderboardPayload(env, season, String(auth.user.id), mode));
   } catch (error) {
