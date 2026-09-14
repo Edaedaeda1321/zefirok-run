@@ -4201,6 +4201,268 @@ img[src$="/xp.webp"]{
 }
 </style>
 
+
+
+
+<style id="zefirok-reward-cases-v2-3">
+/* V2.3 — clean lane art + rebuilt 50+ end card. Presentation only. */
+.lane-label{
+  padding:2px!important;
+  overflow:hidden!important;
+}
+.lane-label.free,
+.lane-label.premium{
+  display:flex!important;
+  align-items:center!important;
+  justify-content:center!important;
+}
+.lane-label-art{
+  display:block!important;
+  width:calc(100% - 4px)!important;
+  height:calc(100% - 4px)!important;
+  max-width:none!important;
+  max-height:none!important;
+  margin:auto!important;
+  object-fit:contain!important;
+  object-position:center!important;
+  opacity:1!important;
+  background:transparent!important;
+  border:0!important;
+  outline:0!important;
+  box-shadow:none!important;
+  filter:none!important;
+}
+
+/* A little real breathing room after the endless destination. */
+.reward-track::after{
+  content:""!important;
+  flex:0 0 24px!important;
+  width:24px!important;
+  pointer-events:none!important;
+}
+
+/* 50+ is one premium end-cap, not a squeezed ordinary level column. */
+.level-column.overflow-reward-column{
+  position:relative!important;
+  box-sizing:border-box!important;
+  flex:0 0 142px!important;
+  min-width:142px!important;
+  max-width:142px!important;
+  padding:0 7px!important;
+  overflow:visible!important;
+  background:linear-gradient(180deg,rgba(255,249,231,.62),rgba(255,255,255,0))!important;
+}
+.level-column.overflow-reward-column:before{display:none!important}
+.level-column.overflow-reward-column>.overflow-reward-cell{
+  grid-column:1!important;
+  grid-row:1/5!important;
+  align-self:stretch!important;
+  position:relative!important;
+  z-index:1!important;
+  box-sizing:border-box!important;
+  width:100%!important;
+  min-width:0!important;
+  max-width:100%!important;
+  height:auto!important;
+  margin:7px 0!important;
+  padding:10px 9px 10px!important;
+  display:grid!important;
+  grid-template-rows:20px 56px 62px auto auto 7px auto minmax(4px,1fr) 30px!important;
+  align-content:stretch!important;
+  justify-items:center!important;
+  gap:4px!important;
+  overflow:hidden!important;
+  border:1px solid rgba(217,171,80,.40)!important;
+  border-radius:21px!important;
+  background:linear-gradient(165deg,#fffdf7 0%,#fff8e9 52%,#fff3d9 100%)!important;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.95),0 7px 20px rgba(142,91,30,.075)!important;
+  opacity:1!important;
+  filter:none!important;
+}
+.level-column.overflow-reward-column>.overflow-reward-cell::before{
+  content:"";
+  position:absolute;
+  inset:-44px -32px auto;
+  height:128px;
+  border-radius:50%;
+  background:radial-gradient(circle,rgba(255,224,134,.31),transparent 69%);
+  pointer-events:none;
+}
+.level-column.overflow-reward-column>.overflow-reward-cell::after{display:none!important}
+
+.overflow-cell-state{
+  grid-row:1!important;
+  position:relative!important;
+  z-index:2!important;
+  align-self:start!important;
+  min-height:20px!important;
+  max-width:100%!important;
+  margin:0!important;
+  padding:3px 8px!important;
+  border:1px solid rgba(215,169,78,.20)!important;
+  border-radius:999px!important;
+  background:rgba(255,255,255,.78)!important;
+  color:#a17a50!important;
+  font-size:7px!important;
+  line-height:12px!important;
+  font-weight:950!important;
+  box-shadow:none!important;
+}
+.overflow-cell-art{
+  grid-row:2!important;
+  position:relative!important;
+  z-index:2!important;
+  align-self:center!important;
+  width:58px!important;
+  height:58px!important;
+  object-fit:contain!important;
+  opacity:.92!important;
+  filter:drop-shadow(0 7px 8px rgba(137,84,17,.14))!important;
+}
+
+/* Reserve the path row: the infinity station floats here, never over text. */
+.level-column.overflow-reward-column>.level-number,
+.level-column.overflow-reward-column.current>.level-number,
+.level-column.overflow-reward-column.selected>.level-number{
+  grid-column:1!important;
+  grid-row:2!important;
+  align-self:center!important;
+  justify-self:center!important;
+  position:relative!important;
+  z-index:6!important;
+  box-sizing:border-box!important;
+  width:62px!important;
+  min-width:62px!important;
+  max-width:62px!important;
+  height:36px!important;
+  min-height:36px!important;
+  margin:0 auto!important;
+  padding:3px 7px 2px!important;
+  border:1px solid #d89c2b!important;
+  border-radius:14px!important;
+  background:linear-gradient(145deg,#fffaf0,#ffeab3)!important;
+  color:#754816!important;
+  box-shadow:inset 0 0 0 2px rgba(255,255,255,.86),0 5px 13px rgba(153,94,18,.13)!important;
+}
+.level-column.overflow-reward-column>.level-number small{
+  display:none!important;
+}
+.level-column.overflow-reward-column>.level-number b{
+  font-size:17px!important;
+  line-height:1!important;
+  color:#754816!important;
+}
+.level-column.overflow-reward-column>.level-number::after{
+  bottom:-4px!important;
+  width:7px!important;
+  height:7px!important;
+  background:linear-gradient(145deg,#ff91b9,#dc4d86)!important;
+  border-color:#e4ad3f!important;
+}
+
+.overflow-cell-title{
+  grid-row:4!important;
+  position:relative!important;
+  z-index:2!important;
+  align-self:end!important;
+  margin:0!important;
+  color:#805922!important;
+  font-size:10px!important;
+  line-height:1.08!important;
+  font-weight:1000!important;
+  text-align:center!important;
+}
+.overflow-cell-copy{
+  grid-row:5!important;
+  position:relative!important;
+  z-index:2!important;
+  align-self:start!important;
+  max-width:108px!important;
+  margin:0 auto!important;
+  color:#9c7b48!important;
+  font-size:6.9px!important;
+  line-height:1.28!important;
+  font-weight:850!important;
+  text-align:center!important;
+}
+.overflow-cell-track{
+  grid-row:6!important;
+  position:relative!important;
+  z-index:2!important;
+  align-self:center!important;
+  width:100%!important;
+  height:6px!important;
+  margin:0!important;
+  border-radius:999px!important;
+  background:rgba(175,127,52,.13)!important;
+  overflow:hidden!important;
+}
+.overflow-cell-track i{
+  height:100%!important;
+  border-radius:inherit!important;
+  background:linear-gradient(90deg,#efc45b,#dc9a2d)!important;
+}
+.overflow-cell-progress{
+  grid-row:7!important;
+  position:relative!important;
+  z-index:2!important;
+  margin:0!important;
+  color:#96713b!important;
+  font-size:6.8px!important;
+  line-height:1.15!important;
+  font-weight:950!important;
+  text-align:center!important;
+}
+.overflow-cell-action{
+  grid-row:9!important;
+  position:relative!important;
+  z-index:2!important;
+  align-self:end!important;
+  width:100%!important;
+  min-height:30px!important;
+  height:30px!important;
+  margin:0!important;
+  padding:0 6px!important;
+  border:0!important;
+  border-radius:11px!important;
+  background:linear-gradient(145deg,#e5b343,#c98a25)!important;
+  color:#fffaf0!important;
+  font-size:7.5px!important;
+  line-height:30px!important;
+  font-weight:950!important;
+  box-shadow:0 5px 12px rgba(159,100,25,.12)!important;
+}
+.overflow-cell-action:disabled{
+  background:rgba(238,228,219,.82)!important;
+  color:#a58f83!important;
+  box-shadow:none!important;
+  opacity:1!important;
+}
+.overflow-reward-cell.is-locked{
+  opacity:1!important;
+  filter:none!important;
+}
+.overflow-reward-cell.is-locked .overflow-cell-art{opacity:.78!important;filter:grayscale(.08) drop-shadow(0 7px 8px rgba(137,84,17,.10))!important}
+.overflow-reward-cell.is-locked .overflow-cell-state{background:rgba(245,238,232,.90)!important;color:#a28d82!important}
+
+@media(max-width:430px){
+  .reward-track::after{flex-basis:20px!important;width:20px!important}
+  .level-column.overflow-reward-column{
+    flex-basis:136px!important;
+    min-width:136px!important;
+    max-width:136px!important;
+    padding-inline:6px!important;
+  }
+  .level-column.overflow-reward-column>.overflow-reward-cell{
+    grid-template-rows:19px 52px 58px auto auto 6px auto minmax(3px,1fr) 29px!important;
+    padding:9px 8px!important;
+    margin:6px 0!important;
+  }
+  .overflow-cell-art{width:54px!important;height:54px!important}
+  .overflow-cell-action{height:29px!important;min-height:29px!important;line-height:29px!important}
+}
+</style>
+
 </head>
 <body>
 <section class="access-gate" id="accessGate">
@@ -4318,9 +4580,9 @@ img[src$="/xp.webp"]{
         <div class="reward-board">
           <aside class="lane-labels" aria-hidden="true">
             <div class="lane-empty"></div>
-            <div class="lane-label free"><img class="lane-label-art" src="/assets/season-pass/free_line.webp?v=07939" alt="Бесплатная линия"></div>
+            <div class="lane-label free"><img class="lane-label-art" src="/assets/season-pass/free_line.webp?v=07943" alt="Бесплатная линия"></div>
             <div class="lane-divider">◆</div>
-            <div class="lane-label premium"><img class="lane-label-art" src="/assets/season-pass/premium_line.webp?v=07939" alt="Премиальная линия"></div>
+            <div class="lane-label premium"><img class="lane-label-art" src="/assets/season-pass/premium_line.webp?v=07943" alt="Премиальная линия"></div>
           </aside>
           <div class="reward-scroll" id="rewardScroll">
             <div class="reward-track" id="rewardTrack"></div>

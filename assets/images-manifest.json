@@ -1,7 +1,7 @@
 {
   "version": 2,
   "hashAlgorithm": "sha256",
-  "catalogHash": "17ae6c775e832f1f",
+  "catalogHash": "ec1140bce08ed8ab",
   "count": 456,
   "images": [
     {
@@ -2337,8 +2337,8 @@
       "label": "Free line",
       "folder": "season-pass",
       "path": "/assets/season-pass/free_line.webp",
-      "hash": "de4427009145",
-      "size": 178506
+      "hash": "ac2829fd022f",
+      "size": 384452
     },
     {
       "fileName": "season-pass/icon_one_season.webp",
@@ -2377,8 +2377,8 @@
       "label": "Premium line",
       "folder": "season-pass",
       "path": "/assets/season-pass/premium_line.webp",
-      "hash": "0f8bec0f6b60",
-      "size": 388158
+      "hash": "4e0bee31826c",
+      "size": 597916
     },
     {
       "fileName": "season-pass/quest.webp",
