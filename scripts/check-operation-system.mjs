@@ -270,6 +270,17 @@ const deferredBoosterConsume = section(consumeBoosterRun, 'if (String(session.st
 assert(!deferredBoosterConsume.includes('buildCasePayload('), 'deferred protected-session consume still returns stale pre-settlement case state');
 assert(deferredBoosterConsume.includes('jsonResponse({ ok: true, deferredToRunSettlement: true })'), 'deferred protected-session consume does not use the minimal no-state response');
 
+// Rating repair is intentionally idempotent at the SQL write level. The cron
+// runs every five minutes, so already-correct rows must not consume D1 rows_written.
+const serverRegistryRatingRepair = extractNamedFunction(worker, 'repairLeaderboardFromServerRunRegistry');
+assert(serverRegistryRatingRepair.includes('WHERE COALESCE(leaderboard_entries.hidden,0)<>0'), 'server-registry rating repair still rewrites unchanged leaderboard_entries');
+assert(serverRegistryRatingRepair.includes('OR COALESCE(leaderboard_runs.accepted,0)<>1'), 'server-registry rating repair still rewrites unchanged leaderboard_runs');
+assert(serverRegistryRatingRepair.includes(`AND (COALESCE(score,0)<? OR COALESCE(duration_ms,0)<? OR COALESCE(accepted_rating,0)<>1 OR COALESCE(season_id,'')<>?)`), 'server-registry rating repair still rewrites unchanged game_run_sessions');
+const authoritativeRatingRepair = extractNamedFunction(worker, 'repairLeaderboardSeasonFromAuthoritativeRuns');
+assert(authoritativeRatingRepair.includes('WHERE COALESCE(leaderboard_entries.hidden,0)<>0'), 'authoritative rating repair still rewrites unchanged leaderboard_entries');
+assert(authoritativeRatingRepair.includes("WHERE run_id IN (${q}) AND (COALESCE(accepted_rating,0)<>1 OR COALESCE(season_id,'')<>?)"), 'authoritative rating repair lacks no-op guards for run acceptance state');
+assert(authoritativeRatingRepair.includes('WHERE COALESCE(leaderboard_all_time.hidden,0)<>0'), 'authoritative rating repair still rewrites unchanged leaderboard_all_time rows');
+
 // FullScreen run HUD must surface reward x2 state without relying on the legacy
 // bottom pill, and the settled result must state how many boosted runs remain.
 assert(index.includes('data-run-focus-booster'), 'fullscreen x2 booster HUD slot is missing');

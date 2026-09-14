@@ -12607,6 +12607,9 @@ async function leaderboardServerRunRegistry(env,season,options={}){
   return {ok:true,seasonId:sid,recoveryWindow:window,minSeconds,minScore,proofGraceMs,proofMinMs,includeStaleStarted,staleStartedMs,rows:normalized,summary:{matches:normalized.length,players:playerIds.size,qualifyingPlayers:qualifyingIds.size,missingPlayers:missingIds.size,byStatus}};
 }
 
+// Rating self-heal runs every five minutes. Every repair statement below is
+// guarded so an already-correct row is not physically rewritten in D1. This
+// keeps recovery idempotent without burning rows_written on no-op reconciles.
 async function repairLeaderboardFromServerRunRegistry(env,season,options={}){
   if(!season?.id)return {ok:true,skipped:true,reason:'no_season'};
   const sid=String(season.id),now=Math.floor(Date.now()/1000),oldLeader=await leaderboardCurrentVisibleLeader(env,sid).catch(()=>null);
@@ -12634,15 +12637,29 @@ async function repairLeaderboardFromServerRunRegistry(env,season,options={}){
       photo_url=CASE WHEN excluded.photo_url<>'' THEN excluded.photo_url ELSE leaderboard_entries.photo_url END,
       best_score=MAX(leaderboard_entries.best_score,excluded.best_score),
       achieved_at=CASE WHEN excluded.best_score>leaderboard_entries.best_score OR (excluded.best_score=leaderboard_entries.best_score AND excluded.achieved_at<leaderboard_entries.achieved_at) THEN excluded.achieved_at ELSE leaderboard_entries.achieved_at END,
-      level=MAX(leaderboard_entries.level,excluded.level),hidden=0,updated_at=excluded.updated_at,case_avatar_id=excluded.case_avatar_id,case_frame_id=excluded.case_frame_id`)
+      level=MAX(leaderboard_entries.level,excluded.level),hidden=0,updated_at=excluded.updated_at,case_avatar_id=excluded.case_avatar_id,case_frame_id=excluded.case_frame_id
+      WHERE COALESCE(leaderboard_entries.hidden,0)<>0
+        OR excluded.best_score>COALESCE(leaderboard_entries.best_score,0)
+        OR (excluded.best_score=COALESCE(leaderboard_entries.best_score,0) AND excluded.achieved_at<COALESCE(leaderboard_entries.achieved_at,2147483647))
+        OR excluded.level>COALESCE(leaderboard_entries.level,0)
+        OR (excluded.display_name<>'' AND excluded.display_name<>COALESCE(leaderboard_entries.display_name,''))
+        OR (excluded.username<>'' AND excluded.username<>COALESCE(leaderboard_entries.username,''))
+        OR (excluded.photo_url<>'' AND excluded.photo_url<>COALESCE(leaderboard_entries.photo_url,''))
+        OR excluded.case_avatar_id<>COALESCE(leaderboard_entries.case_avatar_id,'')
+        OR excluded.case_frame_id<>COALESCE(leaderboard_entries.case_frame_id,'')`)
       .bind(sid,row.telegramId,String(row.name||row.telegramId).slice(0,120),String(row.username||'').slice(0,64),String(row.photoUrl||'').slice(0,500),score,profileLevelFromXp(Number(row.profileXp||0)),achievedAt,now,normalizeCaseCosmeticId('avatar',row.caseAvatarId),normalizeCaseCosmeticId('frame',row.caseFrameId)));
     statements.push(env.DB.prepare(`INSERT INTO leaderboard_runs(run_id,telegram_id,score,duration_ms,run_treats,run_coffee,season_id,accepted,rejection_reason,created_at)
       VALUES(?,?,?,?,0,0,?,1,'server_registry_recovery',?) ON CONFLICT(run_id) DO UPDATE SET
       score=MAX(leaderboard_runs.score,excluded.score),duration_ms=MAX(leaderboard_runs.duration_ms,excluded.duration_ms),season_id=excluded.season_id,accepted=1,
-      rejection_reason=CASE WHEN leaderboard_runs.accepted=1 THEN leaderboard_runs.rejection_reason ELSE 'server_registry_recovery' END`)
+      rejection_reason=CASE WHEN leaderboard_runs.accepted=1 THEN leaderboard_runs.rejection_reason ELSE 'server_registry_recovery' END
+      WHERE excluded.score>COALESCE(leaderboard_runs.score,0)
+        OR excluded.duration_ms>COALESCE(leaderboard_runs.duration_ms,0)
+        OR COALESCE(leaderboard_runs.season_id,'')<>excluded.season_id
+        OR COALESCE(leaderboard_runs.accepted,0)<>1`)
       .bind(row.runId,row.telegramId,score,durationMs,sid,achievedAt));
-    statements.push(env.DB.prepare(`UPDATE game_run_sessions SET score=MAX(score,?),duration_ms=MAX(duration_ms,?),accepted_rating=1,season_id=?,updated_at=MAX(updated_at,?) WHERE run_id=? AND telegram_id=?`)
-      .bind(score,durationMs,sid,now,row.runId,row.telegramId));
+    statements.push(env.DB.prepare(`UPDATE game_run_sessions SET score=MAX(score,?),duration_ms=MAX(duration_ms,?),accepted_rating=1,season_id=?,updated_at=MAX(updated_at,?) WHERE run_id=? AND telegram_id=?
+      AND (COALESCE(score,0)<? OR COALESCE(duration_ms,0)<? OR COALESCE(accepted_rating,0)<>1 OR COALESCE(season_id,'')<>?)`)
+      .bind(score,durationMs,sid,now,row.runId,row.telegramId,score,durationMs,sid));
   }
   for(let i=0;i<statements.length;i+=60)await env.DB.batch(statements.slice(i,i+60));
   leaderboardIntegrityResetMemory();
@@ -12894,7 +12911,16 @@ async function repairLeaderboardSeasonFromAuthoritativeRuns(env,season,options={
         case_avatar_id=excluded.case_avatar_id,case_frame_id=excluded.case_frame_id,level=MAX(leaderboard_entries.level,excluded.level),
         best_score=CASE WHEN excluded.best_score>leaderboard_entries.best_score THEN excluded.best_score ELSE leaderboard_entries.best_score END,
         achieved_at=CASE WHEN excluded.best_score>leaderboard_entries.best_score OR (excluded.best_score=leaderboard_entries.best_score AND excluded.achieved_at<leaderboard_entries.achieved_at) THEN excluded.achieved_at ELSE leaderboard_entries.achieved_at END,
-        hidden=0,updated_at=excluded.updated_at`).bind(sid,id,String(row.display_name||id).slice(0,120),String(row.username||'').slice(0,64),String(row.photo_url||'').slice(0,500),score,profileLevelFromXp(Number(row.profile_xp||0)),achievedAt,now,normalizeCaseCosmeticId('avatar',row.case_avatar_id),normalizeCaseCosmeticId('frame',row.case_frame_id)));
+        hidden=0,updated_at=excluded.updated_at
+      WHERE COALESCE(leaderboard_entries.hidden,0)<>0
+        OR excluded.best_score>COALESCE(leaderboard_entries.best_score,0)
+        OR (excluded.best_score=COALESCE(leaderboard_entries.best_score,0) AND excluded.achieved_at<COALESCE(leaderboard_entries.achieved_at,2147483647))
+        OR excluded.level>COALESCE(leaderboard_entries.level,0)
+        OR (excluded.display_name<>'' AND excluded.display_name<>COALESCE(leaderboard_entries.display_name,''))
+        OR (excluded.username<>'' AND excluded.username<>COALESCE(leaderboard_entries.username,''))
+        OR (excluded.photo_url<>'' AND excluded.photo_url<>COALESCE(leaderboard_entries.photo_url,''))
+        OR excluded.case_avatar_id<>COALESCE(leaderboard_entries.case_avatar_id,'')
+        OR excluded.case_frame_id<>COALESCE(leaderboard_entries.case_frame_id,'')`).bind(sid,id,String(row.display_name||id).slice(0,120),String(row.username||'').slice(0,64),String(row.photo_url||'').slice(0,500),score,profileLevelFromXp(Number(row.profile_xp||0)),achievedAt,now,normalizeCaseCosmeticId('avatar',row.case_avatar_id),normalizeCaseCosmeticId('frame',row.case_frame_id)));
   }
   for(let i=0;i<statements.length;i+=50)await env.DB.batch(statements.slice(i,i+50));
 
@@ -12905,9 +12931,9 @@ async function repairLeaderboardSeasonFromAuthoritativeRuns(env,season,options={
       WHERE l.created_at>=? AND l.created_at<=? AND (?=1 OR l.season_id=?) AND l.duration_ms>=? AND l.raw_score>=? AND COALESCE(t.exclude_from_rating,0)=0 AND (${reasonClause})`).bind(start,end,recoverByWindow?1:0,sid,minSeconds*1000,minScore).all()).results||[];
     const runIds=[...new Set(recoverable.map(row=>String(row.run_id||'')).filter(Boolean))];recoveredRuns=runIds.length;
     for(let i=0;i<runIds.length;i+=80){const chunk=runIds.slice(i,i+80),q=chunk.map(()=>'?').join(',');await env.DB.batch([
-      env.DB.prepare(`UPDATE player_economy_run_ledger SET accepted_rating=1,season_id=? WHERE run_id IN (${q})`).bind(sid,...chunk),
-      env.DB.prepare(`UPDATE leaderboard_runs SET accepted=1,rejection_reason='',season_id=? WHERE run_id IN (${q})`).bind(sid,...chunk),
-      env.DB.prepare(`UPDATE game_run_sessions SET accepted_rating=1,season_id=? WHERE run_id IN (${q})`).bind(sid,...chunk)
+      env.DB.prepare(`UPDATE player_economy_run_ledger SET accepted_rating=1,season_id=? WHERE run_id IN (${q}) AND (COALESCE(accepted_rating,0)<>1 OR COALESCE(season_id,'')<>?)`).bind(sid,...chunk,sid),
+      env.DB.prepare(`UPDATE leaderboard_runs SET accepted=1,rejection_reason='',season_id=? WHERE run_id IN (${q}) AND (COALESCE(accepted,0)<>1 OR COALESCE(rejection_reason,'')<>'' OR COALESCE(season_id,'')<>?)`).bind(sid,...chunk,sid),
+      env.DB.prepare(`UPDATE game_run_sessions SET accepted_rating=1,season_id=? WHERE run_id IN (${q}) AND (COALESCE(accepted_rating,0)<>1 OR COALESCE(season_id,'')<>?)`).bind(sid,...chunk,sid)
     ]);}
 
     const exactFallback=fallbackCandidates.filter(row=>String(row.source_kind||'')!=='live_proof');
@@ -12916,8 +12942,8 @@ async function repairLeaderboardSeasonFromAuthoritativeRuns(env,season,options={
     for(let i=0;i<fallbackRunIds.length;i+=60){
       const chunk=fallbackRunIds.slice(i,i+60),q=chunk.map(()=>'?').join(',');
       await env.DB.batch([
-        env.DB.prepare(`UPDATE leaderboard_runs SET accepted=1,rejection_reason='',season_id=? WHERE run_id IN (${q})`).bind(sid,...chunk),
-        env.DB.prepare(`UPDATE game_run_sessions SET accepted_rating=1,season_id=? WHERE run_id IN (${q})`).bind(sid,...chunk),
+        env.DB.prepare(`UPDATE leaderboard_runs SET accepted=1,rejection_reason='',season_id=? WHERE run_id IN (${q}) AND (COALESCE(accepted,0)<>1 OR COALESCE(rejection_reason,'')<>'' OR COALESCE(season_id,'')<>?)`).bind(sid,...chunk,sid),
+        env.DB.prepare(`UPDATE game_run_sessions SET accepted_rating=1,season_id=? WHERE run_id IN (${q}) AND (COALESCE(accepted_rating,0)<>1 OR COALESCE(season_id,'')<>?)`).bind(sid,...chunk,sid),
         env.DB.prepare(`INSERT OR IGNORE INTO leaderboard_runs(run_id,season_id,telegram_id,score,duration_ms,run_treats,run_coffee,accepted,rejection_reason,created_at)
           SELECT s.run_id,?,s.telegram_id,s.score,s.duration_ms,s.run_treats,s.run_coffee,1,'',CASE WHEN s.finished_at_ms>0 THEN CAST(s.finished_at_ms/1000 AS INTEGER) ELSE s.created_at END
           FROM game_run_sessions s WHERE s.status='finished' AND s.run_id IN (${q})`).bind(sid,...chunk),
@@ -12949,7 +12975,16 @@ async function repairLeaderboardSeasonFromAuthoritativeRuns(env,season,options={
       level=MAX(leaderboard_all_time.level,excluded.level),case_avatar_id=excluded.case_avatar_id,case_frame_id=excluded.case_frame_id,
       best_score=MAX(leaderboard_all_time.best_score,excluded.best_score),
       achieved_at=CASE WHEN excluded.best_score>leaderboard_all_time.best_score OR (excluded.best_score=leaderboard_all_time.best_score AND excluded.achieved_at<leaderboard_all_time.achieved_at) THEN excluded.achieved_at ELSE leaderboard_all_time.achieved_at END,
-      hidden=0,updated_at=excluded.updated_at`).bind(String(row.telegram_id),String(row.display_name||row.telegram_id).slice(0,120),String(row.username||'').slice(0,64),String(row.photo_url||'').slice(0,500),Math.max(0,Number(row.score||0)),profileLevelFromXp(Number(row.profile_xp||0)),Math.max(start,Number(row.created_at||now)),now,normalizeCaseCosmeticId('avatar',row.case_avatar_id),normalizeCaseCosmeticId('frame',row.case_frame_id)));
+      hidden=0,updated_at=excluded.updated_at
+    WHERE COALESCE(leaderboard_all_time.hidden,0)<>0
+      OR excluded.best_score>COALESCE(leaderboard_all_time.best_score,0)
+      OR (excluded.best_score=COALESCE(leaderboard_all_time.best_score,0) AND excluded.achieved_at<COALESCE(leaderboard_all_time.achieved_at,2147483647))
+      OR excluded.level>COALESCE(leaderboard_all_time.level,0)
+      OR (excluded.display_name<>'' AND excluded.display_name<>COALESCE(leaderboard_all_time.display_name,''))
+      OR (excluded.username<>'' AND excluded.username<>COALESCE(leaderboard_all_time.username,''))
+      OR (excluded.photo_url<>'' AND excluded.photo_url<>COALESCE(leaderboard_all_time.photo_url,''))
+      OR excluded.case_avatar_id<>COALESCE(leaderboard_all_time.case_avatar_id,'')
+      OR excluded.case_frame_id<>COALESCE(leaderboard_all_time.case_frame_id,'')`).bind(String(row.telegram_id),String(row.display_name||row.telegram_id).slice(0,120),String(row.username||'').slice(0,64),String(row.photo_url||'').slice(0,500),Math.max(0,Number(row.score||0)),profileLevelFromXp(Number(row.profile_xp||0)),Math.max(start,Number(row.created_at||now)),now,normalizeCaseCosmeticId('avatar',row.case_avatar_id),normalizeCaseCosmeticId('frame',row.case_frame_id)));
   for(let i=0;i<allTimeStatements.length;i+=50)await env.DB.batch(allTimeStatements.slice(i,i+50));
 
   let restoredNotifications=0;
