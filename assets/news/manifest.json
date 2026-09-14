@@ -1,7 +1,7 @@
 {
   "version": 1,
-  "catalogHash": "a01dd8f13b8b87d2",
-  "count": 10,
+  "catalogHash": "573408bbb73b42a1",
+  "count": 11,
   "images": [
     {
       "fileName": "cases-5.0.1.webp",
@@ -51,6 +51,13 @@
       "path": "/assets/news/relise_game_news.webp",
       "hash": "fd804e0c7e73",
       "size": 331444
+    },
+    {
+      "fileName": "seson 2 fix_compensation.webp",
+      "label": "Seson 2 fix compensation",
+      "path": "/assets/news/seson%202%20fix_compensation.webp",
+      "hash": "f9e5b8c8fd17",
+      "size": 297482
     },
     {
       "fileName": "tex_raboty_news.webp",
