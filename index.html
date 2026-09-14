@@ -15846,7 +15846,6 @@ function installProgressInfo(){
       const CASE_API_STATE_PATH = &quot;/api/cases/state&quot;;
       const CASE_API_OPEN_PATH = &quot;/api/cases/open&quot;;
       const CASE_API_OPEN_GRANTED_PATH = &quot;/api/cases/open-granted&quot;;
-      const CASE_API_OPEN_GRANTED_STATUS_PATH = &quot;/api/cases/open-granted/status&quot;;
       const CASE_OPEN_REQUEST_TIMEOUT_MS = 10000;
       const GRANTED_CASE_OPEN_REQUEST_TIMEOUT_MS = 8000;
       const GRANTED_CASE_OPEN_UI_DEADLINE_MS = 18000;
@@ -19443,12 +19442,9 @@ function createTutorialDeck(layer, mount, options, words) {
             || telegramProfileStartupSyncId !== currentTelegramId
             || Date.now() - telegramProfileStartupSyncAt &gt; 60000;
           if (state.running &amp;&amp; state.caseRunId) void startAuthoritativeRunSession(state.caseRunId);
-          // Warm profile quick cards immediately after Telegram auth. The profile
-          // screen should render cached values instead of starting cold requests
-          // only after the player taps the tab.
-          window.setTimeout(() =&gt; { try { void window.zefirokProfileOverview?.(); } catch {} }, 80);
+          // Rating is the visible profile dependency, so start it before background
+          // package/retry work instead of waiting for an old run submission.
           if (profileVisible) void refreshLeaderboard(false, &quot;season&quot;, false);
-          else window.setTimeout(() =&gt; void refreshLeaderboard(false, &quot;season&quot;, false), 260);
           void retryPendingLeaderboardRun({ silent: true });
           if (startupSyncNeeded) {
             telegramProfileStartupSyncId = currentTelegramId;
@@ -20345,12 +20341,6 @@ function createTutorialDeck(layer, mount, options, words) {
           state.caseAlexCollectionRewardClaimed = Boolean(alexCollectionPayload.rewardClaimed);
         }
         if (Array.isArray(data?.recentOpenings)) state.caseRecentOpenings = data.recentOpenings.slice(0, 8);
-        if (data?.giftedOpeningRequests &amp;&amp; typeof data.giftedOpeningRequests === &quot;object&quot;) {
-          for (const [openingType, opening] of Object.entries(data.giftedOpeningRequests)) {
-            const normalized=caseExperienceNormalizeType(openingType),requestId=String(opening?.requestId||&quot;&quot;);
-            if (normalized &amp;&amp; requestId) rememberGrantedCaseRequest(normalized,requestId,Number(opening?.startedAt||Date.now()));
-          }
-        }
         if (data?.opened &amp;&amp; Array.isArray(data.opened.rewards)) {
           const opened = data.opened;
           const recentEntry = { source:&quot;live&quot;, sourceId:String(opened.grantId || opened.id || opened.requestId || opened.level || `${Date.now()}`), caseType:String(opened.caseType || &quot;small&quot;), title:caseTitle(String(opened.caseType || &quot;small&quot;)), openedAt:Number(opened.openedAt || Date.now()), rewards:opened.rewards };
@@ -20501,7 +20491,7 @@ function createTutorialDeck(layer, mount, options, words) {
         // Recovery is an observation only: it must not apply client-side profile
         // preferences or advance any server delivery queue while we are resolving
         // the exact result of an already-started opening.
-        return loadCaseState(true, true, true);
+        return loadCaseState(true, false, true);
       }
 
       function presentConfirmedLevelCase(data, level, recovered = false) {
@@ -20986,43 +20976,13 @@ function createTutorialDeck(layer, mount, options, words) {
           return;
         }
         if (retry.kind === &quot;gifted&quot;) {
-          const recoveredRequestId=grantedCasePendingRequests.get(caseExperienceNormalizeType(retry.caseType))||persistedGrantedCaseRequest(retry.caseType)||retry.requestId;
-          if (recoveredRequestId) { retry.requestId=String(recoveredRequestId);rememberGrantedCaseRequest(retry.caseType,retry.requestId,retry.startedAt); }
+          if (retry.requestId) grantedCasePendingRequests.set(retry.caseType, retry.requestId);
           caseOpeningRetryContext = retry;
           void openGiftedCaseClient(retry.caseType, null);
         }
       }
 
       const grantedCasePendingRequests = new Map();
-      const GRANTED_CASE_PENDING_STORAGE_KEY = &quot;zefirok-granted-case-opening-v2&quot;;
-      const GRANTED_CASE_PENDING_MAX_AGE_MS = 15 * 60 * 1000;
-
-      function storedGrantedCaseRequests() {
-        try {
-          const parsed=JSON.parse(localStorage.getItem(GRANTED_CASE_PENDING_STORAGE_KEY)||&quot;{}&quot;);
-          return parsed &amp;&amp; typeof parsed === &quot;object&quot; ? parsed : {};
-        } catch { return {}; }
-      }
-
-      function persistedGrantedCaseRequest(caseType) {
-        const type=caseExperienceNormalizeType(caseType),row=storedGrantedCaseRequests()?.[type];
-        if (!row || !String(row.requestId||&quot;&quot;)) return &quot;&quot;;
-        if (Date.now()-Math.max(0,Number(row.startedAt||0)) &gt; GRANTED_CASE_PENDING_MAX_AGE_MS) { forgetGrantedCaseRequest(type); return &quot;&quot;; }
-        return String(row.requestId||&quot;&quot;);
-      }
-
-      function rememberGrantedCaseRequest(caseType, requestId, startedAt = Date.now()) {
-        const type=caseExperienceNormalizeType(caseType),token=String(requestId||&quot;&quot;).replace(/[^A-Za-z0-9_-]/g,&quot;&quot;).slice(0,96);
-        if(!type||!token)return;
-        grantedCasePendingRequests.set(type,token);
-        try { const rows=storedGrantedCaseRequests();rows[type]={requestId:token,startedAt:Math.max(0,Number(startedAt||Date.now()))};localStorage.setItem(GRANTED_CASE_PENDING_STORAGE_KEY,JSON.stringify(rows)); } catch {}
-      }
-
-      function forgetGrantedCaseRequest(caseType, requestId = &quot;&quot;) {
-        const type=caseExperienceNormalizeType(caseType),token=String(requestId||&quot;&quot;);
-        if(!token||grantedCasePendingRequests.get(type)===token)grantedCasePendingRequests.delete(type);
-        try { const rows=storedGrantedCaseRequests();if(!token||String(rows?.[type]?.requestId||&quot;&quot;)===token){delete rows[type];localStorage.setItem(GRANTED_CASE_PENDING_STORAGE_KEY,JSON.stringify(rows));} } catch {}
-      }
 
       function grantedCaseRequestId(caseType) {
         const suffix = (globalThis.crypto?.randomUUID?.() || `${Date.now().toString(36)}_${Math.random().toString(36).slice(2)}`).replace(/[^A-Za-z0-9_-]/g, &quot;&quot;);
@@ -21036,20 +20996,8 @@ function createTutorialDeck(layer, mount, options, words) {
         return /уже открывается|попытка открытия устарела|состояние кейса изменилось|повторите открытие/i.test(String(error?.message || &quot;&quot;));
       }
 
-      async function grantedCaseOpeningStatus(caseType, requestId, timeoutMs = 3500) {
-        return caseApiRequest(CASE_API_OPEN_GRANTED_STATUS_PATH,{caseType:String(caseType||&quot;&quot;),requestId:String(requestId||&quot;&quot;)},timeoutMs);
-      }
-
-      function adoptGrantedCaseStatusRequest(caseType,data,currentRequestId) {
-        const serverRequestId=String(data?.requestId||&quot;&quot;);
-        if(!serverRequestId||serverRequestId===currentRequestId)return currentRequestId;
-        rememberGrantedCaseRequest(caseType,serverRequestId,Number(data?.startedAt||Date.now()));
-        if(caseOpeningRetryContext?.kind===&quot;gifted&quot;&amp;&amp;caseExperienceNormalizeType(caseOpeningRetryContext.caseType)===caseExperienceNormalizeType(caseType))caseOpeningRetryContext.requestId=serverRequestId;
-        return serverRequestId;
-      }
-
       async function waitForGrantedCaseResult(caseType, requestId, deadline, firstError = null) {
-        let lastError = firstError, activeRequestId=String(requestId||&quot;&quot;);
+        let lastError = firstError;
         while (Date.now() &lt; deadline) {
           const beforeSleep = deadline - Date.now();
           if (beforeSleep &lt;= 0) break;
@@ -21057,20 +21005,14 @@ function createTutorialDeck(layer, mount, options, words) {
           const remaining = deadline - Date.now();
           if (remaining &lt;= 0) break;
           try {
-            const data = await grantedCaseOpeningStatus(caseType,activeRequestId,Math.max(900,Math.min(3500,remaining)));
-            activeRequestId=adoptGrantedCaseStatusRequest(caseType,data,activeRequestId);
-            if (data?.opened || data?.state === &quot;opened&quot;) return data;
-            if (data?.stale || data?.state === &quot;stale&quot; || data?.retry === true || data?.state === &quot;pending&quot;) {
-              const retryError=Object.assign(new Error(&quot;Сервер готов безопасно продолжить эту же попытку открытия.&quot;),{code:&quot;CASE_OPEN_RETRY_MUTATION&quot;,retryMutation:true,requestId:activeRequestId,pending:true});
-              throw retryError;
-            }
-            if (data?.missing || data?.state === &quot;missing&quot;) {
-              const missingError=Object.assign(new Error(&quot;Сервер не нашёл активную попытку. Повторяем открытие с тем же идентификатором.&quot;),{code:&quot;CASE_OPEN_RETRY_MUTATION&quot;,retryMutation:true,requestId:activeRequestId,pending:true});
-              throw missingError;
-            }
+            const data = await caseApiRequest(
+              CASE_API_OPEN_GRANTED_PATH,
+              { caseType: String(caseType || &quot;&quot;), requestId },
+              Math.max(1000, Math.min(4500, remaining))
+            );
             if (data?.pending) continue;
+            return data;
           } catch (error) {
-            if (error?.retryMutation) throw error;
             lastError = error;
             if (isCasesTemporarilyUnavailableError(error) || !isGrantedCaseRetryableError(error)) throw error;
           }
@@ -21078,16 +21020,14 @@ function createTutorialDeck(layer, mount, options, words) {
         const timeoutError = lastError || new Error(&quot;Сервер всё ещё завершает открытие. Награда не потеряется — повторная проверка продолжит эту же операцию.&quot;);
         if (!timeoutError.code) timeoutError.code = &quot;CASE_OPEN_PENDING&quot;;
         timeoutError.pending = true;
-        timeoutError.requestId=activeRequestId;
         throw timeoutError;
       }
 
       async function openGiftedCaseClient(caseType, button) {
         const type = caseExperienceNormalizeType(caseType);
         const matchingRetryContext = caseOpeningRetryContext?.kind === &quot;gifted&quot; &amp;&amp; caseExperienceNormalizeType(caseOpeningRetryContext?.caseType || &quot;&quot;) === type ? caseOpeningRetryContext : null;
-        let requestId = grantedCasePendingRequests.get(type) || matchingRetryContext?.requestId || persistedGrantedCaseRequest(type) || grantedCaseRequestId(type);
-        const hadPendingRequest=Boolean(grantedCasePendingRequests.get(type)||matchingRetryContext?.requestId||persistedGrantedCaseRequest(type));
-        rememberGrantedCaseRequest(type,requestId,Number(matchingRetryContext?.startedAt||Date.now()));
+        const requestId = grantedCasePendingRequests.get(type) || matchingRetryContext?.requestId || grantedCaseRequestId(type);
+        grantedCasePendingRequests.set(type, requestId);
         const previousContext = matchingRetryContext?.requestId === requestId ? matchingRetryContext : null;
         caseOpeningRetryContext = {
           kind: &quot;gifted&quot;,
@@ -21096,73 +21036,41 @@ function createTutorialDeck(layer, mount, options, words) {
           startedAt: Number(previousContext?.startedAt || Date.now()),
           baselineRecentKeys: Array.isArray(previousContext?.baselineRecentKeys) ? previousContext.baselineRecentKeys : [...caseExperienceRecentKeys()]
         };
-        if (button) { button.disabled = true; button.textContent = hadPendingRequest ? &quot;Проверяем…&quot; : &quot;Открываем…&quot;; }
+        if (button) { button.disabled = true; button.textContent = previousContext ? &quot;Проверяем…&quot; : &quot;Открываем…&quot;; }
         const deadline = Date.now() + GRANTED_CASE_OPEN_UI_DEADLINE_MS;
         showCaseOpeningPreview(type);
         try {
-          let data=null;
-          // For a resumed operation observe first. Do not invoke a second mutation
-          // until the read-only status endpoint explicitly says the lease is stale/missing.
-          if(hadPendingRequest){
-            try{
-              const status=await grantedCaseOpeningStatus(type,requestId,3500);
-              requestId=adoptGrantedCaseStatusRequest(type,status,requestId);
-              caseOpeningRetryContext.requestId=requestId;
-              if(status?.opened||status?.state===&quot;opened&quot;)data=status;
-              else if(status?.pending)data=await waitForGrantedCaseResult(type,requestId,deadline);
-            }catch(error){
-              if(!isGrantedCaseRetryableError(error)&amp;&amp;!error?.retryMutation)throw error;
-            }
+          let data;
+          try {
+            data = await caseApiRequest(CASE_API_OPEN_GRANTED_PATH, { caseType: type, requestId }, GRANTED_CASE_OPEN_REQUEST_TIMEOUT_MS);
+          } catch (error) {
+            const status = Number(error?.status || 0);
+            if (!isCasesTemporarilyUnavailableError(error) &amp;&amp; (error?.timeout || status &gt;= 500 || !status)) data = await waitForGrantedCaseResult(type, requestId, deadline, error);
+            else throw error;
           }
-          if(!data){
-            try {
-              data = await caseApiRequest(CASE_API_OPEN_GRANTED_PATH, { caseType: type, requestId }, GRANTED_CASE_OPEN_REQUEST_TIMEOUT_MS);
-            } catch (error) {
-              const status = Number(error?.status || 0);
-              if (!isCasesTemporarilyUnavailableError(error) &amp;&amp; (error?.timeout || status &gt;= 500 || !status || error?.retryMutation || isGrantedCaseRetryableError(error))) {
-                try{data = await waitForGrantedCaseResult(type, requestId, deadline, error);}
-                catch(waitError){
-                  if(!waitError?.retryMutation)throw waitError;
-                  requestId=String(waitError.requestId||requestId);rememberGrantedCaseRequest(type,requestId,caseOpeningRetryContext.startedAt);caseOpeningRetryContext.requestId=requestId;
-                  data=await caseApiRequest(CASE_API_OPEN_GRANTED_PATH,{caseType:type,requestId},Math.max(2500,Math.min(GRANTED_CASE_OPEN_REQUEST_TIMEOUT_MS,deadline-Date.now())));
-                }
-              } else throw error;
-            }
-          }
-          if (data?.pending) {
-            try{data = await waitForGrantedCaseResult(type, requestId, deadline);}
-            catch(waitError){
-              if(!waitError?.retryMutation)throw waitError;
-              requestId=String(waitError.requestId||requestId);rememberGrantedCaseRequest(type,requestId,caseOpeningRetryContext.startedAt);caseOpeningRetryContext.requestId=requestId;
-              data=await caseApiRequest(CASE_API_OPEN_GRANTED_PATH,{caseType:type,requestId},Math.max(2500,Math.min(GRANTED_CASE_OPEN_REQUEST_TIMEOUT_MS,deadline-Date.now())));
-              if(data?.pending)data=await waitForGrantedCaseResult(type,requestId,deadline);
-            }
-          }
-          requestId=adoptGrantedCaseStatusRequest(type,data,requestId);
-          forgetGrantedCaseRequest(type,requestId);
-          const rewards = Array.isArray(data?.opened?.rewards) ? data.opened.rewards : [];
-          if(!data?.opened||!rewards.length)throw Object.assign(new Error(&quot;Сервер подтвердил открытие, но не вернул сохранённый состав награды.&quot;),{code:&quot;CASE_RESULT_MISSING&quot;,pending:true});
+          if (data?.pending) data = await waitForGrantedCaseResult(type, requestId, deadline);
+          grantedCasePendingRequests.delete(type);
+          const rewards = Array.isArray(data.opened?.rewards) ? data.opened.rewards : [];
           applyServerCasePayload(data, rewards);
-          showCaseResult(data.opened,{recovered:Boolean(data?.opened?.resumed||data?.repeated)});
-          window.setTimeout(()=&gt;void loadCaseState(true,true,false),120);
+          showCaseResult(data.opened);
         } catch (error) {
           caseRouletteBusy = false;
           console.warn(&quot;Case opening request failed&quot;, { kind:&quot;gifted&quot;, caseType:type, requestId, status:Number(error?.status||0), code:String(error?.code||&quot;&quot;) });
           const unavailable = isCasesTemporarilyUnavailableError(error);
           const retryable = unavailable || isGrantedCaseRetryableError(error);
           if (unavailable) {
-            if (grantedCasePendingRequests.get(type) === requestId) forgetGrantedCaseRequest(type,requestId);
+            if (grantedCasePendingRequests.get(type) === requestId) grantedCasePendingRequests.delete(type);
             hapticNotify(&quot;error&quot;);
             showCasesUnavailableState(type, error);
           } else {
-            showCaseRecoveryCheckingState(type, &quot;Проверяем сохранённый результат этой попытки…&quot;);
+            showCaseRecoveryCheckingState(type, &quot;Проверяем, успел ли сервер завершить эту попытку…&quot;);
             const synced = await loadCaseStateForOpeningRecovery();
             const recovered = synced ? caseExperienceFindRecoveredOpening(caseOpeningRetryContext) : null;
             if (recovered) {
-              forgetGrantedCaseRequest(type,requestId);
+              grantedCasePendingRequests.delete(type);
               showCaseResult(recovered, { recovered:true });
             } else {
-              if (!retryable &amp;&amp; grantedCasePendingRequests.get(type) === requestId) forgetGrantedCaseRequest(type,requestId);
+              if (!retryable &amp;&amp; grantedCasePendingRequests.get(type) === requestId) grantedCasePendingRequests.delete(type);
               hapticNotify(&quot;error&quot;);
               showCaseOpenErrorState(type, error, retryable);
             }
@@ -29522,8 +29430,6 @@ function createTutorialDeck(layer, mount, options, words) {
   });
   window.addEventListener(&quot;pageshow&quot;, () =&gt; {document.querySelectorAll(&quot;[data-referrals-open]&quot;).forEach((button) =&gt; { button.disabled = false; });refreshReferralSummary();});
   window.addEventListener(&quot;message&quot;,(event)=&gt;{if(event.data?.type===&quot;zefirok-referrals-account-updated&quot;)refreshReferralSummary();});
-  const referralProfileScreen=document.querySelector('[data-screen=&quot;profile&quot;]');
-  if(referralProfileScreen)new MutationObserver(()=&gt;{if(!referralProfileScreen.hidden)window.setTimeout(refreshReferralSummary,80);}).observe(referralProfileScreen,{attributes:true,attributeFilter:[&quot;hidden&quot;]});
   window.setTimeout(refreshReferralSummary,700);
 })();
 &lt;/script&gt;
