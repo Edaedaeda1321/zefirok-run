@@ -1,8 +1,8 @@
 {
   "version": 2,
   "hashAlgorithm": "sha256",
-  "catalogHash": "e597757ea02f6fb8",
-  "count": 457,
+  "catalogHash": "79d2c61f14b6f782",
+  "count": 458,
   "images": [
     {
       "fileName": "achievements/background_achivment_panel.webp",
@@ -1339,6 +1339,14 @@
       "path": "/assets/news/relise_game_news.webp",
       "hash": "fd804e0c7e73",
       "size": 331444
+    },
+    {
+      "fileName": "news/seson 2 fix_compensation.webp",
+      "label": "Seson 2 fix compensation",
+      "folder": "news",
+      "path": "/assets/news/seson%202%20fix_compensation.webp",
+      "hash": "f9e5b8c8fd17",
+      "size": 297482
     },
     {
       "fileName": "news/tex_raboty_news.webp",
