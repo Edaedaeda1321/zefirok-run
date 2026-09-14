@@ -2386,18 +2386,20 @@ ${escapeHtml(String(error?.message || error).slice(0, 500))}`);
         } catch {}
       }
 
-      const preflight = await runScheduledMaintenancePreflight(env);
-      if (!preflight.ok) {
-        console.warn("Server Cron maintenance preflight completed with errors", preflight.errors);
-        try {
-          await notifyOperationalIssue(env, "server-cron-maintenance", `🟠 <b>Ошибка ремонтной проверки Cron</b>
+      if (shouldCheckTelegramWebhook) {
+        const preflight = await runScheduledMaintenancePreflight(env);
+        if (!preflight.ok) {
+          console.warn("Server Cron maintenance preflight completed with errors", preflight.errors);
+          try {
+            await notifyOperationalIssue(env, "server-cron-maintenance", `🟠 <b>Ошибка ремонтной проверки Cron</b>
 
 Обычные фоновые задачи запускаются отдельно от ремонтных операций.
 
 ${escapeHtml(preflight.errors.join(" | ").slice(0, 700))}`);
-        } catch {}
-      } else {
-        try { await clearOperationalIssue(env, "server-cron-maintenance"); } catch {}
+          } catch {}
+        } else {
+          try { await clearOperationalIssue(env, "server-cron-maintenance"); } catch {}
+        }
       }
     })());
   }
@@ -3987,6 +3989,9 @@ const OPERATIONAL_RETENTION_POLICIES = Object.freeze({
   rewardDelivery:Object.freeze({key:"reward_delivery_queue",detailDays:365,archiveKind:"compact_terminal_forever",batchSize:1000})
 });
 const SERVER_NOTIFICATION_LEASE_SECONDS = 2 * 60;
+const SERVER_CRON_HEARTBEAT_WRITE_INTERVAL_SECONDS = 120;
+const CRON_SERVICE_STATUS_WRITE_INTERVAL_SECONDS = 300;
+const SEASON_START_BROADCAST_SCAN_INTERVAL_SECONDS = 300;
 const GIFT_INBOX_STALE_SECONDS = 12;
 const GIFT_INBOX_REWARD_LEASE_SECONDS = 12;
 const REFERRAL_REWARD_PROCESSING_STALE_SECONDS = 12;
@@ -4024,14 +4029,14 @@ async function recordCronServiceStatus(env, key, handler) {
     const result = await handler();
     const finishedAt=Math.floor(Date.now()/1000);
     const payload = { key, status:"success", lastSuccessAt:finishedAt, lastFinishedAt:finishedAt, startedAt, error:"" };
-    try { await setSystemState(env, `cron:service:${key}`, JSON.stringify(payload)); } catch (error) { console.error(`Failed to persist Cron service status ${key}`, error); }
+    try { await setJsonStatusSystemStateThrottled(env, `cron:service:${key}`, payload, CRON_SERVICE_STATUS_WRITE_INTERVAL_SECONDS); } catch (error) { console.error(`Failed to persist Cron service status ${key}`, error); }
     return result;
   } catch (error) {
     const finishedAt=Math.floor(Date.now()/1000), message=String(error?.message||error).slice(0,500);
     let previous={};
     try { const state=await getSystemState(env,`cron:service:${key}`); previous=state?.value?safeJson(state.value,{}):{}; } catch {}
     const payload={ key,status:"failed",lastSuccessAt:Number(previous.lastSuccessAt||0),lastFinishedAt:finishedAt,startedAt,error:message };
-    try { await setSystemState(env, `cron:service:${key}`, JSON.stringify(payload)); } catch (persistError) { console.error(`Failed to persist Cron service failure ${key}`, persistError); }
+    try { await setJsonStatusSystemStateThrottled(env, `cron:service:${key}`, payload, CRON_SERVICE_STATUS_WRITE_INTERVAL_SECONDS); } catch (persistError) { console.error(`Failed to persist Cron service failure ${key}`, persistError); }
     throw error;
   }
 }
@@ -4105,7 +4110,9 @@ async function ensureServerOptimizationSchema(env) {
       await env.DB.batch(SERVER_CRON_JOB_DEFAULTS.map((job) => env.DB.prepare(
         `INSERT INTO server_cron_jobs(job_key,interval_seconds,priority,enabled,next_run_at,updated_at)
          VALUES(?,?,?,1,0,?)
-         ON CONFLICT(job_key) DO UPDATE SET interval_seconds=excluded.interval_seconds,priority=excluded.priority,updated_at=excluded.updated_at`
+         ON CONFLICT(job_key) DO UPDATE SET interval_seconds=excluded.interval_seconds,priority=excluded.priority,updated_at=excluded.updated_at
+         WHERE server_cron_jobs.interval_seconds<>excluded.interval_seconds
+            OR server_cron_jobs.priority<>excluded.priority`
       ).bind(job.key, job.interval, job.priority, now)));
     })().catch((error) => {
       serverOptimizationSchemaPromise = null;
@@ -4567,7 +4574,6 @@ async function executeServerCronJob(jobKey, env) {
 async function processServerCron(env, controller = null) {
   await ensureServerOptimizationSchema(env);
   const now = Math.floor(Date.now() / 1000);
-  await setSystemState(env, "cron:last_start", String(now));
   const due = await env.DB.prepare(
     `SELECT job_key,interval_seconds,next_run_at
      FROM server_cron_jobs
@@ -4619,12 +4625,7 @@ async function processServerCron(env, controller = null) {
   } catch (error) {
     console.error("Cron analytics write failed", error);
   }
-  await setSystemState(env, "cron:last_success", String(completedAt));
-  await setSystemState(env, "cron:last_dispatch", JSON.stringify({
-    scheduledTime: Number(controller?.scheduledTime || 0),
-    completedAt,
-    jobs: summary
-  }));
+  await setSystemStateHeartbeat(env, "cron:last_success", String(completedAt), SERVER_CRON_HEARTBEAT_WRITE_INTERVAL_SECONDS);
   return { processed: summary.length, jobs: summary };
 }
 
@@ -10015,8 +10016,25 @@ function leaderboardSeasonResetPlan(seasonId) {
 
 async function upsertConfiguredLeaderboardSeason(env, now) {
   const config = configuredSeason(env);
-  const existing=await env.DB.prepare(`SELECT id FROM leaderboard_seasons WHERE id=? LIMIT 1`).bind(config.id).first();
-  if(!existing){const overlap=await findLeaderboardSeasonOverlap(env,config.startsAt,config.endsAt,config.id);if(overlap)return {...config,skipped:true,existingSeasonId:String(overlap.id||"")};}
+  const resetPlanJson=JSON.stringify(config.resetPlan);
+  const existing=await env.DB.prepare(`SELECT id,title,starts_at,ends_at,reward_type,reward_amount,reward_claim_days,reset_plan_json,reward_title,reward_image_url,reward_item_id,manual_override FROM leaderboard_seasons WHERE id=? LIMIT 1`).bind(config.id).first();
+  if(existing){
+    if(Number(existing.manual_override||0)===1)return {...config,skipped:true,reason:"manual_override"};
+    const unchanged=String(existing.title||"")===String(config.title||"")
+      && Number(existing.starts_at||0)===Number(config.startsAt||0)
+      && Number(existing.ends_at||0)===Number(config.endsAt||0)
+      && String(existing.reward_type||"")===String(config.rewardType||"")
+      && Number(existing.reward_amount||0)===Number(config.rewardAmount||0)
+      && Number(existing.reward_claim_days||0)===Number(config.rewardClaimDays||0)
+      && String(existing.reset_plan_json||"")===resetPlanJson
+      && String(existing.reward_title||"")===String(config.rewardTitle||"")
+      && String(existing.reward_image_url||"")===String(config.rewardImageUrl||"")
+      && String(existing.reward_item_id||"")===String(config.rewardItemId||"");
+    if(unchanged)return {...config,unchanged:true};
+  }else{
+    const overlap=await findLeaderboardSeasonOverlap(env,config.startsAt,config.endsAt,config.id);
+    if(overlap)return {...config,skipped:true,existingSeasonId:String(overlap.id||"")};
+  }
   await env.DB.prepare(
     `INSERT INTO leaderboard_seasons (
       id, title, starts_at, ends_at, status, reward_type, reward_amount,
@@ -10034,7 +10052,19 @@ async function upsertConfiguredLeaderboardSeason(env, now) {
       reward_item_id = CASE WHEN leaderboard_seasons.manual_override = 1 THEN leaderboard_seasons.reward_item_id ELSE excluded.reward_item_id END,
       reward_claim_days = CASE WHEN leaderboard_seasons.manual_override = 1 THEN leaderboard_seasons.reward_claim_days ELSE excluded.reward_claim_days END,
       reset_plan_json = CASE WHEN leaderboard_seasons.manual_override = 1 THEN leaderboard_seasons.reset_plan_json ELSE excluded.reset_plan_json END,
-      updated_at = excluded.updated_at`
+      updated_at = excluded.updated_at
+    WHERE leaderboard_seasons.manual_override = 0 AND (
+      COALESCE(leaderboard_seasons.title,'')<>COALESCE(excluded.title,'')
+      OR COALESCE(leaderboard_seasons.starts_at,0)<>COALESCE(excluded.starts_at,0)
+      OR COALESCE(leaderboard_seasons.ends_at,0)<>COALESCE(excluded.ends_at,0)
+      OR COALESCE(leaderboard_seasons.reward_type,'')<>COALESCE(excluded.reward_type,'')
+      OR COALESCE(leaderboard_seasons.reward_amount,0)<>COALESCE(excluded.reward_amount,0)
+      OR COALESCE(leaderboard_seasons.reward_title,'')<>COALESCE(excluded.reward_title,'')
+      OR COALESCE(leaderboard_seasons.reward_image_url,'')<>COALESCE(excluded.reward_image_url,'')
+      OR COALESCE(leaderboard_seasons.reward_item_id,'')<>COALESCE(excluded.reward_item_id,'')
+      OR COALESCE(leaderboard_seasons.reward_claim_days,0)<>COALESCE(excluded.reward_claim_days,0)
+      OR COALESCE(leaderboard_seasons.reset_plan_json,'')<>COALESCE(excluded.reset_plan_json,'')
+    )`
   ).bind(
     config.id,
     config.title,
@@ -10043,7 +10073,7 @@ async function upsertConfiguredLeaderboardSeason(env, now) {
     config.rewardType,
     config.rewardAmount,
     config.rewardClaimDays,
-    JSON.stringify(config.resetPlan),
+    resetPlanJson,
     config.rewardTitle,
     config.rewardImageUrl,
     config.rewardItemId,
@@ -22310,6 +22340,41 @@ async function setSystemState(env, key, value) {
   }
 }
 
+async function setSystemStateHeartbeat(env, key, value, minIntervalSeconds = 120) {
+  const now = Math.floor(Date.now() / 1000);
+  const cutoff = now - Math.max(1, Math.floor(Number(minIntervalSeconds) || 1));
+  const writeState = () => env.DB.prepare(
+    `INSERT INTO bot_system_state (state_key, state_value, updated_at) VALUES (?, ?, ?)
+     ON CONFLICT(state_key) DO UPDATE SET state_value = excluded.state_value, updated_at = excluded.updated_at
+     WHERE bot_system_state.updated_at <= ?`
+  ).bind(String(key), String(value ?? ""), now, cutoff).run();
+  try {
+    await writeState();
+  } catch (writeError) {
+    await ensureStaffOperationsSchema(env);
+    await writeState();
+  }
+}
+
+async function setJsonStatusSystemStateThrottled(env, key, payload, minIntervalSeconds = 300) {
+  const now = Math.floor(Date.now() / 1000);
+  const cutoff = now - Math.max(1, Math.floor(Number(minIntervalSeconds) || 1));
+  const value = JSON.stringify(payload || {});
+  const writeState = () => env.DB.prepare(
+    `INSERT INTO bot_system_state (state_key, state_value, updated_at) VALUES (?, ?, ?)
+     ON CONFLICT(state_key) DO UPDATE SET state_value = excluded.state_value, updated_at = excluded.updated_at
+     WHERE bot_system_state.updated_at <= ?
+        OR COALESCE(json_extract(CASE WHEN json_valid(bot_system_state.state_value) THEN bot_system_state.state_value ELSE '{}' END, '$.status'), '') <> COALESCE(json_extract(excluded.state_value, '$.status'), '')
+        OR COALESCE(json_extract(CASE WHEN json_valid(bot_system_state.state_value) THEN bot_system_state.state_value ELSE '{}' END, '$.error'), '') <> COALESCE(json_extract(excluded.state_value, '$.error'), '')`
+  ).bind(String(key), value, now, cutoff).run();
+  try {
+    await writeState();
+  } catch (writeError) {
+    await ensureStaffOperationsSchema(env);
+    await writeState();
+  }
+}
+
 async function deleteSystemState(env, key) {
   const deleteState = () => env.DB.prepare(`DELETE FROM bot_system_state WHERE state_key = ?`).bind(String(key)).run();
   try {
@@ -26891,6 +26956,9 @@ async function processSeasonStartBroadcasts(env) {
   const now = Math.floor(Date.now() / 1000);
   const state = await getSystemState(env, SEASON_START_BROADCAST_SCAN_STATE_KEY);
   const previous = Math.max(0, Number(state?.value || 0));
+  if(previous>0&&now>=previous&&now-previous<SEASON_START_BROADCAST_SCAN_INTERVAL_SECONDS){
+    return { skipped:true, since:previous, now, ratingQueued:0, passQueued:0 };
+  }
   const since = previous > 0 ? Math.min(previous, now) : Math.max(0, now - 10 * 60);
   await reconcileLeaderboardSeasonTimeline(env, now);
   await ensureSeasonPassSchema(env);

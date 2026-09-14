@@ -281,6 +281,32 @@ assert(authoritativeRatingRepair.includes('WHERE COALESCE(leaderboard_entries.hi
 assert(authoritativeRatingRepair.includes("WHERE run_id IN (${q}) AND (COALESCE(accepted_rating,0)<>1 OR COALESCE(season_id,'')<>?)"), 'authoritative rating repair lacks no-op guards for run acceptance state');
 assert(authoritativeRatingRepair.includes('WHERE COALESCE(leaderboard_all_time.hidden,0)<>0'), 'authoritative rating repair still rewrites unchanged leaderboard_all_time rows');
 
+// D1 write budget: keep minute-level Cron observability without rewriting
+// stable season/config/state rows on every scheduled invocation.
+const configuredSeasonUpsert = extractNamedFunction(worker, 'upsertConfiguredLeaderboardSeason');
+assert(configuredSeasonUpsert.includes('if(unchanged)return {...config,unchanged:true};'), 'configured rating season is still upserted when unchanged');
+assert(configuredSeasonUpsert.includes('if(Number(existing.manual_override||0)===1)return {...config,skipped:true,reason:"manual_override"};'), 'manual rating season override is no longer protected from configured-season refresh');
+assert(configuredSeasonUpsert.includes('WHERE leaderboard_seasons.manual_override = 0 AND ('), 'configured season UPSERT lacks a SQL no-op guard');
+const serverOptimizationSchema = extractNamedFunction(worker, 'ensureServerOptimizationSchema');
+assert(serverOptimizationSchema.includes('WHERE server_cron_jobs.interval_seconds<>excluded.interval_seconds'), 'Cron job bootstrap still rewrites unchanged server_cron_jobs rows');
+const serverCronDispatcher = extractNamedFunction(worker, 'processServerCron');
+assert(!serverCronDispatcher.includes('cron:last_start'), 'server Cron still writes unused cron:last_start every minute');
+assert(!serverCronDispatcher.includes('cron:last_dispatch'), 'server Cron still writes unused cron:last_dispatch every minute');
+assert(serverCronDispatcher.includes('setSystemStateHeartbeat(env, "cron:last_success"'), 'Cron success heartbeat is not using the throttled D1 writer');
+const heartbeatWriter = extractNamedFunction(worker, 'setSystemStateHeartbeat');
+assert(heartbeatWriter.includes('WHERE bot_system_state.updated_at <= ?'), 'Cron heartbeat writer does not suppress fresh duplicate writes');
+const serviceStateWriter = extractNamedFunction(worker, 'setJsonStatusSystemStateThrottled');
+assert(serviceStateWriter.includes("'$.status'"), 'Cron service state writer does not detect status transitions');
+assert(serviceStateWriter.includes("'$.error'"), 'Cron service state writer does not detect error transitions');
+const cronServiceStatus = extractNamedFunction(worker, 'recordCronServiceStatus');
+assert(cronServiceStatus.includes('setJsonStatusSystemStateThrottled'), 'per-service Cron status still writes on every successful minute');
+assert(worker.includes('if (shouldCheckTelegramWebhook) {\n        const preflight = await runScheduledMaintenancePreflight(env);'), 'maintenance preflight still runs every minute instead of the five-minute health cadence');
+const seasonStartBroadcasts = extractNamedFunction(worker, 'processSeasonStartBroadcasts');
+assert(seasonStartBroadcasts.includes('now-previous<SEASON_START_BROADCAST_SCAN_INTERVAL_SECONDS'), 'season-start scan cursor still writes every minute');
+const automationExecution = extractNamedFunction(worker, 'executeV67AutomationTarget');
+assert(automationExecution.includes('INSERT OR IGNORE INTO automation_chain_executions'), 'automation execution idempotency claim was changed unsafely');
+assert(automationExecution.includes('if (Number(claim.meta?.changes || 0) < 1) return false;'), 'automation chain no longer skips duplicate execution claims');
+
 // FullScreen run HUD must surface reward x2 state without relying on the legacy
 // bottom pill, and the settled result must state how many boosted runs remain.
 assert(index.includes('data-run-focus-booster'), 'fullscreen x2 booster HUD slot is missing');
