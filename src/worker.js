@@ -31421,7 +31421,7 @@ async function reconcileSeasonPassBalanceV3AllPlayers(env, seasonId) {
   return { ok:true, skipped:false, players:Number(before?.count||0) };
 }
 
-const SEASON_PASS_SCHEMA_RUNTIME_VERSION = '2026-09-14-overflow-liveops-v1';
+const SEASON_PASS_SCHEMA_RUNTIME_VERSION = '2026-08-18-story-visual-v2';
 const SEASON_PASS_SCHEMA_MARKER_KEY = `season-pass:schema-ready:${SEASON_PASS_SCHEMA_RUNTIME_VERSION}`;
 
 async function seasonPassSchemaMarkerReady(env) {
@@ -31466,7 +31466,7 @@ async function seasonPassSchemaQuickCheck(env) {
     const caseDefinitionColumns = names(caseDefinitionInfo);
     const casePlayerColumns = names(casePlayerInfo);
     const leaderboardRunColumns = names(leaderboardRunInfo);
-    return seasonColumns.has('asset_key') && seasonColumns.has('claim_grace_ends_at') && seasonColumns.has('elite_plus_benefits_json') && seasonColumns.has('overflow_step_xp') && seasonColumns.has('overflow_reward_type') && seasonColumns.has('overflow_reward_item_id') && seasonColumns.has('overflow_reward_title') && seasonColumns.has('overflow_reward_image_url')
+    return seasonColumns.has('asset_key') && seasonColumns.has('claim_grace_ends_at') && seasonColumns.has('elite_plus_benefits_json')
       && storyColumns.has('actions_json') && storyColumns.has('pages_json') && storyColumns.has('unlock_at')
       && storyColumns.has('push_enabled') && storyColumns.has('push_text') && storyColumns.has('reward_json')
       && progressColumns.has('visual_notice_at') && progressColumns.has('notified_at')
@@ -31488,6 +31488,28 @@ async function markSeasonPassSchemaReady(env) {
 
 let seasonPassSchemaReady = false;
 let seasonPassSchemaPromise = null;
+let seasonPassOverflowSchemaReady = false;
+let seasonPassOverflowSchemaPromise = null;
+async function ensureSeasonPassOverflowSchema(env){
+  requireDatabase(env);
+  if(seasonPassOverflowSchemaReady)return;
+  if(seasonPassOverflowSchemaPromise)return seasonPassOverflowSchemaPromise;
+  const promise=(async()=>{
+    const info=await env.DB.prepare(`PRAGMA table_info(season_pass_seasons)`).all();
+    if(!(info.results||[]).length){
+      await ensureSeasonPassSchema(env);
+      seasonPassOverflowSchemaReady=true;
+      return;
+    }
+    await addRuntimeColumnIfMissing(env,'season_pass_seasons','overflow_step_xp',"INTEGER NOT NULL DEFAULT 1500");
+    await addRuntimeColumnIfMissing(env,'season_pass_seasons','overflow_reward_type',"TEXT NOT NULL DEFAULT 'case'");
+    await addRuntimeColumnIfMissing(env,'season_pass_seasons','overflow_reward_item_id',"TEXT NOT NULL DEFAULT 'gold'");
+    await addRuntimeColumnIfMissing(env,'season_pass_seasons','overflow_reward_title',"TEXT NOT NULL DEFAULT 'Золотой кейс'");
+    await addRuntimeColumnIfMissing(env,'season_pass_seasons','overflow_reward_image_url',"TEXT NOT NULL DEFAULT '/assets/cases/gold_closed.webp'");
+  })();
+  seasonPassOverflowSchemaPromise=promise;
+  try{await promise;seasonPassOverflowSchemaReady=true;}finally{if(seasonPassOverflowSchemaPromise===promise)seasonPassOverflowSchemaPromise=null;}
+}
 let seasonPassCaseOperationSchemaReady = false;
 let seasonPassCaseOperationSchemaPromise = null;
 async function ensureSeasonPassCaseOperationSchema(env){
@@ -47370,6 +47392,7 @@ async function ownerPanelLiveContentBatch(env,ctx){
 }
 
 async function ownerPanelSeasonPass(env, ctx) {
+  await ensureSeasonPassOverflowSchema(env);
   const requested=String(ctx.body?.seasonId||'').trim(),nowMs=Date.now(),fallback=configuredSeasonPassState(env,nowMs);const selectedRow=requested?await env.DB.prepare(`SELECT * FROM season_pass_seasons WHERE season_id=? LIMIT 1`).bind(requested).first():await selectSeasonPassSeasonRow(env,nowMs);const selected=selectedRow?seasonPassSeasonFromRow(selectedRow,fallback,nowMs):null;if(!selected)throw new ApiError(404,'Сезонный пропуск не найден.');
   const caseIdsSql=`SELECT case_id FROM season_pass_case_definitions WHERE season_id=?`;
   const [seasonsResult,rewardsResult,tasksResult,stats,tariffPurchases,liveops,teaserRow,teaserStats,caseDefinitionsResult,caseItemsResult,caseSpecialItemsResult,caseResourceItemsResult,storyEventsResult,storyStatsResult]=await Promise.all([env.DB.prepare(`SELECT * FROM season_pass_seasons ORDER BY starts_at DESC,updated_at DESC LIMIT 30`).all(),env.DB.prepare(`SELECT level,lane,reward_type,amount,item_id,title,image_url,enabled FROM season_pass_rewards WHERE season_id=? ORDER BY level,lane`).bind(selected.id).all(),env.DB.prepare(`SELECT task_id,period,premium,metric,target,xp_reward,title,description,enabled,sort_order FROM season_pass_tasks WHERE season_id=? ORDER BY sort_order,task_id`).bind(selected.id).all(),env.DB.prepare(`SELECT COUNT(*) AS players,SUM(CASE WHEN premium_tier='elite' THEN 1 ELSE 0 END) AS elite,SUM(CASE WHEN premium_tier='elite_plus' THEN 1 ELSE 0 END) AS elite_plus,MAX(xp) AS max_xp FROM season_pass_players WHERE season_id=?`).bind(selected.id).first(),env.DB.prepare(`SELECT COUNT(*) AS count FROM season_pass_purchases WHERE season_id=? AND status='delivered'`).bind(selected.id).first(),readLiveOpsConfig(env).catch(()=>({content:{}})),env.DB.prepare(`SELECT * FROM season_pass_teasers WHERE season_id=? LIMIT 1`).bind(selected.id).first(),env.DB.prepare(`SELECT COUNT(*) AS unlocked,SUM(CASE WHEN notified_at>0 THEN 1 ELSE 0 END) AS notified,SUM(CASE WHEN opened_at>0 THEN 1 ELSE 0 END) AS opened FROM season_pass_teaser_deliveries WHERE season_id=?`).bind(selected.id).first(),env.DB.prepare(`SELECT * FROM season_pass_case_definitions ORDER BY release_at DESC,updated_at DESC`).all(),env.DB.prepare(`SELECT * FROM season_pass_case_items WHERE case_id IN (${caseIdsSql}) ORDER BY case_id,reward_kind,item_key`).bind(selected.id).all(),env.DB.prepare(`SELECT * FROM season_pass_case_special_items WHERE case_id IN (${caseIdsSql}) ORDER BY case_id,reward_kind,item_key`).bind(selected.id).all(),env.DB.prepare(`SELECT * FROM season_pass_case_resource_items WHERE case_id IN (${caseIdsSql}) ORDER BY case_id,reward_kind,item_key`).bind(selected.id).all(),env.DB.prepare(`SELECT * FROM season_pass_story_events WHERE season_id=? ORDER BY unlock_level,sort_order,created_at,event_id`).bind(selected.id).all(),env.DB.prepare(`SELECT event_id,SUM(CASE WHEN seen_at>0 THEN 1 ELSE 0 END) AS seen,SUM(CASE WHEN completed_at>0 THEN 1 ELSE 0 END) AS completed,SUM(CASE WHEN notified_at>0 THEN 1 ELSE 0 END) AS notified FROM season_pass_story_progress WHERE season_id=? GROUP BY event_id`).bind(selected.id).all()]);
@@ -47416,7 +47439,7 @@ function ownerPanelSeasonPassRewardPresentation(typeValue, amountValue, itemValu
 }
 
 async function ownerPanelSaveSeasonPassOverflow(env, ctx) {
-  await ensureSeasonPassSchema(env);
+  await ensureSeasonPassOverflowSchema(env);
   const seasonId=String(ctx.body?.seasonId||'').trim();
   const seasonRow=seasonId?await env.DB.prepare(`SELECT * FROM season_pass_seasons WHERE season_id=? LIMIT 1`).bind(seasonId).first():null;
   if(!seasonRow)throw new ApiError(404,'Сезонный пропуск не найден.');
