@@ -13066,7 +13066,9 @@ async function leaderboardState(request, env) {
     const auth = await validateTelegramInitData(String(body.initData || ""), env);
     const mode = String(body.mode || "season") === "all_time" ? "all_time" : "season";
     const season = await selectLeaderboardSeasonForState(env);
-    if (mode === "season" && String(season?.status||"") === "active") await maybeRepairLeaderboardIntegrity(env,season,{recoverTransient:true,notifyLeaderChange:true});
+    // Public leaderboard reads must stay read-only and fast. Full integrity recovery
+    // scans authoritative run history and can touch multiple D1 tables. It remains
+    // available from the scheduled repair/recovery paths, but must never block UI reads.
     if (mode === "all_time") await ensureLeaderboardAllTimeBestScoreMode(env);
     return jsonResponse(await buildLeaderboardPayload(env, season, String(auth.user.id), mode));
   } catch (error) {

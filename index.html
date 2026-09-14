@@ -19446,9 +19446,12 @@ function createTutorialDeck(layer, mount, options, words) {
             || telegramProfileStartupSyncId !== currentTelegramId
             || Date.now() - telegramProfileStartupSyncAt &gt; 60000;
           if (state.running &amp;&amp; state.caseRunId) void startAuthoritativeRunSession(state.caseRunId);
-          // Rating is the visible profile dependency, so start it before background
-          // package/retry work instead of waiting for an old run submission.
+          // Warm the shared profile overview and current-season rating immediately after
+          // Telegram auth. The profile quick card should already have data when opened,
+          // instead of starting a cold leaderboard request only after the tap.
+          window.setTimeout(() =&gt; { try { void window.zefirokProfileOverview?.(); } catch {} }, 80);
           if (profileVisible) void refreshLeaderboard(false, &quot;season&quot;, false);
+          else window.setTimeout(() =&gt; void refreshLeaderboard(false, &quot;season&quot;, false), 260);
           void retryPendingLeaderboardRun({ silent: true });
           if (startupSyncNeeded) {
             telegramProfileStartupSyncId = currentTelegramId;

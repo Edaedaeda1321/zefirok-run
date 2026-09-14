@@ -20,6 +20,10 @@ if (!rating.includes('void refresh("season", true);')) fail('season-first initia
 if (rating.includes('Promise.all([refresh("season", true), refresh("all_time", true)])')) fail('rating still loads both modes during first paint');
 if (!rating.includes('const REQUEST_TIMEOUT_MS = 12000;')) fail('expected bounded rating request timeout missing');
 
+const index = await readFile('index.html', 'utf8');
+if (!index.includes('window.zefirokProfileOverview?.();')) fail('profile overview warm-up after Telegram auth is missing');
+if (!index.includes('else window.setTimeout(() =&gt; void refreshLeaderboard(false, &quot;season&quot;, false), 260);')) fail('background season-rating warm-up is missing');
+
 let checkedScripts = 0;
 const scriptRe = /<script([^>]*)>([\s\S]*?)<\/script>/gi;
 for (const match of rating.matchAll(scriptRe)) {
