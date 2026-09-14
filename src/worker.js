@@ -431,6 +431,30 @@ const CASE_BOOSTER_RUNS = Object.freeze({ points:2, treats:2, coffee:2, shield:1
 const CASE_DUPLICATE_COMPENSATION = Object.freeze({ skin: 150000, avatar: 500, frame: 1500, trail: 5000, music: 150000 });
 const CASE_RARITY_ORDER = Object.freeze({ common: 0, rare: 1, superrare: 2, epic: 3, mythic: 4, legendary: 5 });
 
+// Evergreen case role policy V2.2.
+// IMPORTANT: category chances and currency ranges are unchanged. This only
+// defines which existing item/booster pool is used after that category wins.
+const CASE_EVERGREEN_ROLE_POLICY = Object.freeze({
+  sweetMaxRarity: "superrare"
+});
+function caseEvergreenItemAllowed(caseType, item) {
+  if (!item || item.alexOnly === true || item.achievementOnly === true) return false;
+  const type = String(caseType || "small");
+  if (type !== "legendary" && item.legendaryOnly === true) return false;
+  if (type === "sweet") {
+    const rarity = String(item.rarity || "common");
+    return (CASE_RARITY_ORDER[rarity] ?? 0) <= (CASE_RARITY_ORDER[CASE_EVERGREEN_ROLE_POLICY.sweetMaxRarity] ?? 2);
+  }
+  return true;
+}
+function caseBoosterPoolForType(caseType) {
+  const type=String(caseType||"");
+  if (type === "small" || type === "sweet") return CASE_UTILITY_BOOSTER_TYPES;
+  if (type === "gold") return CASE_BOOSTER_TYPES;
+  return CASE_REWARD_BOOSTER_TYPES;
+}
+
+
 const SHOP_SCHEMA_SQL = `CREATE TABLE IF NOT EXISTS shop_prices (
   product_id TEXT PRIMARY KEY,
   points INTEGER NOT NULL DEFAULT 0 CHECK(points >= 0),
@@ -10642,7 +10666,7 @@ function caseWeightedKind(caseType, state = null, liveops = null, catalogs = nul
       if (!rarityBucketAvailable(rarityBuckets[kind])) { pointsWeight += weight; continue; }
     } else if (cosmeticKinds.includes(kind)) {
       const catalog = runtimeCatalogs[kind] || {};
-      const predicate = (item) => !item?.alexOnly && (caseType === "legendary" || !item?.legendaryOnly);
+      const predicate = (item) => caseEvergreenItemAllowed(caseType, item);
       const available = caseType === "legendary"
         ? caseCatalogHasUnowned(catalog, ownedMap[kind], predicate)
         : Object.values(catalog).some(predicate);
@@ -11282,7 +11306,7 @@ function rollLevelCase(caseType, sourceState, currentOwnedSkins = [], liveops = 
 
   const cosmeticKinds = ["skin", "avatar", "frame", "trail", "music"];
   const ownedKeyByKind = { skin:"ownedSkins", avatar:"ownedAvatars", frame:"ownedFrames", trail:"ownedTrails", music:"ownedMusicTracks" };
-  const caseAvailabilityPredicate = (item) => !item?.alexOnly && (caseType === "legendary" || !item?.legendaryOnly);
+  const caseAvailabilityPredicate = (item) => caseEvergreenItemAllowed(caseType, item);
   const incrementPity = () => {
     if (caseType === "legendary" && guaranteeCount > 0) state.legendaryPityCounter = Math.min(pityMax, state.legendaryPityCounter + 1);
     if (caseType === "mythic" && guaranteeCount > 0) state.mythicPityCounter = Math.min(pityMax, state.mythicPityCounter + 1);
@@ -11425,7 +11449,8 @@ function rollLevelCase(caseType, sourceState, currentOwnedSkins = [], liveops = 
       rewards.push({ kind, amount }); incrementPity(); continue;
     }
     if (kind === "booster") {
-      const boosterType = caseRandomChoice(CASE_REWARD_BOOSTER_TYPES, rng) || "points";
+      const boosterPool = caseBoosterPoolForType(caseType);
+      const boosterType = caseRandomChoice(boosterPool, rng) || "points";
       state.boosters[boosterType] = safeAdminNumber(state.boosters[boosterType] + 1);
       rewards.push({ kind: "booster", boosterType, amount: 1, runs: 2 }); incrementPity(); continue;
     }
@@ -11444,7 +11469,7 @@ function rollLevelCase(caseType, sourceState, currentOwnedSkins = [], liveops = 
     const mapping = {avatar:[catalogs.avatar,"ownedAvatars"],frame:[catalogs.frame,"ownedFrames"],trail:[catalogs.trail,"ownedTrails"],skin:[catalogs.skin,"ownedSkins"],music:[catalogs.music,"ownedMusicTracks"]};
     if (mapping[kind]) {
       const [catalog, ownedKey] = mapping[kind];
-      const success = addCosmetic(kind, catalog, ownedKey, CASE_DUPLICATE_COMPENSATION[kind], kind === "skin" ? null : caseAvailabilityPredicate, {preferUnowned:true,allowDuplicate:caseType!=="legendary"});
+      const success = addCosmetic(kind, catalog, ownedKey, CASE_DUPLICATE_COMPENSATION[kind], caseAvailabilityPredicate, {preferUnowned:true,allowDuplicate:caseType!=="legendary"});
       if (!success) {const [min,max]=caseCurrencyRange(caseType,"points",liveops);const amount=caseRandomInt(min,max,rng);points+=amount;rewards.push({kind:"points",amount,fallbackFromUnavailableCategory:kind});}
       incrementPity();
     }
@@ -45172,7 +45197,7 @@ function albumCaseAcquisitionSources(liveops) {
       // Match the existing pickers exactly: direct/legendary selection uses
       // the legacy weight-or-1 fallback; rarity buckets require positive weight.
       const positiveWeight=Number(item.weight)>0;
-      const direct=Number(chances[kind])>0&&(kind==="skin"||(!item.alexOnly&&(type==="legendary"||!item.legendaryOnly)));
+      const direct=Number(chances[kind])>0&&caseEvergreenItemAllowed(type,item);
       const bucket={epic:"epicCosmetic",mythic:"mythicCosmetic",legendary:"legendaryCosmetic"}[item.rarity];
       const rarity=Boolean(positiveWeight&&bucket&&Number(chances[bucket])>0&&!item.legendaryOnly);
       const guarantee=Number(config.guaranteeCount??(type==="legendary"?50:type==="mythic"?25:0))>0&&

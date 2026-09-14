@@ -4151,6 +4151,56 @@ img[src$="/xp.webp"]{
 .season-path-story-info-sheet[data-story-info-fixed]{transform:none!important;transition:none!important;overscroll-behavior:contain!important;touch-action:pan-y!important;-webkit-overflow-scrolling:touch}
 </style>
 
+
+<style id="zefirok-reward-cases-v2-2">
+/* V2.2: safe rail end geometry + non-draggable story info sheet. */
+.reward-scroll{scroll-snap-type:none!important}
+.reward-track{will-change:transform;backface-visibility:hidden;-webkit-backface-visibility:hidden}
+.reward-track::after{content:"";flex:0 0 18px;width:18px;pointer-events:none}
+.level-column.overflow-reward-column{
+  box-sizing:border-box!important;
+  flex:0 0 128px!important;
+  min-width:128px!important;
+  max-width:128px!important;
+  padding-left:5px!important;
+  padding-right:5px!important;
+  overflow:visible!important
+}
+.level-column.overflow-reward-column>.level-number{grid-column:1!important;min-width:0!important;max-width:100%!important}
+.level-column.overflow-reward-column>.overflow-reward-cell{
+  grid-column:1!important;
+  width:100%!important;
+  min-width:0!important;
+  max-width:100%!important;
+  margin:5px 0!important;
+  box-sizing:border-box!important;
+  overflow:hidden!important
+}
+.lane-label{overflow:hidden!important}
+.lane-label-art{
+  display:block!important;
+  width:auto!important;
+  max-width:calc(100% - 4px)!important;
+  margin-inline:auto!important;
+  background:transparent!important;
+  border:0!important;
+  outline:0!important;
+  box-shadow:none!important
+}
+.season-path-story-info-handle{display:none!important}
+.season-path-story-info-overlay{touch-action:none!important}
+.season-path-story-info-sheet{
+  touch-action:pan-y!important;
+  overscroll-behavior:contain!important;
+  padding-top:15px!important;
+  transform:none!important
+}
+@media(max-width:430px){
+  .reward-track::after{flex-basis:16px;width:16px}
+  .level-column.overflow-reward-column{flex-basis:124px!important;min-width:124px!important;max-width:124px!important;padding-inline:4px!important}
+}
+</style>
+
 </head>
 <body>
 <section class="access-gate" id="accessGate">
@@ -6114,8 +6164,9 @@ img[src$="/xp.webp"]{
   // browser rubber-band state capable of exposing blank space after level 50+.
   let rewardRailX = 0;
   let rewardRailTransitionTimer = 0;
-  let rewardRailMotionRaf = 0;
-  let rewardRailMotionToken = 0;
+  let rewardRailAnimationFrame = 0;
+  let rewardRailAnimationToken = 0;
+  const REWARD_RAIL_END_GUTTER = 16;
   function rewardRailBounds() {
     const viewport=el("rewardScroll"),track=el("rewardTrack");
     if(!viewport||!track)return {min:0,max:0};
@@ -6127,41 +6178,37 @@ img[src$="/xp.webp"]{
     const bounds=rewardRailBounds();
     return Math.max(bounds.min,Math.min(bounds.max,Number(value)||0));
   }
-  function rewardRailPaint(value) {
-    const track=el("rewardTrack");if(!track)return 0;
-    rewardRailX=Number(value)||0;
-    track.style.transform=`translate3d(${rewardRailX.toFixed(3)}px,0,0)`;
-    return rewardRailX;
+  function stopRewardRailAnimation() {
+    rewardRailAnimationToken += 1;
+    if(rewardRailAnimationFrame)cancelAnimationFrame(rewardRailAnimationFrame);
+    rewardRailAnimationFrame=0;
+    clearTimeout(rewardRailTransitionTimer);
+    const track=el("rewardTrack");if(track)track.style.transition="none";
   }
-  function stopRewardRailMotion() {
-    rewardRailMotionToken+=1;
-    if(rewardRailMotionRaf)cancelAnimationFrame(rewardRailMotionRaf);
-    rewardRailMotionRaf=0;clearTimeout(rewardRailTransitionTimer);
-    const track=el("rewardTrack");if(track){track.style.transition="none";track.style.willChange="transform";}
-  }
-  function rewardRailSpringTo(value,{initialVelocity=0,onComplete=null}={}) {
-    const track=el("rewardTrack");if(!track)return 0;
-    const target=rewardRailClampX(value),reduced=window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches===true;
-    stopRewardRailMotion();
-    if(reduced||Math.abs(target-rewardRailX)<.15){rewardRailPaint(target);track.style.willChange="";onComplete?.();return target;}
-    const token=rewardRailMotionToken;let x=rewardRailX,v=Math.max(-2600,Math.min(2600,Number(initialVelocity)||0)),last=performance.now(),stable=0;
-    const stiffness=235,damping=30.5;
-    const frame=now=>{
-      if(token!==rewardRailMotionToken||!track.isConnected)return;
+  function animateRewardRailTo(value,{velocity=0}={}) {
+    const track=el("rewardTrack");if(!track)return rewardRailX;
+    stopRewardRailAnimation();
+    const target=rewardRailClampX(value),token=rewardRailAnimationToken;
+    let x=Number(rewardRailX)||0,v=(Number(velocity)||0)*1000,last=performance.now(),started=last;
+    const stiffness=168,damping=25.5;
+    const step=now=>{
+      if(token!==rewardRailAnimationToken||!track.isConnected)return;
       const dt=Math.min(.032,Math.max(.001,(now-last)/1000));last=now;
-      const steps=Math.max(1,Math.ceil(dt/.008)),h=dt/steps;
-      for(let i=0;i<steps;i+=1){const a=-stiffness*(x-target)-damping*v;v+=a*h;x+=v*h;}
-      rewardRailPaint(x);
-      if(Math.abs(x-target)<.22&&Math.abs(v)<5)stable+=1;else stable=0;
-      if(stable>=2){rewardRailPaint(target);rewardRailMotionRaf=0;track.style.willChange="";onComplete?.();return;}
-      rewardRailMotionRaf=requestAnimationFrame(frame);
+      const a=(target-x)*stiffness-v*damping;v+=a*dt;x+=v*dt;
+      const bounds=rewardRailBounds(),elastic=7;x=Math.max(bounds.min-elastic,Math.min(bounds.max+elastic,x));
+      rewardRailX=x;track.style.transform=`translate3d(${x.toFixed(2)}px,0,0)`;
+      if((Math.abs(target-x)<.14&&Math.abs(v)<1.8)||(now-started)>1050){
+        rewardRailX=target;track.style.transform=`translate3d(${target.toFixed(2)}px,0,0)`;rewardRailAnimationFrame=0;return;
+      }
+      rewardRailAnimationFrame=requestAnimationFrame(step);
     };
-    rewardRailMotionRaf=requestAnimationFrame(frame);return target;
+    rewardRailAnimationFrame=requestAnimationFrame(step);return target;
   }
-  function setRewardRailX(value,{animate=false,duration=360,initialVelocity=0,onComplete=null}={}) {
-    const next=rewardRailClampX(value);
-    if(animate)return rewardRailSpringTo(next,{initialVelocity,onComplete});
-    stopRewardRailMotion();rewardRailPaint(next);const track=el("rewardTrack");if(track)track.style.willChange="";onComplete?.();return next;
+  function setRewardRailX(value,{animate=false,duration=360,velocity=0}={}) {
+    const track=el("rewardTrack");if(!track)return 0;
+    const next=rewardRailClampX(value),reduced=window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches===true;
+    if(animate&&!reduced)return animateRewardRailTo(next,{velocity});
+    stopRewardRailAnimation();rewardRailX=next;track.style.transform=`translate3d(${next.toFixed(2)}px,0,0)`;return next;
   }
   function syncRewardRailBounds() {
     return setRewardRailX(rewardRailX,{animate:false});
@@ -6199,15 +6246,19 @@ img[src$="/xp.webp"]{
     scrollSyncTimer = setTimeout(()=>{ suppressScrollSync = false; },delay);
   }
 
-  function scrollToLevel(level,behavior="smooth",motion={}) {
+  function scrollToLevel(level,behavior="smooth",initialVelocity=0) {
     const targetLevel=Math.max(1,Math.min(MAX_LEVEL+1,Number(level)||1));
-    const target=document.querySelector(`[data-level-column="${targetLevel}"]`),viewport=el("rewardScroll");
+    const target=document.querySelector(`[data-level-column="${targetLevel}"]`);
+    const viewport=el("rewardScroll");
     if(!target||!viewport)return;
-    const desiredX=rewardRailTargetX(targetLevel);
-    suppressScrollSync=true;updateNavigator(targetLevel);
-    if(behavior==="smooth"){
-      rewardRailSpringTo(desiredX,{initialVelocity:Number(motion?.initialVelocity)||0,onComplete:()=>{releaseScrollSync(0);motion?.onComplete?.();}});
-    }else{setRewardRailX(desiredX,{animate:false});releaseScrollSync(50);motion?.onComplete?.();}
+    const targetCenter=target.offsetLeft+target.offsetWidth/2;
+    let desiredX=viewport.clientWidth/2-targetCenter;
+    if(targetLevel===1)desiredX=0;
+    if(targetLevel===MAX_LEVEL+1)desiredX=viewport.clientWidth-REWARD_RAIL_END_GUTTER-(target.offsetLeft+target.offsetWidth);
+    suppressScrollSync=true;
+    updateNavigator(targetLevel);
+    setRewardRailX(desiredX,{animate:behavior==="smooth",duration:behavior==="smooth"?560:0,velocity:initialVelocity});
+    releaseScrollSync(behavior === "smooth" ? 680 : 50);
   }
 
   function nearestVisibleLevel(offsetX=rewardRailX) {
@@ -7966,46 +8017,57 @@ img[src$="/xp.webp"]{
 
   const rewardScroll=el("rewardScroll");
   const rewardTouchPan={active:false,id:null,startX:0,startY:0,startRailX:0,axis:"",lastClientX:0,lastAt:0,velocity:0,minX:0,maxX:0,pendingX:0,raf:0};
+  const rewardTouchClamp=value=>Math.max(rewardTouchPan.minX,Math.min(rewardTouchPan.maxX,Number(value)||0));
+  const rewardTouchResistedX=value=>{
+    const raw=Number(value)||0,min=rewardTouchPan.minX,max=rewardTouchPan.maxX;
+    if(raw<min)return min-(min-raw)*.16;
+    if(raw>max)return max+(raw-max)*.16;
+    return raw;
+  };
   const flushRewardTouchFrame=()=>{
-    rewardTouchPan.raf=0;const track=el("rewardTrack");if(!track)return;rewardRailPaint(rewardTouchPan.pendingX);
+    rewardTouchPan.raf=0;const track=el("rewardTrack");if(!track)return;
+    rewardRailX=rewardTouchResistedX(rewardTouchPan.pendingX);
+    track.style.transform=`translate3d(${rewardRailX.toFixed(2)}px,0,0)`;
   };
-  const scheduleRewardTouchX=value=>{
-    rewardTouchPan.pendingX=rewardRailElasticX(value,rewardTouchPan.minX,rewardTouchPan.maxX);
-    if(!rewardTouchPan.raf)rewardTouchPan.raf=requestAnimationFrame(flushRewardTouchFrame);
-  };
+  const scheduleRewardTouchX=value=>{rewardTouchPan.pendingX=Number(value)||0;if(!rewardTouchPan.raf)rewardTouchPan.raf=requestAnimationFrame(flushRewardTouchFrame);};
   rewardScroll.addEventListener("touchstart",event=>{
     if(event.touches?.length!==1){rewardTouchPan.active=false;rewardTouchPan.axis="";return;}
     const touch=event.touches[0],now=performance.now(),bounds=rewardRailBounds();
-    stopRewardRailMotion();cancelAnimationFrame(rewardTouchPan.raf);rewardTouchPan.raf=0;rewardScroll.classList.add("is-touching");
+    stopRewardRailAnimation();cancelAnimationFrame(rewardTouchPan.raf);rewardTouchPan.raf=0;
     rewardTouchPan.active=true;rewardTouchPan.id=touch.identifier;rewardTouchPan.minX=bounds.min;rewardTouchPan.maxX=bounds.max;
     rewardTouchPan.startX=Number(touch.clientX)||0;rewardTouchPan.startY=Number(touch.clientY)||0;
     rewardTouchPan.startRailX=Math.max(bounds.min,Math.min(bounds.max,rewardRailX));rewardTouchPan.pendingX=rewardTouchPan.startRailX;rewardTouchPan.axis="";
     rewardTouchPan.lastClientX=rewardTouchPan.startX;rewardTouchPan.lastAt=now;rewardTouchPan.velocity=0;
+    rewardScroll.classList.add("is-touching");
   },{passive:true});
   rewardScroll.addEventListener("touchmove",event=>{
     if(!rewardTouchPan.active)return;
     const touch=Array.from(event.touches||[]).find(item=>item.identifier===rewardTouchPan.id);if(!touch)return;
     const clientX=Number(touch.clientX)||0,clientY=Number(touch.clientY)||0,dx=clientX-rewardTouchPan.startX,dy=clientY-rewardTouchPan.startY;
-    if(!rewardTouchPan.axis){if(Math.max(Math.abs(dx),Math.abs(dy))<5)return;rewardTouchPan.axis=Math.abs(dx)>Math.abs(dy)*1.08?"x":"y";}
+    if(!rewardTouchPan.axis){if(Math.max(Math.abs(dx),Math.abs(dy))<5)return;rewardTouchPan.axis=Math.abs(dx)>Math.abs(dy)*1.06?"x":"y";}
     if(rewardTouchPan.axis!=="x")return;
-    if(event.cancelable)event.preventDefault();
-    const now=performance.now(),dt=Math.max(6,now-rewardTouchPan.lastAt),fingerVelocity=(clientX-rewardTouchPan.lastClientX)/dt;
-    rewardTouchPan.velocity=rewardTouchPan.velocity*.58+fingerVelocity*.42;rewardTouchPan.lastClientX=clientX;rewardTouchPan.lastAt=now;
+    event.preventDefault();
+    const now=performance.now(),dt=Math.max(8,now-rewardTouchPan.lastAt),fingerVelocity=(clientX-rewardTouchPan.lastClientX)/dt;
+    rewardTouchPan.velocity=rewardTouchPan.velocity*.68+fingerVelocity*.32;rewardTouchPan.lastClientX=clientX;rewardTouchPan.lastAt=now;
     scheduleRewardTouchX(rewardTouchPan.startRailX+dx);
   },{passive:false});
-  const finishRewardTouchPan=(cancelled=false)=>{
+  const finishRewardTouchPan=()=>{
     if(!rewardTouchPan.active)return;
     if(rewardTouchPan.raf){cancelAnimationFrame(rewardTouchPan.raf);rewardTouchPan.raf=0;flushRewardTouchFrame();}
-    const horizontal=rewardTouchPan.axis==="x",velocity=cancelled?0:rewardTouchPan.velocity,minX=rewardTouchPan.minX,maxX=rewardTouchPan.maxX;
+    const horizontal=rewardTouchPan.axis==="x",velocity=rewardTouchPan.velocity,minX=rewardTouchPan.minX,maxX=rewardTouchPan.maxX;
     rewardTouchPan.active=false;rewardTouchPan.id=null;rewardTouchPan.axis="";rewardScroll.classList.remove("is-touching");
     if(!horizontal){syncRewardRailBounds();return;}
-    const clamped=Math.max(minX,Math.min(maxX,rewardRailX)),projected=Math.max(minX,Math.min(maxX,clamped+velocity*235));
-    const edgeSnap=Math.max(16,Math.min(42,rewardScroll.clientWidth*.06));
-    const targetLevel=(rewardRailX<minX||projected<=minX+edgeSnap)?MAX_LEVEL+1:(rewardRailX>maxX||projected>=maxX-edgeSnap)?1:nearestVisibleLevel(projected);
-    scrollToLevel(targetLevel,"smooth",{initialVelocity:velocity*1000,onComplete:()=>passSelectHaptic?.()});
+    rewardRailX=Math.max(minX,Math.min(maxX,rewardRailX));
+    const projected=Math.max(minX,Math.min(maxX,rewardRailX+velocity*185));
+    const edgeSnap=Math.max(14,Math.min(34,rewardScroll.clientWidth*.05));
+    const targetLevel=(projected<=minX+edgeSnap||rewardRailX<=minX+3)?MAX_LEVEL+1:nearestVisibleLevel(projected);
+    scrollToLevel(targetLevel,"smooth",velocity);
   };
-  rewardScroll.addEventListener("touchend",()=>finishRewardTouchPan(false),{passive:true});
-  rewardScroll.addEventListener("touchcancel",()=>finishRewardTouchPan(true),{passive:true});
+  rewardScroll.addEventListener("touchend",finishRewardTouchPan,{passive:true});
+  rewardScroll.addEventListener("touchcancel",()=>{
+    cancelAnimationFrame(rewardTouchPan.raf);rewardTouchPan.raf=0;rewardTouchPan.active=false;rewardTouchPan.id=null;rewardTouchPan.axis="";rewardScroll.classList.remove("is-touching");syncRewardRailBounds();
+  },{passive:true});
+
 
   el("buyLevel").addEventListener("click",()=>openLevelPurchaseConfirm());
   el("levelBuyEntry").addEventListener("click",()=>openLevelPurchaseConfirm());
