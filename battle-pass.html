@@ -4514,7 +4514,7 @@ img[src$="/xp.webp"]{
     <div class="season-state-banner" id="seasonStateBanner" hidden></div>
     <section class="hero">
       <h1><span class="season-index">Сезон:</span> <span class="season-name">Загрузка…</span></h1>
-      <p>Получай награды, проходи 50 уровней сезона, а после финала продолжай бесконечную дорожку 50+ за золотые кейсы.</p>
+      <p>Получай награды, проходи 50 уровней сезона, а после финала продолжай бесконечную дорожку 50+ с настраиваемыми наградами.</p>
       <section class="hero-progress">
         <div class="level-badge-wrap">
           <div class="level-badge" id="levelValue">1</div>
@@ -6320,26 +6320,29 @@ img[src$="/xp.webp"]{
 
   function overflowRewardColumnMarkup() {
     const state = overflowState();
+    const reward = serverPass?.overflow?.reward || serverPass?.season?.progression?.overflowReward || {type:"case",itemId:"gold",title:"Золотой кейс",imageUrl:"/assets/cases/gold_closed.webp"};
+    const rewardTitle = String(reward.title || "Кейс");
+    const rewardImage = String(reward.imageUrl || "/assets/cases/gold_closed.webp");
     const unlocked = state.unlocked;
     const available = state.available;
     const percent = unlocked ? Math.min(100,Math.round(state.within/Math.max(1,state.step)*100)) : 0;
     const stateLabel = !unlocked ? "После 50" : available > 0 ? `Готово ×${available}` : `50+ · получено ${state.claimed}`;
     const progressLabel = !unlocked
-      ? `${state.step.toLocaleString("ru-RU")} XP за кейс`
+      ? `${state.step.toLocaleString("ru-RU")} XP за награду`
       : available > 0
-        ? `${available === 1 ? "Кейс готов" : `Готово кейсов: ${available}`}`
+        ? `${available === 1 ? "Награда готова" : `Готово наград: ${available}`}`
         : `${Math.round(state.within).toLocaleString("ru-RU")} / ${state.step.toLocaleString("ru-RU")} XP`;
     const actionLabel = !unlocked
       ? "Откроется после 50"
       : available > 0
-        ? (available === 1 ? "Забрать кейс" : `Забрать ×${available}`)
+        ? (available === 1 ? "Забрать" : `Забрать ×${available}`)
         : "Копи XP";
     return `<section class="level-column overflow-reward-column ${unlocked?"current":""} ${selectedLevel===MAX_LEVEL+1?"selected":""}" data-level-column="${MAX_LEVEL+1}" aria-label="Бесконечная дорожка 50 плюс">
       <div class="level-number is-overflow"><small>50+</small><b>∞</b></div>
       <article class="overflow-reward-cell ${unlocked?"":"is-locked"}">
         <span class="overflow-cell-state">${stateLabel}</span>
-        <img class="overflow-cell-art" src="/assets/cases/gold_closed.webp" alt="Золотой кейс">
-        <div class="overflow-cell-title">Золотой кейс</div>
+        <img class="overflow-cell-art" src="${storyEscapeHtml(rewardImage)}" alt="${storyEscapeHtml(rewardTitle)}">
+        <div class="overflow-cell-title">${storyEscapeHtml(rewardTitle)}</div>
         <div class="overflow-cell-copy">Для всех тарифов · каждые ${state.step.toLocaleString("ru-RU")} XP</div>
         <div class="overflow-cell-track"><i style="width:${percent}%"></i></div>
         <div class="overflow-cell-progress">${progressLabel}</div>
@@ -8128,16 +8131,16 @@ img[src$="/xp.webp"]{
   }
 
   async function claimOverflowRewards(sourceButton=null){
-    const state=overflowState();if(state.available<=0)return showToast("Следующий золотой кейс ещё не открыт");
+    const state=overflowState();if(state.available<=0)return showToast("Следующая награда бесконечной линии ещё не открыта");
     const button=sourceButton||document.querySelector("[data-overflow-inline]");
     const old=button?.textContent||"";
     if(button){button.disabled=true;button.textContent="Получаем кейс…";}
     try{
       const data=await seasonPassApi(CLAIM_OVERFLOW_PATH,{all:true});
       applyServerPass(data);render();notifyAccountChanged();passNotifyHaptic("success");
-      const received=Array.isArray(data.received)?data.received.map(item=>({premium:true,icon:"",image:item.imageUrl||"/assets/cases/gold_closed.webp",name:item.title||"Золотой кейс",description:"Бонус после 50 уровня",level:"50+",source:"Бесконечная дорожка 50+"})):[];
+      const received=Array.isArray(data.received)?data.received.map(item=>({premium:true,icon:"",image:item.imageUrl||serverPass?.season?.progression?.overflowReward?.imageUrl||"/assets/cases/gold_closed.webp",name:item.title||serverPass?.season?.progression?.overflowReward?.title||"Награда",description:"Бонус после 50 уровня",level:"50+",source:"Бесконечная дорожка 50+"})):[];
       if(received.length)openRewardSummary(received);else showToast("Золотой кейс уже получен");
-    }catch(error){passNotifyHaptic("error");showToast(error.message||"Не удалось получить золотой кейс");}
+    }catch(error){passNotifyHaptic("error");showToast(error.message||"Не удалось получить награду бесконечной линии");}
     finally{if(button&&button.isConnected){button.textContent=old;button.disabled=false;}render();}
   }
 
