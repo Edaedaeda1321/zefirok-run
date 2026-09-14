@@ -191,6 +191,12 @@ assert(index.includes('error?.operationCode || error?.code || error?.details?.op
 assert(index.includes('error?.operationCode === &quot;STATE_CONFLICT&quot;'), 'granted-case retry logic ignores normalized STATE_CONFLICT');
 assert(index.includes('return loadCaseState(true, true, true);'), 'case opening recovery does not request the fast read-only state check');
 assert(worker.includes('/api/cases/open-granted/status'), 'granted-case read-only status endpoint is missing');
+assert(worker.includes("activeOpenings.some((row)=>Math.max(0,safeAdminNumber(row.opening_started_at))===0"), 'case inventory read does not self-heal stale granted-case openings');
+assert(worker.includes("state:'pending',pending:false,retry:true,recovered:true"), 'granted-case status endpoint does not actively recover stale leases');
+assert(worker.includes('recordGrantedCaseRecoveryTimeline'), 'automatic granted-case recovery is not written to the player timeline');
+assert(worker.includes("COALESCE(opened_at,0)=0 AND COALESCE(rewards_json,'[]')='[]'"), 'granted-case recovery can reset a row that already has a persisted result');
+assert(worker.includes('/api/owner/v85/player/case/recover'), 'Control Center stale-case recovery endpoint is missing');
+assert(worker.includes("event_type IN ('case_open','seasonal_case_open','case_open_failed','case_open_recovered')"), 'case audit omits recovery events');
 assert(index.includes('CASE_API_OPEN_GRANTED_STATUS_PATH'), 'granted-case client does not poll the read-only status endpoint');
 assert(index.includes('operationContractVersion: 1'), 'client does not send operation contract version');
 assert(index.includes('function operationIssuePresentation'), 'client shared friendly operation state presenter is missing');

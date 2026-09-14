@@ -11109,13 +11109,20 @@ async function buildCasePayload(env, telegramId, currentProfile, extra = {}, opt
   };
 }
 
-async function readFastCaseInventory(env, telegramId) {
-  const id=String(telegramId);
+async function readFastCaseInventory(env, telegramId, skipStaleRecovery = false) {
+  const id=String(telegramId),now=Math.floor(Date.now()/1000);
   const [openingsResult, giftedResult, activeOpeningResult] = await env.DB.batch([
     env.DB.prepare(`SELECT level FROM level_case_openings WHERE telegram_id=? ORDER BY level ASC`).bind(id),
     env.DB.prepare(`SELECT case_type,COUNT(*) AS count FROM granted_cases WHERE telegram_id=? AND status='pending' GROUP BY case_type`).bind(id),
-    env.DB.prepare(`SELECT id,case_type,opening_started_at,opening_token FROM granted_cases WHERE telegram_id=? AND status='opening' AND opening_token<>'' ORDER BY opening_started_at ASC,id ASC LIMIT 12`).bind(id)
+    env.DB.prepare(`SELECT id,case_type,opening_started_at,opening_token FROM granted_cases WHERE telegram_id=? AND status='opening' ORDER BY opening_started_at ASC,id ASC LIMIT 12`).bind(id)
   ]);
+  const activeOpenings=activeOpeningResult?.results||[];
+  // Read paths stay cheap for normal players. Only if a real stale lease is present
+  // do we run the recovery mutation and then re-read the authoritative inventory.
+  if(!skipStaleRecovery&&activeOpenings.some((row)=>Math.max(0,safeAdminNumber(row.opening_started_at))===0||Math.max(0,safeAdminNumber(row.opening_started_at))<=now-GRANTED_CASE_OPENING_STALE_SECONDS)){
+    const recovered=await recoverStaleGrantedCaseOpenings(env,id,now);
+    if(recovered>0)return readFastCaseInventory(env,id,true);
+  }
   const openedLevels = (openingsResult?.results || []).map((row) => Number(row.level || 0)).filter((level) => level > 0);
   const giftedCases = { small:0, sweet:0, gold:0, mythic:0, legendary:0, alex:0 };
   for (const row of giftedResult?.results || []) {
@@ -11123,7 +11130,7 @@ async function readFastCaseInventory(env, telegramId) {
     if (type) giftedCases[type] = safeAdminNumber(row.count);
   }
   const giftedOpeningRequests = {};
-  for(const row of activeOpeningResult?.results || []){
+  for(const row of activeOpenings){
     const type=normalizeCaseType(row.case_type),requestId=String(row.opening_token||'').trim();
     if(!type||!requestId||giftedOpeningRequests[type])continue;
     giftedOpeningRequests[type]={grantId:String(row.id||''),requestId,startedAt:Math.max(0,safeAdminNumber(row.opening_started_at))*1000};
@@ -11993,27 +12000,38 @@ async function releaseGrantedCaseOpeningReservations(env, telegramId, caseId, re
   return released;
 }
 
+async function recordGrantedCaseRecoveryTimeline(env,telegramId,row,requestId,openingStartedAt,recoveryCode,releasedReservations=0,now=Math.floor(Date.now()/1000)){
+  const grantId=String(row?.id||''),caseType=normalizeCaseType(row?.case_type),title=LEVEL_CASE_CONFIG[caseType]?.title||caseType||'Кейс';
+  if(!grantId)return;
+  const details={caseType,grantId,requestId:String(requestId||''),openingStartedAt:Math.max(0,safeAdminNumber(openingStartedAt)),recoveredAt:Math.max(0,Number(now||0)),releasedReservations:Math.max(0,safeAdminNumber(releasedReservations)),recoveryCode:String(recoveryCode||'STALE_OPENING_RESET'),reason:'Зависшая попытка без сохранённого результата возвращена в pending.'};
+  await recordPlayerTimeline(env,String(telegramId),'case_open_recovered',`Автовосстановление открытия · ${title}`,details,`case_recovery_${grantId}_${details.openingStartedAt}_${details.recoveryCode}`.slice(0,180),null,Math.max(0,Number(now||0)));
+}
+
 async function recoverGrantedCaseRequestLease(env,telegramId,row,requestId,now=Math.floor(Date.now()/1000)){
   if(String(row?.status||'')!=='opening')return false;
   const caseId=String(row?.id||''),token=String(requestId||''),startedAt=Math.max(0,safeAdminNumber(row?.opening_started_at));
   const age=startedAt>0?Math.max(0,Number(now||0)-startedAt):GRANTED_CASE_RETRY_LEASE_SECONDS;
-  if(!caseId||!token||age<GRANTED_CASE_RETRY_LEASE_SECONDS)return false;
-  const reset=await env.DB.prepare(`UPDATE granted_cases SET status='pending',opening_started_at=0,opening_token='' WHERE id=? AND telegram_id=? AND status='opening' AND opening_started_at=? AND opening_token=?`).bind(caseId,String(telegramId),startedAt,token).run();
+  if(!caseId||age<GRANTED_CASE_RETRY_LEASE_SECONDS)return false;
+  const reset=await env.DB.prepare(`UPDATE granted_cases SET status='pending',opening_started_at=0,opening_token='' WHERE id=? AND telegram_id=? AND status='opening' AND opening_started_at=? AND opening_token=? AND COALESCE(opened_at,0)=0 AND COALESCE(rewards_json,'[]')='[]'`).bind(caseId,String(telegramId),startedAt,token).run();
   if(safeAdminNumber(reset?.meta?.changes)<1)return false;
-  await releaseGrantedCaseOpeningReservations(env,telegramId,caseId,token,startedAt);
+  let releasedReservations=0;
+  if(token)releasedReservations=await releaseGrantedCaseOpeningReservations(env,telegramId,caseId,token,startedAt);
+  await recordGrantedCaseRecoveryTimeline(env,telegramId,row,token,startedAt,'LEASE_RECOVERY',releasedReservations,now);
   return true;
 }
 
 async function recoverStaleGrantedCaseOpenings(env,telegramId,now=Math.floor(Date.now()/1000)){
   const id=String(telegramId||''),cutoff=Math.max(0,Number(now||0)-GRANTED_CASE_OPENING_STALE_SECONDS);
-  const stale=(await env.DB.prepare(`SELECT id,opening_token,opening_started_at FROM granted_cases WHERE telegram_id=? AND status='opening' AND (opening_started_at=0 OR opening_started_at<=?) ORDER BY opening_started_at ASC LIMIT 20`).bind(id,cutoff).all()).results||[];
+  const stale=(await env.DB.prepare(`SELECT id,case_type,opening_token,opening_started_at FROM granted_cases WHERE telegram_id=? AND status='opening' AND (opening_started_at=0 OR opening_started_at<=?) ORDER BY opening_started_at ASC LIMIT 20`).bind(id,cutoff).all()).results||[];
   let recovered=0;
   for(const row of stale){
     const caseId=String(row.id||''),token=String(row.opening_token||''),startedAt=Math.max(0,safeAdminNumber(row.opening_started_at));
-    const result=await env.DB.prepare(`UPDATE granted_cases SET status='pending',opening_started_at=0,opening_token='' WHERE id=? AND telegram_id=? AND status='opening' AND opening_started_at=? AND opening_token=?`).bind(caseId,id,startedAt,token).run();
+    const result=await env.DB.prepare(`UPDATE granted_cases SET status='pending',opening_started_at=0,opening_token='' WHERE id=? AND telegram_id=? AND status='opening' AND opening_started_at=? AND opening_token=? AND COALESCE(opened_at,0)=0 AND COALESCE(rewards_json,'[]')='[]'`).bind(caseId,id,startedAt,token).run();
     if(safeAdminNumber(result?.meta?.changes)<1)continue;
     recovered+=1;
-    if(token){try{await releaseGrantedCaseOpeningReservations(env,id,caseId,token,startedAt);}catch(error){console.error('Failed to release stale granted-case stock',error);}}
+    let releasedReservations=0;
+    if(token){try{releasedReservations=await releaseGrantedCaseOpeningReservations(env,id,caseId,token,startedAt);}catch(error){console.error('Failed to release stale granted-case stock',error);}}
+    try{await recordGrantedCaseRecoveryTimeline(env,id,row,token,startedAt,'STALE_OPENING_RESET',releasedReservations,now);}catch(error){console.error('Failed to record stale granted-case recovery',error);}
   }
   return recovered;
 }
@@ -12052,15 +12070,23 @@ async function getGrantedCaseOpeningStatus(request,env){
     // After a WebView reload the browser can lose its in-memory token. Reattach
     // only to an active opening of the same case owned by the authenticated player.
     if(!row){
-      row=await env.DB.prepare(`SELECT id,case_type,status,rewards_json,opened_at,opening_started_at,opening_token FROM granted_cases WHERE telegram_id=? AND case_type=? AND status='opening' AND opening_token<>'' ORDER BY opening_started_at ASC,id ASC LIMIT 1`).bind(telegramId,caseType).first();
+      row=await env.DB.prepare(`SELECT id,case_type,status,rewards_json,opened_at,opening_started_at,opening_token FROM granted_cases WHERE telegram_id=? AND case_type=? AND status='opening' ORDER BY opening_started_at ASC,id ASC LIMIT 1`).bind(telegramId,caseType).first();
       if(row?.opening_token)requestId=String(row.opening_token);
     }
     if(!row)return jsonResponse({ok:true,state:'missing',missing:true,caseType,requestId});
-    const rowType=normalizeCaseType(row.case_type)||caseType,status=String(row.status||'');
+    let rowType=normalizeCaseType(row.case_type)||caseType,status=String(row.status||'');
     if(status==='opened'){const payload=grantedCasePersistedOpenedPayload(row,requestId);return jsonResponse(payload||{ok:true,state:'missing',missing:true,caseType:rowType,requestId});}
     if(status==='opening'){
       const startedAt=Math.max(0,safeAdminNumber(row.opening_started_at)),age=startedAt?Math.max(0,now-startedAt):GRANTED_CASE_RETRY_LEASE_SECONDS;
-      if(age>=GRANTED_CASE_RETRY_LEASE_SECONDS)return jsonResponse({ok:true,state:'stale',stale:true,pending:false,caseType:rowType,requestId,grantId:String(row.id||''),startedAt:startedAt*1000});
+      if(age>=GRANTED_CASE_RETRY_LEASE_SECONDS){
+        const recovered=await recoverGrantedCaseRequestLease(env,telegramId,row,String(row.opening_token??''),now);
+        if(recovered)return jsonResponse({ok:true,state:'pending',pending:false,retry:true,recovered:true,caseType:rowType,requestId,grantId:String(row.id||''),startedAt:startedAt*1000});
+        const refreshed=await env.DB.prepare(`SELECT id,case_type,status,rewards_json,opened_at,opening_started_at,opening_token FROM granted_cases WHERE id=? AND telegram_id=? LIMIT 1`).bind(String(row.id||''),telegramId).first();
+        if(refreshed){row=refreshed;rowType=normalizeCaseType(row.case_type)||rowType;status=String(row.status||'');}
+        if(status==='opened'){const payload=grantedCasePersistedOpenedPayload(row,requestId);return jsonResponse(payload||{ok:true,state:'missing',missing:true,caseType:rowType,requestId});}
+        if(status==='pending')return jsonResponse({ok:true,state:'pending',pending:false,retry:true,recovered:true,caseType:rowType,requestId,grantId:String(row.id||'')});
+        return jsonResponse({ok:true,state:'stale',stale:true,pending:false,caseType:rowType,requestId,grantId:String(row.id||''),startedAt:startedAt*1000});
+      }
       return jsonResponse({ok:true,state:'opening',pending:true,caseType:rowType,requestId,grantId:String(row.id||''),startedAt:startedAt*1000,retryAfterMs:Math.max(500,Math.min(1200,(GRANTED_CASE_RETRY_LEASE_SECONDS-age)*1000))},202);
     }
     return jsonResponse({ok:true,state:status||'missing',missing:status!=='pending',retry:status==='pending',caseType:rowType,requestId,grantId:String(row.id||'')});
@@ -39846,12 +39872,42 @@ async function ownerPanelV85Player360(env,ctx){
     env.DB.prepare(`SELECT m.mail_id,m.mail_kind,m.title,m.preview_text,m.body_text,m.image_url,m.reason,m.reward_state,m.read_at,m.created_at,m.updated_at,m.claimed_at,COALESCE((SELECT json_group_array(json(r.reward_json)) FROM player_mail_rewards_v3 r WHERE r.telegram_id=m.telegram_id AND r.mail_id=m.mail_id),'[]') AS rewards_json FROM player_mail_v3 m WHERE m.telegram_id=? ORDER BY m.created_at DESC LIMIT 16`).bind(telegramId).all(),
     env.DB.prepare(`SELECT id,case_type,status,granted_by,reason,rewards_json,created_at,opened_at,opening_started_at,opening_token FROM granted_cases WHERE telegram_id=? ORDER BY created_at DESC LIMIT 16`).bind(telegramId).all(),
     env.DB.prepare(`SELECT grant_id,case_id,source_season_id,status,granted_by,rewards_json,created_at,opened_at,opening_started_at,opening_token,open_request_id FROM season_pass_case_grants WHERE telegram_id=? ORDER BY created_at DESC LIMIT 16`).bind(telegramId).all(),
-    env.DB.prepare(`SELECT id,event_type,title,details_json,source_id,actor_name,created_at FROM player_timeline_events WHERE telegram_id=? AND created_at>=? AND event_type IN ('case_open','seasonal_case_open','case_open_failed') ORDER BY created_at DESC,id DESC LIMIT 80`).bind(telegramId,now-7*86400).all(),
+    env.DB.prepare(`SELECT id,event_type,title,details_json,source_id,actor_name,created_at FROM player_timeline_events WHERE telegram_id=? AND created_at>=? AND event_type IN ('case_open','seasonal_case_open','case_open_failed','case_open_recovered') ORDER BY created_at DESC,id DESC LIMIT 80`).bind(telegramId,now-7*86400).all(),
     env.DB.prepare(`SELECT id,duration_ms,error_text,created_at FROM admin_performance_samples WHERE area=? AND created_at>=? AND json_valid(error_text)=1 AND CAST(COALESCE(json_extract(error_text,'$.p'),'') AS TEXT)=? AND CAST(COALESCE(json_extract(error_text,'$.e'),'') AS TEXT) IN ('/api/cases/open','/api/cases/open-granted','/api/cases/open-granted/status','/api/battle-pass/seasonal-case/open','/api/battle-pass/seasonal-case/status') ORDER BY created_at DESC,id DESC LIMIT 80`).bind(v67PerformanceArea("player:network"),now-7*86400,telegramId).all(),
     env.DB.prepare(`SELECT id,area,duration_ms,success,error_text,created_at FROM admin_performance_samples WHERE area IN (?,?,?,?,?) AND created_at>=? AND json_valid(error_text)=1 AND CAST(COALESCE(json_extract(error_text,'$.p'),'') AS TEXT)=? ORDER BY created_at DESC,id DESC LIMIT 80`).bind(v67PerformanceArea("player:case_open_level"),v67PerformanceArea("player:case_open_granted"),v67PerformanceArea("player:case_open_granted_status"),v67PerformanceArea("player:season_case_open"),v67PerformanceArea("player:season_case_status"),now-7*86400,telegramId).all()
   ]);
   return {ok:true,telegramId,stats:{runs:Number(runStats?.total||0),accepted:Number(runStats?.accepted||0),rejected:Number(runStats?.rejected||0),runs7:Number(runStats?.runs7||0),avgScore:Number(runStats?.avg_score||0),firstRunAt:Number(runStats?.first_run||0),lastRunAt:Number(runStats?.last_run||0),casesOpened:Number(cases?.opened||0),purchases:Number(purchases?.count||0),promoUses:(promos.results||[]).length,physicalRewards:(physical.results||[]).length},promos:(promos.results||[]).map(r=>({code:String(r.code||""),status:String(r.status||""),createdAt:Number(r.created_at||0)})),physical:(physical.results||[]).map(r=>({code:String(r.code||""),productId:String(r.product_id||""),productName:String(r.product_name||""),status:String(r.status||""),createdAt:Number(r.created_at||0),redeemedAt:Number(r.redeemed_at||0)})),rewards:(rewardQueue.results||[]).map(r=>({id:Number(r.id||0),sourceType:String(r.source_type||""),sourceId:String(r.source_id||""),kind:String(r.reward_kind||""),rewardId:String(r.reward_id||""),amount:Number(r.amount||0),reason:String(r.reason||""),status:String(r.status||""),attempts:Number(r.attempts||0),error:String(r.last_error||""),createdAt:Number(r.created_at||0),updatedAt:Number(r.updated_at||0),deliveredAt:Number(r.delivered_at||0),claimedAt:Number(r.claimed_at||0),leaseUntil:Number(r.lease_until||0)})),campaigns:(campaigns.results||[]).map(r=>({id:String(r.campaign_id||""),title:String(r.title||""),status:String(r.status||""),processedAt:Number(r.processed_at||0),deliveredAt:Number(r.delivered_at||0),error:String(r.delivery_error||""),createdAt:Number(r.created_at||0)})),notifications:(notifications.results||[]).map(r=>({category:String(r.category||""),sentAt:Number(r.sent_at||0)})),tickets:(tickets.results||[]).map(r=>({id:Number(r.id||0),category:String(r.category||""),description:String(r.description||""),status:String(r.status||""),resolution:String(r.resolution||""),createdAt:Number(r.created_at||0),updatedAt:Number(r.updated_at||0),closedAt:Number(r.closed_at||0)})),fraud:(fraud.results||[]).map(r=>({id:Number(r.id||0),type:String(r.alert_type||""),severity:String(r.severity||""),title:String(r.title||""),status:String(r.status||""),resolution:String(r.resolution||""),createdAt:Number(r.created_at||0),updatedAt:Number(r.updated_at||0)})),notes:(notes.results||[]).map(r=>({id:Number(r.id||0),text:String(r.note_text||""),createdBy:String(r.created_by_name||r.created_by||""),createdAt:Number(r.created_at||0)})),timeline:(timeline.results||[]).map(r=>({id:Number(r.id||0),type:String(r.event_type||""),title:String(r.title||""),details:ownerV8SafeJson(r.details_json,{}),sourceId:String(r.source_id||""),actor:String(r.actor_name||""),createdAt:Number(r.created_at||0)})),caseAuditTimeline:(caseTimeline.results||[]).map(r=>({id:Number(r.id||0),type:String(r.event_type||""),title:String(r.title||""),details:ownerV8SafeJson(r.details_json,{}),sourceId:String(r.source_id||""),actor:String(r.actor_name||""),createdAt:Number(r.created_at||0)})),gifts:(gifts.results||[]).map(r=>({id:String(r.mail_id||""),kind:String(r.mail_kind||""),title:String(r.title||""),preview:String(r.preview_text||""),message:String(r.body_text||""),imageUrl:String(r.image_url||""),reason:String(r.reason||""),rewards:ownerV8SafeJson(r.rewards_json,[]),status:playerMailV3LegacyStatus(r.reward_state),rewardState:String(r.reward_state||"none"),readAt:Number(r.read_at||0),createdAt:Number(r.created_at||0),updatedAt:Number(r.updated_at||0),claimedAt:Number(r.claimed_at||0)})),cases:(grantedCases.results||[]).map(r=>({id:String(r.id||""),caseType:String(r.case_type||""),status:String(r.status||""),grantedBy:String(r.granted_by||""),reason:String(r.reason||""),rewards:ownerV8SafeJson(r.rewards_json,[]),createdAt:Number(r.created_at||0),openedAt:Number(r.opened_at||0),openingStartedAt:Number(r.opening_started_at||0),openingToken:String(r.opening_token||""),requestId:String(r.opening_token||"")})),seasonalCases:(seasonalCases.results||[]).map(r=>({id:String(r.grant_id||""),caseId:String(r.case_id||""),seasonId:String(r.source_season_id||""),status:String(r.status||""),grantedBy:String(r.granted_by||""),rewards:ownerV8SafeJson(r.rewards_json,[]),createdAt:Number(r.created_at||0),openedAt:Number(r.opened_at||0),openingStartedAt:Number(r.opening_started_at||0),openingToken:String(r.opening_token||""),requestId:String(r.open_request_id||"")})),networkDiagnostics:(caseNetworkDiagnostics.results||[]).map(r=>{const x=ownerV8SafeJson(r.error_text,{});return{id:Number(r.id||0),endpoint:String(x.e||""),code:String(x.c||""),reason:String(x.r||""),traceId:String(x.x||""),durationMs:Number(r.duration_ms||0),timeoutMs:Number(x.tm||0),serverMs:Number(x.sm||0),networkMs:Number(x.nm||0),online:Number(x.o??1)!==0,effectiveType:String(x.n||""),rtt:Number(x.rt||0),downlink:Number(x.dl||0),count:Number(x.q||1),requestId:String(x.rq||""),caseType:String(x.ct||""),caseId:String(x.ci||""),grantId:String(x.g||""),level:Number(x.l||0),createdAt:Number(r.created_at||0)};}),apiDiagnostics:(caseApiDiagnostics.results||[]).map(r=>{const x=ownerV8SafeJson(r.error_text,{});return{id:Number(r.id||0),area:String(r.area||""),endpoint:String(x.e||""),status:Number(x.s||0),code:String(x.c||""),reason:String(x.r||""),traceId:String(x.x||""),durationMs:Number(r.duration_ms||0),requestId:String(x.rq||""),caseType:String(x.ct||""),caseId:String(x.ci||""),grantId:String(x.g||""),level:Number(x.l||0),createdAt:Number(r.created_at||0)};}),legal,moderation:{blocked:Boolean(moderation?.blocked),reason:String(moderation?.blockReason||""),type:String(moderation?.blockType||""),until:Number(moderation?.blockedUntil||0)},moderationHistory:(moderationHistory.results||[]).map(r=>({id:Number(r.id||0),action:String(r.action||""),reason:String(r.reason||""),actor:String(r.actor_name||""),createdAt:Number(r.created_at||0),blockType:String(r.block_type||""),blockedUntil:Number(r.blocked_until||0)}))};
 }
+async function ownerPanelV85PlayerCaseRecover(env,ctx){
+  if(!ctx.access?.owner&&!ctx.access?.permissions?.manageCases)throw new ApiError(403,'Нет права восстанавливать кейсы игроков.');
+  const telegramId=String(ctx.body?.telegramId||'').trim(),grantId=String(ctx.body?.grantId||'').trim().slice(0,180);
+  if(!/^\d{4,20}$/.test(telegramId))throw new ApiError(400,'Некорректный Telegram ID.');
+  if(!grantId)throw new ApiError(400,'Не выбран grantId кейса.');
+  const row=await env.DB.prepare(`SELECT id,telegram_id,case_type,status,rewards_json,created_at,opened_at,opening_started_at,opening_token FROM granted_cases WHERE id=? AND telegram_id=? LIMIT 1`).bind(grantId,telegramId).first();
+  if(!row)throw new ApiError(404,'Кейс игрока не найден.');
+  const status=String(row.status||''),caseType=normalizeCaseType(row.case_type),now=Math.floor(Date.now()/1000),startedAt=Math.max(0,safeAdminNumber(row.opening_started_at)),token=String(row.opening_token||'');
+  if(status==='opened')return {ok:true,telegramId,grantId,status:'opened',alreadyResolved:true,message:'Кейс уже подтверждён сервером. Восстановление не требуется.'};
+  if(status==='pending')return {ok:true,telegramId,grantId,status:'pending',alreadyResolved:true,message:'Кейс уже доступен игроку для открытия.'};
+  if(status!=='opening')throw new ApiError(409,'Кейс больше не находится в opening. Обновите карточку игрока.');
+  const expectedStartedAt=Math.max(0,Math.floor(Number(ctx.body?.openingStartedAt||0))),expectedToken=String(ctx.body?.openingToken||'');
+  if(expectedStartedAt&&expectedStartedAt!==startedAt)throw new ApiError(409,'Попытка открытия уже изменилась. Обновите карточку игрока.');
+  if(expectedToken&&expectedToken!==token)throw new ApiError(409,'requestId попытки уже изменился. Обновите карточку игрока.');
+  const age=startedAt>0?Math.max(0,now-startedAt):GRANTED_CASE_OPENING_STALE_SECONDS;
+  if(age<GRANTED_CASE_OPENING_STALE_SECONDS)throw new ApiError(409,`Открытие ещё не считается зависшим. Повторите проверку через ${Math.max(1,GRANTED_CASE_OPENING_STALE_SECONDS-age)} сек.`);
+  let rewards=[];try{const parsed=JSON.parse(String(row.rewards_json||'[]'));rewards=Array.isArray(parsed)?parsed:[];}catch{throw new ApiError(409,'Не удалось безопасно проверить сохранённый результат кейса.');}
+  if(Number(row.opened_at||0)>0||rewards.length)throw new ApiError(409,'У кейса уже есть сохранённый результат. Автоматическое восстановление заблокировано — требуется ручная проверка.');
+  const reset=await env.DB.prepare(`UPDATE granted_cases SET status='pending',opening_started_at=0,opening_token='' WHERE id=? AND telegram_id=? AND status='opening' AND opening_started_at=? AND opening_token=? AND COALESCE(opened_at,0)=0 AND rewards_json='[]'`).bind(grantId,telegramId,startedAt,token).run();
+  if(safeAdminNumber(reset?.meta?.changes)<1)throw new ApiError(409,'Состояние кейса изменилось во время восстановления. Обновите карточку игрока.');
+  let releasedReservations=0;
+  if(token){try{releasedReservations=await releaseGrantedCaseOpeningReservations(env,telegramId,grantId,token,startedAt);}catch(error){console.error('Owner case recovery reservation release failed',error);}}
+  const title=LEVEL_CASE_CONFIG[caseType]?.title||caseType||'Кейс',sourceId=`case_recovery_${grantId}_${now}`.slice(0,180),details={caseType,grantId,requestId:token,openingStartedAt:startedAt,recoveredAt:now,releasedReservations,recoveryCode:'STALE_OPENING_RESET',reason:'Зависшая попытка без сохранённого результата возвращена в pending.'};
+  await Promise.all([
+    recordPlayerTimeline(env,telegramId,'case_open_recovered',`Восстановлено зависшее открытие · ${title}`,details,sourceId,ctx.user,now),
+    logStaffAction(env,ctx.user,ctx.access,'owner_panel_case_opening_recover',telegramId,'granted_case',grantId,null,null,details)
+  ]);
+  return {ok:true,telegramId,grantId,caseType,status:'pending',recovered:true,releasedReservations,message:'Зависшая попытка снята. Исходный кейс снова доступен игроку.'};
+}
+
 async function ownerPanelV85PlayerNoteSave(env,ctx){await ensureControlCenterV85Schema(env);const id=String(ctx.body?.telegramId||"").trim(),text=String(ctx.body?.text||"").trim().slice(0,1200);if(!/^\d{4,20}$/.test(id)||text.length<2)throw new ApiError(400,"Выберите игрока и укажите заметку.");const now=Math.floor(Date.now()/1000);const result=await env.DB.prepare(`INSERT INTO player_notes(telegram_id,note_text,created_by,created_by_name,created_at,deleted_at,deleted_by) VALUES(?,?,?,?,?,0,'')`).bind(id,text,String(ctx.user.id),telegramDisplayName(ctx.user),now).run();await logStaffAction(env,ctx.user,ctx.access,"owner_panel_player_note",id,"player_note",null,Number(result.meta?.last_row_id||0),{text});return {ok:true,id:Number(result.meta?.last_row_id||0)};}
 async function ownerPanelV85PlayerNoteDelete(env,ctx){await ensureControlCenterV85Schema(env);const noteId=ownerPanelInteger(ctx.body?.noteId,1,999999999);if(noteId==null)throw new ApiError(400,"Некорректная заметка.");const row=await env.DB.prepare(`SELECT * FROM player_notes WHERE id=? AND deleted_at=0 LIMIT 1`).bind(noteId).first();if(!row)throw new ApiError(404,"Заметка не найдена.");await env.DB.prepare(`UPDATE player_notes SET deleted_at=?,deleted_by=? WHERE id=? AND deleted_at=0`).bind(Math.floor(Date.now()/1000),String(ctx.user.id),noteId).run();await logStaffAction(env,ctx.user,ctx.access,"owner_panel_player_note_delete",String(row.telegram_id),"player_note",noteId,null,{});return {ok:true};}
 
@@ -45848,6 +45904,7 @@ const OWNER_CC_ENDPOINT_TARGET = Object.freeze({
   "/api/owner/v8/snapshot/restore": "live",
   "/api/owner/v8/draft/action": "live",
   "/api/owner/v85/player/360": "read",
+  "/api/owner/v85/player/case/recover": "live_player",
   "/api/owner/v85/player/note/save": "draft",
   "/api/owner/v85/player/note/delete": "draft",
   "/api/owner/v85/segments/save": "live",
@@ -46081,6 +46138,7 @@ async function handleOwnerPanelApi(request, env, path, executionCtx = null) {
     if (path === "/api/owner/v8/snapshot/restore") return jsonResponse(await ownerPanelV8RestoreSnapshot(env, ctx));
     if (path === "/api/owner/v8/draft/action") return jsonResponse(await ownerPanelV8DraftAction(env, ctx));
     if (path === "/api/owner/v85/player/360") return jsonResponse(await ownerPanelV85Player360(env, ctx));
+    if (path === "/api/owner/v85/player/case/recover") return jsonResponse(await ownerPanelV85PlayerCaseRecover(env, ctx));
     if (path === "/api/owner/v85/player/note/save") return jsonResponse(await ownerPanelV85PlayerNoteSave(env, ctx));
     if (path === "/api/owner/v85/player/note/delete") return jsonResponse(await ownerPanelV85PlayerNoteDelete(env, ctx));
     if (path === "/api/owner/v85/segments/save") return jsonResponse(await ownerPanelV85SegmentSave(env, ctx));
