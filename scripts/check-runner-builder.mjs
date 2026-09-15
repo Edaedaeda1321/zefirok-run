@@ -96,6 +96,36 @@ must('foreground follows current road',index,'const currentRoad = runnerSceneRoa
 must('disabled road skips procedural fallback',index,'if (runnerBackground.roadEnabled === false) return;');
 must('dynamic obstacle path',index,'const image = runnerSceneImage(assetKey, assetPath);');
 
+
+must('background framing defaults',worker,'fitMode:"cover", zoom:1, positionX:.5, positionY:.5');
+must('background framing normalized',worker,'fitMode=String(item?.fitMode||"cover").toLowerCase()==="contain"?"contain":"cover"');
+must('background zoom normalized',worker,'zoom=runnerBuilderNum(item?.zoom,1,2,1)');
+must('background horizontal position normalized',worker,'positionX=runnerBuilderNum(item?.positionX,0,1,.5)');
+must('background vertical position normalized',worker,'positionY=runnerBuilderNum(item?.positionY,0,1,.5)');
+must('public scene exposes background framing',worker,'fitMode:background.fitMode==="contain"?"contain":"cover"');
+
+must('background frame helper',owner,'function rbBackgroundFrame(item)');
+must('background frame preview renderer',owner,"function rbBackgroundFrameMarkup(item,extraClass='')");
+must('background frame DOM sync',owner,'function rbSyncBackgroundFrames(root=document)');
+must('background fit mode UI',owner,'id="rbBackgroundFitMode"');
+must('background zoom UI',owner,'id="rbBackgroundZoom"');
+must('background x position UI',owner,'id="rbBackgroundPositionX"');
+must('background y position UI',owner,'id="rbBackgroundPositionY"');
+must('background full image preset',owner,'id="rbBackgroundFrameFull"');
+must('background legacy framing preset',owner,'id="rbBackgroundFrameLegacy"');
+must('background editor uses 9:16 preview',owner,'aspect-ratio:9/16');
+must('scene preview uses framed background',owner,"rbBackgroundFrameMarkup(bg,'rb-run-preview-background')");
+must('background cards use framed preview',owner,"rbBackgroundFrameMarkup(item,'rb-bg-preview')");
+
+must('client default background framing',index,'fitMode: &quot;cover&quot;, zoom: 1, positionX: 0.5, positionY: 0.5');
+must('client background fit normalization',index,'fitMode: String(backgroundRaw.fitMode || &quot;cover&quot;).toLowerCase() === &quot;contain&quot; ? &quot;contain&quot; : &quot;cover&quot;');
+must('client background zoom normalization',index,'zoom: Math.max(1, Math.min(2, Number(backgroundRaw.zoom) || 1))');
+must('runtime background frame key',index,'const frameKey = `${fitMode}:${zoom.toFixed(3)}:${positionX.toFixed(3)}:${positionY.toFixed(3)}');
+must('runtime supports contain background',index,'const baseScale = fitMode === &quot;contain&quot;');
+must('runtime applies background zoom',index,'const scale = baseScale * zoom;');
+must('runtime applies background x position',index,'const dx = (w - dw) * positionX;');
+must('runtime applies background y position',index,'const dy = (h - dh) * positionY;');
+
 const failed=checks.filter(x=>!x.ok);
 for(const item of checks)console.log(`${item.ok?'PASS':'FAIL'}  ${item.name}`);
 if(failed.length){console.error(`\nRunner Builder check failed: ${failed.length}/${checks.length}`);for(const item of failed)console.error(`- ${item.name}: ${item.detail}`);process.exit(1);}
