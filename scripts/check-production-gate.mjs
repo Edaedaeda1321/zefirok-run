@@ -65,6 +65,7 @@ const steps = [
   // Protect the exact regression that previously made rating/profile reads hang:
   // public leaderboard reads must remain read-only and first paint must stay lazy.
   ['rating fast reads', 'node', ['scripts/check-rating-fast-read.mjs']],
+  ['case opening stability', 'node', ['scripts/check-case-stability.mjs']],
   ['migration history', 'node', ['scripts/check-migrations.mjs']],
   ['schema contract', 'node', ['scripts/check-database-schema.mjs', '--contract-only']],
   ['deploy assets', 'node', ['scripts/check-deploy-assets.mjs']],

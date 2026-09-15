@@ -15846,9 +15846,13 @@ function installProgressInfo(){
       const CASE_API_STATE_PATH = &quot;/api/cases/state&quot;;
       const CASE_API_OPEN_PATH = &quot;/api/cases/open&quot;;
       const CASE_API_OPEN_GRANTED_PATH = &quot;/api/cases/open-granted&quot;;
+      const CASE_API_OPEN_GRANTED_STATUS_PATH = &quot;/api/cases/open-granted/status&quot;;
       const CASE_OPEN_REQUEST_TIMEOUT_MS = 10000;
       const GRANTED_CASE_OPEN_REQUEST_TIMEOUT_MS = 8000;
-      const GRANTED_CASE_OPEN_UI_DEADLINE_MS = 18000;
+      const GRANTED_CASE_STATUS_REQUEST_TIMEOUT_MS = 6500;
+      const GRANTED_CASE_OPEN_UI_DEADLINE_MS = 70000;
+      const GRANTED_CASE_PENDING_STORE_KEY = &quot;zefirok-granted-case-ops-v2&quot;;
+      const GRANTED_CASE_PENDING_TTL_MS = 15 * 60 * 1000;
       const CASE_API_PURCHASE_PATH = &quot;/api/cases/purchase&quot;;
       const CASE_API_ACTIVATE_PATH = &quot;/api/cases/activate&quot;;
       const CASE_API_EQUIP_PATH = &quot;/api/cases/equip&quot;;
@@ -20327,6 +20331,14 @@ function createTutorialDeck(layer, mount, options, words) {
 
       function applyServerCasePayload(data, openedRewards = null) {
         if (data &amp;&amp; typeof data === &quot;object&quot;) caseStateLastSyncAt = Date.now();
+        if (Array.isArray(data?.giftedCaseOpenings)) {
+          for (const opening of data.giftedCaseOpenings) {
+            const type = caseExperienceNormalizeType(opening?.caseType || &quot;&quot;);
+            const requestId = String(opening?.requestId || &quot;&quot;).trim();
+            const startedAt = Math.max(0, Number(opening?.startedAt || 0));
+            if (type &amp;&amp; requestId) rememberGrantedCasePendingRequest(type, requestId, startedAt &gt; 0 ? startedAt * 1000 : Date.now());
+          }
+        }
         if (Array.isArray(data?.openedCases)) {
           caseLevelOpeningResults.clear();
           for (const entry of data.openedCases) {
@@ -20365,6 +20377,22 @@ function createTutorialDeck(layer, mount, options, words) {
           }
           if (data.giftedCases &amp;&amp; typeof data.giftedCases === &quot;object&quot;) {
             state.caseGiftedCases = normalizeGiftedCases(data.giftedCases);
+            // A server-side opening is still the same unopened case from the player&#x27;s
+            // point of view. New clients keep it visible as &quot;check opening&quot; without
+            // changing the authoritative pending count returned for legacy clients.
+            const openingCounts = {};
+            for (const opening of Array.isArray(data?.giftedCaseOpenings) ? data.giftedCaseOpenings : []) {
+              const type = caseExperienceNormalizeType(opening?.caseType || &quot;&quot;);
+              if (Object.prototype.hasOwnProperty.call(state.caseGiftedCases, type)) openingCounts[type] = Number(openingCounts[type] || 0) + 1;
+            }
+            // A locally remembered operation may already be committed and therefore
+            // absent from giftedCaseOpenings. Keep exactly one recovery card visible
+            // only when there is no authoritative pending/active case of that type.
+            for (const [type, requestId] of grantedCasePendingRequests.entries()) {
+              if (!requestId || Number(openingCounts[type] || 0) &gt; 0) continue;
+              if (Object.prototype.hasOwnProperty.call(state.caseGiftedCases, type) &amp;&amp; Number(state.caseGiftedCases[type] || 0) &lt;= 0) openingCounts[type] = 1;
+            }
+            for (const [type, count] of Object.entries(openingCounts)) state.caseGiftedCases[type] = Math.max(0, Number(state.caseGiftedCases[type] || 0) + count);
           } else if (data?.caseDelta?.giftedCaseType &amp;&amp; Number(data?.caseDelta?.giftedCaseDelta || 0)) {
             const giftedType = String(data.caseDelta.giftedCaseType || &quot;&quot;);
             const currentGifted = normalizeGiftedCases(state.caseGiftedCases);
@@ -20983,13 +21011,62 @@ function createTutorialDeck(layer, mount, options, words) {
           return;
         }
         if (retry.kind === &quot;gifted&quot;) {
-          if (retry.requestId) grantedCasePendingRequests.set(retry.caseType, retry.requestId);
+          if (retry.requestId) rememberGrantedCasePendingRequest(retry.caseType, retry.requestId, retry.startedAt);
           caseOpeningRetryContext = retry;
           void openGiftedCaseClient(retry.caseType, null);
         }
       }
 
       const grantedCasePendingRequests = new Map();
+      const grantedCasePendingStartedAt = new Map();
+
+      function persistGrantedCasePendingRequests() {
+        try {
+          const now = Date.now();
+          const rows = [...grantedCasePendingRequests.entries()]
+            .map(([caseType, requestId]) =&gt; ({ caseType, requestId:String(requestId || &quot;&quot;), startedAt:Number(grantedCasePendingStartedAt.get(caseType) || now) }))
+            .filter((row) =&gt; row.caseType &amp;&amp; row.requestId &amp;&amp; now - row.startedAt &lt; GRANTED_CASE_PENDING_TTL_MS);
+          if (rows.length) localStorage.setItem(GRANTED_CASE_PENDING_STORE_KEY, JSON.stringify(rows));
+          else localStorage.removeItem(GRANTED_CASE_PENDING_STORE_KEY);
+        } catch {}
+      }
+
+      function rememberGrantedCasePendingRequest(caseType, requestId, startedAt = Date.now()) {
+        const type = caseExperienceNormalizeType(caseType);
+        const token = String(requestId || &quot;&quot;).trim();
+        if (!type || !token) return;
+        grantedCasePendingRequests.set(type, token);
+        grantedCasePendingStartedAt.set(type, Math.max(1, Number(startedAt || Date.now())));
+        persistGrantedCasePendingRequests();
+      }
+
+      function forgetGrantedCasePendingRequest(caseType, requestId = &quot;&quot;) {
+        const type = caseExperienceNormalizeType(caseType);
+        const current = String(grantedCasePendingRequests.get(type) || &quot;&quot;);
+        if (requestId &amp;&amp; current &amp;&amp; current !== String(requestId)) return;
+        grantedCasePendingRequests.delete(type);
+        grantedCasePendingStartedAt.delete(type);
+        persistGrantedCasePendingRequests();
+      }
+
+      function restoreGrantedCasePendingRequests() {
+        try {
+          const now = Date.now();
+          const rows = JSON.parse(localStorage.getItem(GRANTED_CASE_PENDING_STORE_KEY) || &quot;[]&quot;);
+          if (!Array.isArray(rows)) return;
+          for (const row of rows) {
+            const type = caseExperienceNormalizeType(row?.caseType || &quot;&quot;);
+            const requestId = String(row?.requestId || &quot;&quot;).trim();
+            const startedAt = Number(row?.startedAt || 0);
+            if (type &amp;&amp; requestId &amp;&amp; startedAt &gt; 0 &amp;&amp; now - startedAt &lt; GRANTED_CASE_PENDING_TTL_MS) {
+              grantedCasePendingRequests.set(type, requestId);
+              grantedCasePendingStartedAt.set(type, startedAt);
+            }
+          }
+          persistGrantedCasePendingRequests();
+        } catch {}
+      }
+      restoreGrantedCasePendingRequests();
 
       function grantedCaseRequestId(caseType) {
         const suffix = (globalThis.crypto?.randomUUID?.() || `${Date.now().toString(36)}_${Math.random().toString(36).slice(2)}`).replace(/[^A-Za-z0-9_-]/g, &quot;&quot;);
@@ -21005,23 +21082,46 @@ function createTutorialDeck(layer, mount, options, words) {
 
       async function waitForGrantedCaseResult(caseType, requestId, deadline, firstError = null) {
         let lastError = firstError;
+        let resumeAttempted = false;
         while (Date.now() &lt; deadline) {
-          const beforeSleep = deadline - Date.now();
-          if (beforeSleep &lt;= 0) break;
-          await new Promise((resolve) =&gt; window.setTimeout(resolve, Math.min(900, Math.max(250, beforeSleep))));
           const remaining = deadline - Date.now();
           if (remaining &lt;= 0) break;
           try {
-            const data = await caseApiRequest(
-              CASE_API_OPEN_GRANTED_PATH,
+            const status = await caseApiRequest(
+              CASE_API_OPEN_GRANTED_STATUS_PATH,
               { caseType: String(caseType || &quot;&quot;), requestId },
-              Math.max(1000, Math.min(4500, remaining))
+              Math.max(1000, Math.min(GRANTED_CASE_STATUS_REQUEST_TIMEOUT_MS, remaining))
             );
-            if (data?.pending) continue;
-            return data;
+            if (status?.opened &amp;&amp; !status?.pending) {
+              // Clear the local recovery marker before refreshing the authoritative
+              // inventory, otherwise the temporary recovery card could survive one render.
+              forgetGrantedCasePendingRequest(caseType, requestId);
+              try { await loadCaseStateForOpeningRecovery(); } catch {}
+              return status;
+            }
+            if ((status?.missing || status?.stale || status?.state === &quot;pending&quot;) &amp;&amp; !resumeAttempted) {
+              resumeAttempted = true;
+              try {
+                const resumed = await caseApiRequest(
+                  CASE_API_OPEN_GRANTED_PATH,
+                  { caseType: String(caseType || &quot;&quot;), requestId, resume: true },
+                  Math.max(1000, Math.min(GRANTED_CASE_OPEN_REQUEST_TIMEOUT_MS, remaining))
+                );
+                if (!resumed?.pending) return resumed;
+              } catch (error) {
+                lastError = error;
+                if (isCasesTemporarilyUnavailableError(error) || !isGrantedCaseRetryableError(error)) throw error;
+              }
+            }
+            const beforeSleep = deadline - Date.now();
+            if (beforeSleep &lt;= 0) break;
+            await new Promise((resolve) =&gt; window.setTimeout(resolve, Math.max(300, Math.min(1100, Number(status?.retryAfterMs || 750), beforeSleep))));
           } catch (error) {
             lastError = error;
             if (isCasesTemporarilyUnavailableError(error) || !isGrantedCaseRetryableError(error)) throw error;
+            const beforeSleep = deadline - Date.now();
+            if (beforeSleep &lt;= 0) break;
+            await new Promise((resolve) =&gt; window.setTimeout(resolve, Math.min(900, beforeSleep)));
           }
         }
         const timeoutError = lastError || new Error(&quot;Сервер всё ещё завершает открытие. Награда не потеряется — повторная проверка продолжит эту же операцию.&quot;);
@@ -21033,30 +21133,37 @@ function createTutorialDeck(layer, mount, options, words) {
       async function openGiftedCaseClient(caseType, button) {
         const type = caseExperienceNormalizeType(caseType);
         const matchingRetryContext = caseOpeningRetryContext?.kind === &quot;gifted&quot; &amp;&amp; caseExperienceNormalizeType(caseOpeningRetryContext?.caseType || &quot;&quot;) === type ? caseOpeningRetryContext : null;
-        const requestId = grantedCasePendingRequests.get(type) || matchingRetryContext?.requestId || grantedCaseRequestId(type);
-        grantedCasePendingRequests.set(type, requestId);
+        const storedRequestId = String(grantedCasePendingRequests.get(type) || &quot;&quot;);
+        const requestId = storedRequestId || matchingRetryContext?.requestId || grantedCaseRequestId(type);
+        const existingOperation = Boolean(storedRequestId || matchingRetryContext?.requestId);
+        const startedAt = Number(matchingRetryContext?.startedAt || grantedCasePendingStartedAt.get(type) || Date.now());
+        rememberGrantedCasePendingRequest(type, requestId, startedAt);
         const previousContext = matchingRetryContext?.requestId === requestId ? matchingRetryContext : null;
         caseOpeningRetryContext = {
           kind: &quot;gifted&quot;,
           caseType: type,
           requestId,
-          startedAt: Number(previousContext?.startedAt || Date.now()),
+          startedAt,
           baselineRecentKeys: Array.isArray(previousContext?.baselineRecentKeys) ? previousContext.baselineRecentKeys : [...caseExperienceRecentKeys()]
         };
-        if (button) { button.disabled = true; button.textContent = previousContext ? &quot;Проверяем…&quot; : &quot;Открываем…&quot;; }
+        if (button) { button.disabled = true; button.textContent = existingOperation ? &quot;Проверяем…&quot; : &quot;Открываем…&quot;; }
         const deadline = Date.now() + GRANTED_CASE_OPEN_UI_DEADLINE_MS;
         showCaseOpeningPreview(type);
         try {
           let data;
-          try {
-            data = await caseApiRequest(CASE_API_OPEN_GRANTED_PATH, { caseType: type, requestId }, GRANTED_CASE_OPEN_REQUEST_TIMEOUT_MS);
-          } catch (error) {
-            const status = Number(error?.status || 0);
-            if (!isCasesTemporarilyUnavailableError(error) &amp;&amp; (error?.timeout || status &gt;= 500 || !status)) data = await waitForGrantedCaseResult(type, requestId, deadline, error);
-            else throw error;
+          if (existingOperation) {
+            data = await waitForGrantedCaseResult(type, requestId, deadline);
+          } else {
+            try {
+              data = await caseApiRequest(CASE_API_OPEN_GRANTED_PATH, { caseType: type, requestId }, GRANTED_CASE_OPEN_REQUEST_TIMEOUT_MS);
+            } catch (error) {
+              const status = Number(error?.status || 0);
+              if (!isCasesTemporarilyUnavailableError(error) &amp;&amp; (error?.timeout || status &gt;= 500 || !status)) data = await waitForGrantedCaseResult(type, requestId, deadline, error);
+              else throw error;
+            }
+            if (data?.pending) data = await waitForGrantedCaseResult(type, requestId, deadline);
           }
-          if (data?.pending) data = await waitForGrantedCaseResult(type, requestId, deadline);
-          grantedCasePendingRequests.delete(type);
+          forgetGrantedCasePendingRequest(type, requestId);
           const rewards = Array.isArray(data.opened?.rewards) ? data.opened.rewards : [];
           applyServerCasePayload(data, rewards);
           showCaseResult(data.opened);
@@ -21066,7 +21173,7 @@ function createTutorialDeck(layer, mount, options, words) {
           const unavailable = isCasesTemporarilyUnavailableError(error);
           const retryable = unavailable || isGrantedCaseRetryableError(error);
           if (unavailable) {
-            if (grantedCasePendingRequests.get(type) === requestId) grantedCasePendingRequests.delete(type);
+            forgetGrantedCasePendingRequest(type, requestId);
             hapticNotify(&quot;error&quot;);
             showCasesUnavailableState(type, error);
           } else {
@@ -21074,10 +21181,10 @@ function createTutorialDeck(layer, mount, options, words) {
             const synced = await loadCaseStateForOpeningRecovery();
             const recovered = synced ? caseExperienceFindRecoveredOpening(caseOpeningRetryContext) : null;
             if (recovered) {
-              grantedCasePendingRequests.delete(type);
+              forgetGrantedCasePendingRequest(type, requestId);
               showCaseResult(recovered, { recovered:true });
             } else {
-              if (!retryable &amp;&amp; grantedCasePendingRequests.get(type) === requestId) grantedCasePendingRequests.delete(type);
+              if (!retryable) forgetGrantedCasePendingRequest(type, requestId);
               hapticNotify(&quot;error&quot;);
               showCaseOpenErrorState(type, error, retryable);
             }
