@@ -56,6 +56,19 @@ must('runner mobile begins below telegram chrome',owner,'.rb-editor-layer{displa
 must('runner mobile bounded by app viewport',owner,'height:calc(var(--app-h) - var(--cc32-sheet-top-gap));max-height:calc(var(--app-h) - var(--cc32-sheet-top-gap))');
 must('runner mobile footer respects safe area',owner,'padding:0 10px calc(10px + var(--safe-bottom))');
 mustNot('runner builder has no undefined panel background',owner,'background:var(--panel)');
+must('production active scene source',owner,'function rbProductionActiveScene()');
+must('production now banner',owner,'🟢 PRODUCTION СЕЙЧАС');
+must('production obstacle status resolver',owner,'function rbObstacleProductionStatus(id)');
+must('active obstacle badge',owner,"label:'Сейчас в забеге'");
+must('obstacle active filter',owner,'data-rb-obstacle-filter="active"');
+must('unused obstacle status',owner,"label:'Не используется'");
+must('active scene badge',owner,"label:'Сейчас у игроков'");
+must('active group status',owner,"label:'Сейчас используется'");
+must('active cards highlighted',owner,'.rb-card.is-live');
+must('pouf exact preview',owner,"pouf:'/assets/runner-builder/previews/pouf.webp'");
+must('stool exact preview',owner,"stool:'/assets/runner-builder/previews/stool.webp'");
+must('table exact preview',owner,"tablePink:'/assets/runner-builder/previews/tablePink.webp'");
+for(const file of ['pouf.webp','stool.webp','tablePink.webp'])checks.push({name:`builtin preview asset ${file}`,ok:fs.existsSync(new URL(`../assets/runner-builder/previews/${file}`,import.meta.url)),detail:file});
 must('production save API',owner,"api('/api/owner/runner-builder/save'");
 
 must('client legacy scene fallback',index,'const LEGACY_RUNNER_SCENE = Object.freeze');
