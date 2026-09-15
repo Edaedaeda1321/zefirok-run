@@ -1,0 +1,74 @@
+import fs from 'node:fs';
+
+const worker=fs.readFileSync(new URL('../src/worker.js',import.meta.url),'utf8');
+const owner=fs.readFileSync(new URL('../owner.html',import.meta.url),'utf8');
+const index=fs.readFileSync(new URL('../index.html',import.meta.url),'utf8');
+const checks=[];
+const must=(name,haystack,needle)=>checks.push({name,ok:haystack.includes(needle),detail:needle});
+const mustNot=(name,haystack,needle)=>checks.push({name,ok:!haystack.includes(needle),detail:`must not contain ${needle}`});
+
+must('server state key',worker,'RUNNER_BUILDER_STATE_KEY = "runner:scene-builder:v1"');
+must('legacy catalog defaults',worker,'function runnerBuilderDefaultConfig()');
+must('normalized hitboxes',worker,'function runnerBuilderNormalizeHitbox(value)');
+must('max three hitboxes',worker,'.slice(0,3).map(runnerBuilderNormalizeHitbox)');
+must('scene pool resolver',worker,'function runnerBuilderScenePool(config,scene)');
+must('background road toggle normalized',worker,'roadEnabled=runnerBuilderBool(item?.roadEnabled,true)');
+must('public scene road toggle',worker,'roadEnabled:background.roadEnabled!==false');
+must('empty active scene validation',worker,'нет ни одного активного препятствия');
+must('season binding public resolver',worker,'function runnerBuilderResolvePublicScene(configInput,seasonId="")');
+must('active season only',worker,"manual_status!='ended' AND starts_at<=? AND ends_at>?");
+must('public config includes runner scene',worker,'runnerScene\n    };');
+must('public config reader',worker,'readRunnerScenePublicConfig(env)');
+must('owner read endpoint target',worker,'"/api/owner/runner-builder": "read"');
+must('owner save endpoint target',worker,'"/api/owner/runner-builder/save": "live"');
+must('owner read endpoint route',worker,'ownerPanelRunnerBuilder(env, ctx)');
+must('owner save endpoint route',worker,'ownerPanelRunnerBuilderSave(env, ctx)');
+must('revision conflict guard',worker,'Конструктор забега уже изменён в другой вкладке');
+must('cache invalidation',worker,'invalidateRunnerBuilderConfigCache()');
+must('test project future season override',worker,'testPublicConfig.runnerScene=runnerBuilderResolvePublicScene');
+
+must('content nav entry',owner,"['runnerbuilder','Конструктор забега']");
+must('runner view',owner,'id="view-runnerbuilder"');
+must('four builder tabs',owner,'data-rb-tab="scenes"');
+must('obstacles tab',owner,'data-rb-tab="obstacles"');
+must('groups tab',owner,'data-rb-tab="groups"');
+must('backgrounds tab',owner,'data-rb-tab="backgrounds"');
+must('road layer toggle UI',owner,'id="rbRoadEnabled"');
+must('alpha collision proposal',owner,'function rbAutoHitboxFromImage()');
+must('collision alpha button',owner,'id="rbHitboxAuto"');
+must('collision editor follows obstacle aspect',owner,'stage.style.aspectRatio=`${logicalW}/${logicalH}`');
+must('custom collision preview bottom aligned',owner,"img.style.objectPosition=customPath?'center bottom':'center center'");
+must('auto collision respects custom contain',owner,'if(customPath){const fit=Math.min(logicalW/image.naturalWidth,logicalH/image.naturalHeight)');
+must('collision stage',owner,'id="rbCollisionStage"');
+must('collision drag',owner,'function bindRbHitboxDrag');
+must('up to 3 hitboxes UI',owner,'draft.hitboxes.length>=3');
+must('group delete copy safety',owner,'Сами препятствия и их картинки останутся в библиотеке');
+must('scene duplicate',owner,'function duplicateRbScene');
+must('group duplicate',owner,'function duplicateRbGroup');
+must('all obstacles mode',owner,'id="rbSceneAll"');
+must('season binding UI',owner,'data-rb-season-binding');
+must('season control card',owner,'id="passRunnerSceneCard"');
+must('asset picker runner support',owner,"const runnerVisual=String(targetId||'').startsWith('rb')");
+must('production save API',owner,"api('/api/owner/runner-builder/save'");
+
+must('client legacy scene fallback',index,'const LEGACY_RUNNER_SCENE = Object.freeze');
+must('client runner normalization',index,'function normalizeRunnerSceneClient(raw)');
+must('client startup applies scene',index,'applyRemoteRunnerScene(publicConfig.runnerScene);');
+must('client weighted obstacle chooser',index,'function chooseRunnerObstacleDefinition()');
+must('spawn uses runtime catalog',index,'const definition = chooseRunnerObstacleDefinition();');
+must('spawn stores obstacle id',index,'obstacleId: definition.id');
+must('explicit hitbox resolver',index,'function obstacleHitboxes(item)');
+must('collision iterates configured boxes',index,'for (const factors of obstacleHitboxes(item))');
+mustNot('old hardcoded hitbox factors removed',index,'function obstaclePrimaryHitboxFactors(type)');
+mustNot('old hardcoded spawn random removed',index,'const type = roll &lt; 0.3 ? &quot;pouf&quot;');
+must('dynamic background image',index,'function runnerSceneBackgroundImage()');
+must('dynamic road image',index,'function runnerSceneRoadImage()');
+must('road can be disabled',index,'if (background.roadEnabled === false) return null;');
+must('foreground follows current road',index,'const currentRoad = runnerSceneRoadImage();');
+must('disabled road skips procedural fallback',index,'if (runnerBackground.roadEnabled === false) return;');
+must('dynamic obstacle path',index,'const image = runnerSceneImage(assetKey, assetPath);');
+
+const failed=checks.filter(x=>!x.ok);
+for(const item of checks)console.log(`${item.ok?'PASS':'FAIL'}  ${item.name}`);
+if(failed.length){console.error(`\nRunner Builder check failed: ${failed.length}/${checks.length}`);for(const item of failed)console.error(`- ${item.name}: ${item.detail}`);process.exit(1);}
+console.log(`\nRunner Builder check PASS: ${checks.length} invariants.`);

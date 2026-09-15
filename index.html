@@ -14664,6 +14664,131 @@ function installProgressInfo(){
       syncDogAvatar();
       let gameplayStateReady = false;
       const assets = {};
+      const LEGACY_RUNNER_SCENE = Object.freeze({
+        version: 1,
+        revision: 1,
+        sceneId: &quot;cafe-default&quot;,
+        title: &quot;Кафе · основной&quot;,
+        seasonId: &quot;&quot;,
+        background: Object.freeze({ id: &quot;cafe&quot;, title: &quot;Кафе&quot;, assetKey: &quot;cafeBackground&quot;, assetPath: &quot;&quot;, roadEnabled: true, roadAssetKey: &quot;roadStrip&quot;, roadAssetPath: &quot;&quot; }),
+        obstacles: Object.freeze([
+          Object.freeze({ id: &quot;pouf&quot;, title: &quot;Пуф&quot;, assetKey: &quot;pouf&quot;, assetPath: &quot;&quot;, width: 58, height: 40, shadow: true, weight: 30, hitboxes: Object.freeze([{ x: 0.16, y: 0.62, w: 0.68, h: 0.28 }]) }),
+          Object.freeze({ id: &quot;stool&quot;, title: &quot;Стул&quot;, assetKey: &quot;stool&quot;, assetPath: &quot;&quot;, width: 42, height: 42, shadow: true, weight: 22, hitboxes: Object.freeze([{ x: 0.2, y: 0.6, w: 0.6, h: 0.28 }]) }),
+          Object.freeze({ id: &quot;table&quot;, title: &quot;Стол&quot;, assetKey: &quot;tablePink&quot;, assetPath: &quot;&quot;, width: 50, height: 48, shadow: true, weight: 18, hitboxes: Object.freeze([{ x: 0.18, y: 0.66, w: 0.64, h: 0.24 }]) }),
+          Object.freeze({ id: &quot;pillow&quot;, title: &quot;Подушка&quot;, assetKey: &quot;pillowObstacle&quot;, assetPath: &quot;&quot;, width: 72, height: 35, shadow: true, weight: 16, hitboxes: Object.freeze([{ x: 0.08, y: 0.55, w: 0.84, h: 0.33 }]) }),
+          Object.freeze({ id: &quot;vase&quot;, title: &quot;Ваза&quot;, assetKey: &quot;vaseObstacle&quot;, assetPath: &quot;&quot;, width: 42, height: 64, shadow: true, weight: 14, hitboxes: Object.freeze([{ x: 0.2, y: 0.42, w: 0.6, h: 0.48 }]) })
+        ])
+      });
+      const runnerDynamicImages = new Map();
+      let remoteRunnerScene = LEGACY_RUNNER_SCENE;
+
+      function normalizeRunnerHitboxClient(value) {
+        const row = value &amp;&amp; typeof value === &quot;object&quot; ? value : {};
+        let x = Math.max(0, Math.min(1, Number(row.x) || 0));
+        let y = Math.max(0, Math.min(1, Number(row.y) || 0));
+        let w = Math.max(0.02, Math.min(1, Number(row.w) || 0.6));
+        let h = Math.max(0.02, Math.min(1, Number(row.h) || 0.28));
+        if (x + w &gt; 1) w = Math.max(0.02, 1 - x);
+        if (y + h &gt; 1) h = Math.max(0.02, 1 - y);
+        return { x, y, w, h };
+      }
+
+      function normalizeRunnerSceneClient(raw) {
+        if (!raw || typeof raw !== &quot;object&quot;) return LEGACY_RUNNER_SCENE;
+        const backgroundRaw = raw.background &amp;&amp; typeof raw.background === &quot;object&quot; ? raw.background : {};
+        const obstacles = (Array.isArray(raw.obstacles) ? raw.obstacles : []).slice(0, 80).map((item) =&gt; ({
+          id: String(item?.id || &quot;&quot;).trim(),
+          title: String(item?.title || item?.id || &quot;Препятствие&quot;).trim(),
+          assetKey: String(item?.assetKey || &quot;&quot;).trim(),
+          assetPath: String(item?.assetPath || &quot;&quot;).trim(),
+          width: Math.max(18, Math.min(220, Number(item?.width) || 48)),
+          height: Math.max(18, Math.min(220, Number(item?.height) || 48)),
+          shadow: item?.shadow !== false,
+          weight: Math.max(0.01, Number(item?.weight) || 1),
+          hitboxes: (Array.isArray(item?.hitboxes) ? item.hitboxes : []).slice(0, 3).map(normalizeRunnerHitboxClient)
+        })).filter((item) =&gt; item.id &amp;&amp; item.hitboxes.length);
+        if (!obstacles.length) return LEGACY_RUNNER_SCENE;
+        return {
+          version: Math.max(1, Number(raw.version) || 1),
+          revision: Math.max(1, Number(raw.revision) || 1),
+          sceneId: String(raw.sceneId || &quot;runtime-scene&quot;),
+          title: String(raw.title || &quot;Сцена забега&quot;),
+          seasonId: String(raw.seasonId || &quot;&quot;),
+          background: {
+            id: String(backgroundRaw.id || &quot;runtime-background&quot;),
+            title: String(backgroundRaw.title || &quot;Фон&quot;),
+            assetKey: String(backgroundRaw.assetKey || &quot;cafeBackground&quot;),
+            assetPath: String(backgroundRaw.assetPath || &quot;&quot;),
+            roadEnabled: backgroundRaw.roadEnabled !== false,
+            roadAssetKey: String(backgroundRaw.roadAssetKey || &quot;roadStrip&quot;),
+            roadAssetPath: String(backgroundRaw.roadAssetPath || &quot;&quot;)
+          },
+          obstacles
+        };
+      }
+
+      function ensureRunnerDynamicImage(path) {
+        const src = String(path || &quot;&quot;).trim();
+        if (!src) return null;
+        if (runnerDynamicImages.has(src)) return runnerDynamicImages.get(src);
+        const image = installDetachedAssetFallback(new Image());
+        image.decoding = &quot;async&quot;;
+        image.addEventListener(&quot;load&quot;, () =&gt; {
+          invalidateGameRenderCaches();
+          if (typeof draw === &quot;function&quot;) requestAnimationFrame(() =&gt; draw());
+        });
+        image.src = src;
+        runnerDynamicImages.set(src, image);
+        return image;
+      }
+
+      function runnerSceneImage(assetKey, assetPath) {
+        const path = String(assetPath || &quot;&quot;).trim();
+        if (path) return ensureRunnerDynamicImage(path);
+        const key = String(assetKey || &quot;&quot;).trim();
+        return key ? assets[key] || null : null;
+      }
+
+      function applyRemoteRunnerScene(raw) {
+        remoteRunnerScene = normalizeRunnerSceneClient(raw);
+        const background = remoteRunnerScene.background || {};
+        if (background.assetPath) ensureRunnerDynamicImage(background.assetPath);
+        if (background.roadEnabled !== false &amp;&amp; background.roadAssetPath) ensureRunnerDynamicImage(background.roadAssetPath);
+        for (const obstacle of remoteRunnerScene.obstacles || []) if (obstacle.assetPath) ensureRunnerDynamicImage(obstacle.assetPath);
+        invalidateGameRenderCaches();
+      }
+
+      function runnerSceneBackgroundImage() {
+        const background = remoteRunnerScene?.background || LEGACY_RUNNER_SCENE.background;
+        return runnerSceneImage(background.assetKey || &quot;cafeBackground&quot;, background.assetPath || &quot;&quot;);
+      }
+
+      function runnerSceneRoadImage() {
+        const background = remoteRunnerScene?.background || LEGACY_RUNNER_SCENE.background;
+        if (background.roadEnabled === false) return null;
+        return runnerSceneImage(background.roadAssetKey || &quot;roadStrip&quot;, background.roadAssetPath || &quot;&quot;);
+      }
+
+      function runnerObstacleDefinition(item) {
+        const id = String(item?.obstacleId || item?.type || &quot;&quot;);
+        return (remoteRunnerScene?.obstacles || []).find((entry) =&gt; entry.id === id)
+          || LEGACY_RUNNER_SCENE.obstacles.find((entry) =&gt; entry.id === id)
+          || null;
+      }
+
+      function chooseRunnerObstacleDefinition() {
+        const pool = (remoteRunnerScene?.obstacles || []).filter((entry) =&gt; Number(entry.weight || 0) &gt; 0);
+        const source = pool.length ? pool : LEGACY_RUNNER_SCENE.obstacles;
+        const total = source.reduce((sum, entry) =&gt; sum + Math.max(0, Number(entry.weight || 0)), 0);
+        if (total &lt;= 0) return source[0] || null;
+        let roll = Math.random() * total;
+        for (const entry of source) {
+          roll -= Math.max(0, Number(entry.weight || 0));
+          if (roll &lt;= 0) return entry;
+        }
+        return source[source.length - 1] || null;
+      }
+
       // Загружаем в canvas только изображения, которые действительно рисуются в забеге.
       // Остальные UI-изображения остаются в assetSources и загружаются своими &lt;img&gt;
       // только тогда, когда соответствующий экран реально используется.
@@ -25453,6 +25578,7 @@ function createTutorialDeck(layer, mount, options, words) {
 
           const publicConfig = data.publicConfig || {};
           applyRemoteGameplayConfig(publicConfig.gameplay);
+          applyRemoteRunnerScene(publicConfig.runnerScene);
           const nextFeatureFlags = data.flags || {};
           window.__ZEFIROK_FEATURE_FLAGS__ = nextFeatureFlags;
           try { window.dispatchEvent(new CustomEvent(&quot;zefirok-feature-flags&quot;, { detail: nextFeatureFlags })); } catch (error) {}
@@ -27217,24 +27343,20 @@ function createTutorialDeck(layer, mount, options, words) {
         return Math.max(0.25, runtimeGameplayConfig.pickupDelayBase) + Math.random() * Math.max(0.12, randomWindow);
       }
 
-      function spawnObstacle() {
-        const roll = Math.random();
-        const type = roll &lt; 0.3 ? &quot;pouf&quot; : roll &lt; 0.52 ? &quot;stool&quot; : roll &lt; 0.7 ? &quot;table&quot; : roll &lt; 0.86 ? &quot;pillow&quot; : &quot;vase&quot;;
-        const sizes = {
-          pouf: [58, 40],
-          stool: [42, 42],
-          table: [50, 48],
-          pillow: [72, 35],
-          vase: [42, 64]
-        };
-        const size = sizes[type];
+            function spawnObstacle() {
+        const definition = chooseRunnerObstacleDefinition();
+        if (!definition) return;
+        const width = Math.max(18, Number(definition.width) || 48);
+        const height = Math.max(18, Number(definition.height) || 48);
+        const startX = canvasViewWidth + 36;
         state.obstacles.push({
-          type,
-          x: canvasViewWidth + 36,
-          previousX: canvasViewWidth + 36,
-          y: ground.y - size[1],
-          w: size[0],
-          h: size[1]
+          type: definition.id,
+          obstacleId: definition.id,
+          x: startX,
+          previousX: startX,
+          y: ground.y - height,
+          w: width,
+          h: height
         });
       }
 
@@ -27275,68 +27397,29 @@ function createTutorialDeck(layer, mount, options, words) {
         return ax &lt; bx + bw &amp;&amp; ax + aw &gt; bx &amp;&amp; ay &lt; by + bh &amp;&amp; ay + ah &gt; by;
       }
 
-      function obstaclePrimaryHitboxFactors(type) {
-        if (type === &quot;pouf&quot;) return [0.16, 0.62, 0.68, 0.28];
-        if (type === &quot;table&quot;) return [0.18, 0.66, 0.64, 0.24];
-        if (type === &quot;pillow&quot;) return [0.08, 0.55, 0.84, 0.33];
-        if (type === &quot;vase&quot;) return [0.2, 0.42, 0.6, 0.48];
-        return [0.2, 0.6, 0.6, 0.28];
+            function obstacleHitboxes(item) {
+        const definition = runnerObstacleDefinition(item);
+        const source = Array.isArray(definition?.hitboxes) &amp;&amp; definition.hitboxes.length
+          ? definition.hitboxes
+          : [{ x: 0.2, y: 0.6, w: 0.6, h: 0.28 }];
+        return source.slice(0, 3);
       }
 
       function collidesWithObstacle(item) {
-        if (!CLIENT_OPT_ALLOCATION_FREE_COLLISIONS) {
-          const factors = obstaclePrimaryHitboxFactors(item.type);
-          const dogBox = !dog.grounded
-            ? { x: dog.x + dog.w * 0.31, y: dog.y + dog.h * 0.76, w: dog.w * 0.4, h: dog.h * 0.12 }
-            : { x: dog.x + dog.w * 0.25, y: dog.y + dog.h * 0.58, w: dog.w * 0.52, h: dog.h * 0.3 };
-          const box = { x: item.x + item.w * factors[0], y: item.y + item.h * factors[1], w: item.w * factors[2], h: item.h * factors[3] };
-          if (!dog.grounded) {
-            const dogPaws = dog.y + dog.h * 0.84;
-            if (dogPaws &lt; item.y + item.h * 0.62) return false;
-            return overlapValues(
-              dog.x + dog.w * 0.42, dog.y + dog.h * 0.82, dog.w * 0.28, dog.h * 0.08,
-              item.x + item.w * 0.16, item.y + item.h * 0.62, item.w * 0.68, item.h * 0.28
-            );
-          }
-          if (overlapValues(dogBox.x, dogBox.y, dogBox.w, dogBox.h, box.x, box.y, box.w, box.h)) return true;
-          return overlapValues(
-            dog.x + dog.w * 0.14, dog.y + dog.h * 0.34, dog.w * 0.68, dog.h * 0.54,
-            item.x + item.w * 0.08, item.y + item.h * 0.22, item.w * 0.84, item.h * 0.72
-          );
+        const dogX = dog.grounded ? dog.x + dog.w * 0.25 : dog.x + dog.w * 0.42;
+        const dogY = dog.grounded ? dog.y + dog.h * 0.58 : dog.y + dog.h * 0.82;
+        const dogW = dog.grounded ? dog.w * 0.52 : dog.w * 0.28;
+        const dogH = dog.grounded ? dog.h * 0.3 : dog.h * 0.08;
+        for (const factors of obstacleHitboxes(item)) {
+          if (overlapValues(
+            dogX, dogY, dogW, dogH,
+            item.x + item.w * factors.x,
+            item.y + item.h * factors.y,
+            item.w * factors.w,
+            item.h * factors.h
+          )) return true;
         }
-
-        if (!dog.grounded) {
-          const dogPaws = dog.y + dog.h * 0.84;
-          if (dogPaws &lt; item.y + item.h * 0.62) return false;
-          return overlapValues(
-            dog.x + dog.w * 0.42, dog.y + dog.h * 0.82, dog.w * 0.28, dog.h * 0.08,
-            item.x + item.w * 0.16, item.y + item.h * 0.62, item.w * 0.68, item.h * 0.28
-          );
-        }
-
-        let hitX = 0.2;
-        let hitY = 0.6;
-        let hitW = 0.6;
-        let hitH = 0.28;
-        if (item.type === &quot;pouf&quot;) {
-          hitX = 0.16; hitY = 0.62; hitW = 0.68; hitH = 0.28;
-        } else if (item.type === &quot;table&quot;) {
-          hitX = 0.18; hitY = 0.66; hitW = 0.64; hitH = 0.24;
-        } else if (item.type === &quot;pillow&quot;) {
-          hitX = 0.08; hitY = 0.55; hitW = 0.84; hitH = 0.33;
-        } else if (item.type === &quot;vase&quot;) {
-          hitX = 0.2; hitY = 0.42; hitW = 0.6; hitH = 0.48;
-        }
-
-        if (overlapValues(
-          dog.x + dog.w * 0.25, dog.y + dog.h * 0.58, dog.w * 0.52, dog.h * 0.3,
-          item.x + item.w * hitX, item.y + item.h * hitY, item.w * hitW, item.h * hitH
-        )) return true;
-
-        return overlapValues(
-          dog.x + dog.w * 0.14, dog.y + dog.h * 0.34, dog.w * 0.68, dog.h * 0.54,
-          item.x + item.w * 0.08, item.y + item.h * 0.22, item.w * 0.84, item.h * 0.72
-        );
+        return false;
       }
 
       function currentVisualParticleLimit() {
@@ -27396,8 +27479,9 @@ function createTutorialDeck(layer, mount, options, words) {
         }
       }
 
-      function staticCafeScene(w, h) {
-        if (!isReady(&quot;cafeBackground&quot;)) return null;
+            function staticCafeScene(w, h) {
+        const img = runnerSceneBackgroundImage();
+        if (!img || !img.complete || !img.naturalWidth) return null;
         const width = Math.max(1, Math.ceil(w * canvasPixelRatio));
         const height = Math.max(1, Math.ceil(h * canvasPixelRatio));
         if (staticCafeSceneCache?.width === width &amp;&amp; staticCafeSceneCache?.height === height) return staticCafeSceneCache.canvas;
@@ -27408,7 +27492,6 @@ function createTutorialDeck(layer, mount, options, words) {
         cacheContext.setTransform(canvasPixelRatio, 0, 0, canvasPixelRatio, 0, 0);
         cacheContext.imageSmoothingEnabled = true;
         try { cacheContext.imageSmoothingQuality = &quot;medium&quot;; } catch (error) {}
-        const img = assets.cafeBackground;
         const scale = Math.max(w / img.naturalWidth, h / img.naturalHeight);
         const dw = img.naturalWidth * scale;
         const dh = img.naturalHeight * scale;
@@ -27513,9 +27596,9 @@ function createTutorialDeck(layer, mount, options, words) {
         return cache;
       }
 
-      function drawRoad(w) {
-        if (!isReady(&quot;roadStrip&quot;)) return false;
-        const img = assets.roadStrip;
+            function drawRoad(w) {
+        const img = runnerSceneRoadImage();
+        if (!img || !img.complete || !img.naturalWidth || !img.naturalHeight) return false;
         if (
           !roadDrawMetricsCache ||
           roadDrawMetricsCache.width !== w ||
@@ -27527,16 +27610,7 @@ function createTutorialDeck(layer, mount, options, words) {
           const sw = Math.max(1, Math.floor(img.naturalWidth * 0.76));
           const roadH = Math.max(58, Math.min(76, w * 0.15));
           const tileW = roadH * (sw / img.naturalHeight);
-          roadDrawMetricsCache = {
-            width: w,
-            pixelRatio: canvasPixelRatio,
-            sourceWidth: img.naturalWidth,
-            sourceHeight: img.naturalHeight,
-            sx,
-            sw,
-            roadH,
-            tileW
-          };
+          roadDrawMetricsCache = { width: w, pixelRatio: canvasPixelRatio, sourceWidth: img.naturalWidth, sourceHeight: img.naturalHeight, sx, sw, roadH, tileW };
           roadTileCache = null;
         }
         const { sx, sw, roadH, tileW } = roadDrawMetricsCache;
@@ -27546,25 +27620,23 @@ function createTutorialDeck(layer, mount, options, words) {
         }
         if (roadTileCache) clientPerformance.roadTileCacheHits += 1;
         const y = ground.y - 8;
-        const renderedDistance = Math.max(0, simulationRenderHorizontal(
-          state.previousVisualDistance,
-          state.visualDistance,
-          Number(state.renderSpeed || state.speed || 0)
-        ));
+        const renderedDistance = Math.max(0, simulationRenderHorizontal(state.previousVisualDistance, state.visualDistance, Number(state.renderSpeed || state.speed || 0)));
         const offset = -((renderedDistance * 0.86) % tileW);
-
         ctx.save();
         ctx.globalAlpha = 0.96;
         for (let x = offset - tileW; x &lt; w + tileW; x += tileW) {
-          if (roadTileCache) ctx.drawImage(roadTileCache, x, y, tileW + 1, roadH);
-          else ctx.drawImage(img, sx, 0, sw, img.naturalHeight, x, y, tileW + 1, roadH);
+          if (roadTileCache) ctx.drawImage(roadTileCache, x, y, tileW, roadH);
+          else ctx.drawImage(img, sx, 0, sw, img.naturalHeight, x, y, tileW, roadH);
         }
         ctx.restore();
         return true;
       }
 
       function drawForeground(w) {
-        if (isReady(&quot;roadStrip&quot;)) return;
+        const runnerBackground = remoteRunnerScene?.background || LEGACY_RUNNER_SCENE.background;
+        if (runnerBackground.roadEnabled === false) return;
+        const currentRoad = runnerSceneRoadImage();
+        if (currentRoad &amp;&amp; currentRoad.complete &amp;&amp; currentRoad.naturalWidth &amp;&amp; currentRoad.naturalHeight) return;
         ctx.strokeStyle = &quot;rgba(214, 163, 132, 0.7)&quot;;
         ctx.lineWidth = 1.5;
         ctx.beginPath();
@@ -27825,32 +27897,30 @@ function createTutorialDeck(layer, mount, options, words) {
         ctx.restore();
       }
 
-      function drawObstacle(item) {
+            function drawObstacle(item) {
         const renderX = simulationRenderHorizontal(item.previousX, item.x, -Number(state.renderSpeed || state.speed || 0));
         const renderY = item.y;
+        const definition = runnerObstacleDefinition(item);
+        const assetKey = String(definition?.assetKey || &quot;&quot;);
+        const assetPath = String(definition?.assetPath || &quot;&quot;);
+        const image = runnerSceneImage(assetKey, assetPath);
         ctx.save();
-        if (isReady(&quot;itemShadow&quot;)) {
-          drawAsset(&quot;itemShadow&quot;, renderX + item.w * 0.02, ground.y - 10, item.w * 0.96, 18, 0.58);
-        } else {
-          ctx.fillStyle = &quot;rgba(82, 60, 45, 0.14)&quot;;
-          ctx.beginPath();
-          ctx.ellipse(renderX + item.w / 2, ground.y + 6, item.w * 0.38, 7, 0, 0, Math.PI * 2);
-          ctx.fill();
+        if (definition?.shadow !== false) {
+          if (isReady(&quot;itemShadow&quot;)) drawAsset(&quot;itemShadow&quot;, renderX + item.w * 0.02, ground.y - 10, item.w * 0.96, 18, 0.58);
+          else {
+            ctx.fillStyle = &quot;rgba(82, 60, 45, 0.14)&quot;;
+            ctx.beginPath();
+            ctx.ellipse(renderX + item.w / 2, ground.y + 6, item.w * 0.38, 7, 0, 0, Math.PI * 2);
+            ctx.fill();
+          }
         }
-        if (item.type === &quot;pouf&quot;) {
-          if (isReady(&quot;pouf&quot;)) drawAsset(&quot;pouf&quot;, renderX, renderY, item.w, item.h);
-          else drawPouf(renderX, renderY, item.w, item.h);
-        } else if (item.type === &quot;table&quot;) {
-          if (isReady(&quot;tablePink&quot;)) drawAsset(&quot;tablePink&quot;, renderX, renderY, item.w, item.h);
-          else drawStool(renderX, renderY, item.w, item.h, 1);
-        } else if (item.type === &quot;pillow&quot;) {
-          if (isReady(&quot;pillowObstacle&quot;)) drawAsset(&quot;pillowObstacle&quot;, renderX, renderY, item.w, item.h);
-          else drawPouf(renderX, renderY, item.w, item.h);
-        } else if (item.type === &quot;vase&quot;) {
-          if (isReady(&quot;vaseObstacle&quot;)) drawAsset(&quot;vaseObstacle&quot;, renderX, renderY, item.w, item.h);
-          else drawFlowers(renderX, renderY, 0.7);
-        } else {
-          if (isReady(&quot;stool&quot;)) drawAsset(&quot;stool&quot;, renderX, renderY, item.w, item.h);
+        let drawn = false;
+        if (assetPath &amp;&amp; image?.complete &amp;&amp; image.naturalWidth) drawn = drawContain(image, renderX, renderY, item.w, item.h, 1, &quot;bottom&quot;);
+        else if (assetKey &amp;&amp; isReady(assetKey)) drawn = drawAsset(assetKey, renderX, renderY, item.w, item.h);
+        if (!drawn) {
+          const id = String(definition?.id || item.obstacleId || item.type || &quot;&quot;);
+          if (id === &quot;pouf&quot; || id === &quot;pillow&quot;) drawPouf(renderX, renderY, item.w, item.h);
+          else if (id === &quot;vase&quot;) drawFlowers(renderX, renderY, 0.7);
           else drawStool(renderX, renderY, item.w, item.h, 1);
         }
         ctx.restore();
