@@ -37785,8 +37785,8 @@ ${leadLine}
 function v77MoscowHour(now){return new Date((Number(now)+3*3600)*1000).getUTCHours();}
 function isTransactionalPlayerNotificationCategory(category){const value=String(category||"");return value==="player_mail"||value.startsWith("player_mail:")||value.startsWith("campaign_mail:");}
 function v77QuietDelaySeconds(policy,now){const start=Number(policy.quiet_start_hour),end=Number(policy.quiet_end_hour),hour=v77MoscowHour(now);const quiet=start===end?false:start<end?(hour>=start&&hour<end):(hour>=start||hour<end);if(!quiet)return 0;let hours=(end-hour+24)%24;if(hours===0)hours=24;return hours*3600+60;}
-async function v77NotificationDecision(env,telegramId,now=Math.floor(Date.now()/1000)){
-  await ensureV77Schema(env);const policy=await env.DB.prepare(`SELECT * FROM player_notification_policy WHERE id=1`).first();if(Number(policy?.paused))return {allowed:false,delay:3600,reason:"paused",policy};const quiet=v77QuietDelaySeconds(policy,now);if(quiet)return {allowed:false,delay:quiet,reason:"quiet",policy};const dayStart=Math.floor((now+3*3600)/V67_DAY)*V67_DAY-3*3600;const count=await env.DB.prepare(`SELECT COUNT(*) AS count,MAX(sent_at) AS last_at FROM player_notification_log WHERE telegram_id=? AND sent_at>=?`).bind(String(telegramId),dayStart).first();if(Number(count?.count||0)>=Number(policy?.max_per_day||3))return {allowed:false,delay:Math.max(900,dayStart+V67_DAY-now),reason:"daily_limit",policy};const gap=Math.max(0,Number(policy?.min_gap_seconds||0));if(count?.last_at&&now-Number(count.last_at)<gap)return {allowed:false,delay:gap-(now-Number(count.last_at))+30,reason:"gap",policy};return {allowed:true,delay:0,reason:"ok",policy};
+async function v77NotificationDecision(env,telegramId,now=Math.floor(Date.now()/1000),options={}){
+  await ensureV77Schema(env);const policy=await env.DB.prepare(`SELECT * FROM player_notification_policy WHERE id=1`).first();if(Number(policy?.paused))return {allowed:false,delay:3600,reason:"paused",policy};const quiet=v77QuietDelaySeconds(policy,now);if(quiet)return {allowed:false,delay:quiet,reason:"quiet",policy};const ignoreFrequencyLimits=Boolean(options?.ignoreFrequencyLimits);if(ignoreFrequencyLimits)return {allowed:true,delay:0,reason:"priority",policy};const dayStart=Math.floor((now+3*3600)/V67_DAY)*V67_DAY-3*3600;const count=await env.DB.prepare(`SELECT COUNT(*) AS count,MAX(sent_at) AS last_at FROM player_notification_log WHERE telegram_id=? AND sent_at>=? AND category NOT LIKE 'rating_dethroned:%'`).bind(String(telegramId),dayStart).first();if(Number(count?.count||0)>=Number(policy?.max_per_day||3))return {allowed:false,delay:Math.max(900,dayStart+V67_DAY-now),reason:"daily_limit",policy};const gap=Math.max(0,Number(policy?.min_gap_seconds||0));if(count?.last_at&&now-Number(count.last_at)<gap)return {allowed:false,delay:gap-(now-Number(count.last_at))+30,reason:"gap",policy};return {allowed:true,delay:0,reason:"ok",policy};
 }
 
 async function v77DeliverPlayerNotification(env,telegramId,chatId,category,messageHtml,replyMarkup={}){
@@ -37810,6 +37810,8 @@ async function processV77NotificationQueue(env,limit=24){
   await ensureV77Schema(env);
   const now=Math.floor(Date.now()/1000);
   const max=Math.max(1,Math.min(60,Number(limit)||24));
+  const legacyDethroneCutoff=now-LEADERBOARD_DETHRONE_DELAY_SECONDS;
+  await env.DB.prepare(`UPDATE player_notification_queue SET available_at=?,updated_at=? WHERE status IN ('pending','failed') AND category LIKE 'rating_dethroned:%' AND last_error='' AND created_at<=? AND available_at>?`).bind(now,now,legacyDethroneCutoff,now).run();
   const rows=(await env.DB.prepare(`SELECT id,telegram_id,chat_id,category,message_html,reply_markup_json,attempts FROM player_notification_queue WHERE status IN ('pending','failed') AND available_at<=? AND attempts<5 AND (lease_until=0 OR lease_until<?) ORDER BY available_at ASC,id ASC LIMIT ?`).bind(now,now,max).all()).results||[];
   let sent=0,failed=0,deferred=0,skipped=0;
   for(const row of rows){
@@ -37841,9 +37843,11 @@ async function processV77NotificationQueue(env,limit=24){
         deliveryReplyMarkup=materialized.replyMarkup||deliveryReplyMarkup;
       }
       const transactional=isTransactionalPlayerNotificationCategory(row.category);
-      const decision=transactional?{allowed:true,delay:0,reason:"transactional"}:await v77NotificationDecision(env,row.telegram_id,claimAt);
+      const ratingDethrone=isLeaderboardDethroneNotificationCategory(row.category);
+      const decision=transactional?{allowed:true,delay:0,reason:"transactional"}:await v77NotificationDecision(env,row.telegram_id,claimAt,{ignoreFrequencyLimits:ratingDethrone});
       if(!decision.allowed){
-        await env.DB.prepare(`UPDATE player_notification_queue SET available_at=?,updated_at=?,lease_token='',lease_until=0 WHERE id=? AND lease_token=?`).bind(claimAt+Math.max(60,decision.delay),claimAt,row.id,token).run();
+        const deferReason=`notification-policy:${String(decision.reason||"deferred")}`;
+        await env.DB.prepare(`UPDATE player_notification_queue SET available_at=?,last_error=?,updated_at=?,lease_token='',lease_until=0 WHERE id=? AND lease_token=?`).bind(claimAt+Math.max(60,decision.delay),deferReason,claimAt,row.id,token).run();
         deferred+=1;continue;
       }
       if(transactional){
