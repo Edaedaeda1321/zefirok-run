@@ -4417,6 +4417,7 @@ async function processCriticalServerQueues(env) {
     ["seasonEndReminders", () => processSeasonEndReminders(env)],
     ["seasonPassLetters", () => processSeasonPassTeaserNotifications(env)],
     ["seasonPassStory", () => processSeasonPassStoryNotifications(env)],
+    ["ratingDethroneRecovery", () => recoverOwnerRatingDethroneNotifications(env, 12)],
     ["playerNotifications", () => processV77NotificationQueue(env, 40)],
     ["seasonStarts", () => processSeasonStartBroadcasts(env)],
     ["broadcast", async () => {
@@ -37747,6 +37748,57 @@ async function queueLeaderboardDethroneNotificationIfNeeded(env,{seasonId,previo
   return {queued:true,queueId:Number(result.meta?.last_row_id||0),updated:false};
 }
 
+async function recoverOwnerRatingDethroneNotifications(env,limit=12){
+  await ensureV77Schema(env);
+  const now=Math.floor(Date.now()/1000),max=Math.max(1,Math.min(30,Number(limit)||12));
+  let rows=[];
+  try{
+    // Owner grants are low-volume, but this runs every minute. Read only the newest
+    // receipts by rowid instead of scanning historical JSON without a created_at index.
+    const result=await env.DB.prepare(`SELECT operation_id,telegram_id,result_json,created_at FROM owner_grant_operations WHERE created_at>=? ORDER BY rowid DESC LIMIT 80`).bind(now-21600).all();
+    rows=(result.results||[]).filter((row)=>{
+      const receipt=safeJson(row.result_json,{}),notice=receipt?.dethroneNotification;
+      return String(receipt?.grantType||"")==="rating_record"&&String(receipt?.previousLeaderId||"").trim()&&(!notice||String(notice?.reason||"")==="enqueue_failed");
+    }).reverse().slice(0,max);
+  }catch(error){
+    if(/no such table.*owner_grant_operations/i.test(String(error?.message||error)))return {checked:0,recovered:0,skipped:0,failed:0,reason:"owner-grant-table-missing"};
+    throw error;
+  }
+  let recovered=0,skipped=0,failed=0;
+  for(const row of rows){
+    const receipt=safeJson(row.result_json,{}),seasonId=String(receipt?.seasonId||"").trim(),previousLeaderId=String(receipt?.previousLeaderId||"").trim(),expectedLeaderId=String(row.telegram_id||"").trim();
+    if(!seasonId||!previousLeaderId||!expectedLeaderId||previousLeaderId===expectedLeaderId){
+      const outcome={queued:false,reason:"invalid_recovery_context",recovered:true};
+      await env.DB.prepare(`UPDATE owner_grant_operations SET result_json=? WHERE operation_id=?`).bind(JSON.stringify({...receipt,dethroneNotification:outcome}),String(row.operation_id||"")).run();
+      skipped+=1;continue;
+    }
+    if(receipt?.targetHidden===true){
+      const outcome={queued:false,reason:"target_hidden",recovered:true};
+      await env.DB.prepare(`UPDATE owner_grant_operations SET result_json=? WHERE operation_id=?`).bind(JSON.stringify({...receipt,dethroneNotification:outcome}),String(row.operation_id||"")).run();
+      skipped+=1;continue;
+    }
+    const category=leaderboardDethroneCategory(seasonId);
+    const [queueEvidence,logEvidence]=await Promise.all([
+      env.DB.prepare(`SELECT id,status,last_error FROM player_notification_queue WHERE telegram_id=? AND category=? AND created_at>=? ORDER BY id DESC LIMIT 1`).bind(previousLeaderId,category,Math.max(0,Number(row.created_at||0)-5)).first(),
+      env.DB.prepare(`SELECT sent_at FROM player_notification_log WHERE telegram_id=? AND category=? AND sent_at>=? ORDER BY sent_at DESC LIMIT 1`).bind(previousLeaderId,category,Math.max(0,Number(row.created_at||0)-5)).first()
+    ]);
+    if(queueEvidence||logEvidence){
+      const outcome={queued:Boolean(queueEvidence&&["pending","failed"].includes(String(queueEvidence.status||""))),queueId:Number(queueEvidence?.id||0),reason:logEvidence?"already_sent":"already_recorded",recovered:true};
+      await env.DB.prepare(`UPDATE owner_grant_operations SET result_json=? WHERE operation_id=?`).bind(JSON.stringify({...receipt,dethroneNotification:outcome}),String(row.operation_id||"")).run();
+      skipped+=1;continue;
+    }
+    try{
+      const outcome=await queueLeaderboardDethroneNotificationIfNeeded(env,{seasonId,previousLeaderId,expectedLeaderId});
+      await env.DB.prepare(`UPDATE owner_grant_operations SET result_json=? WHERE operation_id=?`).bind(JSON.stringify({...receipt,dethroneNotification:{...outcome,recovered:true}}),String(row.operation_id||"")).run();
+      if(outcome?.queued)recovered+=1;else skipped+=1;
+    }catch(error){
+      failed+=1;
+      console.error("owner rating dethrone recovery failed",row.operation_id,error);
+    }
+  }
+  return {checked:rows.length,recovered,skipped,failed};
+}
+
 async function materializeLeaderboardDethroneNotification(env,row,now=Math.floor(Date.now()/1000)){
   const seasonId=leaderboardDethroneSeasonId(row?.category),telegramId=String(row?.telegram_id||"").trim();
   if(!seasonId||!telegramId)return {action:"cancel",reason:"rating-dethrone-invalid"};
@@ -37812,7 +37864,7 @@ async function processV77NotificationQueue(env,limit=24){
   const max=Math.max(1,Math.min(60,Number(limit)||24));
   const legacyDethroneCutoff=now-LEADERBOARD_DETHRONE_DELAY_SECONDS;
   await env.DB.prepare(`UPDATE player_notification_queue SET available_at=?,updated_at=? WHERE status IN ('pending','failed') AND category LIKE 'rating_dethroned:%' AND last_error='' AND created_at<=? AND available_at>?`).bind(now,now,legacyDethroneCutoff,now).run();
-  const rows=(await env.DB.prepare(`SELECT id,telegram_id,chat_id,category,message_html,reply_markup_json,attempts FROM player_notification_queue WHERE status IN ('pending','failed') AND available_at<=? AND attempts<5 AND (lease_until=0 OR lease_until<?) ORDER BY available_at ASC,id ASC LIMIT ?`).bind(now,now,max).all()).results||[];
+  const rows=(await env.DB.prepare(`SELECT id,telegram_id,chat_id,category,message_html,reply_markup_json,attempts FROM player_notification_queue WHERE status IN ('pending','failed') AND available_at<=? AND attempts<5 AND (lease_until=0 OR lease_until<?) ORDER BY CASE WHEN category LIKE 'rating_dethroned:%' THEN 0 ELSE 1 END,available_at ASC,id ASC LIMIT ?`).bind(now,now,max).all()).results||[];
   let sent=0,failed=0,deferred=0,skipped=0;
   for(const row of rows){
     const token=caseGrantId("player_notice_lock");
@@ -46626,9 +46678,6 @@ async function ownerPanelGrantRatingRecord(env, ctx, telegramId, score, reason) 
   if (!season || String(season.status) !== "active" || Number(season.starts_at || 0) > now || Number(season.ends_at || 0) <= now) {
     throw new ApiError(409, "Выдать рекорд можно только в активный рейтинговый сезон.");
   }
-  // Any authoritative path that can change #1 must capture the visible leader before mutation.
-  // Owner rating restoration used to bypass the dethrone event entirely.
-  const previousSeasonLeader = await leaderboardCurrentVisibleLeader(env, String(season.id)).catch(() => null);
   const identity = await env.DB.prepare(`SELECT p.telegram_id,p.best_score,p.profile_xp,
       COALESCE(NULLIF(b.display_name,''),NULLIF(a.display_name,''),p.telegram_id) AS display_name,
       COALESCE(NULLIF(b.username,''),NULLIF(a.username,''),'') AS username,
@@ -46651,6 +46700,10 @@ async function ownerPanelGrantRatingRecord(env, ctx, telegramId, score, reason) 
   const caseAvatarId = normalizeCaseCosmeticId("avatar", caseEnsured?.state?.activeAvatarId);
   const caseFrameId = normalizeCaseCosmeticId("frame", caseEnsured?.state?.activeFrameId);
   const nextProfileBest = Math.max(Math.max(0, Number(identity.best_score || 0)), score);
+  // Capture the visible leader as late as possible so the manual mutation and
+  // the transition snapshot cannot drift across unrelated profile/cosmetic reads.
+  const previousSeasonLeader = await leaderboardCurrentVisibleLeader(env, String(season.id)).catch(() => null);
+  const previousLeaderId = String(previousSeasonLeader?.telegram_id || "");
   const sourceId=ctx.grantOperation.id;
   await ownerGrantCommit(env,ctx,[
     env.DB.prepare(`INSERT INTO leaderboard_entries (
@@ -46667,22 +46720,28 @@ async function ownerPanelGrantRatingRecord(env, ctx, telegramId, score, reason) 
     env.DB.prepare(`UPDATE admin_profile_state SET best_score=?,best_score_override=?,revision=revision+1,updated_at=?,updated_by=? WHERE telegram_id=?`).bind(
       nextProfileBest, nextProfileBest, now, `owner-rating:${ctx.user.id}`, telegramId
     )
-  ],{ok:true,grantType:"rating_record",sourceId,seasonId:String(season.id),seasonTitle:String(season.title||""),previousScore,score,message:`\u0420\u0435\u043a\u043e\u0440\u0434 \u0442\u0435\u043a\u0443\u0449\u0435\u0433\u043e \u0440\u0435\u0439\u0442\u0438\u043d\u0433\u0430: ${score.toLocaleString("ru-RU")}.`});
+  ],{ok:true,grantType:"rating_record",sourceId,seasonId:String(season.id),seasonTitle:String(season.title||""),previousScore,score,previousLeaderId,targetHidden:Boolean(hidden),message:`\u0420\u0435\u043a\u043e\u0440\u0434 \u0442\u0435\u043a\u0443\u0449\u0435\u0433\u043e \u0440\u0435\u0439\u0442\u0438\u043d\u0433\u0430: ${score.toLocaleString("ru-RU")}.`});
   // Reuse the same debounced, send-time-revalidated notification path as a real run.
   // The helper re-reads the actual leader, so a hidden player or a score that did not
   // really take #1 cannot generate a false dethrone notification. Queue this immediately
   // after the authoritative rating commit, before secondary all-time/timeline work.
-  let dethroneNotification = { queued: false, reason: "leader_unchanged" };
-  if (previousSeasonLeader?.telegram_id && String(previousSeasonLeader.telegram_id) !== telegramId) {
-    try {
-      dethroneNotification = await queueLeaderboardDethroneNotificationIfNeeded(env, {
-        seasonId: String(season.id),
-        previousLeaderId: String(previousSeasonLeader.telegram_id),
-        expectedLeaderId: telegramId
-      });
-    } catch (error) {
-      console.error("owner rating grant dethrone notification failed", error);
-      dethroneNotification = { queued: false, reason: "enqueue_failed" };
+  let dethroneNotification = { queued: false, reason: previousLeaderId ? "leader_unchanged" : "no_previous_leader" };
+  if (previousLeaderId && previousLeaderId !== telegramId) {
+    if (hidden === 1) {
+      // Tester/excluded accounts are intentionally invisible in the public ranking.
+      // Report that explicitly instead of looking like the notification system failed.
+      dethroneNotification = { queued: false, reason: "target_hidden" };
+    } else {
+      try {
+        dethroneNotification = await queueLeaderboardDethroneNotificationIfNeeded(env, {
+          seasonId: String(season.id),
+          previousLeaderId,
+          expectedLeaderId: telegramId
+        });
+      } catch (error) {
+        console.error("owner rating grant dethrone notification failed", error);
+        dethroneNotification = { queued: false, reason: "enqueue_failed" };
+      }
     }
   }
 
@@ -46691,12 +46750,23 @@ async function ownerPanelGrantRatingRecord(env, ctx, telegramId, score, reason) 
   });
   try {
     await recordPlayerTimeline(env, telegramId, "rating_owner_grant", `владелец установил рекорд ${score.toLocaleString("ru-RU")} в текущем рейтинге`, {
-      seasonId: String(season.id), previousScore, score, allTimeScore, reason, dethroneNotification
+      seasonId: String(season.id), previousScore, score, allTimeScore, previousLeaderId, targetHidden: Boolean(hidden), reason, dethroneNotification
     }, sourceId, ctx.user, now);
   } catch (error) { console.error("owner rating grant timeline failed", error); }
   await logStaffAction(env, ctx.user, ctx.access, "owner_panel_rating_record_grant", telegramId, "rating", previousScore, score, {
-    seasonId: String(season.id), seasonTitle: String(season.title || ""), allTimeScore, reason, dethroneNotification
+    seasonId: String(season.id), seasonTitle: String(season.title || ""), allTimeScore, previousLeaderId, targetHidden: Boolean(hidden), reason, dethroneNotification
   });
+  const dethroneStatusMessage = dethroneNotification?.queued
+    ? " Уведомление прежнему лидеру поставлено в очередь примерно на 90 секунд."
+    : ({
+        target_hidden: " Уведомление не создано: этот аккаунт скрыт из рейтинга настройкой тестера.",
+        no_bot_chat: " Уведомление не создано: у прежнего лидера нет активного чата с ботом.",
+        leader_changed: " Уведомление не создано: после записи фактический лидер не совпал с выданным игроком.",
+        no_previous_leader: " Уведомление не требуется: до изменения видимого лидера не было.",
+        leader_unchanged: " Уведомление не требуется: лидер не сменился.",
+        season_inactive: " Уведомление не создано: рейтинговый сезон уже не активен.",
+        enqueue_failed: " Рейтинг обновлён, но постановка уведомления в очередь завершилась ошибкой; Cron попробует восстановить событие."
+      })[String(dethroneNotification?.reason || "")] || ` Уведомление не создано: ${String(dethroneNotification?.reason || "неизвестная причина")}.`;
   return {
     ok: true,
     grantType: "rating_record",
@@ -46705,8 +46775,10 @@ async function ownerPanelGrantRatingRecord(env, ctx, telegramId, score, reason) 
     previousScore,
     score,
     allTimeScore,
+    previousLeaderId,
+    targetHidden: Boolean(hidden),
     dethroneNotification,
-    message: `Рекорд текущего рейтинга установлен: ${score.toLocaleString("ru-RU")} очков.`
+    message: `Рекорд текущего рейтинга установлен: ${score.toLocaleString("ru-RU")} очков.${dethroneStatusMessage}`
   };
 }
 
