@@ -49,6 +49,13 @@ must('all obstacles mode',owner,'id="rbSceneAll"');
 must('season binding UI',owner,'data-rb-season-binding');
 must('season control card',owner,'id="passRunnerSceneCard"');
 must('asset picker runner support',owner,"const runnerVisual=String(targetId||'').startsWith('rb')");
+must('runner editor has opaque surface',owner,'background:#fffafb;box-shadow:-18px 0 50px');
+must('runner layer participates in normal overlay stack',owner,'.rb-editor-layer{position:fixed;inset:0;z-index:70');
+must('runner asset picker stays above editor',owner,'#projectAssetPickerOverlay{z-index:90!important}');
+must('runner mobile begins below telegram chrome',owner,'.rb-editor-layer{display:none;padding-top:var(--cc32-sheet-top-gap);overflow:hidden}');
+must('runner mobile bounded by app viewport',owner,'height:calc(var(--app-h) - var(--cc32-sheet-top-gap));max-height:calc(var(--app-h) - var(--cc32-sheet-top-gap))');
+must('runner mobile footer respects safe area',owner,'padding:0 10px calc(10px + var(--safe-bottom))');
+mustNot('runner builder has no undefined panel background',owner,'background:var(--panel)');
 must('production save API',owner,"api('/api/owner/runner-builder/save'");
 
 must('client legacy scene fallback',index,'const LEGACY_RUNNER_SCENE = Object.freeze');
