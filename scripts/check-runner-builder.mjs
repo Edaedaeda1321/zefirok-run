@@ -68,6 +68,14 @@ must('active cards highlighted',owner,'.rb-card.is-live');
 must('pouf exact preview',owner,"pouf:'/assets/runner-builder/previews/pouf.webp'");
 must('stool exact preview',owner,"stool:'/assets/runner-builder/previews/stool.webp'");
 must('table exact preview',owner,"tablePink:'/assets/runner-builder/previews/tablePink.webp'");
+must('shared obstacle preview renderer',owner,'function rbObstaclePreviewMarkup(item)');
+must('preview uses logical SVG coordinates',owner,'viewBox="0 0 ${w} ${h}"');
+must('custom preview mirrors runtime contain bottom',owner,"fit=custom?'xMidYMax meet':'none'");
+must('preview hitboxes scale inside logical box',owner,'class="rb-preview-hitbox"');
+must('library preview uses shared renderer',owner,'<div class="rb-object-preview">${rbObstaclePreviewMarkup(item)}</div>');
+must('scene preview uses shared renderer',owner,'>${rbObstaclePreviewMarkup(item)}</div>`;}).join');
+mustNot('legacy card hitbox overlay removed',owner,'.rb-object-preview>i{position:absolute');
+mustNot('legacy card image contain sizing removed',owner,'.rb-object-preview img{max-width:82%');
 for(const file of ['pouf.webp','stool.webp','tablePink.webp'])checks.push({name:`builtin preview asset ${file}`,ok:fs.existsSync(new URL(`../assets/runner-builder/previews/${file}`,import.meta.url)),detail:file});
 must('production save API',owner,"api('/api/owner/runner-builder/save'");
 
