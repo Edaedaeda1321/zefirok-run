@@ -191,6 +191,7 @@ button{-webkit-tap-highlight-color:transparent}
 .title{display:grid;gap:2px}
 .title strong{font-size:21px}
 .title span{color:var(--muted);font-size:11px;font-weight:750}
+.ui-stale-refresh{position:fixed;left:50%;top:calc(max(env(safe-area-inset-top),var(--zefirok-content-safe-top,0px),var(--zefirok-native-controls-top,0px)) + 58px);z-index:180;display:inline-flex;align-items:center;gap:7px;max-width:calc(100vw - 32px);transform:translateX(-50%);padding:7px 11px;border:1px solid rgba(229,190,203,.82);border-radius:999px;background:rgba(255,250,252,.94);color:#8e6072;font-size:11px;font-weight:850;line-height:1;box-shadow:0 8px 22px rgba(93,53,69,.12);backdrop-filter:blur(10px);pointer-events:none}.ui-stale-refresh[hidden]{display:none!important}.ui-stale-refresh-dot{width:10px;height:10px;border:2px solid rgba(180,104,133,.24);border-top-color:#b86886;border-radius:50%;animation:bp-stale-spin .8s linear infinite}@keyframes bp-stale-spin{to{transform:rotate(360deg)}}@media(prefers-reduced-motion:reduce){.ui-stale-refresh-dot{animation:none}}
 
 .pass-shell{
   overflow:hidden;
@@ -4525,6 +4526,7 @@ img[src$="/xp.webp"]{
 </section>
 
 <div class="app-scroll" id="appScroll" hidden>
+<div class="ui-stale-refresh" id="uiStaleRefresh" hidden aria-live="polite"><span class="ui-stale-refresh-dot" aria-hidden="true"></span><span>Обновляем…</span></div>
 <main class="page" id="seasonPassPage">
   <header class="topbar">
     <button class="back" id="backButton" aria-label="Назад в профиль">←</button>
@@ -5267,6 +5269,10 @@ img[src$="/xp.webp"]{
   let serverPass = null;
   let serverLoading = false;
   let hostTelegramInitData = "";
+  const UI_STALE_CACHE_PREFIX = "zefirok-ui-stale-v1";
+  const UI_STALE_BATTLE_PASS_MAX_AGE_MS = 6 * 60 * 60 * 1000;
+  const UI_STALE_CACHE_MAX_CHARS = 900000;
+  let uiStaleRetryTimer = 0;
 
   function romanSeasonNumber(value){
     const roman=String(value||"").trim().toUpperCase();
@@ -5457,7 +5463,8 @@ img[src$="/xp.webp"]{
     setSeasonPassLiveOpsImage('#levelPurchaseUnlocked .level-purchase-premium img',"tariffs.elitePlusCardIcon",PASS_LIVEOPS_VISUAL_FALLBACKS.elitePlusCardIcon);
   }
 
-  function applyServerPass(data) {
+  function applyServerPass(data, options = {}) {
+    const persistSnapshot = options.persist !== false;
     if (!data || typeof data !== "object") return;
     if (data.season?.id && String(data.season.id) === String(serverPass?.season?.id) &&
         Number.isFinite(Number(data.player?.revision)) && Number.isFinite(Number(serverPass?.player?.revision)) &&
@@ -5517,7 +5524,11 @@ img[src$="/xp.webp"]{
       const label = document.querySelector('[data-season-end-label]');
       if (label && Number.isFinite(end.getTime())) label.textContent = new Intl.DateTimeFormat("ru-RU",{day:"numeric",month:"long",year:"numeric",timeZone:"Europe/Moscow"}).format(end);
     }
-    savePass();
+    if (persistSnapshot) {
+      savePass();
+      writeBattlePassStaleCache(serverPass);
+      setBattlePassStaleUpdating(false);
+    }
   }
 
   async function loadServerPass() {
@@ -5573,6 +5584,77 @@ img[src$="/xp.webp"]{
 
     try { return String(sessionStorage.getItem("zefirok-telegram-init-data") || ""); }
     catch { return ""; }
+  }
+
+  function battlePassStaleUserId(initData = telegramInitData()) {
+    try {
+      const raw = new URLSearchParams(String(initData || "")).get("user");
+      const user = raw ? JSON.parse(raw) : null;
+      return String(user?.id || "").trim();
+    } catch { return ""; }
+  }
+
+  function battlePassStaleCacheKey(initData = telegramInitData()) {
+    const userId = battlePassStaleUserId(initData);
+    return userId ? `${UI_STALE_CACHE_PREFIX}:battle-pass:${userId}` : "";
+  }
+
+  function readBattlePassStaleCache() {
+    const key = battlePassStaleCacheKey();
+    if (!key) return null;
+    try {
+      const envelope = JSON.parse(localStorage.getItem(key) || "null");
+      const savedAt = Number(envelope?.savedAt || 0);
+      if (Number(envelope?.v || 0) !== 1 || !savedAt || Date.now() - savedAt > UI_STALE_BATTLE_PASS_MAX_AGE_MS || !envelope?.data || typeof envelope.data !== "object") {
+        if (envelope) localStorage.removeItem(key);
+        return null;
+      }
+      return envelope.data;
+    } catch { return null; }
+  }
+
+  function writeBattlePassStaleCache(data) {
+    const key = battlePassStaleCacheKey();
+    if (!key || !data || typeof data !== "object") return false;
+    try {
+      const raw = JSON.stringify({ v: 1, savedAt: Date.now(), data });
+      if (raw.length > UI_STALE_CACHE_MAX_CHARS) return false;
+      localStorage.setItem(key, raw);
+      return true;
+    } catch { return false; }
+  }
+
+  function setBattlePassStaleUpdating(active) {
+    const indicator = el("uiStaleRefresh");
+    if (indicator) indicator.hidden = !active;
+    const scroll = el("appScroll");
+    if (scroll) scroll.dataset.uiStale = active ? "true" : "false";
+    if (!active && uiStaleRetryTimer) { clearTimeout(uiStaleRetryTimer); uiStaleRetryTimer = 0; }
+  }
+
+  function scheduleBattlePassStaleRetry() {
+    if (uiStaleRetryTimer) clearTimeout(uiStaleRetryTimer);
+    uiStaleRetryTimer = setTimeout(() => {
+      uiStaleRetryTimer = 0;
+      if (document.hidden || el("appScroll")?.dataset?.uiStale !== "true") return;
+      void boot();
+    }, 30000);
+  }
+
+  function showBattlePassStaleSnapshot(data) {
+    if (!data || typeof data !== "object") return false;
+    stopPreseasonTimer();
+    el("accessGate").hidden = true;
+    el("preseasonGate").hidden = true;
+    el("appScroll").hidden = false;
+    setBattlePassStaleUpdating(true);
+    applyServerPass(data, { persist: false });
+    selectedLevel = currentLevel();
+    render();
+    const requestedView = new URLSearchParams(location.search).get("view");
+    if (requestedView === "tasks") openView("tasks");
+    else requestAnimationFrame(() => requestAnimationFrame(() => scrollToLevel(selectedLevel, "auto")));
+    return true;
   }
 
   async function waitForTelegramInitData(timeoutMs = 650) {
@@ -8782,13 +8864,30 @@ let taskInfoMotion = null;
 
       installCopyProtection();
   installScrollProtection();
+      let staleSnapshot = readBattlePassStaleCache();
+      if (!staleSnapshot) {
+        await waitForTelegramInitData();
+        staleSnapshot = readBattlePassStaleCache();
+      }
+      const staleShown = Boolean(staleSnapshot && showBattlePassStaleSnapshot(staleSnapshot));
       const access = await checkAccess();
       if (!access.allowed) {
-        if (access.kind === "hidden") denyAccess(access.error);
-        else showAccessError(access.error);
+        if (access.kind === "hidden") {
+          setBattlePassStaleUpdating(false);
+          el("appScroll").hidden = true;
+          el("accessGate").hidden = false;
+          denyAccess(access.error);
+        } else if (staleShown) {
+          setBattlePassStaleUpdating(true);
+          scheduleBattlePassStaleRetry();
+          showToast(access.error || "Свежие данные пока недоступны. Показываем последние успешные данные.");
+        } else {
+          showAccessError(access.error);
+        }
         return;
       }
 
+      setBattlePassStaleUpdating(Boolean(staleShown && !access.state));
       if (access.season?.status === "upcoming") {
         showPreseason(access.season, access.canPreviewUpcoming);
         return;
@@ -8805,7 +8904,7 @@ let taskInfoMotion = null;
   window.setInterval(()=>{ if (serverPass) updateSeasonBadges(); },30000);
   // One lightweight local ticker; no state fetch and no full page re-render.
   window.setInterval(()=>{if(serverPass&&!document.hidden){updatePassCountdown();updateTaskTimes();}},1000);
-  document.addEventListener("visibilitychange",()=>{if(!document.hidden){updatePassCountdown();updateSeasonBadges();updateTaskTimes();}});
+  document.addEventListener("visibilitychange",()=>{if(!document.hidden){updatePassCountdown();updateSeasonBadges();updateTaskTimes();if(el("appScroll")?.dataset?.uiStale==="true")void boot();}});
   window.addEventListener("focus",updatePassCountdown);
   window.addEventListener("pageshow",updatePassCountdown);
   window.addEventListener("pageshow",(event)=>{

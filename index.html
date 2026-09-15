@@ -12317,6 +12317,7 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
 
 &lt;section class=&quot;screen&quot; data-screen=&quot;profile&quot; hidden=&quot;&quot;&gt;
 &lt;div class=&quot;profile-shell&quot;&gt;
+  &lt;div class=&quot;profile-stale-refresh&quot; data-profile-stale-refresh hidden aria-live=&quot;polite&quot;&gt;&lt;span class=&quot;profile-stale-refresh-dot&quot; aria-hidden=&quot;true&quot;&gt;&lt;/span&gt;&lt;span&gt;Обновляем…&lt;/span&gt;&lt;/div&gt;
   &lt;div class=&quot;profile-hero&quot;&gt;
     &lt;button class=&quot;profile-mail-shortcut&quot; data-profile-mail-open type=&quot;button&quot; aria-label=&quot;Открыть Почту&quot; title=&quot;Почта Зеффи&quot;&gt;&lt;img src=&quot;/assets/ui/icon_message_season.webp&quot; alt=&quot;&quot; loading=&quot;lazy&quot; decoding=&quot;async&quot;&gt;&lt;span data-profile-mail-badge hidden&gt;0&lt;/span&gt;&lt;/button&gt;
     &lt;div class=&quot;profile-avatar-wrap&quot;&gt;
@@ -15867,6 +15868,46 @@ function installProgressInfo(){
       const LEADERBOARD_MODAL_IMAGE = &quot;/assets/rating/season-rating-modal.webp&quot;;
       const LEADERBOARD_PENDING_RUN_KEY = &quot;zefirok-pending-leaderboard-run-v1&quot;;
       const LEADERBOARD_REFRESH_INTERVAL_MS = 30000;
+      const UI_STALE_CACHE_PREFIX = &quot;zefirok-ui-stale-v1&quot;;
+      const UI_STALE_LEADERBOARD_MAX_AGE_MS = 2 * 60 * 60 * 1000;
+      const UI_STALE_CACHE_MAX_CHARS = 900000;
+      const profileStaleSources = new Set();
+      function setProfileStaleUpdating(source, active) {
+        const key = String(source || &quot;profile&quot;);
+        if (active) profileStaleSources.add(key);
+        else profileStaleSources.delete(key);
+        const indicator = root.querySelector(&quot;[data-profile-stale-refresh]&quot;);
+        if (indicator) indicator.hidden = profileStaleSources.size === 0;
+      }
+      window.zefirokSetProfileStaleUpdating = setProfileStaleUpdating;
+      function profileLeaderboardStaleKey(mode, userId = String(telegramProfile?.id || &quot;&quot;)) {
+        const id = String(userId || &quot;&quot;).trim();
+        return id ? `${UI_STALE_CACHE_PREFIX}:leaderboard:${id}:${mode === &quot;all_time&quot; ? &quot;all_time&quot; : &quot;season&quot;}` : &quot;&quot;;
+      }
+      function readProfileLeaderboardStale(mode, userId) {
+        const key = profileLeaderboardStaleKey(mode, userId);
+        if (!key) return null;
+        try {
+          const envelope = JSON.parse(localStorage.getItem(key) || &quot;null&quot;);
+          const savedAt = Number(envelope?.savedAt || 0);
+          if (Number(envelope?.v || 0) !== 1 || !savedAt || Date.now() - savedAt &gt; UI_STALE_LEADERBOARD_MAX_AGE_MS || !envelope?.data || typeof envelope.data !== &quot;object&quot;) {
+            if (envelope) localStorage.removeItem(key);
+            return null;
+          }
+          return { ...envelope.data, _loadedAt: 0, _uiStale: true };
+        } catch { return null; }
+      }
+      function writeProfileLeaderboardStale(mode, data, userId) {
+        const key = profileLeaderboardStaleKey(mode, userId);
+        if (!key || !data || typeof data !== &quot;object&quot;) return false;
+        try {
+          const snapshot = { ...data }; delete snapshot._loadedAt; delete snapshot._uiStale;
+          const raw = JSON.stringify({ v: 1, savedAt: Date.now(), data: snapshot });
+          if (raw.length &gt; UI_STALE_CACHE_MAX_CHARS) return false;
+          localStorage.setItem(key, raw);
+          return true;
+        } catch { return false; }
+      }
       let leaderboardData = null;
       let leaderboardMode = &quot;season&quot;;
       let skinBonusCaseSyncInFlight = false;
@@ -25642,8 +25683,13 @@ function createTutorialDeck(layer, mount, options, words) {
         const initData = String(telegramProfile?.initData || &quot;&quot;);
         const requestUser = String(telegramProfile?.id || &quot;guest&quot;);
         if (activate) leaderboardMode = requestedMode;
+        if (!leaderboardCache[requestedMode] &amp;&amp; requestUser !== &quot;guest&quot;) {
+          const stale = readProfileLeaderboardStale(requestedMode, requestUser);
+          if (stale) leaderboardCache[requestedMode] = stale;
+        }
         const cached = leaderboardCache[requestedMode];
         if (cached) {
+          if (cached._uiStale) setProfileStaleUpdating(`leaderboard-${requestedMode}`, true);
           if (requestedMode === &quot;season&quot;) renderLeaderboardSummary();
           if (requestedMode === leaderboardMode) leaderboardData = cached;
         }
@@ -25652,7 +25698,7 @@ function createTutorialDeck(layer, mount, options, words) {
           return null;
         }
         const now = Date.now();
-        if (!force &amp;&amp; cached &amp;&amp; now - Number(cached._loadedAt || 0) &lt; LEADERBOARD_REFRESH_INTERVAL_MS) return cached;
+        if (!force &amp;&amp; cached &amp;&amp; !cached._uiStale &amp;&amp; now - Number(cached._loadedAt || 0) &lt; LEADERBOARD_REFRESH_INTERVAL_MS) return cached;
         const existingTask = leaderboardRefreshTask[requestedMode];
         if (existingTask &amp;&amp; leaderboardRefreshTaskUser[requestedMode] === requestUser) return existingTask;
 
@@ -25662,9 +25708,12 @@ function createTutorialDeck(layer, mount, options, words) {
           try {
             const loaded = await leaderboardApiRequest(LEADERBOARD_API_STATE_PATH, { initData, mode: requestedMode });
             loaded._loadedAt = Date.now();
+            loaded._uiStale = false;
             if (serial !== leaderboardRequestSerial[requestedMode]) return loaded;
             leaderboardCache[requestedMode] = loaded;
-            leaderboardLastRefreshAt = now;
+            writeProfileLeaderboardStale(requestedMode, loaded, requestUser);
+            setProfileStaleUpdating(`leaderboard-${requestedMode}`, false);
+            leaderboardLastRefreshAt = Date.now();
             applyLeaderboardResetPlan(loaded?.season?.resetPlan, loaded?.serverTime);
             if (requestedMode === &quot;season&quot;) renderLeaderboardSummary();
             if (requestedMode === leaderboardMode) leaderboardData = loaded;
@@ -25672,6 +25721,7 @@ function createTutorialDeck(layer, mount, options, words) {
           } catch (error) {
             console.warn(&quot;Leaderboard refresh failed&quot;, error);
             if (!cached &amp;&amp; requestedMode === leaderboardMode) renderLeaderboardUnavailable(error.message || &quot;Не удалось загрузить рейтинг.&quot;);
+            if (cached?._uiStale) setProfileStaleUpdating(`leaderboard-${requestedMode}`, true);
             return cached || null;
           } finally {
             if (serial === leaderboardRequestSerial[requestedMode]) leaderboardRefreshInFlight[requestedMode] = false;
@@ -29496,8 +29546,24 @@ function createTutorialDeck(layer, mount, options, words) {
 #zefirok-maltipoo-runner .album-profile-copy{min-width:0}#zefirok-maltipoo-runner .album-profile-copy strong{display:block;font-size:12px;font-weight:950}#zefirok-maltipoo-runner .album-profile-copy span{display:block;margin-top:4px;color:#8c707b;font-size:9px;font-weight:750;line-height:1.4}
 #zefirok-maltipoo-runner .album-profile-card .profile-action{grid-column:1/-1;width:100%}
 &lt;/style&gt;
-&lt;script id=&quot;zefirok-profile-overview-client-v1&quot;&gt;
-(()=&gt;{let value=null,loadedAt=0,inflight=null;window.zefirokProfileOverview=async(force=false)=&gt;{if(!force&amp;&amp;value&amp;&amp;Date.now()-loadedAt&lt;15000)return value;if(inflight)return inflight;let initData=&quot;&quot;;try{initData=String(window.Telegram?.WebApp?.initData||sessionStorage.getItem(&quot;zefirok-telegram-init-data&quot;)||&quot;&quot;);}catch{}if(!initData)return null;const controller=new AbortController(),timer=setTimeout(()=&gt;controller.abort(),4500);inflight=fetch(&quot;/api/profile/overview&quot;,{method:&quot;POST&quot;,headers:{&quot;Content-Type&quot;:&quot;application/json&quot;},body:JSON.stringify({initData}),cache:&quot;no-store&quot;,credentials:&quot;same-origin&quot;,signal:controller.signal}).then(async r=&gt;{const d=await r.json();if(!r.ok||!d?.ok)throw new Error(d?.error||&quot;profile-overview&quot;);value=d;loadedAt=Date.now();return d;}).finally(()=&gt;{clearTimeout(timer);inflight=null;});return inflight;};})();
+&lt;style id=&quot;zefirok-ui-stale-cache-v1-style&quot;&gt;
+#zefirok-maltipoo-runner .profile-stale-refresh{display:flex;align-items:center;justify-content:center;gap:7px;width:max-content;max-width:calc(100% - 24px);margin:0 auto 8px;padding:7px 11px;border:1px solid rgba(229,190,203,.82);border-radius:999px;background:rgba(255,250,252,.94);color:#8e6072;font-size:10px;font-weight:850;line-height:1;box-shadow:0 8px 22px rgba(93,53,69,.09)}
+#zefirok-maltipoo-runner .profile-stale-refresh[hidden]{display:none!important}
+#zefirok-maltipoo-runner .profile-stale-refresh-dot{width:9px;height:9px;border:2px solid rgba(180,104,133,.24);border-top-color:#b86886;border-radius:50%;animation:zefirok-stale-spin .8s linear infinite}@keyframes zefirok-stale-spin{to{transform:rotate(360deg)}}
+@media(prefers-reduced-motion:reduce){#zefirok-maltipoo-runner .profile-stale-refresh-dot{animation:none}}
+&lt;/style&gt;
+&lt;script id=&quot;zefirok-profile-overview-client-v2&quot;&gt;
+(()=&gt;{
+  const PREFIX=&quot;zefirok-ui-stale-v1&quot;,MAX_AGE=6*60*60*1000,MAX_CHARS=900000;let value=null,loadedAt=0,inflight=null;
+  const auth=()=&gt;{let initData=&quot;&quot;;try{initData=String(window.Telegram?.WebApp?.initData||sessionStorage.getItem(&quot;zefirok-telegram-init-data&quot;)||&quot;&quot;);}catch{}return initData;};
+  const userId=(initData)=&gt;{try{const raw=new URLSearchParams(String(initData||&quot;&quot;)).get(&quot;user&quot;),user=raw?JSON.parse(raw):null;return String(user?.id||&quot;&quot;).trim();}catch{return &quot;&quot;;}};
+  const key=(initData)=&gt;{const id=userId(initData);return id?`${PREFIX}:profile-overview:${id}`:&quot;&quot;;};
+  const read=(initData)=&gt;{const storageKey=key(initData);if(!storageKey)return null;try{const envelope=JSON.parse(localStorage.getItem(storageKey)||&quot;null&quot;),savedAt=Number(envelope?.savedAt||0);if(Number(envelope?.v||0)!==1||!savedAt||Date.now()-savedAt&gt;MAX_AGE||!envelope?.data||typeof envelope.data!==&quot;object&quot;){if(envelope)localStorage.removeItem(storageKey);return null;}return {...envelope.data,_uiStale:true};}catch{return null;}};
+  const write=(initData,data)=&gt;{const storageKey=key(initData);if(!storageKey||!data||typeof data!==&quot;object&quot;)return;try{const snapshot={...data};delete snapshot._uiStale;const raw=JSON.stringify({v:1,savedAt:Date.now(),data:snapshot});if(raw.length&lt;=MAX_CHARS)localStorage.setItem(storageKey,raw);}catch{}};
+  const setUpdating=(active)=&gt;{try{window.zefirokSetProfileStaleUpdating?.(&quot;overview&quot;,active);}catch{}};
+  const fetchFresh=(initData)=&gt;{if(inflight)return inflight;const controller=new AbortController(),timer=setTimeout(()=&gt;controller.abort(),4500);inflight=fetch(&quot;/api/profile/overview&quot;,{method:&quot;POST&quot;,headers:{&quot;Content-Type&quot;:&quot;application/json&quot;},body:JSON.stringify({initData}),cache:&quot;no-store&quot;,credentials:&quot;same-origin&quot;,signal:controller.signal}).then(async r=&gt;{const d=await r.json();if(!r.ok||!d?.ok)throw new Error(d?.error||&quot;profile-overview&quot;);value=d;loadedAt=Date.now();write(initData,d);setUpdating(false);try{window.dispatchEvent(new CustomEvent(&quot;zefirok-profile-overview-updated&quot;,{detail:d}));}catch{}return d;}).finally(()=&gt;{clearTimeout(timer);inflight=null;});return inflight;};
+  window.zefirokProfileOverview=async(force=false)=&gt;{if(!force&amp;&amp;value&amp;&amp;!value._uiStale&amp;&amp;Date.now()-loadedAt&lt;15000)return value;const initData=auth();if(!initData)return value;const stale=!value?read(initData):null;if(stale&amp;&amp;!force){value=stale;loadedAt=0;setUpdating(true);void fetchFresh(initData).catch(()=&gt;setUpdating(true));return stale;}if(inflight)return value?value:inflight;return fetchFresh(initData);};
+})();
 &lt;/script&gt;
 &lt;script id=&quot;zefirok-album-profile-entry-v2&quot;&gt;
 (() =&gt; {
@@ -29514,6 +29580,7 @@ function createTutorialDeck(layer, mount, options, words) {
   });
   window.addEventListener(&quot;pageshow&quot;,()=&gt;{document.querySelectorAll(&quot;[data-album-open]&quot;).forEach(button=&gt;{button.disabled=false;});if(albumScreen&amp;&amp;!albumScreen.hidden)refreshAlbumQuick(true);});
   window.addEventListener(&quot;focus&quot;,()=&gt;{if(albumScreen&amp;&amp;!albumScreen.hidden)refreshAlbumQuick();});
+  window.addEventListener(&quot;zefirok-profile-overview-updated&quot;,(event)=&gt;{const data=event?.detail,summary=data?.album;if(!data?.ok||!summary)return;const owned=Math.max(0,Number(summary.ownedRequired||0)),total=Math.max(0,Number(summary.requiredTotal||0)),percent=Math.max(0,Math.min(100,Math.round(Number(summary.progressPercent||0))));if(status)status.textContent=total?`${percent}%`:&quot;Новый&quot;;if(meta)meta.textContent=total?`${owned} из ${total} собрано`:&quot;Коллекции и воспоминания&quot;;loadedAt=Date.now();});
 })();
 &lt;/script&gt;
 &lt;script id=&quot;zefirok-referrals-profile-entry-v2&quot;&gt;
@@ -29532,6 +29599,7 @@ function createTutorialDeck(layer, mount, options, words) {
   window.addEventListener(&quot;pageshow&quot;, () =&gt; {document.querySelectorAll(&quot;[data-referrals-open]&quot;).forEach((button) =&gt; { button.disabled = false; });refreshReferralSummary();});
   window.addEventListener(&quot;message&quot;,(event)=&gt;{if(event.data?.type===&quot;zefirok-referrals-account-updated&quot;)refreshReferralSummary();});
   window.setTimeout(refreshReferralSummary,700);
+  window.addEventListener(&quot;zefirok-profile-overview-updated&quot;,(event)=&gt;{const overview=event?.detail,data=overview?.referrals,badge=document.querySelector(&quot;[data-referrals-badge]&quot;),meta=document.querySelector(&quot;[data-profile-v2-friends-meta]&quot;);if(!overview?.ok||!data||!badge)return;const friends=Math.max(0,Number(data.activeFriends||0)),pending=Math.max(0,Number(data.pendingCount||0)),word=(count,one,few,many)=&gt;{const n=Math.abs(Number(count||0)),m100=n%100,m10=n%10;return m100&gt;=11&amp;&amp;m100&lt;=14?many:m10===1?one:(m10&gt;=2&amp;&amp;m10&lt;=4)?few:many;};badge.textContent=friends?`${friends} ${word(friends,&quot;друг&quot;,&quot;друга&quot;,&quot;друзей&quot;)}`:&quot;Нет друзей&quot;;badge.classList.toggle(&quot;is-boost&quot;,Boolean(data?.boost?.active&amp;&amp;pending===0));badge.hidden=false;if(meta){if(pending&gt;0)meta.textContent=`${pending} ${word(pending,&quot;подарок&quot;,&quot;подарка&quot;,&quot;подарков&quot;)} ${pending===1?&quot;ждёт&quot;:&quot;ждут&quot;}`;else if(data?.boost?.active)meta.textContent=`Совместный XP ×${Number(data.boost.multiplier||2)} активен`;else meta.textContent=friends?&quot;Играть и получать награды вместе&quot;:&quot;Пригласи друга в кафе&quot;;}});
 })();
 &lt;/script&gt;
 &lt;style id=&quot;zefirok-achievements-entry-v4-style&quot;&gt;
@@ -29591,6 +29659,7 @@ function createTutorialDeck(layer, mount, options, words) {
   const refreshVisibleProfile=(attempt=0,force=false)=&gt;{window.clearTimeout(initialRefreshTimer);if(!profileVisible())return;const cached=bootstrapState();if(cached&amp;&amp;!hasServerState)applyServerState(cached);if(!force&amp;&amp;hasServerState&amp;&amp;Date.now()-lastFreshAt&lt;15000)return;if(initData()){void refresh(force);return;}if(attempt&gt;=16)return;initialRefreshTimer=window.setTimeout(()=&gt;refreshVisibleProfile(attempt+1,force),250);};
   document.addEventListener(&quot;click&quot;,(event)=&gt;{const openButton=event.target?.closest?.(&quot;[data-achievements-open]&quot;);if(openButton){event.preventDefault();openButton.disabled=true;try{window.parent.postMessage({type:&quot;zefirok-open-achievements&quot;,view:openButton.dataset.achievementsView===&quot;showcase&quot;?&quot;showcase&quot;:&quot;goals&quot;},&quot;*&quot;);}catch{try{window.location.href=&quot;/achievements.html?view=&quot;+(openButton.dataset.achievementsView===&quot;showcase&quot;?&quot;showcase&quot;:&quot;goals&quot;);}catch{}}window.setTimeout(()=&gt;{openButton.disabled=false;},900);return;}if(event.target?.closest?.(&#x27;[data-tab=&quot;profile&quot;]&#x27;))window.setTimeout(()=&gt;refreshVisibleProfile(),80);});
   window.addEventListener(&quot;zefirok-achievement-showcase-ready&quot;,(event)=&gt;applyServerState(event?.detail));
+  window.addEventListener(&quot;zefirok-profile-overview-updated&quot;,(event)=&gt;{const data=event?.detail?.achievements;if(data?.ok)applyServerState(data);});
   window.addEventListener(&quot;pageshow&quot;,()=&gt;{document.querySelectorAll(&quot;[data-achievements-open]&quot;).forEach((button)=&gt;{button.disabled=false;});if(profileVisible())refreshVisibleProfile();});
   window.addEventListener(&quot;message&quot;,(event)=&gt;{if(event.data?.type===&quot;zefirok-achievements-account-updated&quot;)refreshVisibleProfile(0,true);if(event.data?.type===&quot;zefirok-open-screen&quot;&amp;&amp;String(event.data?.screen||&quot;&quot;)===&quot;profile&quot;)window.setTimeout(()=&gt;refreshVisibleProfile(),80);});
   const observedProfileScreen=profileScreen();

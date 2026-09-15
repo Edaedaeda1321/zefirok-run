@@ -8644,6 +8644,7 @@ body{font-family:var(--font-sans);color:#60384a}
 #zefirok-maltipoo-runner .leaderboard-dynamic{min-height:0!important}
 .rating-toast{position:fixed;left:50%;bottom:max(18px,calc(var(--zefirok-content-safe-bottom,0px) + 12px));z-index:100;max-width:min(88vw,440px);transform:translateX(-50%);padding:12px 16px;border-radius:15px;background:#6f3650;color:#fff;font-size:13px;font-weight:850;text-align:center;box-shadow:0 12px 30px rgba(67,30,47,.28)}
 .rating-toast[data-kind="success"]{background:#33855f}.rating-toast[data-kind="warning"]{background:#a45e2d}
+.rating-stale-refresh{position:fixed;left:50%;top:calc(max(8px,var(--zefirok-content-safe-top,0px)) + 8px);z-index:110;display:inline-flex;align-items:center;gap:7px;max-width:calc(100vw - 32px);transform:translateX(-50%);padding:7px 11px;border:1px solid rgba(229,190,203,.82);border-radius:999px;background:rgba(255,250,252,.94);color:#8e6072;font-size:11px;font-weight:850;line-height:1;box-shadow:0 8px 22px rgba(93,53,69,.12);backdrop-filter:blur(10px);pointer-events:none}.rating-stale-refresh[hidden]{display:none!important}.rating-stale-refresh-dot{width:10px;height:10px;border:2px solid rgba(180,104,133,.24);border-top-color:#b86886;border-radius:50%;animation:rating-stale-spin .8s linear infinite}@keyframes rating-stale-spin{to{transform:rotate(360deg)}}@media(prefers-reduced-motion:reduce){.rating-stale-refresh-dot{animation:none}}
 </style>
 <style id="standalone-rating-stability-fix">
 /* Standalone rating: Telegram already positions the WebView below its own chrome. */
@@ -9754,6 +9755,7 @@ body { min-height: var(--zefirok-app-height, 100dvh); }
   </div>
 </div>
 <div class="rating-toast" data-rating-toast hidden></div>
+<div class="rating-stale-refresh" data-rating-stale-refresh hidden aria-live="polite"><span class="rating-stale-refresh-dot" aria-hidden="true"></span><span>Обновляем…</span></div>
 <section class="rating-pass-info" data-rating-pass-info data-tier="elite" hidden role="dialog" aria-modal="true" aria-labelledby="rating-pass-info-title">
   <div class="rating-pass-info-card">
     <div class="rating-pass-info-hero" aria-hidden="true">
@@ -9844,6 +9846,9 @@ body { min-height: var(--zefirok-app-height, 100dvh); }
   const PROFILE_MIN_SECONDS = 12;
   const PROFILE_MIN_SCORE = 150;
   const CACHE_TTL_MS = 30000;
+  const UI_STALE_CACHE_PREFIX = "zefirok-ui-stale-v1";
+  const UI_STALE_RATING_MAX_AGE_MS = 2 * 60 * 60 * 1000;
+  const UI_STALE_CACHE_MAX_CHARS = 900000;
   const REQUEST_TIMEOUT_MS = 12000;
   const CLAIM_TIMEOUT_MS = 15000;
   const COFFEE_REWARD_ICON = "/assets/optimized/v0.79.5/iconCoffee.webp?v=0.79.5";
@@ -9904,6 +9909,7 @@ body { min-height: var(--zefirok-app-height, 100dvh); }
   const dynamic = document.querySelector("[data-leaderboard-dynamic]");
   const banner = document.querySelector("[data-leaderboard-modal-banner]");
   const toast = document.querySelector("[data-rating-toast]");
+  const staleRefresh = document.querySelector("[data-rating-stale-refresh]");
   const passInfo = document.querySelector("[data-rating-pass-info]");
   const passInfoStar = document.querySelector(".rating-pass-info-star");
   const passInfoKicker = document.querySelector("[data-rating-pass-info-kicker]");
@@ -10015,6 +10021,66 @@ body { min-height: var(--zefirok-app-height, 100dvh); }
 
   function currentInitData() {
     return String(telegramProfile?.initData || readInitData() || "");
+  }
+
+  function ratingStaleUserId() {
+    const direct = String(telegramProfile?.id || "").trim();
+    if (direct) return direct;
+    return String(parseInitDataUser(currentInitData())?.id || "").trim();
+  }
+
+  function ratingStaleCacheKey(nextMode) {
+    const userId = ratingStaleUserId();
+    if (!userId) return "";
+    return `${UI_STALE_CACHE_PREFIX}:leaderboard:${userId}:${nextMode === "all_time" ? "all_time" : "season"}`;
+  }
+
+  function readRatingStaleCache(nextMode) {
+    const key = ratingStaleCacheKey(nextMode);
+    if (!key) return null;
+    try {
+      const envelope = JSON.parse(localStorage.getItem(key) || "null");
+      const savedAt = Number(envelope?.savedAt || 0);
+      if (Number(envelope?.v || 0) !== 1 || !savedAt || Date.now() - savedAt > UI_STALE_RATING_MAX_AGE_MS || !envelope?.data || typeof envelope.data !== "object") {
+        if (envelope) localStorage.removeItem(key);
+        return null;
+      }
+      const data = { ...envelope.data, _loadedAt: 0, _uiStale: true };
+      data._signature = renderSignature(data);
+      return data;
+    } catch {
+      return null;
+    }
+  }
+
+  function writeRatingStaleCache(nextMode, data) {
+    const key = ratingStaleCacheKey(nextMode);
+    if (!key || !data || typeof data !== "object") return false;
+    try {
+      const snapshot = { ...data };
+      delete snapshot._loadedAt;
+      delete snapshot._signature;
+      delete snapshot._uiStale;
+      const raw = JSON.stringify({ v: 1, savedAt: Date.now(), data: snapshot });
+      if (raw.length > UI_STALE_CACHE_MAX_CHARS) return false;
+      localStorage.setItem(key, raw);
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  function hydrateRatingStaleCache(nextMode) {
+    const normalized = nextMode === "all_time" ? "all_time" : "season";
+    if (cache[normalized]) return cache[normalized];
+    const stale = readRatingStaleCache(normalized);
+    if (stale) cache[normalized] = stale;
+    return stale;
+  }
+
+  function setRatingStaleUpdating(active) {
+    if (!staleRefresh) return;
+    staleRefresh.hidden = !active;
   }
 
   function showToast(message, kind = "info", duration = 3400) {
@@ -10869,9 +10935,10 @@ body { min-height: var(--zefirok-app-height, 100dvh); }
       return null;
     }
 
-    const cached = cache[nextMode];
+    const cached = cache[nextMode] || hydrateRatingStaleCache(nextMode);
     const now = Date.now();
-    if (!force && cached && now - Number(cached._loadedAt || 0) < CACHE_TTL_MS) return cached;
+    if (nextMode === mode) setRatingStaleUpdating(Boolean(cached?._uiStale));
+    if (!force && cached && !cached._uiStale && now - Number(cached._loadedAt || 0) < CACHE_TTL_MS) return cached;
 
     const serial = ++requestSerial[nextMode];
     requestControllers[nextMode]?.abort?.();
@@ -10884,8 +10951,11 @@ body { min-height: var(--zefirok-app-height, 100dvh); }
       if (serial !== requestSerial[nextMode]) return data;
       const previousSignature = String(cache[nextMode]?._signature || "");
       data._loadedAt = Date.now();
+      data._uiStale = false;
       data._signature = renderSignature(data);
       cache[nextMode] = data;
+      writeRatingStaleCache(nextMode, data);
+      if (nextMode === mode) setRatingStaleUpdating(false);
       notifyResetPlan(data);
       lastVisibleRefreshAt = Date.now();
       if (nextMode === mode) {
@@ -10897,7 +10967,10 @@ body { min-height: var(--zefirok-app-height, 100dvh); }
       if (error?.name === "AbortError" && serial !== requestSerial[nextMode]) return cache[nextMode] || null;
       const message = error?.name === "AbortError" ? "Сервер отвечает слишком долго. Проверьте соединение и повторите попытку." : (error?.message || "Не удалось загрузить рейтинг.");
       if (nextMode === mode && !cache[nextMode]) renderError(message, true);
-      else if (nextMode === mode) showToast(message, "warning", 4200);
+      else if (nextMode === mode) {
+        setRatingStaleUpdating(Boolean(cache[nextMode]?._uiStale));
+        showToast(message, "warning", 4200);
+      }
       return cache[nextMode] || null;
     } finally {
       clearTimeout(timeout);
@@ -10993,6 +11066,8 @@ body { min-height: var(--zefirok-app-height, 100dvh); }
       const nextMode = modeButton.dataset.leaderboardMode === "all_time" ? "all_time" : "season";
       if (nextMode === mode) return;
       mode = nextMode;
+      hydrateRatingStaleCache(mode);
+      setRatingStaleUpdating(Boolean(cache[mode]?._uiStale));
       render();
       resetRatingScroll();
       void refresh(mode, false);
@@ -11256,6 +11331,8 @@ body { min-height: var(--zefirok-app-height, 100dvh); }
   }
 
   resetRatingScroll();
+  hydrateRatingStaleCache("season");
+  setRatingStaleUpdating(Boolean(cache.season?._uiStale));
   render();
   requestAnimationFrame(resetRatingScroll);
   setTimeout(resetRatingScroll, 80);
