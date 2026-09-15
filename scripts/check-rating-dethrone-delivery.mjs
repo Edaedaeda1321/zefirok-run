@@ -59,6 +59,28 @@ assert(worker.includes('if(lastAt&&now-lastAt<LEADERBOARD_DETHRONE_COOLDOWN_SECO
 assert(worker.includes('if(!subscriber||Number(subscriber.active||0)!==1||!String(subscriber.chat_id||"").trim())return {action:"cancel",reason:"rating-bot-unavailable"};'), 'bot subscription revalidation is missing');
 assert(worker.includes('if(!leader||!player)return {action:"cancel",reason:"rating-entry-missing"};'), 'rating entry revalidation is missing');
 
+// A Control Center "restore rating record" is an authoritative leaderboard mutation too.
+// It must participate in the exact same leader-transition notification pipeline.
+const ownerGrantStart = indexOfRequired(
+  worker,
+  'async function ownerPanelGrantRatingRecord(env, ctx, telegramId, score, reason)',
+  'owner rating grant function is missing'
+);
+const ownerGrantEnd = worker.indexOf('\n}\n\nfunction ownerPanelDirectGrantUi', ownerGrantStart);
+assert(ownerGrantEnd > ownerGrantStart, 'owner rating grant function boundary is missing');
+const ownerGrant = ownerGrantEnd > ownerGrantStart ? worker.slice(ownerGrantStart, ownerGrantEnd + 2) : '';
+const ownerOldLeaderIndex = indexOfRequired(ownerGrant, 'const previousSeasonLeader = await leaderboardCurrentVisibleLeader(env, String(season.id)).catch(() => null);', 'owner rating grant does not capture the old visible leader');
+const ownerCommitIndex = indexOfRequired(ownerGrant, 'await ownerGrantCommit(env,ctx,[', 'owner rating grant commit is missing');
+const ownerNotifyIndex = indexOfRequired(ownerGrant, 'dethroneNotification = await queueLeaderboardDethroneNotificationIfNeeded(env, {', 'owner rating grant does not enqueue a dethrone notification');
+assert(ownerOldLeaderIndex >= 0 && ownerCommitIndex > ownerOldLeaderIndex, 'old leader must be captured before the authoritative owner rating mutation');
+assert(ownerNotifyIndex > ownerCommitIndex, 'owner dethrone notification must be evaluated only after the rating mutation commits');
+assert(ownerGrant.includes('previousLeaderId: String(previousSeasonLeader.telegram_id)'), 'owner rating notification does not target the displaced leader');
+assert(ownerGrant.includes('expectedLeaderId: telegramId'), 'owner rating notification does not verify the new leader');
+assert(ownerGrant.includes('String(previousSeasonLeader.telegram_id) !== telegramId'), 'owner rating grant can notify a player about displacing themselves');
+assert(ownerGrant.includes('dethroneNotification = { queued: false, reason: "enqueue_failed" };'), 'owner rating notification enqueue failure is not observable');
+assert(ownerGrant.includes('reason, dethroneNotification'), 'owner rating audit/timeline does not retain notification diagnostics');
+assert(ownerGrant.includes('allTimeScore,\n    dethroneNotification,\n    message:'), 'owner rating response does not expose notification diagnostics');
+
 // Behavior-level proof: priority bypasses only frequency limits. It must still
 // honor global pause and quiet hours and must not even query the daily log.
 if (decision) {

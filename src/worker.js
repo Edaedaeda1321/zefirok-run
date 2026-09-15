@@ -46626,6 +46626,9 @@ async function ownerPanelGrantRatingRecord(env, ctx, telegramId, score, reason) 
   if (!season || String(season.status) !== "active" || Number(season.starts_at || 0) > now || Number(season.ends_at || 0) <= now) {
     throw new ApiError(409, "Выдать рекорд можно только в активный рейтинговый сезон.");
   }
+  // Any authoritative path that can change #1 must capture the visible leader before mutation.
+  // Owner rating restoration used to bypass the dethrone event entirely.
+  const previousSeasonLeader = await leaderboardCurrentVisibleLeader(env, String(season.id)).catch(() => null);
   const identity = await env.DB.prepare(`SELECT p.telegram_id,p.best_score,p.profile_xp,
       COALESCE(NULLIF(b.display_name,''),NULLIF(a.display_name,''),p.telegram_id) AS display_name,
       COALESCE(NULLIF(b.username,''),NULLIF(a.username,''),'') AS username,
@@ -46665,16 +46668,34 @@ async function ownerPanelGrantRatingRecord(env, ctx, telegramId, score, reason) 
       nextProfileBest, nextProfileBest, now, `owner-rating:${ctx.user.id}`, telegramId
     )
   ],{ok:true,grantType:"rating_record",sourceId,seasonId:String(season.id),seasonTitle:String(season.title||""),previousScore,score,message:`\u0420\u0435\u043a\u043e\u0440\u0434 \u0442\u0435\u043a\u0443\u0449\u0435\u0433\u043e \u0440\u0435\u0439\u0442\u0438\u043d\u0433\u0430: ${score.toLocaleString("ru-RU")}.`});
+  // Reuse the same debounced, send-time-revalidated notification path as a real run.
+  // The helper re-reads the actual leader, so a hidden player or a score that did not
+  // really take #1 cannot generate a false dethrone notification. Queue this immediately
+  // after the authoritative rating commit, before secondary all-time/timeline work.
+  let dethroneNotification = { queued: false, reason: "leader_unchanged" };
+  if (previousSeasonLeader?.telegram_id && String(previousSeasonLeader.telegram_id) !== telegramId) {
+    try {
+      dethroneNotification = await queueLeaderboardDethroneNotificationIfNeeded(env, {
+        seasonId: String(season.id),
+        previousLeaderId: String(previousSeasonLeader.telegram_id),
+        expectedLeaderId: telegramId
+      });
+    } catch (error) {
+      console.error("owner rating grant dethrone notification failed", error);
+      dethroneNotification = { queued: false, reason: "enqueue_failed" };
+    }
+  }
+
   const allTimeScore = await syncLeaderboardAllTimeFromSeasonEntries(env, {
     telegramId, displayName, username, photoUrl, level, hidden, caseAvatarId, caseFrameId, now
   });
   try {
     await recordPlayerTimeline(env, telegramId, "rating_owner_grant", `владелец установил рекорд ${score.toLocaleString("ru-RU")} в текущем рейтинге`, {
-      seasonId: String(season.id), previousScore, score, allTimeScore, reason
+      seasonId: String(season.id), previousScore, score, allTimeScore, reason, dethroneNotification
     }, sourceId, ctx.user, now);
   } catch (error) { console.error("owner rating grant timeline failed", error); }
   await logStaffAction(env, ctx.user, ctx.access, "owner_panel_rating_record_grant", telegramId, "rating", previousScore, score, {
-    seasonId: String(season.id), seasonTitle: String(season.title || ""), allTimeScore, reason
+    seasonId: String(season.id), seasonTitle: String(season.title || ""), allTimeScore, reason, dethroneNotification
   });
   return {
     ok: true,
@@ -46684,6 +46705,7 @@ async function ownerPanelGrantRatingRecord(env, ctx, telegramId, score, reason) 
     previousScore,
     score,
     allTimeScore,
+    dethroneNotification,
     message: `Рекорд текущего рейтинга установлен: ${score.toLocaleString("ru-RU")} очков.`
   };
 }
