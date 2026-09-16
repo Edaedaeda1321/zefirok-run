@@ -12317,6 +12317,7 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
 
 &lt;section class=&quot;screen&quot; data-screen=&quot;profile&quot; hidden=&quot;&quot;&gt;
 &lt;div class=&quot;profile-shell&quot;&gt;
+  &lt;div class=&quot;profile-stale-refresh&quot; data-profile-stale-refresh hidden aria-live=&quot;polite&quot;&gt;&lt;span class=&quot;profile-stale-refresh-dot&quot; aria-hidden=&quot;true&quot;&gt;&lt;/span&gt;&lt;span&gt;Обновляем…&lt;/span&gt;&lt;/div&gt;
   &lt;div class=&quot;profile-hero&quot;&gt;
     &lt;button class=&quot;profile-mail-shortcut&quot; data-profile-mail-open type=&quot;button&quot; aria-label=&quot;Открыть Почту&quot; title=&quot;Почта Зеффи&quot;&gt;&lt;img src=&quot;/assets/ui/icon_message_season.webp&quot; alt=&quot;&quot; loading=&quot;lazy&quot; decoding=&quot;async&quot;&gt;&lt;span data-profile-mail-badge hidden&gt;0&lt;/span&gt;&lt;/button&gt;
     &lt;div class=&quot;profile-avatar-wrap&quot;&gt;
@@ -14261,7 +14262,16 @@ function installProgressInfo(){
       const assetSources = JSON.parse(root.querySelector(&quot;[data-zefirok-assets]&quot;).textContent);
       // 1.2.1 · Предсезонная сцена: сохраняем существующий canvas-пайплайн и cover-масштабирование.
       assetSources.cafeBackground = &quot;/assets/optimized/v0.79.5/background_season2.webp?v=1.2.1&quot;;
-      assetSources.roadStrip = &quot;/assets/optimized/v0.79.5/road_night_cafe.webp?v=0.79.5&quot;;
+      Object.assign(assetSources, {
+        game_barricade_flovers_night_s2: &quot;/assets/optimized/v0.79.5/game_barricade_flovers_night_s2.webp?v=0.79.5&quot;,
+        road_night_cafe: &quot;/assets/optimized/v0.79.5/road_night_cafe.webp?v=0.79.5&quot;,
+        game_barricade_tablet: &quot;/assets/optimized/v0.79.5/game_barricade_tablet.webp?v=0.79.5&quot;,
+        barrier_game_bag: &quot;/assets/optimized/v0.79.5/barrier_game_bag.webp?v=0.79.5&quot;,
+        barricade_game_puff_night: &quot;/assets/optimized/v0.79.5/barricade_game_puff_night.webp?v=0.79.5&quot;,
+        barricade_game_boock_night: &quot;/assets/optimized/v0.79.5/barricade_game_boock_night.webp?v=0.79.5&quot;,
+        barricade_game_group_svechi_night: &quot;/assets/optimized/v0.79.5/barricade_game_group_svechi_night.webp?v=0.79.5&quot;,
+        barricade_game_group_telechka: &quot;/assets/optimized/v0.79.5/barricade_game_group_telechka.webp?v=0.79.5&quot;
+      });
       // Новый стандартный аватар Зеффи в шапке основного экрана.
       // Не влияет на игровой спрайт и портрет выбранного скина в забеге.
       assetSources.skinDefaultAvatar = &quot;/assets/ui/new_avatars_game.webp&quot;;
@@ -14269,10 +14279,7 @@ function installProgressInfo(){
       // что и основная карточка магазина: параметры, подтверждение, успех и «Мои покупки».
       assetSources.shopZefirProduct = assetSources.shopMarshmallowAssortment || &quot;/assets/optimized/v0.79.5/shopMarshmallowAssortment.webp?v=0.79.5&quot;;
       const ASSET_BUILD_VERSION = &quot;0.79.5&quot;;
-      const assetFallbackSources = Object.freeze({&quot;skinDefaultPortrait&quot;:&quot;/assets/optimized/v0.79.5/skinDefaultPortrait.webp?v=0.79.5&quot;,&quot;navGameButtonSelected&quot;:&quot;/assets/optimized/v0.79.5/navGameButtonSelected.webp?v=0.79.5&quot;,&quot;navGameButtonUnselected&quot;:&quot;/assets/optimized/v0.79.5/navGameButtonUnselected.webp?v=0.79.5&quot;,&quot;iconScore&quot;:&quot;/assets/optimized/v0.79.5/iconScore.webp?v=0.79.5&quot;,&quot;cafeBackground&quot;:&quot;/assets/optimized/v0.79.5/cafeBackground.webp?v=0.79.5&quot;,&quot;skinDefaultAvatar&quot;:&quot;/assets/optimized/v0.79.5/skinDefaultAvatar.webp?v=0.79.5&quot;,&quot;shopMarshmallowAssortment&quot;:&quot;/assets/optimized/v0.79.5/shopMarshmallowAssortment.webp?v=0.79.5&quot;,&quot;shopMascot&quot;:&quot;/assets/optimized/v0.79.5/shopMascot.webp?v=0.79.5&quot;,&quot;pillowObstacle&quot;:&quot;/assets/optimized/v0.79.5/pillowObstacle.webp?v=0.79.5&quot;,&quot;coffeePickup&quot;:&quot;/assets/optimized/v0.79.5/coffeePickup.webp?v=0.79.5&quot;,&quot;vaseObstacle&quot;:&quot;/assets/optimized/v0.79.5/vaseObstacle.webp?v=0.79.5&quot;,&quot;iconCoffee&quot;:&quot;/assets/optimized/v0.79.5/iconCoffee.webp?v=0.79.5&quot;,&quot;iconRecord&quot;:&quot;/assets/optimized/v0.79.5/iconRecord.webp?v=0.79.5&quot;,&quot;game_barricade_flovers_night_s2&quot;:&quot;/assets/optimized/v0.79.5/game_barricade_flovers_night_s2.webp?v=0.79.5&quot;,&quot;road_night_cafe&quot;:&quot;/assets/optimized/v0.79.5/road_night_cafe.webp?v=0.79.5&quot;,&quot;game_barricade_tablet&quot;:&quot;/assets/optimized/v0.79.5/game_barricade_tablet.webp?v=0.79.5&quot;,&quot;barrier_game_bag&quot;:&quot;/assets/optimized/v0.79.5/barrier_game_bag.webp?v=0.79.5&quot;,&quot;barricade_game_puff_night&quot;:&quot;/assets/optimized/v0.79.5/barricade_game_puff_night.webp?v=0.79.5&quot;,&quot;barricade_game_boock_night&quot;:&quot;/assets/optimized/v0.79.5/barricade_game_boock_night.webp?v=0.79.5&quot;,&quot;barricade_game_group_svechi_night&quot;:&quot;/assets/optimized/v0.79.5/barricade_game_group_svechi_night.webp?v=0.79.5&quot;,&quot;barricade_game_group_telechka&quot;:&quot;/assets/optimized/v0.79.5/barricade_game_group_telechka.webp?v=0.79.5&quot;});
-      for (const [assetKey, fallbackSrc] of Object.entries(assetFallbackSources)) {
-        if (!assetSources[assetKey] && fallbackSrc) assetSources[assetKey] = fallbackSrc;
-      }
+      const assetFallbackSources = Object.freeze({&quot;skinDefaultPortrait&quot;:&quot;/assets/optimized/v0.79.5/skinDefaultPortrait.webp?v=0.79.5&quot;,&quot;navGameButtonSelected&quot;:&quot;/assets/optimized/v0.79.5/navGameButtonSelected.webp?v=0.79.5&quot;,&quot;navGameButtonUnselected&quot;:&quot;/assets/optimized/v0.79.5/navGameButtonUnselected.webp?v=0.79.5&quot;,&quot;iconScore&quot;:&quot;/assets/optimized/v0.79.5/iconScore.webp?v=0.79.5&quot;,&quot;cafeBackground&quot;:&quot;/assets/optimized/v0.79.5/cafeBackground.webp?v=0.79.5&quot;,&quot;skinDefaultAvatar&quot;:&quot;/assets/optimized/v0.79.5/skinDefaultAvatar.webp?v=0.79.5&quot;,&quot;shopMarshmallowAssortment&quot;:&quot;/assets/optimized/v0.79.5/shopMarshmallowAssortment.webp?v=0.79.5&quot;,&quot;shopMascot&quot;:&quot;/assets/optimized/v0.79.5/shopMascot.webp?v=0.79.5&quot;,&quot;pillowObstacle&quot;:&quot;/assets/optimized/v0.79.5/pillowObstacle.webp?v=0.79.5&quot;,&quot;coffeePickup&quot;:&quot;/assets/optimized/v0.79.5/coffeePickup.webp?v=0.79.5&quot;,&quot;vaseObstacle&quot;:&quot;/assets/optimized/v0.79.5/vaseObstacle.webp?v=0.79.5&quot;,&quot;iconCoffee&quot;:&quot;/assets/optimized/v0.79.5/iconCoffee.webp?v=0.79.5&quot;,&quot;iconRecord&quot;:&quot;/assets/optimized/v0.79.5/iconRecord.webp?v=0.79.5&quot;});
       const assetFallbackByUrl = new Map();
       for (const [assetKey, fallbackSrc] of Object.entries(assetFallbackSources)) {
         const primarySrc = String(assetSources[assetKey] || &quot;&quot;);
@@ -14667,6 +14674,138 @@ function installProgressInfo(){
       syncDogAvatar();
       let gameplayStateReady = false;
       const assets = {};
+      const LEGACY_RUNNER_SCENE = Object.freeze({
+        version: 1,
+        revision: 1,
+        sceneId: &quot;cafe-default&quot;,
+        title: &quot;Кафе · основной&quot;,
+        seasonId: &quot;&quot;,
+        background: Object.freeze({ id: &quot;cafe&quot;, title: &quot;Кафе&quot;, assetKey: &quot;cafeBackground&quot;, assetPath: &quot;&quot;, fitMode: &quot;cover&quot;, zoom: 1, positionX: 0.5, positionY: 0.5, roadEnabled: true, roadAssetKey: &quot;roadStrip&quot;, roadAssetPath: &quot;&quot; }),
+        obstacles: Object.freeze([
+          Object.freeze({ id: &quot;pouf&quot;, title: &quot;Пуф&quot;, assetKey: &quot;pouf&quot;, assetPath: &quot;&quot;, width: 58, height: 40, shadow: true, weight: 30, hitboxes: Object.freeze([{ x: 0.16, y: 0.62, w: 0.68, h: 0.28 }]) }),
+          Object.freeze({ id: &quot;stool&quot;, title: &quot;Стул&quot;, assetKey: &quot;stool&quot;, assetPath: &quot;&quot;, width: 42, height: 42, shadow: true, weight: 22, hitboxes: Object.freeze([{ x: 0.2, y: 0.6, w: 0.6, h: 0.28 }]) }),
+          Object.freeze({ id: &quot;table&quot;, title: &quot;Стол&quot;, assetKey: &quot;tablePink&quot;, assetPath: &quot;&quot;, width: 50, height: 48, shadow: true, weight: 18, hitboxes: Object.freeze([{ x: 0.18, y: 0.66, w: 0.64, h: 0.24 }]) }),
+          Object.freeze({ id: &quot;pillow&quot;, title: &quot;Подушка&quot;, assetKey: &quot;pillowObstacle&quot;, assetPath: &quot;&quot;, width: 72, height: 35, shadow: true, weight: 16, hitboxes: Object.freeze([{ x: 0.08, y: 0.55, w: 0.84, h: 0.33 }]) }),
+          Object.freeze({ id: &quot;vase&quot;, title: &quot;Ваза&quot;, assetKey: &quot;vaseObstacle&quot;, assetPath: &quot;&quot;, width: 42, height: 64, shadow: true, weight: 14, hitboxes: Object.freeze([{ x: 0.2, y: 0.42, w: 0.6, h: 0.48 }]) })
+        ])
+      });
+      const runnerDynamicImages = new Map();
+      let remoteRunnerScene = LEGACY_RUNNER_SCENE;
+
+      function normalizeRunnerHitboxClient(value) {
+        const row = value &amp;&amp; typeof value === &quot;object&quot; ? value : {};
+        let x = Math.max(0, Math.min(1, Number(row.x) || 0));
+        let y = Math.max(0, Math.min(1, Number(row.y) || 0));
+        let w = Math.max(0.02, Math.min(1, Number(row.w) || 0.6));
+        let h = Math.max(0.02, Math.min(1, Number(row.h) || 0.28));
+        if (x + w &gt; 1) w = Math.max(0.02, 1 - x);
+        if (y + h &gt; 1) h = Math.max(0.02, 1 - y);
+        return { x, y, w, h };
+      }
+
+      function normalizeRunnerSceneClient(raw) {
+        if (!raw || typeof raw !== &quot;object&quot;) return LEGACY_RUNNER_SCENE;
+        const backgroundRaw = raw.background &amp;&amp; typeof raw.background === &quot;object&quot; ? raw.background : {};
+        const obstacles = (Array.isArray(raw.obstacles) ? raw.obstacles : []).slice(0, 80).map((item) =&gt; ({
+          id: String(item?.id || &quot;&quot;).trim(),
+          title: String(item?.title || item?.id || &quot;Препятствие&quot;).trim(),
+          assetKey: String(item?.assetKey || &quot;&quot;).trim(),
+          assetPath: String(item?.assetPath || &quot;&quot;).trim(),
+          width: Math.max(18, Math.min(220, Number(item?.width) || 48)),
+          height: Math.max(18, Math.min(220, Number(item?.height) || 48)),
+          shadow: item?.shadow !== false,
+          weight: Math.max(0.01, Number(item?.weight) || 1),
+          hitboxes: (Array.isArray(item?.hitboxes) ? item.hitboxes : []).slice(0, 3).map(normalizeRunnerHitboxClient)
+        })).filter((item) =&gt; item.id &amp;&amp; item.hitboxes.length);
+        if (!obstacles.length) return LEGACY_RUNNER_SCENE;
+        return {
+          version: Math.max(1, Number(raw.version) || 1),
+          revision: Math.max(1, Number(raw.revision) || 1),
+          sceneId: String(raw.sceneId || &quot;runtime-scene&quot;),
+          title: String(raw.title || &quot;Сцена забега&quot;),
+          seasonId: String(raw.seasonId || &quot;&quot;),
+          background: {
+            id: String(backgroundRaw.id || &quot;runtime-background&quot;),
+            title: String(backgroundRaw.title || &quot;Фон&quot;),
+            assetKey: String(backgroundRaw.assetKey || &quot;cafeBackground&quot;),
+            assetPath: String(backgroundRaw.assetPath || &quot;&quot;),
+            fitMode: String(backgroundRaw.fitMode || &quot;cover&quot;).toLowerCase() === &quot;contain&quot; ? &quot;contain&quot; : &quot;cover&quot;,
+            zoom: Math.max(1, Math.min(2, Number(backgroundRaw.zoom) || 1)),
+            positionX: Number.isFinite(Number(backgroundRaw.positionX)) ? Math.max(0, Math.min(1, Number(backgroundRaw.positionX))) : 0.5,
+            positionY: Number.isFinite(Number(backgroundRaw.positionY)) ? Math.max(0, Math.min(1, Number(backgroundRaw.positionY))) : 0.5,
+            roadEnabled: backgroundRaw.roadEnabled !== false,
+            roadAssetKey: String(backgroundRaw.roadAssetKey || &quot;roadStrip&quot;),
+            roadAssetPath: String(backgroundRaw.roadAssetPath || &quot;&quot;)
+          },
+          obstacles
+        };
+      }
+
+      function ensureRunnerDynamicImage(path) {
+        const src = String(path || &quot;&quot;).trim();
+        if (!src) return null;
+        if (runnerDynamicImages.has(src)) return runnerDynamicImages.get(src);
+        const image = installDetachedAssetFallback(new Image());
+        image.decoding = &quot;async&quot;;
+        image.addEventListener(&quot;load&quot;, () =&gt; {
+          invalidateGameRenderCaches();
+          if (typeof draw === &quot;function&quot;) requestAnimationFrame(() =&gt; draw());
+        });
+        image.src = src;
+        runnerDynamicImages.set(src, image);
+        return image;
+      }
+
+      function runnerSceneImage(assetKey, assetPath) {
+        const path = String(assetPath || &quot;&quot;).trim();
+        if (path) return ensureRunnerDynamicImage(path);
+        const key = String(assetKey || &quot;&quot;).trim();
+        if (!key) return null;
+        if (assets[key]) return assets[key];
+        const builtInSrc = String(assetSources[key] || &quot;&quot;).trim();
+        return builtInSrc ? ensureRunnerDynamicImage(builtInSrc) : null;
+      }
+
+      function applyRemoteRunnerScene(raw) {
+        remoteRunnerScene = normalizeRunnerSceneClient(raw);
+        const background = remoteRunnerScene.background || {};
+        if (background.assetPath) ensureRunnerDynamicImage(background.assetPath);
+        if (background.roadEnabled !== false &amp;&amp; background.roadAssetPath) ensureRunnerDynamicImage(background.roadAssetPath);
+        for (const obstacle of remoteRunnerScene.obstacles || []) if (obstacle.assetPath) ensureRunnerDynamicImage(obstacle.assetPath);
+        invalidateGameRenderCaches();
+      }
+
+      function runnerSceneBackgroundImage() {
+        const background = remoteRunnerScene?.background || LEGACY_RUNNER_SCENE.background;
+        return runnerSceneImage(background.assetKey || &quot;cafeBackground&quot;, background.assetPath || &quot;&quot;);
+      }
+
+      function runnerSceneRoadImage() {
+        const background = remoteRunnerScene?.background || LEGACY_RUNNER_SCENE.background;
+        if (background.roadEnabled === false) return null;
+        return runnerSceneImage(background.roadAssetKey || &quot;roadStrip&quot;, background.roadAssetPath || &quot;&quot;);
+      }
+
+      function runnerObstacleDefinition(item) {
+        const id = String(item?.obstacleId || item?.type || &quot;&quot;);
+        return (remoteRunnerScene?.obstacles || []).find((entry) =&gt; entry.id === id)
+          || LEGACY_RUNNER_SCENE.obstacles.find((entry) =&gt; entry.id === id)
+          || null;
+      }
+
+      function chooseRunnerObstacleDefinition() {
+        const pool = (remoteRunnerScene?.obstacles || []).filter((entry) =&gt; Number(entry.weight || 0) &gt; 0);
+        const source = pool.length ? pool : LEGACY_RUNNER_SCENE.obstacles;
+        const total = source.reduce((sum, entry) =&gt; sum + Math.max(0, Number(entry.weight || 0)), 0);
+        if (total &lt;= 0) return source[0] || null;
+        let roll = Math.random() * total;
+        for (const entry of source) {
+          roll -= Math.max(0, Number(entry.weight || 0));
+          if (roll &lt;= 0) return entry;
+        }
+        return source[source.length - 1] || null;
+      }
+
       // Загружаем в canvas только изображения, которые действительно рисуются в забеге.
       // Остальные UI-изображения остаются в assetSources и загружаются своими &lt;img&gt;
       // только тогда, когда соответствующий экран реально используется.
@@ -14682,15 +14821,7 @@ function installProgressInfo(){
         &quot;pillowObstacle&quot;,
         &quot;vaseObstacle&quot;,
         &quot;marshmallow&quot;,
-        &quot;coffeePickup&quot;,
-        &quot;game_barricade_flovers_night_s2&quot;,
-        &quot;road_night_cafe&quot;,
-        &quot;game_barricade_tablet&quot;,
-        &quot;barrier_game_bag&quot;,
-        &quot;barricade_game_puff_night&quot;,
-        &quot;barricade_game_boock_night&quot;,
-        &quot;barricade_game_group_svechi_night&quot;,
-        &quot;barricade_game_group_telechka&quot;
+        &quot;coffeePickup&quot;
       ]);
       for (const name of GAMEPLAY_CANVAS_ASSET_KEYS) {
         const src = assetSources[name];
@@ -14699,7 +14830,7 @@ function installProgressInfo(){
         assets[name].decoding = &quot;async&quot;;
         assets[name].src = src;
         assets[name].addEventListener(&quot;load&quot;, () =&gt; {
-          if (name === &quot;cafeBackground&quot; || name === &quot;roadStrip&quot; || name === &quot;road_night_cafe&quot;) invalidateGameRenderCaches();
+          if (name === &quot;cafeBackground&quot; || name === &quot;roadStrip&quot;) invalidateGameRenderCaches();
           if (gameplayStateReady &amp;&amp; !state.running) draw();
         });
       }
@@ -15879,6 +16010,46 @@ function installProgressInfo(){
       const LEADERBOARD_MODAL_IMAGE = &quot;/assets/rating/season-rating-modal.webp&quot;;
       const LEADERBOARD_PENDING_RUN_KEY = &quot;zefirok-pending-leaderboard-run-v1&quot;;
       const LEADERBOARD_REFRESH_INTERVAL_MS = 30000;
+      const UI_STALE_CACHE_PREFIX = &quot;zefirok-ui-stale-v1&quot;;
+      const UI_STALE_LEADERBOARD_MAX_AGE_MS = 2 * 60 * 60 * 1000;
+      const UI_STALE_CACHE_MAX_CHARS = 900000;
+      const profileStaleSources = new Set();
+      function setProfileStaleUpdating(source, active) {
+        const key = String(source || &quot;profile&quot;);
+        if (active) profileStaleSources.add(key);
+        else profileStaleSources.delete(key);
+        const indicator = root.querySelector(&quot;[data-profile-stale-refresh]&quot;);
+        if (indicator) indicator.hidden = profileStaleSources.size === 0;
+      }
+      window.zefirokSetProfileStaleUpdating = setProfileStaleUpdating;
+      function profileLeaderboardStaleKey(mode, userId = String(telegramProfile?.id || &quot;&quot;)) {
+        const id = String(userId || &quot;&quot;).trim();
+        return id ? `${UI_STALE_CACHE_PREFIX}:leaderboard:${id}:${mode === &quot;all_time&quot; ? &quot;all_time&quot; : &quot;season&quot;}` : &quot;&quot;;
+      }
+      function readProfileLeaderboardStale(mode, userId) {
+        const key = profileLeaderboardStaleKey(mode, userId);
+        if (!key) return null;
+        try {
+          const envelope = JSON.parse(localStorage.getItem(key) || &quot;null&quot;);
+          const savedAt = Number(envelope?.savedAt || 0);
+          if (Number(envelope?.v || 0) !== 1 || !savedAt || Date.now() - savedAt &gt; UI_STALE_LEADERBOARD_MAX_AGE_MS || !envelope?.data || typeof envelope.data !== &quot;object&quot;) {
+            if (envelope) localStorage.removeItem(key);
+            return null;
+          }
+          return { ...envelope.data, _loadedAt: 0, _uiStale: true };
+        } catch { return null; }
+      }
+      function writeProfileLeaderboardStale(mode, data, userId) {
+        const key = profileLeaderboardStaleKey(mode, userId);
+        if (!key || !data || typeof data !== &quot;object&quot;) return false;
+        try {
+          const snapshot = { ...data }; delete snapshot._loadedAt; delete snapshot._uiStale;
+          const raw = JSON.stringify({ v: 1, savedAt: Date.now(), data: snapshot });
+          if (raw.length &gt; UI_STALE_CACHE_MAX_CHARS) return false;
+          localStorage.setItem(key, raw);
+          return true;
+        } catch { return false; }
+      }
       let leaderboardData = null;
       let leaderboardMode = &quot;season&quot;;
       let skinBonusCaseSyncInFlight = false;
@@ -25424,6 +25595,7 @@ function createTutorialDeck(layer, mount, options, words) {
 
           const publicConfig = data.publicConfig || {};
           applyRemoteGameplayConfig(publicConfig.gameplay);
+          applyRemoteRunnerScene(publicConfig.runnerScene);
           const nextFeatureFlags = data.flags || {};
           window.__ZEFIROK_FEATURE_FLAGS__ = nextFeatureFlags;
           try { window.dispatchEvent(new CustomEvent(&quot;zefirok-feature-flags&quot;, { detail: nextFeatureFlags })); } catch (error) {}
@@ -25654,8 +25826,13 @@ function createTutorialDeck(layer, mount, options, words) {
         const initData = String(telegramProfile?.initData || &quot;&quot;);
         const requestUser = String(telegramProfile?.id || &quot;guest&quot;);
         if (activate) leaderboardMode = requestedMode;
+        if (!leaderboardCache[requestedMode] &amp;&amp; requestUser !== &quot;guest&quot;) {
+          const stale = readProfileLeaderboardStale(requestedMode, requestUser);
+          if (stale) leaderboardCache[requestedMode] = stale;
+        }
         const cached = leaderboardCache[requestedMode];
         if (cached) {
+          if (cached._uiStale) setProfileStaleUpdating(`leaderboard-${requestedMode}`, true);
           if (requestedMode === &quot;season&quot;) renderLeaderboardSummary();
           if (requestedMode === leaderboardMode) leaderboardData = cached;
         }
@@ -25664,7 +25841,7 @@ function createTutorialDeck(layer, mount, options, words) {
           return null;
         }
         const now = Date.now();
-        if (!force &amp;&amp; cached &amp;&amp; now - Number(cached._loadedAt || 0) &lt; LEADERBOARD_REFRESH_INTERVAL_MS) return cached;
+        if (!force &amp;&amp; cached &amp;&amp; !cached._uiStale &amp;&amp; now - Number(cached._loadedAt || 0) &lt; LEADERBOARD_REFRESH_INTERVAL_MS) return cached;
         const existingTask = leaderboardRefreshTask[requestedMode];
         if (existingTask &amp;&amp; leaderboardRefreshTaskUser[requestedMode] === requestUser) return existingTask;
 
@@ -25674,9 +25851,12 @@ function createTutorialDeck(layer, mount, options, words) {
           try {
             const loaded = await leaderboardApiRequest(LEADERBOARD_API_STATE_PATH, { initData, mode: requestedMode });
             loaded._loadedAt = Date.now();
+            loaded._uiStale = false;
             if (serial !== leaderboardRequestSerial[requestedMode]) return loaded;
             leaderboardCache[requestedMode] = loaded;
-            leaderboardLastRefreshAt = now;
+            writeProfileLeaderboardStale(requestedMode, loaded, requestUser);
+            setProfileStaleUpdating(`leaderboard-${requestedMode}`, false);
+            leaderboardLastRefreshAt = Date.now();
             applyLeaderboardResetPlan(loaded?.season?.resetPlan, loaded?.serverTime);
             if (requestedMode === &quot;season&quot;) renderLeaderboardSummary();
             if (requestedMode === leaderboardMode) leaderboardData = loaded;
@@ -25684,6 +25864,7 @@ function createTutorialDeck(layer, mount, options, words) {
           } catch (error) {
             console.warn(&quot;Leaderboard refresh failed&quot;, error);
             if (!cached &amp;&amp; requestedMode === leaderboardMode) renderLeaderboardUnavailable(error.message || &quot;Не удалось загрузить рейтинг.&quot;);
+            if (cached?._uiStale) setProfileStaleUpdating(`leaderboard-${requestedMode}`, true);
             return cached || null;
           } finally {
             if (serial === leaderboardRequestSerial[requestedMode]) leaderboardRefreshInFlight[requestedMode] = false;
@@ -27179,30 +27360,20 @@ function createTutorialDeck(layer, mount, options, words) {
         return Math.max(0.25, runtimeGameplayConfig.pickupDelayBase) + Math.random() * Math.max(0.12, randomWindow);
       }
 
-      function spawnObstacle() {
-        const roll = Math.random();
-        const type = roll &lt; 0.16 ? &quot;pouf&quot; : roll &lt; 0.31 ? &quot;stool&quot; : roll &lt; 0.44 ? &quot;table&quot; : roll &lt; 0.56 ? &quot;pillow&quot; : roll &lt; 0.68 ? &quot;vase&quot; : roll &lt; 0.76 ? &quot;nightPlanter&quot; : roll &lt; 0.83 ? &quot;wetFloorSign&quot; : roll &lt; 0.89 ? &quot;clientBag&quot; : roll &lt; 0.94 ? &quot;booksMenu&quot; : roll &lt; 0.97 ? &quot;candlesGroup&quot; : &quot;waiterCart&quot;;
-        const sizes = {
-          pouf: [58, 40],
-          stool: [42, 42],
-          table: [50, 48],
-          pillow: [72, 35],
-          vase: [42, 64],
-          nightPlanter: [74, 74],
-          wetFloorSign: [56, 82],
-          clientBag: [64, 64],
-          booksMenu: [62, 86],
-          candlesGroup: [64, 92],
-          waiterCart: [82, 94]
-        };
-        const size = sizes[type];
+            function spawnObstacle() {
+        const definition = chooseRunnerObstacleDefinition();
+        if (!definition) return;
+        const width = Math.max(18, Number(definition.width) || 48);
+        const height = Math.max(18, Number(definition.height) || 48);
+        const startX = canvasViewWidth + 36;
         state.obstacles.push({
-          type,
-          x: canvasViewWidth + 36,
-          previousX: canvasViewWidth + 36,
-          y: ground.y - size[1],
-          w: size[0],
-          h: size[1]
+          type: definition.id,
+          obstacleId: definition.id,
+          x: startX,
+          previousX: startX,
+          y: ground.y - height,
+          w: width,
+          h: height
         });
       }
 
@@ -27243,74 +27414,29 @@ function createTutorialDeck(layer, mount, options, words) {
         return ax &lt; bx + bw &amp;&amp; ax + aw &gt; bx &amp;&amp; ay &lt; by + bh &amp;&amp; ay + ah &gt; by;
       }
 
-      function obstaclePrimaryHitboxFactors(type) {
-        if (type === &quot;pouf&quot;) return [0.16, 0.62, 0.68, 0.28];
-        if (type === &quot;table&quot;) return [0.18, 0.66, 0.64, 0.24];
-        if (type === &quot;pillow&quot;) return [0.08, 0.55, 0.84, 0.33];
-        if (type === &quot;vase&quot;) return [0.2, 0.42, 0.6, 0.48];
-        if (type === &quot;nightPlanter&quot;) return [0.16, 0.22, 0.68, 0.68];
-        if (type === &quot;wetFloorSign&quot;) return [0.14, 0.08, 0.72, 0.84];
-        if (type === &quot;clientBag&quot;) return [0.12, 0.18, 0.76, 0.68];
-        if (type === &quot;booksMenu&quot;) return [0.14, 0.12, 0.72, 0.8];
-        if (type === &quot;candlesGroup&quot;) return [0.14, 0.1, 0.72, 0.82];
-        if (type === &quot;waiterCart&quot;) return [0.08, 0.18, 0.84, 0.74];
-        return [0.2, 0.6, 0.6, 0.28];
+            function obstacleHitboxes(item) {
+        const definition = runnerObstacleDefinition(item);
+        const source = Array.isArray(definition?.hitboxes) &amp;&amp; definition.hitboxes.length
+          ? definition.hitboxes
+          : [{ x: 0.2, y: 0.6, w: 0.6, h: 0.28 }];
+        return source.slice(0, 3);
       }
 
       function collidesWithObstacle(item) {
-        if (!CLIENT_OPT_ALLOCATION_FREE_COLLISIONS) {
-          const factors = obstaclePrimaryHitboxFactors(item.type);
-          const dogBox = !dog.grounded
-            ? { x: dog.x + dog.w * 0.31, y: dog.y + dog.h * 0.76, w: dog.w * 0.4, h: dog.h * 0.12 }
-            : { x: dog.x + dog.w * 0.25, y: dog.y + dog.h * 0.58, w: dog.w * 0.52, h: dog.h * 0.3 };
-          const box = { x: item.x + item.w * factors[0], y: item.y + item.h * factors[1], w: item.w * factors[2], h: item.h * factors[3] };
-          if (!dog.grounded) {
-            const dogPaws = dog.y + dog.h * 0.84;
-            if (dogPaws &lt; item.y + item.h * 0.62) return false;
-            return overlapValues(
-              dog.x + dog.w * 0.42, dog.y + dog.h * 0.82, dog.w * 0.28, dog.h * 0.08,
-              item.x + item.w * 0.16, item.y + item.h * 0.62, item.w * 0.68, item.h * 0.28
-            );
-          }
-          if (overlapValues(dogBox.x, dogBox.y, dogBox.w, dogBox.h, box.x, box.y, box.w, box.h)) return true;
-          return overlapValues(
-            dog.x + dog.w * 0.14, dog.y + dog.h * 0.34, dog.w * 0.68, dog.h * 0.54,
-            item.x + item.w * 0.08, item.y + item.h * 0.22, item.w * 0.84, item.h * 0.72
-          );
+        const dogX = dog.grounded ? dog.x + dog.w * 0.25 : dog.x + dog.w * 0.42;
+        const dogY = dog.grounded ? dog.y + dog.h * 0.58 : dog.y + dog.h * 0.82;
+        const dogW = dog.grounded ? dog.w * 0.52 : dog.w * 0.28;
+        const dogH = dog.grounded ? dog.h * 0.3 : dog.h * 0.08;
+        for (const factors of obstacleHitboxes(item)) {
+          if (overlapValues(
+            dogX, dogY, dogW, dogH,
+            item.x + item.w * factors.x,
+            item.y + item.h * factors.y,
+            item.w * factors.w,
+            item.h * factors.h
+          )) return true;
         }
-
-        if (!dog.grounded) {
-          const dogPaws = dog.y + dog.h * 0.84;
-          if (dogPaws &lt; item.y + item.h * 0.62) return false;
-          return overlapValues(
-            dog.x + dog.w * 0.42, dog.y + dog.h * 0.82, dog.w * 0.28, dog.h * 0.08,
-            item.x + item.w * 0.16, item.y + item.h * 0.62, item.w * 0.68, item.h * 0.28
-          );
-        }
-
-        let hitX = 0.2;
-        let hitY = 0.6;
-        let hitW = 0.6;
-        let hitH = 0.28;
-        if (item.type === &quot;pouf&quot;) {
-          hitX = 0.16; hitY = 0.62; hitW = 0.68; hitH = 0.28;
-        } else if (item.type === &quot;table&quot;) {
-          hitX = 0.18; hitY = 0.66; hitW = 0.64; hitH = 0.24;
-        } else if (item.type === &quot;pillow&quot;) {
-          hitX = 0.08; hitY = 0.55; hitW = 0.84; hitH = 0.33;
-        } else if (item.type === &quot;vase&quot;) {
-          hitX = 0.2; hitY = 0.42; hitW = 0.6; hitH = 0.48;
-        }
-
-        if (overlapValues(
-          dog.x + dog.w * 0.25, dog.y + dog.h * 0.58, dog.w * 0.52, dog.h * 0.3,
-          item.x + item.w * hitX, item.y + item.h * hitY, item.w * hitW, item.h * hitH
-        )) return true;
-
-        return overlapValues(
-          dog.x + dog.w * 0.14, dog.y + dog.h * 0.34, dog.w * 0.68, dog.h * 0.54,
-          item.x + item.w * 0.08, item.y + item.h * 0.22, item.w * 0.84, item.h * 0.72
-        );
+        return false;
       }
 
       function currentVisualParticleLimit() {
@@ -27370,11 +27496,18 @@ function createTutorialDeck(layer, mount, options, words) {
         }
       }
 
-      function staticCafeScene(w, h) {
-        if (!isReady(&quot;cafeBackground&quot;)) return null;
+            function staticCafeScene(w, h) {
+        const img = runnerSceneBackgroundImage();
+        if (!img || !img.complete || !img.naturalWidth) return null;
+        const background = remoteRunnerScene?.background || LEGACY_RUNNER_SCENE.background;
+        const fitMode = String(background?.fitMode || &quot;cover&quot;).toLowerCase() === &quot;contain&quot; ? &quot;contain&quot; : &quot;cover&quot;;
+        const zoom = Math.max(1, Math.min(2, Number(background?.zoom) || 1));
+        const positionX = Number.isFinite(Number(background?.positionX)) ? Math.max(0, Math.min(1, Number(background.positionX))) : 0.5;
+        const positionY = Number.isFinite(Number(background?.positionY)) ? Math.max(0, Math.min(1, Number(background.positionY))) : 0.5;
+        const frameKey = `${fitMode}:${zoom.toFixed(3)}:${positionX.toFixed(3)}:${positionY.toFixed(3)}:${img.naturalWidth}x${img.naturalHeight}`;
         const width = Math.max(1, Math.ceil(w * canvasPixelRatio));
         const height = Math.max(1, Math.ceil(h * canvasPixelRatio));
-        if (staticCafeSceneCache?.width === width &amp;&amp; staticCafeSceneCache?.height === height) return staticCafeSceneCache.canvas;
+        if (staticCafeSceneCache?.width === width &amp;&amp; staticCafeSceneCache?.height === height &amp;&amp; staticCafeSceneCache?.frameKey === frameKey) return staticCafeSceneCache.canvas;
         const cache = document.createElement(&quot;canvas&quot;);
         cache.width = width;
         cache.height = height;
@@ -27382,16 +27515,20 @@ function createTutorialDeck(layer, mount, options, words) {
         cacheContext.setTransform(canvasPixelRatio, 0, 0, canvasPixelRatio, 0, 0);
         cacheContext.imageSmoothingEnabled = true;
         try { cacheContext.imageSmoothingQuality = &quot;medium&quot;; } catch (error) {}
-        const img = assets.cafeBackground;
-        const scale = Math.max(w / img.naturalWidth, h / img.naturalHeight);
+        cacheContext.fillStyle = &quot;#fff8f0&quot;;
+        cacheContext.fillRect(0, 0, w, h);
+        const baseScale = fitMode === &quot;contain&quot;
+          ? Math.min(w / img.naturalWidth, h / img.naturalHeight)
+          : Math.max(w / img.naturalWidth, h / img.naturalHeight);
+        const scale = baseScale * zoom;
         const dw = img.naturalWidth * scale;
         const dh = img.naturalHeight * scale;
-        const dx = (w - dw) / 2;
-        const dy = (h - dh) / 2;
+        const dx = (w - dw) * positionX;
+        const dy = (h - dh) * positionY;
         cacheContext.drawImage(img, dx, dy, dw, dh);
         cacheContext.fillStyle = &quot;rgba(255, 249, 246, 0.08)&quot;;
         cacheContext.fillRect(0, 0, w, h);
-        staticCafeSceneCache = { canvas: cache, width, height };
+        staticCafeSceneCache = { canvas: cache, width, height, frameKey };
         return cache;
       }
 
@@ -27469,7 +27606,7 @@ function createTutorialDeck(layer, mount, options, words) {
           drawStool(w * 0.36, y, 32, 30, 0.52);
           drawStool(w * 0.62, y - 2, 32, 30, 0.52);
         }
-        if (isReady(&quot;game_barricade_flovers_night_s2&quot;)) drawAsset(&quot;game_barricade_flovers_night_s2&quot;, w - 74, ground.y - 104, 54, 60, 0.72);
+        if (isReady(&quot;flowersTall&quot;)) drawAsset(&quot;flowersTall&quot;, w - 58, ground.y - 96, 42, 58, 0.62);
         else drawFlowers(w - 48, ground.y - 98, 0.58);
       }
 
@@ -27487,48 +27624,46 @@ function createTutorialDeck(layer, mount, options, words) {
         return cache;
       }
 
-      function drawRoad(w) {
-        if (!isReady(&quot;roadStrip&quot;)) return false;
-        const img = assets.roadStrip;
+            function drawRoad(w) {
+        const img = runnerSceneRoadImage();
+        if (!img || !img.complete || !img.naturalWidth || !img.naturalHeight) return false;
+        const runnerBackground = remoteRunnerScene?.background || LEGACY_RUNNER_SCENE.background;
+        const roadIdentity = `${String(runnerBackground.roadAssetKey || &quot;&quot;)}|${String(runnerBackground.roadAssetPath || &quot;&quot;)}`;
+        const nightCafeRoad = roadIdentity.includes(&quot;road_night_cafe&quot;);
         if (
           !roadDrawMetricsCache ||
           roadDrawMetricsCache.width !== w ||
           roadDrawMetricsCache.pixelRatio !== canvasPixelRatio ||
           roadDrawMetricsCache.sourceWidth !== img.naturalWidth ||
-          roadDrawMetricsCache.sourceHeight !== img.naturalHeight
+          roadDrawMetricsCache.sourceHeight !== img.naturalHeight ||
+          roadDrawMetricsCache.variant !== roadIdentity
         ) {
-          const sx = Math.floor(img.naturalWidth * 0.12);
-          const sw = Math.max(1, Math.floor(img.naturalWidth * 0.76));
-          const roadH = Math.max(58, Math.min(76, w * 0.15));
-          const tileW = roadH * (sw / img.naturalHeight);
-          roadDrawMetricsCache = {
-            width: w,
-            pixelRatio: canvasPixelRatio,
-            sourceWidth: img.naturalWidth,
-            sourceHeight: img.naturalHeight,
-            sx,
-            sw,
-            roadH,
-            tileW
-          };
+          const sxRatio = nightCafeRoad ? 0.04 : 0.12;
+          const swRatio = nightCafeRoad ? 0.92 : 0.76;
+          const sx = Math.floor(img.naturalWidth * sxRatio);
+          const sw = Math.max(1, Math.floor(img.naturalWidth * swRatio));
+          const roadH = nightCafeRoad
+            ? Math.max(94, Math.min(126, w * 0.245))
+            : Math.max(58, Math.min(76, w * 0.15));
+          const roadWidthScale = nightCafeRoad ? 1.12 : 1;
+          const tileW = roadH * (sw / img.naturalHeight) * roadWidthScale;
+          const visibleLift = nightCafeRoad
+            ? Math.round(Math.max(24, Math.min(34, roadH * 0.27)))
+            : 8;
+          roadDrawMetricsCache = { width: w, pixelRatio: canvasPixelRatio, sourceWidth: img.naturalWidth, sourceHeight: img.naturalHeight, sx, sw, roadH, tileW, visibleLift, variant: roadIdentity };
           roadTileCache = null;
         }
-        const { sx, sw, roadH, tileW } = roadDrawMetricsCache;
+        const { sx, sw, roadH, tileW, visibleLift } = roadDrawMetricsCache;
         if (CLIENT_OPT_ROAD_TILE_CACHE &amp;&amp; !roadTileCache) {
           clientPerformance.roadTileCacheMisses += 1;
           roadTileCache = createRoadTileCache(img, sx, sw, tileW, roadH);
         }
         if (roadTileCache) clientPerformance.roadTileCacheHits += 1;
-        const y = ground.y - 8;
-        const renderedDistance = Math.max(0, simulationRenderHorizontal(
-          state.previousVisualDistance,
-          state.visualDistance,
-          Number(state.renderSpeed || state.speed || 0)
-        ));
+        const y = ground.y - visibleLift;
+        const renderedDistance = Math.max(0, simulationRenderHorizontal(state.previousVisualDistance, state.visualDistance, Number(state.renderSpeed || state.speed || 0)));
         const offset = -((renderedDistance * 0.86) % tileW);
-
         ctx.save();
-        ctx.globalAlpha = 0.96;
+        ctx.globalAlpha = nightCafeRoad ? 0.99 : 0.96;
         for (let x = offset - tileW; x &lt; w + tileW; x += tileW) {
           if (roadTileCache) ctx.drawImage(roadTileCache, x, y, tileW + 1, roadH);
           else ctx.drawImage(img, sx, 0, sw, img.naturalHeight, x, y, tileW + 1, roadH);
@@ -27538,7 +27673,10 @@ function createTutorialDeck(layer, mount, options, words) {
       }
 
       function drawForeground(w) {
-        if (isReady(&quot;roadStrip&quot;)) return;
+        const runnerBackground = remoteRunnerScene?.background || LEGACY_RUNNER_SCENE.background;
+        if (runnerBackground.roadEnabled === false) return;
+        const currentRoad = runnerSceneRoadImage();
+        if (currentRoad &amp;&amp; currentRoad.complete &amp;&amp; currentRoad.naturalWidth &amp;&amp; currentRoad.naturalHeight) return;
         ctx.strokeStyle = &quot;rgba(214, 163, 132, 0.7)&quot;;
         ctx.lineWidth = 1.5;
         ctx.beginPath();
@@ -27799,45 +27937,30 @@ function createTutorialDeck(layer, mount, options, words) {
         ctx.restore();
       }
 
-      function drawObstacle(item) {
+            function drawObstacle(item) {
         const renderX = simulationRenderHorizontal(item.previousX, item.x, -Number(state.renderSpeed || state.speed || 0));
         const renderY = item.y;
+        const definition = runnerObstacleDefinition(item);
+        const assetKey = String(definition?.assetKey || &quot;&quot;);
+        const assetPath = String(definition?.assetPath || &quot;&quot;);
+        const image = runnerSceneImage(assetKey, assetPath);
         ctx.save();
-        if (isReady(&quot;itemShadow&quot;)) {
-          drawAsset(&quot;itemShadow&quot;, renderX + item.w * 0.02, ground.y - 10, item.w * 0.96, 18, 0.58);
-        } else {
-          ctx.fillStyle = &quot;rgba(82, 60, 45, 0.14)&quot;;
-          ctx.beginPath();
-          ctx.ellipse(renderX + item.w / 2, ground.y + 6, item.w * 0.38, 7, 0, 0, Math.PI * 2);
-          ctx.fill();
+        if (definition?.shadow !== false) {
+          if (isReady(&quot;itemShadow&quot;)) drawAsset(&quot;itemShadow&quot;, renderX + item.w * 0.02, ground.y - 10, item.w * 0.96, 18, 0.58);
+          else {
+            ctx.fillStyle = &quot;rgba(82, 60, 45, 0.14)&quot;;
+            ctx.beginPath();
+            ctx.ellipse(renderX + item.w / 2, ground.y + 6, item.w * 0.38, 7, 0, 0, Math.PI * 2);
+            ctx.fill();
+          }
         }
-        if (item.type === &quot;pouf&quot;) {
-          if (isReady(&quot;barricade_game_puff_night&quot;)) drawAsset(&quot;barricade_game_puff_night&quot;, renderX, renderY, item.w, item.h);
-          else if (isReady(&quot;pouf&quot;)) drawAsset(&quot;pouf&quot;, renderX, renderY, item.w, item.h);
-          else drawPouf(renderX, renderY, item.w, item.h);
-        } else if (item.type === &quot;table&quot;) {
-          if (isReady(&quot;tablePink&quot;)) drawAsset(&quot;tablePink&quot;, renderX, renderY, item.w, item.h);
-          else drawStool(renderX, renderY, item.w, item.h, 1);
-        } else if (item.type === &quot;pillow&quot;) {
-          if (isReady(&quot;pillowObstacle&quot;)) drawAsset(&quot;pillowObstacle&quot;, renderX, renderY, item.w, item.h);
-          else drawPouf(renderX, renderY, item.w, item.h);
-        } else if (item.type === &quot;vase&quot;) {
-          if (isReady(&quot;vaseObstacle&quot;)) drawAsset(&quot;vaseObstacle&quot;, renderX, renderY, item.w, item.h);
-          else drawFlowers(renderX, renderY, 0.7);
-        } else if (item.type === &quot;nightPlanter&quot;) {
-          if (isReady(&quot;game_barricade_flovers_night_s2&quot;)) drawAsset(&quot;game_barricade_flovers_night_s2&quot;, renderX, renderY, item.w, item.h);
-        } else if (item.type === &quot;wetFloorSign&quot;) {
-          if (isReady(&quot;game_barricade_tablet&quot;)) drawAsset(&quot;game_barricade_tablet&quot;, renderX, renderY, item.w, item.h);
-        } else if (item.type === &quot;clientBag&quot;) {
-          if (isReady(&quot;barrier_game_bag&quot;)) drawAsset(&quot;barrier_game_bag&quot;, renderX, renderY, item.w, item.h);
-        } else if (item.type === &quot;booksMenu&quot;) {
-          if (isReady(&quot;barricade_game_boock_night&quot;)) drawAsset(&quot;barricade_game_boock_night&quot;, renderX, renderY, item.w, item.h);
-        } else if (item.type === &quot;candlesGroup&quot;) {
-          if (isReady(&quot;barricade_game_group_svechi_night&quot;)) drawAsset(&quot;barricade_game_group_svechi_night&quot;, renderX, renderY, item.w, item.h);
-        } else if (item.type === &quot;waiterCart&quot;) {
-          if (isReady(&quot;barricade_game_group_telechka&quot;)) drawAsset(&quot;barricade_game_group_telechka&quot;, renderX, renderY, item.w, item.h);
-        } else {
-          if (isReady(&quot;stool&quot;)) drawAsset(&quot;stool&quot;, renderX, renderY, item.w, item.h);
+        let drawn = false;
+        if (assetPath &amp;&amp; image?.complete &amp;&amp; image.naturalWidth) drawn = drawContain(image, renderX, renderY, item.w, item.h, 1, &quot;bottom&quot;);
+        else if (assetKey &amp;&amp; isReady(assetKey)) drawn = drawAsset(assetKey, renderX, renderY, item.w, item.h);
+        if (!drawn) {
+          const id = String(definition?.id || item.obstacleId || item.type || &quot;&quot;);
+          if (id === &quot;pouf&quot; || id === &quot;pillow&quot;) drawPouf(renderX, renderY, item.w, item.h);
+          else if (id === &quot;vase&quot;) drawFlowers(renderX, renderY, 0.7);
           else drawStool(renderX, renderY, item.w, item.h, 1);
         }
         ctx.restore();
@@ -29533,8 +29656,24 @@ function createTutorialDeck(layer, mount, options, words) {
 #zefirok-maltipoo-runner .album-profile-copy{min-width:0}#zefirok-maltipoo-runner .album-profile-copy strong{display:block;font-size:12px;font-weight:950}#zefirok-maltipoo-runner .album-profile-copy span{display:block;margin-top:4px;color:#8c707b;font-size:9px;font-weight:750;line-height:1.4}
 #zefirok-maltipoo-runner .album-profile-card .profile-action{grid-column:1/-1;width:100%}
 &lt;/style&gt;
-&lt;script id=&quot;zefirok-profile-overview-client-v1&quot;&gt;
-(()=&gt;{let value=null,loadedAt=0,inflight=null;window.zefirokProfileOverview=async(force=false)=&gt;{if(!force&amp;&amp;value&amp;&amp;Date.now()-loadedAt&lt;15000)return value;if(inflight)return inflight;let initData=&quot;&quot;;try{initData=String(window.Telegram?.WebApp?.initData||sessionStorage.getItem(&quot;zefirok-telegram-init-data&quot;)||&quot;&quot;);}catch{}if(!initData)return null;const controller=new AbortController(),timer=setTimeout(()=&gt;controller.abort(),4500);inflight=fetch(&quot;/api/profile/overview&quot;,{method:&quot;POST&quot;,headers:{&quot;Content-Type&quot;:&quot;application/json&quot;},body:JSON.stringify({initData}),cache:&quot;no-store&quot;,credentials:&quot;same-origin&quot;,signal:controller.signal}).then(async r=&gt;{const d=await r.json();if(!r.ok||!d?.ok)throw new Error(d?.error||&quot;profile-overview&quot;);value=d;loadedAt=Date.now();return d;}).finally(()=&gt;{clearTimeout(timer);inflight=null;});return inflight;};})();
+&lt;style id=&quot;zefirok-ui-stale-cache-v1-style&quot;&gt;
+#zefirok-maltipoo-runner .profile-stale-refresh{display:flex;align-items:center;justify-content:center;gap:7px;width:max-content;max-width:calc(100% - 24px);margin:0 auto 8px;padding:7px 11px;border:1px solid rgba(229,190,203,.82);border-radius:999px;background:rgba(255,250,252,.94);color:#8e6072;font-size:10px;font-weight:850;line-height:1;box-shadow:0 8px 22px rgba(93,53,69,.09)}
+#zefirok-maltipoo-runner .profile-stale-refresh[hidden]{display:none!important}
+#zefirok-maltipoo-runner .profile-stale-refresh-dot{width:9px;height:9px;border:2px solid rgba(180,104,133,.24);border-top-color:#b86886;border-radius:50%;animation:zefirok-stale-spin .8s linear infinite}@keyframes zefirok-stale-spin{to{transform:rotate(360deg)}}
+@media(prefers-reduced-motion:reduce){#zefirok-maltipoo-runner .profile-stale-refresh-dot{animation:none}}
+&lt;/style&gt;
+&lt;script id=&quot;zefirok-profile-overview-client-v2&quot;&gt;
+(()=&gt;{
+  const PREFIX=&quot;zefirok-ui-stale-v1&quot;,MAX_AGE=6*60*60*1000,MAX_CHARS=900000;let value=null,loadedAt=0,inflight=null;
+  const auth=()=&gt;{let initData=&quot;&quot;;try{initData=String(window.Telegram?.WebApp?.initData||sessionStorage.getItem(&quot;zefirok-telegram-init-data&quot;)||&quot;&quot;);}catch{}return initData;};
+  const userId=(initData)=&gt;{try{const raw=new URLSearchParams(String(initData||&quot;&quot;)).get(&quot;user&quot;),user=raw?JSON.parse(raw):null;return String(user?.id||&quot;&quot;).trim();}catch{return &quot;&quot;;}};
+  const key=(initData)=&gt;{const id=userId(initData);return id?`${PREFIX}:profile-overview:${id}`:&quot;&quot;;};
+  const read=(initData)=&gt;{const storageKey=key(initData);if(!storageKey)return null;try{const envelope=JSON.parse(localStorage.getItem(storageKey)||&quot;null&quot;),savedAt=Number(envelope?.savedAt||0);if(Number(envelope?.v||0)!==1||!savedAt||Date.now()-savedAt&gt;MAX_AGE||!envelope?.data||typeof envelope.data!==&quot;object&quot;){if(envelope)localStorage.removeItem(storageKey);return null;}return {...envelope.data,_uiStale:true};}catch{return null;}};
+  const write=(initData,data)=&gt;{const storageKey=key(initData);if(!storageKey||!data||typeof data!==&quot;object&quot;)return;try{const snapshot={...data};delete snapshot._uiStale;const raw=JSON.stringify({v:1,savedAt:Date.now(),data:snapshot});if(raw.length&lt;=MAX_CHARS)localStorage.setItem(storageKey,raw);}catch{}};
+  const setUpdating=(active)=&gt;{try{window.zefirokSetProfileStaleUpdating?.(&quot;overview&quot;,active);}catch{}};
+  const fetchFresh=(initData)=&gt;{if(inflight)return inflight;const controller=new AbortController(),timer=setTimeout(()=&gt;controller.abort(),4500);inflight=fetch(&quot;/api/profile/overview&quot;,{method:&quot;POST&quot;,headers:{&quot;Content-Type&quot;:&quot;application/json&quot;},body:JSON.stringify({initData}),cache:&quot;no-store&quot;,credentials:&quot;same-origin&quot;,signal:controller.signal}).then(async r=&gt;{const d=await r.json();if(!r.ok||!d?.ok)throw new Error(d?.error||&quot;profile-overview&quot;);value=d;loadedAt=Date.now();write(initData,d);setUpdating(false);try{window.dispatchEvent(new CustomEvent(&quot;zefirok-profile-overview-updated&quot;,{detail:d}));}catch{}return d;}).finally(()=&gt;{clearTimeout(timer);inflight=null;});return inflight;};
+  window.zefirokProfileOverview=async(force=false)=&gt;{if(!force&amp;&amp;value&amp;&amp;!value._uiStale&amp;&amp;Date.now()-loadedAt&lt;15000)return value;const initData=auth();if(!initData)return value;const stale=!value?read(initData):null;if(stale&amp;&amp;!force){value=stale;loadedAt=0;setUpdating(true);void fetchFresh(initData).catch(()=&gt;setUpdating(true));return stale;}if(inflight)return value?value:inflight;return fetchFresh(initData);};
+})();
 &lt;/script&gt;
 &lt;script id=&quot;zefirok-album-profile-entry-v2&quot;&gt;
 (() =&gt; {
@@ -29551,6 +29690,7 @@ function createTutorialDeck(layer, mount, options, words) {
   });
   window.addEventListener(&quot;pageshow&quot;,()=&gt;{document.querySelectorAll(&quot;[data-album-open]&quot;).forEach(button=&gt;{button.disabled=false;});if(albumScreen&amp;&amp;!albumScreen.hidden)refreshAlbumQuick(true);});
   window.addEventListener(&quot;focus&quot;,()=&gt;{if(albumScreen&amp;&amp;!albumScreen.hidden)refreshAlbumQuick();});
+  window.addEventListener(&quot;zefirok-profile-overview-updated&quot;,(event)=&gt;{const data=event?.detail,summary=data?.album;if(!data?.ok||!summary)return;const owned=Math.max(0,Number(summary.ownedRequired||0)),total=Math.max(0,Number(summary.requiredTotal||0)),percent=Math.max(0,Math.min(100,Math.round(Number(summary.progressPercent||0))));if(status)status.textContent=total?`${percent}%`:&quot;Новый&quot;;if(meta)meta.textContent=total?`${owned} из ${total} собрано`:&quot;Коллекции и воспоминания&quot;;loadedAt=Date.now();});
 })();
 &lt;/script&gt;
 &lt;script id=&quot;zefirok-referrals-profile-entry-v2&quot;&gt;
@@ -29569,6 +29709,7 @@ function createTutorialDeck(layer, mount, options, words) {
   window.addEventListener(&quot;pageshow&quot;, () =&gt; {document.querySelectorAll(&quot;[data-referrals-open]&quot;).forEach((button) =&gt; { button.disabled = false; });refreshReferralSummary();});
   window.addEventListener(&quot;message&quot;,(event)=&gt;{if(event.data?.type===&quot;zefirok-referrals-account-updated&quot;)refreshReferralSummary();});
   window.setTimeout(refreshReferralSummary,700);
+  window.addEventListener(&quot;zefirok-profile-overview-updated&quot;,(event)=&gt;{const overview=event?.detail,data=overview?.referrals,badge=document.querySelector(&quot;[data-referrals-badge]&quot;),meta=document.querySelector(&quot;[data-profile-v2-friends-meta]&quot;);if(!overview?.ok||!data||!badge)return;const friends=Math.max(0,Number(data.activeFriends||0)),pending=Math.max(0,Number(data.pendingCount||0)),word=(count,one,few,many)=&gt;{const n=Math.abs(Number(count||0)),m100=n%100,m10=n%10;return m100&gt;=11&amp;&amp;m100&lt;=14?many:m10===1?one:(m10&gt;=2&amp;&amp;m10&lt;=4)?few:many;};badge.textContent=friends?`${friends} ${word(friends,&quot;друг&quot;,&quot;друга&quot;,&quot;друзей&quot;)}`:&quot;Нет друзей&quot;;badge.classList.toggle(&quot;is-boost&quot;,Boolean(data?.boost?.active&amp;&amp;pending===0));badge.hidden=false;if(meta){if(pending&gt;0)meta.textContent=`${pending} ${word(pending,&quot;подарок&quot;,&quot;подарка&quot;,&quot;подарков&quot;)} ${pending===1?&quot;ждёт&quot;:&quot;ждут&quot;}`;else if(data?.boost?.active)meta.textContent=`Совместный XP ×${Number(data.boost.multiplier||2)} активен`;else meta.textContent=friends?&quot;Играть и получать награды вместе&quot;:&quot;Пригласи друга в кафе&quot;;}});
 })();
 &lt;/script&gt;
 &lt;style id=&quot;zefirok-achievements-entry-v4-style&quot;&gt;
@@ -29628,6 +29769,7 @@ function createTutorialDeck(layer, mount, options, words) {
   const refreshVisibleProfile=(attempt=0,force=false)=&gt;{window.clearTimeout(initialRefreshTimer);if(!profileVisible())return;const cached=bootstrapState();if(cached&amp;&amp;!hasServerState)applyServerState(cached);if(!force&amp;&amp;hasServerState&amp;&amp;Date.now()-lastFreshAt&lt;15000)return;if(initData()){void refresh(force);return;}if(attempt&gt;=16)return;initialRefreshTimer=window.setTimeout(()=&gt;refreshVisibleProfile(attempt+1,force),250);};
   document.addEventListener(&quot;click&quot;,(event)=&gt;{const openButton=event.target?.closest?.(&quot;[data-achievements-open]&quot;);if(openButton){event.preventDefault();openButton.disabled=true;try{window.parent.postMessage({type:&quot;zefirok-open-achievements&quot;,view:openButton.dataset.achievementsView===&quot;showcase&quot;?&quot;showcase&quot;:&quot;goals&quot;},&quot;*&quot;);}catch{try{window.location.href=&quot;/achievements.html?view=&quot;+(openButton.dataset.achievementsView===&quot;showcase&quot;?&quot;showcase&quot;:&quot;goals&quot;);}catch{}}window.setTimeout(()=&gt;{openButton.disabled=false;},900);return;}if(event.target?.closest?.(&#x27;[data-tab=&quot;profile&quot;]&#x27;))window.setTimeout(()=&gt;refreshVisibleProfile(),80);});
   window.addEventListener(&quot;zefirok-achievement-showcase-ready&quot;,(event)=&gt;applyServerState(event?.detail));
+  window.addEventListener(&quot;zefirok-profile-overview-updated&quot;,(event)=&gt;{const data=event?.detail?.achievements;if(data?.ok)applyServerState(data);});
   window.addEventListener(&quot;pageshow&quot;,()=&gt;{document.querySelectorAll(&quot;[data-achievements-open]&quot;).forEach((button)=&gt;{button.disabled=false;});if(profileVisible())refreshVisibleProfile();});
   window.addEventListener(&quot;message&quot;,(event)=&gt;{if(event.data?.type===&quot;zefirok-achievements-account-updated&quot;)refreshVisibleProfile(0,true);if(event.data?.type===&quot;zefirok-open-screen&quot;&amp;&amp;String(event.data?.screen||&quot;&quot;)===&quot;profile&quot;)window.setTimeout(()=&gt;refreshVisibleProfile(),80);});
   const observedProfileScreen=profileScreen();

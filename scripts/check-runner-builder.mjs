@@ -117,6 +117,40 @@ must('background editor uses 9:16 preview',owner,'aspect-ratio:9/16');
 must('scene preview uses framed background',owner,"rbBackgroundFrameMarkup(bg,'rb-run-preview-background')");
 must('background cards use framed preview',owner,"rbBackgroundFrameMarkup(item,'rb-bg-preview')");
 
+
+must('runner builder config v2',worker,'RUNNER_BUILDER_CONFIG_VERSION = 2');
+must('season 2 seed function',worker,'function runnerBuilderSeason2Seed()');
+must('season 2 one-time upgrade',worker,'function runnerBuilderUpgradeConfig(raw)');
+must('season 2 road builtin allowed',worker,'"road_night_cafe"');
+must('season 2 flower builtin allowed',worker,'"game_barricade_flovers_night_s2"');
+must('season 2 wet floor seed',worker,'id:"wet-floor-sign"');
+must('season 2 client bag seed',worker,'id:"client-bag"');
+must('season 2 night pouf seed',worker,'id:"pouf-night-s2"');
+must('season 2 books seed',worker,'id:"books-menu-night"');
+must('season 2 candles seed',worker,'id:"candles-night"');
+must('season 2 waiter cart seed',worker,'id:"waiter-cart"');
+must('season 2 editable group seed',worker,'title:"Ночь сладких чудес · сезон 2"');
+must('season 2 scene seed',worker,'id:"night-cafe-s2", title:"Ночь в кафе · сезон 2"');
+must('existing cafe road migrates to season 2 road',worker,'currentCafe.roadAssetKey="road_night_cafe"');
+must('fresh fallback uses season 2 road',worker,'roadAssetKey:"road_night_cafe"');
+must('normalize upgrades old config first',worker,'const upgraded=runnerBuilderUpgradeConfig(raw)');
+
+must('owner previews season 2 flowers',owner,"game_barricade_flovers_night_s2:'/assets/optimized/v0.79.5/game_barricade_flovers_night_s2.webp?v=0.79.5'");
+must('owner previews wet floor',owner,"game_barricade_tablet:'/assets/optimized/v0.79.5/game_barricade_tablet.webp?v=0.79.5'");
+must('owner previews client bag',owner,"barrier_game_bag:'/assets/optimized/v0.79.5/barrier_game_bag.webp?v=0.79.5'");
+must('owner previews night pouf',owner,"barricade_game_puff_night:'/assets/optimized/v0.79.5/barricade_game_puff_night.webp?v=0.79.5'");
+must('owner previews books',owner,"barricade_game_boock_night:'/assets/optimized/v0.79.5/barricade_game_boock_night.webp?v=0.79.5'");
+must('owner previews candles',owner,"barricade_game_group_svechi_night:'/assets/optimized/v0.79.5/barricade_game_group_svechi_night.webp?v=0.79.5'");
+must('owner previews waiter cart',owner,"barricade_game_group_telechka:'/assets/optimized/v0.79.5/barricade_game_group_telechka.webp?v=0.79.5'");
+
+must('client registers season 2 road asset',index,'road_night_cafe: &quot;/assets/optimized/v0.79.5/road_night_cafe.webp?v=0.79.5&quot;');
+must('client lazy loads builtin runner assets',index,'const builtInSrc = String(assetSources[key] || &quot;&quot;).trim();');
+must('season 2 road variant detection',index,'const nightCafeRoad = roadIdentity.includes(&quot;road_night_cafe&quot;);');
+must('season 2 road taller',index,'Math.max(94, Math.min(126, w * 0.245))');
+must('season 2 road wider',index,'const roadWidthScale = nightCafeRoad ? 1.12 : 1;');
+must('season 2 road lifted',index,'Math.max(24, Math.min(34, roadH * 0.27))');
+for(const file of ['game_barricade_flovers_night_s2.webp','road_night_cafe.webp','game_barricade_tablet.webp','barrier_game_bag.webp','barricade_game_puff_night.webp','barricade_game_boock_night.webp','barricade_game_group_svechi_night.webp','barricade_game_group_telechka.webp'])checks.push({name:`season 2 asset ${file}`,ok:fs.existsSync(new URL(`../assets/optimized/v0.79.5/${file}`,import.meta.url)),detail:file});
+
 must('client default background framing',index,'fitMode: &quot;cover&quot;, zoom: 1, positionX: 0.5, positionY: 0.5');
 must('client background fit normalization',index,'fitMode: String(backgroundRaw.fitMode || &quot;cover&quot;).toLowerCase() === &quot;contain&quot; ? &quot;contain&quot; : &quot;cover&quot;');
 must('client background zoom normalization',index,'zoom: Math.max(1, Math.min(2, Number(backgroundRaw.zoom) || 1))');

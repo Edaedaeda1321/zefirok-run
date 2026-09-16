@@ -38789,13 +38789,55 @@ function ownerV8AssetPath(value = "") {
 
 // ======================= RUNNER SCENE BUILDER v1 =======================
 const RUNNER_BUILDER_STATE_KEY = "runner:scene-builder:v1";
-const RUNNER_BUILDER_CONFIG_VERSION = 1;
+const RUNNER_BUILDER_CONFIG_VERSION = 2;
 const RUNNER_BUILDER_MAX_OBSTACLES = 80;
 const RUNNER_BUILDER_MAX_GROUPS = 48;
 const RUNNER_BUILDER_MAX_SCENES = 48;
 const RUNNER_BUILDER_MAX_BACKGROUNDS = 48;
-const RUNNER_BUILDER_BUILTIN_ASSET_KEYS = new Set(["pouf","stool","tablePink","pillowObstacle","vaseObstacle","itemShadow","cafeBackground","roadStrip"]);
+const RUNNER_BUILDER_BUILTIN_ASSET_KEYS = new Set(["pouf","stool","tablePink","pillowObstacle","vaseObstacle","itemShadow","cafeBackground","roadStrip","game_barricade_flovers_night_s2","road_night_cafe","game_barricade_tablet","barrier_game_bag","barricade_game_puff_night","barricade_game_boock_night","barricade_game_group_svechi_night","barricade_game_group_telechka"]);
 let runnerBuilderConfigMemory = { value: null, expiresAt: 0 };
+
+function runnerBuilderSeason2Seed(){
+  return {
+    backgrounds:[
+      { id:"night-cafe-s2", title:"Ночь в кафе · сезон 2", enabled:true, assetKey:"cafeBackground", assetPath:"", fitMode:"cover", zoom:1, positionX:.5, positionY:.5, roadEnabled:true, roadAssetKey:"road_night_cafe", roadAssetPath:"" }
+    ],
+    obstacles:[
+      { id:"flowers-night-s2", title:"Большое кашпо с ночными цветами", enabled:true, assetKey:"game_barricade_flovers_night_s2", assetPath:"", width:74, height:74, shadow:true, defaultWeight:14, hitboxes:[{x:.16,y:.22,w:.68,h:.68}] },
+      { id:"wet-floor-sign", title:"Табличка «Мокрый пол»", enabled:true, assetKey:"game_barricade_tablet", assetPath:"", width:56, height:82, shadow:true, defaultWeight:10, hitboxes:[{x:.14,y:.08,w:.72,h:.84}] },
+      { id:"client-bag", title:"Сумка клиента", enabled:true, assetKey:"barrier_game_bag", assetPath:"", width:64, height:64, shadow:true, defaultWeight:10, hitboxes:[{x:.12,y:.18,w:.76,h:.68}] },
+      { id:"pouf-night-s2", title:"Ночной пуфик", enabled:true, assetKey:"barricade_game_puff_night", assetPath:"", width:72, height:60, shadow:true, defaultWeight:18, hitboxes:[{x:.10,y:.50,w:.80,h:.42}] },
+      { id:"books-menu-night", title:"Стопка книг и меню", enabled:true, assetKey:"barricade_game_boock_night", assetPath:"", width:62, height:86, shadow:true, defaultWeight:12, hitboxes:[{x:.14,y:.12,w:.72,h:.80}] },
+      { id:"candles-night", title:"Группа свечей на стойке", enabled:true, assetKey:"barricade_game_group_svechi_night", assetPath:"", width:64, height:92, shadow:true, defaultWeight:8, hitboxes:[{x:.14,y:.10,w:.72,h:.82}] },
+      { id:"waiter-cart", title:"Тележка официанта", enabled:true, assetKey:"barricade_game_group_telechka", assetPath:"", width:82, height:94, shadow:true, defaultWeight:7, hitboxes:[{x:.08,y:.18,w:.84,h:.74}] }
+    ],
+    groups:[
+      { id:"night-cafe-s2", title:"Ночь сладких чудес · сезон 2", enabled:true, items:[
+        {obstacleId:"flowers-night-s2",weight:14,enabled:true},{obstacleId:"wet-floor-sign",weight:10,enabled:true},{obstacleId:"client-bag",weight:10,enabled:true},{obstacleId:"pouf-night-s2",weight:18,enabled:true},{obstacleId:"books-menu-night",weight:12,enabled:true},{obstacleId:"candles-night",weight:8,enabled:true},{obstacleId:"waiter-cart",weight:7,enabled:true}
+      ] }
+    ],
+    scenes:[
+      { id:"night-cafe-s2", title:"Ночь в кафе · сезон 2", enabled:true, backgroundId:"night-cafe-s2", useAllObstacles:false, groupIds:["night-cafe-s2"] }
+    ]
+  };
+}
+
+function runnerBuilderUpgradeConfig(raw){
+  if(!raw||typeof raw!=="object")return raw;
+  const currentVersion=Math.max(1,Math.floor(Number(raw.version)||1));
+  if(currentVersion>=2)return raw;
+  const source=JSON.parse(JSON.stringify(raw)),seed=runnerBuilderSeason2Seed();
+  if(Array.isArray(source.backgrounds)){
+    const currentCafe=source.backgrounds.find(item=>String(item?.id||"")==="cafe");
+    if(currentCafe&&!String(currentCafe.roadAssetPath||"").trim()&&(!String(currentCafe.roadAssetKey||"").trim()||String(currentCafe.roadAssetKey)==="roadStrip"))currentCafe.roadAssetKey="road_night_cafe";
+  }
+  for(const key of ["backgrounds","obstacles","groups","scenes"]){
+    const rows=Array.isArray(source[key])?source[key]:[];source[key]=rows;const ids=new Set(rows.map(item=>String(item?.id||"")));
+    for(const item of seed[key])if(!ids.has(item.id)){rows.push(item);ids.add(item.id);}
+  }
+  source.version=2;
+  return source;
+}
 
 function runnerBuilderDefaultConfig(){
   return {
@@ -38803,22 +38845,26 @@ function runnerBuilderDefaultConfig(){
     revision: 1,
     defaultSceneId: "cafe-default",
     backgrounds: [
-      { id:"cafe", title:"Кафе", enabled:true, assetKey:"cafeBackground", assetPath:"", fitMode:"cover", zoom:1, positionX:.5, positionY:.5, roadEnabled:true, roadAssetKey:"roadStrip", roadAssetPath:"" }
+      { id:"cafe", title:"Кафе", enabled:true, assetKey:"cafeBackground", assetPath:"", fitMode:"cover", zoom:1, positionX:.5, positionY:.5, roadEnabled:true, roadAssetKey:"road_night_cafe", roadAssetPath:"" },
+      ...runnerBuilderSeason2Seed().backgrounds
     ],
     obstacles: [
       { id:"pouf", title:"Пуф", enabled:true, assetKey:"pouf", assetPath:"", width:58, height:40, shadow:true, defaultWeight:30, hitboxes:[{x:.16,y:.62,w:.68,h:.28}] },
       { id:"stool", title:"Стул", enabled:true, assetKey:"stool", assetPath:"", width:42, height:42, shadow:true, defaultWeight:22, hitboxes:[{x:.20,y:.60,w:.60,h:.28}] },
       { id:"table", title:"Стол", enabled:true, assetKey:"tablePink", assetPath:"", width:50, height:48, shadow:true, defaultWeight:18, hitboxes:[{x:.18,y:.66,w:.64,h:.24}] },
       { id:"pillow", title:"Подушка", enabled:true, assetKey:"pillowObstacle", assetPath:"", width:72, height:35, shadow:true, defaultWeight:16, hitboxes:[{x:.08,y:.55,w:.84,h:.33}] },
-      { id:"vase", title:"Ваза", enabled:true, assetKey:"vaseObstacle", assetPath:"", width:42, height:64, shadow:true, defaultWeight:14, hitboxes:[{x:.20,y:.42,w:.60,h:.48}] }
+      { id:"vase", title:"Ваза", enabled:true, assetKey:"vaseObstacle", assetPath:"", width:42, height:64, shadow:true, defaultWeight:14, hitboxes:[{x:.20,y:.42,w:.60,h:.48}] },
+      ...runnerBuilderSeason2Seed().obstacles
     ],
     groups: [
       { id:"cafe", title:"Кафе", enabled:true, items:[
         {obstacleId:"pouf",weight:30,enabled:true},{obstacleId:"stool",weight:22,enabled:true},{obstacleId:"table",weight:18,enabled:true},{obstacleId:"pillow",weight:16,enabled:true},{obstacleId:"vase",weight:14,enabled:true}
-      ] }
+      ] },
+      ...runnerBuilderSeason2Seed().groups
     ],
     scenes: [
-      { id:"cafe-default", title:"Кафе · основной", enabled:true, backgroundId:"cafe", useAllObstacles:false, groupIds:["cafe"] }
+      { id:"cafe-default", title:"Кафе · основной", enabled:true, backgroundId:"cafe", useAllObstacles:false, groupIds:["cafe"] },
+      ...runnerBuilderSeason2Seed().scenes
     ],
     seasonBindings: {}
   };
@@ -38840,7 +38886,7 @@ function runnerBuilderNormalizeHitbox(value){
   return {x:Number(x.toFixed(4)),y:Number(y.toFixed(4)),w:Number(w.toFixed(4)),h:Number(h.toFixed(4))};
 }
 function normalizeRunnerBuilderConfig(raw){
-  const source=raw&&typeof raw==="object"?raw:{},defaults=runnerBuilderDefaultConfig();
+  const upgraded=runnerBuilderUpgradeConfig(raw),source=upgraded&&typeof upgraded==="object"?upgraded:{},defaults=runnerBuilderDefaultConfig();
   const backgrounds=[],backgroundIds=new Set();
   for(const item of (Array.isArray(source.backgrounds)?source.backgrounds:defaults.backgrounds).slice(0,RUNNER_BUILDER_MAX_BACKGROUNDS)){
     const id=runnerBuilderSafeId(item?.id);if(!id||backgroundIds.has(id))continue;const assetKey=runnerBuilderAssetKey(item?.assetKey),assetPath=runnerBuilderAssetPath(item?.assetPath),fitMode=String(item?.fitMode||"cover").toLowerCase()==="contain"?"contain":"cover",zoom=runnerBuilderNum(item?.zoom,1,2,1),positionX=runnerBuilderNum(item?.positionX,0,1,.5),positionY=runnerBuilderNum(item?.positionY,0,1,.5),roadEnabled=runnerBuilderBool(item?.roadEnabled,true),roadAssetKey=runnerBuilderAssetKey(item?.roadAssetKey),roadAssetPath=runnerBuilderAssetPath(item?.roadAssetPath);
