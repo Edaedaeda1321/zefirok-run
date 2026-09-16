@@ -118,7 +118,7 @@ must('scene preview uses framed background',owner,"rbBackgroundFrameMarkup(bg,'r
 must('background cards use framed preview',owner,"rbBackgroundFrameMarkup(item,'rb-bg-preview')");
 
 
-must('runner builder config v2',worker,'RUNNER_BUILDER_CONFIG_VERSION = 2');
+must('runner builder config v3',worker,'RUNNER_BUILDER_CONFIG_VERSION = 3');
 must('season 2 seed function',worker,'function runnerBuilderSeason2Seed()');
 must('season 2 one-time upgrade',worker,'function runnerBuilderUpgradeConfig(raw)');
 must('season 2 road builtin allowed',worker,'"road_night_cafe"');
@@ -131,7 +131,7 @@ must('season 2 candles seed',worker,'id:"candles-night"');
 must('season 2 waiter cart seed',worker,'id:"waiter-cart"');
 must('season 2 editable group seed',worker,'title:"Ночь сладких чудес · сезон 2"');
 must('season 2 scene seed',worker,'id:"night-cafe-s2", title:"Ночь в кафе · сезон 2"');
-must('existing cafe road migrates to season 2 road',worker,'currentCafe.roadAssetKey="road_night_cafe"');
+must('season 2 matching backgrounds migrate to night road',worker,'if(!key||key==="roadStrip")background.roadAssetKey="road_night_cafe";');
 must('fresh fallback uses season 2 road',worker,'roadAssetKey:"road_night_cafe"');
 must('normalize upgrades old config first',worker,'const upgraded=runnerBuilderUpgradeConfig(raw)');
 
@@ -159,6 +159,21 @@ must('runtime supports contain background',index,'const baseScale = fitMode === 
 must('runtime applies background zoom',index,'const scale = baseScale * zoom;');
 must('runtime applies background x position',index,'const dx = (w - dw) * positionX;');
 must('runtime applies background y position',index,'const dy = (h - dh) * positionY;');
+must('season 2 road repair helper',worker,'function runnerBuilderRepairSeason2Road(source)');
+must('season 2 scene detector',worker,'function runnerBuilderSceneLooksSeason2(config,scene)');
+must('season 2 road public repair',worker,'const publicRoadKey=season2Scene');
+must('standard cafe keeps standard road',worker,'roadAssetKey:"roadStrip", roadAssetPath:""');
+must('client season 2 obstacle marker set',index,'const RUNNER_SEASON2_OBSTACLE_IDS = new Set');
+must('client repairs old season 2 road binding',index,'roadAssetKey = &quot;road_night_cafe&quot;');
+must('client preloads runner background key',index,'runnerSceneImage(background.assetKey || &quot;cafeBackground&quot;');
+must('client preloads runner road key',index,'runnerSceneImage(background.roadAssetKey || &quot;roadStrip&quot;');
+must('client preloads obstacle keys',index,'for (const obstacle of remoteRunnerScene.obstacles || []) runnerSceneImage');
+must('client waits for obstacle art',index,'function runnerObstacleImageReady(entry)');
+must('client chooser uses ready pool',index,'const readyPool = pool.filter(runnerObstacleImageReady);');
+must('dynamic builtin runner art renders',index,'else drawn = drawContain(image, renderX, renderY, item.w, item.h, 1, &quot;bottom&quot;);');
+must('runner mobile containment style',owner,'id="runnerBuilderMobileContainmentHotfix"');
+must('runner live chips wrap on mobile',owner,'.rb-live-obstacles{display:flex;flex-wrap:wrap;overflow:visible;gap:5px}');
+must('runner cards stay inside viewport',owner,'.rb-card{overflow:hidden}');
 
 const failed=checks.filter(x=>!x.ok);
 for(const item of checks)console.log(`${item.ok?'PASS':'FAIL'}  ${item.name}`);

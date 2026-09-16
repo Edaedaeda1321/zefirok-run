@@ -14690,6 +14690,7 @@ function installProgressInfo(){
         ])
       });
       const runnerDynamicImages = new Map();
+      const RUNNER_SEASON2_OBSTACLE_IDS = new Set([&quot;flowers-night-s2&quot;, &quot;wet-floor-sign&quot;, &quot;client-bag&quot;, &quot;pouf-night-s2&quot;, &quot;books-menu-night&quot;, &quot;candles-night&quot;, &quot;waiter-cart&quot;]);
       let remoteRunnerScene = LEGACY_RUNNER_SCENE;
 
       function normalizeRunnerHitboxClient(value) {
@@ -14718,6 +14719,11 @@ function installProgressInfo(){
           hitboxes: (Array.isArray(item?.hitboxes) ? item.hitboxes : []).slice(0, 3).map(normalizeRunnerHitboxClient)
         })).filter((item) =&gt; item.id &amp;&amp; item.hitboxes.length);
         if (!obstacles.length) return LEGACY_RUNNER_SCENE;
+        const roadAssetPath = String(backgroundRaw.roadAssetPath || &quot;&quot;).trim();
+        let roadAssetKey = String(backgroundRaw.roadAssetKey || &quot;roadStrip&quot;).trim() || &quot;roadStrip&quot;;
+        const sceneMarker = `${String(raw.sceneId || &quot;&quot;)} ${String(raw.title || &quot;&quot;)} ${String(backgroundRaw.id || &quot;&quot;)} ${String(backgroundRaw.title || &quot;&quot;)}`;
+        const season2Scene = obstacles.some((item) =&gt; RUNNER_SEASON2_OBSTACLE_IDS.has(item.id)) || /(?:night|ноч|season[\s_-]*2|сезон[\s_-]*2|(?:^|[^a-z0-9])s2(?:[^a-z0-9]|$))/i.test(sceneMarker);
+        if (season2Scene &amp;&amp; !roadAssetPath &amp;&amp; (!roadAssetKey || roadAssetKey === &quot;roadStrip&quot;)) roadAssetKey = &quot;road_night_cafe&quot;;
         return {
           version: Math.max(1, Number(raw.version) || 1),
           revision: Math.max(1, Number(raw.revision) || 1),
@@ -14734,8 +14740,8 @@ function installProgressInfo(){
             positionX: Number.isFinite(Number(backgroundRaw.positionX)) ? Math.max(0, Math.min(1, Number(backgroundRaw.positionX))) : 0.5,
             positionY: Number.isFinite(Number(backgroundRaw.positionY)) ? Math.max(0, Math.min(1, Number(backgroundRaw.positionY))) : 0.5,
             roadEnabled: backgroundRaw.roadEnabled !== false,
-            roadAssetKey: String(backgroundRaw.roadAssetKey || &quot;roadStrip&quot;),
-            roadAssetPath: String(backgroundRaw.roadAssetPath || &quot;&quot;)
+            roadAssetKey,
+            roadAssetPath
           },
           obstacles
         };
@@ -14769,9 +14775,9 @@ function installProgressInfo(){
       function applyRemoteRunnerScene(raw) {
         remoteRunnerScene = normalizeRunnerSceneClient(raw);
         const background = remoteRunnerScene.background || {};
-        if (background.assetPath) ensureRunnerDynamicImage(background.assetPath);
-        if (background.roadEnabled !== false &amp;&amp; background.roadAssetPath) ensureRunnerDynamicImage(background.roadAssetPath);
-        for (const obstacle of remoteRunnerScene.obstacles || []) if (obstacle.assetPath) ensureRunnerDynamicImage(obstacle.assetPath);
+        runnerSceneImage(background.assetKey || &quot;cafeBackground&quot;, background.assetPath || &quot;&quot;);
+        if (background.roadEnabled !== false) runnerSceneImage(background.roadAssetKey || &quot;roadStrip&quot;, background.roadAssetPath || &quot;&quot;);
+        for (const obstacle of remoteRunnerScene.obstacles || []) runnerSceneImage(obstacle.assetKey || &quot;&quot;, obstacle.assetPath || &quot;&quot;);
         invalidateGameRenderCaches();
       }
 
@@ -14793,9 +14799,18 @@ function installProgressInfo(){
           || null;
       }
 
+      function runnerObstacleImageReady(entry) {
+        if (!entry) return false;
+        const image = runnerSceneImage(entry.assetKey || &quot;&quot;, entry.assetPath || &quot;&quot;);
+        return Boolean(image &amp;&amp; image.complete &amp;&amp; image.naturalWidth &gt; 0 &amp;&amp; image.naturalHeight &gt; 0);
+      }
+
       function chooseRunnerObstacleDefinition() {
         const pool = (remoteRunnerScene?.obstacles || []).filter((entry) =&gt; Number(entry.weight || 0) &gt; 0);
-        const source = pool.length ? pool : LEGACY_RUNNER_SCENE.obstacles;
+        for (const entry of pool) runnerSceneImage(entry.assetKey || &quot;&quot;, entry.assetPath || &quot;&quot;);
+        const readyPool = pool.filter(runnerObstacleImageReady);
+        const source = pool.length ? readyPool : LEGACY_RUNNER_SCENE.obstacles.filter(runnerObstacleImageReady);
+        if (!source.length) return null;
         const total = source.reduce((sum, entry) =&gt; sum + Math.max(0, Number(entry.weight || 0)), 0);
         if (total &lt;= 0) return source[0] || null;
         let roll = Math.random() * total;
@@ -27955,8 +27970,11 @@ function createTutorialDeck(layer, mount, options, words) {
           }
         }
         let drawn = false;
-        if (assetPath &amp;&amp; image?.complete &amp;&amp; image.naturalWidth) drawn = drawContain(image, renderX, renderY, item.w, item.h, 1, &quot;bottom&quot;);
-        else if (assetKey &amp;&amp; isReady(assetKey)) drawn = drawAsset(assetKey, renderX, renderY, item.w, item.h);
+        if (image?.complete &amp;&amp; image.naturalWidth &amp;&amp; image.naturalHeight) {
+          if (assetPath) drawn = drawContain(image, renderX, renderY, item.w, item.h, 1, &quot;bottom&quot;);
+          else if (assetKey &amp;&amp; assets[assetKey] === image) drawn = drawAsset(assetKey, renderX, renderY, item.w, item.h);
+          else drawn = drawContain(image, renderX, renderY, item.w, item.h, 1, &quot;bottom&quot;);
+        }
         if (!drawn) {
           const id = String(definition?.id || item.obstacleId || item.type || &quot;&quot;);
           if (id === &quot;pouf&quot; || id === &quot;pillow&quot;) drawPouf(renderX, renderY, item.w, item.h);

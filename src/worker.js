@@ -38789,12 +38789,13 @@ function ownerV8AssetPath(value = "") {
 
 // ======================= RUNNER SCENE BUILDER v1 =======================
 const RUNNER_BUILDER_STATE_KEY = "runner:scene-builder:v1";
-const RUNNER_BUILDER_CONFIG_VERSION = 2;
+const RUNNER_BUILDER_CONFIG_VERSION = 3;
 const RUNNER_BUILDER_MAX_OBSTACLES = 80;
 const RUNNER_BUILDER_MAX_GROUPS = 48;
 const RUNNER_BUILDER_MAX_SCENES = 48;
 const RUNNER_BUILDER_MAX_BACKGROUNDS = 48;
 const RUNNER_BUILDER_BUILTIN_ASSET_KEYS = new Set(["pouf","stool","tablePink","pillowObstacle","vaseObstacle","itemShadow","cafeBackground","roadStrip","game_barricade_flovers_night_s2","road_night_cafe","game_barricade_tablet","barrier_game_bag","barricade_game_puff_night","barricade_game_boock_night","barricade_game_group_svechi_night","barricade_game_group_telechka"]);
+const RUNNER_BUILDER_SEASON2_OBSTACLE_IDS = new Set(["flowers-night-s2","wet-floor-sign","client-bag","pouf-night-s2","books-menu-night","candles-night","waiter-cart"]);
 let runnerBuilderConfigMemory = { value: null, expiresAt: 0 };
 
 function runnerBuilderSeason2Seed(){
@@ -38822,20 +38823,58 @@ function runnerBuilderSeason2Seed(){
   };
 }
 
+function runnerBuilderSeason2Marker(value){
+  return /(?:night|ноч|season[\s_-]*2|сезон[\s_-]*2|(?:^|[^a-z0-9])s2(?:[^a-z0-9]|$))/i.test(String(value||""));
+}
+function runnerBuilderSceneLooksSeason2(config,scene){
+  if(!scene||typeof scene!=="object")return false;
+  if(runnerBuilderSeason2Marker(`${scene.id||""} ${scene.title||""}`))return true;
+  if(scene.useAllObstacles===true)return (Array.isArray(config?.obstacles)?config.obstacles:[]).some(item=>RUNNER_BUILDER_SEASON2_OBSTACLE_IDS.has(String(item?.id||""))&&item?.enabled!==false);
+  const groups=new Map((Array.isArray(config?.groups)?config.groups:[]).map(group=>[String(group?.id||""),group]));
+  for(const groupId of (Array.isArray(scene.groupIds)?scene.groupIds:[])){
+    const group=groups.get(String(groupId||""));
+    if(!group||group.enabled===false)continue;
+    if((Array.isArray(group.items)?group.items:[]).some(item=>item?.enabled!==false&&RUNNER_BUILDER_SEASON2_OBSTACLE_IDS.has(String(item?.obstacleId||""))))return true;
+  }
+  return false;
+}
+function runnerBuilderRepairSeason2Road(source){
+  if(!source||typeof source!=="object")return source;
+  const backgrounds=Array.isArray(source.backgrounds)?source.backgrounds:[];
+  const scenes=Array.isArray(source.scenes)?source.scenes:[];
+  const season2BackgroundIds=new Set();
+  for(const scene of scenes)if(runnerBuilderSceneLooksSeason2(source,scene))season2BackgroundIds.add(String(scene?.backgroundId||""));
+  for(const background of backgrounds){
+    const marker=`${background?.id||""} ${background?.title||""}`;
+    if(runnerBuilderSeason2Marker(marker))season2BackgroundIds.add(String(background?.id||""));
+  }
+  for(const background of backgrounds){
+    if(!season2BackgroundIds.has(String(background?.id||"")))continue;
+    if(background?.roadEnabled===false||String(background?.roadAssetPath||"").trim())continue;
+    const key=String(background?.roadAssetKey||"").trim();
+    if(!key||key==="roadStrip")background.roadAssetKey="road_night_cafe";
+  }
+  return source;
+}
 function runnerBuilderUpgradeConfig(raw){
   if(!raw||typeof raw!=="object")return raw;
   const currentVersion=Math.max(1,Math.floor(Number(raw.version)||1));
-  if(currentVersion>=2)return raw;
+  if(currentVersion>=RUNNER_BUILDER_CONFIG_VERSION)return raw;
   const source=JSON.parse(JSON.stringify(raw)),seed=runnerBuilderSeason2Seed();
-  if(Array.isArray(source.backgrounds)){
-    const currentCafe=source.backgrounds.find(item=>String(item?.id||"")==="cafe");
-    if(currentCafe&&!String(currentCafe.roadAssetPath||"").trim()&&(!String(currentCafe.roadAssetKey||"").trim()||String(currentCafe.roadAssetKey)==="roadStrip"))currentCafe.roadAssetKey="road_night_cafe";
+  if(currentVersion<2){
+    for(const key of ["backgrounds","obstacles","groups","scenes"]){
+      const rows=Array.isArray(source[key])?source[key]:[];source[key]=rows;const ids=new Set(rows.map(item=>String(item?.id||"")));
+      for(const item of seed[key])if(!ids.has(item.id)){rows.push(item);ids.add(item.id);}
+    }
   }
-  for(const key of ["backgrounds","obstacles","groups","scenes"]){
-    const rows=Array.isArray(source[key])?source[key]:[];source[key]=rows;const ids=new Set(rows.map(item=>String(item?.id||"")));
-    for(const item of seed[key])if(!ids.has(item.id)){rows.push(item);ids.add(item.id);}
+  if(currentVersion<3){
+    for(const key of ["backgrounds","obstacles","groups","scenes"]){
+      const rows=Array.isArray(source[key])?source[key]:[];source[key]=rows;const ids=new Set(rows.map(item=>String(item?.id||"")));
+      for(const item of seed[key])if(!ids.has(item.id)){rows.push(item);ids.add(item.id);}
+    }
+    runnerBuilderRepairSeason2Road(source);
   }
-  source.version=2;
+  source.version=RUNNER_BUILDER_CONFIG_VERSION;
   return source;
 }
 
@@ -38845,7 +38884,7 @@ function runnerBuilderDefaultConfig(){
     revision: 1,
     defaultSceneId: "cafe-default",
     backgrounds: [
-      { id:"cafe", title:"Кафе", enabled:true, assetKey:"cafeBackground", assetPath:"", fitMode:"cover", zoom:1, positionX:.5, positionY:.5, roadEnabled:true, roadAssetKey:"road_night_cafe", roadAssetPath:"" },
+      { id:"cafe", title:"Кафе", enabled:true, assetKey:"cafeBackground", assetPath:"", fitMode:"cover", zoom:1, positionX:.5, positionY:.5, roadEnabled:true, roadAssetKey:"roadStrip", roadAssetPath:"" },
       ...runnerBuilderSeason2Seed().backgrounds
     ],
     obstacles: [
@@ -38933,7 +38972,10 @@ function runnerBuilderResolvePublicScene(configInput,seasonId=""){
   const config=normalizeRunnerBuilderConfig(configInput),boundId=seasonId?String(config.seasonBindings?.[String(seasonId)]||""):"",requested=config.scenes.find(x=>x.id===boundId&&x.enabled)||config.scenes.find(x=>x.id===config.defaultSceneId&&x.enabled)||config.scenes.find(x=>x.enabled)||config.scenes[0],fallback=runnerBuilderDefaultConfig();
   let scene=requested,pool=runnerBuilderScenePool(config,scene);if(!scene||!pool.length){const fallbackConfig=normalizeRunnerBuilderConfig(fallback);scene=fallbackConfig.scenes[0];pool=runnerBuilderScenePool(fallbackConfig,scene);config.backgrounds=fallbackConfig.backgrounds;}
   const background=config.backgrounds.find(x=>x.id===scene.backgroundId&&x.enabled)||config.backgrounds.find(x=>x.enabled)||fallback.backgrounds[0];
-  return {version:RUNNER_BUILDER_CONFIG_VERSION,revision:config.revision,sceneId:scene.id,title:scene.title,seasonId:String(seasonId||""),background:{id:background.id,title:background.title,assetKey:background.assetKey||"",assetPath:background.assetPath||"",fitMode:background.fitMode==="contain"?"contain":"cover",zoom:Number(background.zoom||1),positionX:Number.isFinite(Number(background.positionX))?Number(background.positionX):.5,positionY:Number.isFinite(Number(background.positionY))?Number(background.positionY):.5,roadEnabled:background.roadEnabled!==false,roadAssetKey:background.roadAssetKey||"",roadAssetPath:background.roadAssetPath||""},obstacles:pool.map(item=>({id:item.id,title:item.title,assetKey:item.assetKey||"",assetPath:item.assetPath||"",width:item.width,height:item.height,shadow:item.shadow!==false,weight:Number(item.weight||item.defaultWeight||1),hitboxes:(item.hitboxes||[]).slice(0,3)})),source:"d1"};
+  const season2Scene=runnerBuilderSceneLooksSeason2(config,scene)||pool.some(item=>RUNNER_BUILDER_SEASON2_OBSTACLE_IDS.has(String(item?.id||"")));
+  const storedRoadKey=String(background.roadAssetKey||"");
+  const publicRoadKey=season2Scene&&background.roadEnabled!==false&&!String(background.roadAssetPath||"").trim()&&(!storedRoadKey||storedRoadKey==="roadStrip")?"road_night_cafe":storedRoadKey;
+  return {version:RUNNER_BUILDER_CONFIG_VERSION,revision:config.revision,sceneId:scene.id,title:scene.title,seasonId:String(seasonId||""),background:{id:background.id,title:background.title,assetKey:background.assetKey||"",assetPath:background.assetPath||"",fitMode:background.fitMode==="contain"?"contain":"cover",zoom:Number(background.zoom||1),positionX:Number.isFinite(Number(background.positionX))?Number(background.positionX):.5,positionY:Number.isFinite(Number(background.positionY))?Number(background.positionY):.5,roadEnabled:background.roadEnabled!==false,roadAssetKey:publicRoadKey,roadAssetPath:background.roadAssetPath||""},obstacles:pool.map(item=>({id:item.id,title:item.title,assetKey:item.assetKey||"",assetPath:item.assetPath||"",width:item.width,height:item.height,shadow:item.shadow!==false,weight:Number(item.weight||item.defaultWeight||1),hitboxes:(item.hitboxes||[]).slice(0,3)})),source:"d1"};
 }
 function invalidateRunnerBuilderConfigCache(){runnerBuilderConfigMemory={value:null,expiresAt:0};invalidateGamePublicConfigCache();}
 async function readRunnerBuilderConfig(env,force=false){const now=Date.now();if(!force&&runnerBuilderConfigMemory.value&&runnerBuilderConfigMemory.expiresAt>now)return runnerBuilderConfigMemory.value;let config=runnerBuilderDefaultConfig();try{const row=await getSystemState(env,RUNNER_BUILDER_STATE_KEY);if(row?.value)config=normalizeRunnerBuilderConfig(safeJson(row.value,config));}catch(error){console.error("runner builder config fallback",error);}runnerBuilderConfigMemory={value:config,expiresAt:Date.now()+15000};return config;}
