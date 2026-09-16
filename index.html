@@ -27625,8 +27625,8 @@ function createTutorialDeck(layer, mount, options, words) {
         else drawFlowers(w - 48, ground.y - 98, 0.58);
       }
 
-      function createRoadTileCache(img, sx, sw, tileW, roadH) {
-        if (!CLIENT_OPT_ROAD_TILE_CACHE || !img || tileW &lt;= 0 || roadH &lt;= 0) return null;
+      function createRoadTileCache(img, sx, sy, sw, sh, tileW, roadH) {
+        if (!CLIENT_OPT_ROAD_TILE_CACHE || !img || tileW &lt;= 0 || roadH &lt;= 0 || sw &lt;= 0 || sh &lt;= 0) return null;
         const cache = document.createElement(&quot;canvas&quot;);
         cache.width = Math.max(1, Math.ceil(tileW * canvasPixelRatio));
         cache.height = Math.max(1, Math.ceil(roadH * canvasPixelRatio));
@@ -27635,11 +27635,11 @@ function createTutorialDeck(layer, mount, options, words) {
         cacheContext.imageSmoothingEnabled = true;
         try { cacheContext.imageSmoothingQuality = &quot;medium&quot;; } catch (error) {}
         cacheContext.clearRect(0, 0, cache.width, cache.height);
-        cacheContext.drawImage(img, sx, 0, sw, img.naturalHeight, 0, 0, cache.width, cache.height);
+        cacheContext.drawImage(img, sx, sy, sw, sh, 0, 0, cache.width, cache.height);
         return cache;
       }
 
-            function drawRoad(w) {
+      function drawRoad(w) {
         const img = runnerSceneRoadImage();
         if (!img || !img.complete || !img.naturalWidth || !img.naturalHeight) return false;
         const runnerBackground = remoteRunnerScene?.background || LEGACY_RUNNER_SCENE.background;
@@ -27655,23 +27655,27 @@ function createTutorialDeck(layer, mount, options, words) {
         ) {
           const sxRatio = nightCafeRoad ? 0.04 : 0.12;
           const swRatio = nightCafeRoad ? 0.92 : 0.76;
+          const syRatio = nightCafeRoad ? 0.30 : 0;
+          const shRatio = nightCafeRoad ? 0.52 : 1;
           const sx = Math.floor(img.naturalWidth * sxRatio);
           const sw = Math.max(1, Math.floor(img.naturalWidth * swRatio));
+          const sy = Math.max(0, Math.floor(img.naturalHeight * syRatio));
+          const sh = Math.max(1, Math.min(img.naturalHeight - sy, Math.floor(img.naturalHeight * shRatio)));
           const roadH = nightCafeRoad
-            ? Math.max(94, Math.min(126, w * 0.245))
+            ? Math.max(118, Math.min(156, w * 0.30))
             : Math.max(58, Math.min(76, w * 0.15));
-          const roadWidthScale = nightCafeRoad ? 1.12 : 1;
-          const tileW = roadH * (sw / img.naturalHeight) * roadWidthScale;
+          const roadWidthScale = nightCafeRoad ? 1.08 : 1;
+          const tileW = roadH * (sw / sh) * roadWidthScale;
           const visibleLift = nightCafeRoad
-            ? Math.round(Math.max(24, Math.min(34, roadH * 0.27)))
+            ? Math.round(Math.max(38, Math.min(52, roadH * 0.32)))
             : 8;
-          roadDrawMetricsCache = { width: w, pixelRatio: canvasPixelRatio, sourceWidth: img.naturalWidth, sourceHeight: img.naturalHeight, sx, sw, roadH, tileW, visibleLift, variant: roadIdentity };
+          roadDrawMetricsCache = { width: w, pixelRatio: canvasPixelRatio, sourceWidth: img.naturalWidth, sourceHeight: img.naturalHeight, sx, sy, sw, sh, roadH, tileW, visibleLift, variant: roadIdentity };
           roadTileCache = null;
         }
-        const { sx, sw, roadH, tileW, visibleLift } = roadDrawMetricsCache;
+        const { sx, sy, sw, sh, roadH, tileW, visibleLift } = roadDrawMetricsCache;
         if (CLIENT_OPT_ROAD_TILE_CACHE &amp;&amp; !roadTileCache) {
           clientPerformance.roadTileCacheMisses += 1;
-          roadTileCache = createRoadTileCache(img, sx, sw, tileW, roadH);
+          roadTileCache = createRoadTileCache(img, sx, sy, sw, sh, tileW, roadH);
         }
         if (roadTileCache) clientPerformance.roadTileCacheHits += 1;
         const y = ground.y - visibleLift;
@@ -27681,7 +27685,7 @@ function createTutorialDeck(layer, mount, options, words) {
         ctx.globalAlpha = nightCafeRoad ? 0.99 : 0.96;
         for (let x = offset - tileW; x &lt; w + tileW; x += tileW) {
           if (roadTileCache) ctx.drawImage(roadTileCache, x, y, tileW + 1, roadH);
-          else ctx.drawImage(img, sx, 0, sw, img.naturalHeight, x, y, tileW + 1, roadH);
+          else ctx.drawImage(img, sx, sy, sw, sh, x, y, tileW + 1, roadH);
         }
         ctx.restore();
         return true;

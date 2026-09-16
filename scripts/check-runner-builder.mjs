@@ -146,9 +146,13 @@ must('owner previews waiter cart',owner,"barricade_game_group_telechka:'/assets/
 must('client registers season 2 road asset',index,'road_night_cafe: &quot;/assets/optimized/v0.79.5/road_night_cafe.webp?v=0.79.5&quot;');
 must('client lazy loads builtin runner assets',index,'const builtInSrc = String(assetSources[key] || &quot;&quot;).trim();');
 must('season 2 road variant detection',index,'const nightCafeRoad = roadIdentity.includes(&quot;road_night_cafe&quot;);');
-must('season 2 road taller',index,'Math.max(94, Math.min(126, w * 0.245))');
-must('season 2 road wider',index,'const roadWidthScale = nightCafeRoad ? 1.12 : 1;');
-must('season 2 road lifted',index,'Math.max(24, Math.min(34, roadH * 0.27))');
+must('season 2 road trims transparent top',index,'const syRatio = nightCafeRoad ? 0.30 : 0;');
+must('season 2 road trims transparent height',index,'const shRatio = nightCafeRoad ? 0.52 : 1;');
+must('season 2 road taller',index,'Math.max(118, Math.min(156, w * 0.30))');
+must('season 2 road wider',index,'const roadWidthScale = nightCafeRoad ? 1.08 : 1;');
+must('season 2 road lifted',index,'Math.max(38, Math.min(52, roadH * 0.32))');
+must('road cache crops source vertically',index,'createRoadTileCache(img, sx, sy, sw, sh, tileW, roadH)');
+must('road direct draw crops source vertically',index,'ctx.drawImage(img, sx, sy, sw, sh, x, y, tileW + 1, roadH)');
 for(const file of ['game_barricade_flovers_night_s2.webp','road_night_cafe.webp','game_barricade_tablet.webp','barrier_game_bag.webp','barricade_game_puff_night.webp','barricade_game_boock_night.webp','barricade_game_group_svechi_night.webp','barricade_game_group_telechka.webp'])checks.push({name:`season 2 asset ${file}`,ok:fs.existsSync(new URL(`../assets/optimized/v0.79.5/${file}`,import.meta.url)),detail:file});
 
 must('client default background framing',index,'fitMode: &quot;cover&quot;, zoom: 1, positionX: 0.5, positionY: 0.5');
