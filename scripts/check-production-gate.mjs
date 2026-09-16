@@ -67,6 +67,7 @@ const steps = [
   ['rating fast reads', 'node', ['scripts/check-rating-fast-read.mjs']],
   ['rating dethrone delivery', 'node', ['scripts/check-rating-dethrone-delivery.mjs']],
   ['case opening stability', 'node', ['scripts/check-case-stability.mjs']],
+  ['runner case milestones', 'node', ['scripts/check-run-case-milestones.mjs']],
   ['health dashboard', 'node', ['scripts/check-health-dashboard.mjs']],
   ['migration history', 'node', ['scripts/check-migrations.mjs']],
   ['schema contract', 'node', ['scripts/check-database-schema.mjs', '--contract-only']],

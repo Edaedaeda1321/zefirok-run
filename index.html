@@ -15105,6 +15105,9 @@ function installProgressInfo(){
         runCaseDrop: null,
         runCaseDropSpawned: false,
         runCaseDropCaught: false,
+        runCaseDrops: [],
+        runCaseDropCaughtMilestones: [],
+        runCaseDropCheckpointMilestone: 0,
         runSkinId: &quot;default&quot;,
         wallet: 0,
         inventory: {},
@@ -16986,6 +16989,9 @@ function createTutorialDeck(layer, mount, options, words) {
         state.runCaseDrop = null;
         state.runCaseDropSpawned = false;
         state.runCaseDropCaught = false;
+        state.runCaseDrops = [];
+        state.runCaseDropCaughtMilestones = [];
+        state.runCaseDropCheckpointMilestone = 0;
         state.wallet = 0;
         state.inventory = {};
         state.redemptionCodes = [];
@@ -18029,6 +18035,9 @@ function createTutorialDeck(layer, mount, options, words) {
         state.runCaseDrop = null;
         state.runCaseDropSpawned = false;
         state.runCaseDropCaught = false;
+        state.runCaseDrops = [];
+        state.runCaseDropCaughtMilestones = [];
+        state.runCaseDropCheckpointMilestone = 0;
         state.speed = runtimeGameplayConfig.startSpeed;
         state.renderSpeed = state.speed;
         state.visualDistance = 0;
@@ -18419,7 +18428,9 @@ function createTutorialDeck(layer, mount, options, words) {
       function runResultsEvents(payload) {
         const settlement = payload?.runSettlement || {};
         const events = [];
-        if (settlement?.caseDrop?.granted) events.push(runResultsEventMarkup(RUN_RESULT_ICONS.caseDrop, &quot;\u041a\u0435\u0439\u0441 \u043f\u043e\u0439\u043c\u0430\u043d!&quot;, `${runResultCaseTitle(settlement.caseDrop.type)} \u0434\u043e\u0431\u0430\u0432\u043b\u0435\u043d \u0432 \u043f\u0440\u043e\u0444\u0438\u043b\u044c`));
+        const grantedCaseDrops=Array.isArray(settlement?.caseDrops)?settlement.caseDrops.filter((drop)=&gt;drop?.granted):(settlement?.caseDrop?.granted?[settlement.caseDrop]:[]);
+        if(grantedCaseDrops.length===1)events.push(runResultsEventMarkup(RUN_RESULT_ICONS.caseDrop,&quot;\u041a\u0435\u0439\u0441 \u043f\u043e\u0439\u043c\u0430\u043d!&quot;,`${runResultCaseTitle(grantedCaseDrops[0].type)} \u0434\u043e\u0431\u0430\u0432\u043b\u0435\u043d \u0432 \u043f\u0440\u043e\u0444\u0438\u043b\u044c`));
+        else if(grantedCaseDrops.length&gt;1)events.push(runResultsEventMarkup(RUN_RESULT_ICONS.caseDrop,`\u041f\u043e\u0439\u043c\u0430\u043d\u043e \u043a\u0435\u0439\u0441\u043e\u0432: ${grantedCaseDrops.length}`,grantedCaseDrops.map((drop)=&gt;runResultCaseTitle(drop.type)).join(&quot; · &quot;)));
         const achievement = Array.isArray(payload?.achievementUnlocks) ? payload.achievementUnlocks[0] : null;
         if (achievement) events.push(runResultsEventMarkup(RUN_RESULT_ICONS.achievement, &quot;\u041d\u043e\u0432\u043e\u0435 \u0434\u043e\u0441\u0442\u0438\u0436\u0435\u043d\u0438\u0435&quot;, String(achievement.title || &quot;\u0414\u043e\u0441\u0442\u0438\u0436\u0435\u043d\u0438\u0435 \u043e\u0442\u043a\u0440\u044b\u0442\u043e&quot;)));
         const task = Array.isArray(payload?.seasonPassAward?.taskNotice?.tasks) ? payload.seasonPassAward.taskNotice.tasks[0] : null;
@@ -18907,7 +18918,12 @@ function createTutorialDeck(layer, mount, options, words) {
           state.spawn = nextObstacleDelay();
         }
 
-        if(state.runCaseDrop&amp;&amp;!state.runCaseDropSpawned&amp;&amp;!state.runCaseDropCaught&amp;&amp;state.score&gt;=Math.max(1000,Number(state.runCaseDrop.minScore||1000))&amp;&amp;state.time*1000&gt;=Number(state.runCaseDrop.spawnAfterMs||0)) spawnReservedCaseDrop();
+        const reachedCaseMilestone=Math.floor(Math.max(0,Number(state.score||0))/1000)*1000;
+        if(reachedCaseMilestone&gt;=1000&amp;&amp;reachedCaseMilestone&gt;Number(state.runCaseDropCheckpointMilestone||0)){
+          state.runCaseDropCheckpointMilestone=reachedCaseMilestone;
+          void sendAuthoritativeRunCheckpoint(true);
+        }
+        spawnNextReservedCaseDrop();
 
         state.treatSpawn -= dt;
         if (state.treatSpawn &lt;= 0) {
@@ -18951,7 +18967,11 @@ function createTutorialDeck(layer, mount, options, words) {
           )) {
             item.got = true;
             if(item.kind===&quot;case_drop&quot;){
+              const milestoneScore=Math.max(1000,Math.floor(Number(item.milestoneScore||1000)/1000)*1000);
+              const drop=(Array.isArray(state.runCaseDrops)?state.runCaseDrops:[]).find((entry)=&gt;Number(entry.milestoneScore||0)===milestoneScore);
+              if(drop)drop.caught=true;
               state.runCaseDropCaught=true;
+              state.runCaseDropCaughtMilestones=[...new Set([...currentRunCaseDropCaughtMilestones(),milestoneScore])].sort((a,b)=&gt;a-b);
               playGameSound(&quot;collectCoffee&quot;);
               hapticImpact(&quot;heavy&quot;,180);
               puff(item.x+item.size/2,item.y+item.size/2,18);
@@ -26066,6 +26086,40 @@ function createTutorialDeck(layer, mount, options, words) {
         return delta;
       }
 
+      function normalizeRunCaseDropMilestone(raw) {
+        if (!raw || typeof raw !== &quot;object&quot;) return null;
+        const milestoneScore = Math.max(1000, Math.floor(Number(raw.milestoneScore || raw.minScore || 1000) / 1000) * 1000);
+        const type = String(raw.type || &quot;small&quot;);
+        if (!RUN_CASE_DROP_IMAGES[type]) return null;
+        return {
+          type, milestoneScore, minScore: milestoneScore,
+          spawnAfterMs: Math.max(0, Number(raw.spawnAfterMs || 0)),
+          caught: Boolean(raw.caught), granted: Boolean(raw.granted), spawned: Boolean(raw.spawned)
+        };
+      }
+
+      function mergeServerRunCaseDrops(rawDrops) {
+        const source = Array.isArray(rawDrops) ? rawDrops : [];
+        const previous = new Map((Array.isArray(state.runCaseDrops) ? state.runCaseDrops : []).map((drop) =&gt; [Number(drop.milestoneScore || 0), drop]));
+        const merged = source.map(normalizeRunCaseDropMilestone).filter(Boolean).map((drop) =&gt; {
+          const old = previous.get(drop.milestoneScore);
+          return { ...drop, spawned: Boolean(old?.spawned), caught: Boolean(drop.caught || old?.caught) };
+        });
+        for (const old of previous.values()) {
+          if (!merged.some((drop) =&gt; drop.milestoneScore === Number(old.milestoneScore || 0))) merged.push(old);
+        }
+        merged.sort((a,b) =&gt; a.milestoneScore - b.milestoneScore);
+        state.runCaseDrops = merged;
+        state.runCaseDropCaughtMilestones = [...new Set(merged.filter((drop) =&gt; drop.caught).map((drop) =&gt; drop.milestoneScore))].sort((a,b) =&gt; a-b);
+        state.runCaseDropCaught = state.runCaseDropCaughtMilestones.length &gt; 0;
+        state.runCaseDrop = merged[0] || null;
+        state.runCaseDropSpawned = Boolean(merged[0]?.spawned);
+      }
+
+      function currentRunCaseDropCaughtMilestones() {
+        return [...new Set((Array.isArray(state.runCaseDropCaughtMilestones) ? state.runCaseDropCaughtMilestones : []).map((value) =&gt; Math.floor(Number(value) || 0)).filter((value) =&gt; value &gt;= 1000 &amp;&amp; value % 1000 === 0))].sort((a,b) =&gt; a-b);
+      }
+
       async function startAuthoritativeRunSession(runId) {
         const id = String(runId || &quot;&quot;).trim();
         if (!/^[A-Za-z0-9_-]{12,96}$/.test(id)) return false;
@@ -26078,14 +26132,16 @@ function createTutorialDeck(layer, mount, options, words) {
             if (authoritativeRunSessionId !== id) return false;
             const runBoosters = normalizeRunCaseBoosters(data?.runSession?.boosters);
             const serverRunSkinId = normalizeRunSkinId(data?.runSession?.skinId || state.runSkinId);
-            const serverCaseDrop=data?.runSession?.caseDrop&amp;&amp;typeof data.runSession.caseDrop===&quot;object&quot;?{type:String(data.runSession.caseDrop.type||&quot;small&quot;),spawnAfterMs:Math.max(0,Number(data.runSession.caseDrop.spawnAfterMs||0)),minScore:Math.max(1000,Number(data.runSession.caseDrop.minScore||1000))}:null;
+            const serverCaseDrop=data?.runSession?.caseDrop&amp;&amp;typeof data.runSession.caseDrop===&quot;object&quot;?normalizeRunCaseDropMilestone(data.runSession.caseDrop):null;
+            const serverCaseDrops=Array.isArray(data?.runSession?.caseDrops)?data.runSession.caseDrops:(serverCaseDrop?[serverCaseDrop]:[]);
             if (String(state.caseRunId || &quot;&quot;) === id) {
               state.runSkinId=serverRunSkinId;
               ensureGameplayDogSprites(serverRunSkinId);
               ensureSkinPortraitImage(runDogRunPortraitSrc(serverRunSkinId));
-              state.runCaseDrop=serverCaseDrop;
-              state.runCaseDropSpawned=false;
-              state.runCaseDropCaught=false;
+              state.runCaseDrops=[];
+              state.runCaseDropCaughtMilestones=[];
+              state.runCaseDropCheckpointMilestone=0;
+              mergeServerRunCaseDrops(serverCaseDrops);
               antiCheatWithTrustedChange(&quot;run-booster-snapshot&quot;, () =&gt; {
                 state.runCaseBoosters = runBoosters;
                 const active = normalizeActiveCaseBoosters(state.activeCaseBoosters, state.activeCaseBooster);
@@ -26119,7 +26175,8 @@ function createTutorialDeck(layer, mount, options, words) {
           runCoffee: Math.max(0, Math.floor(Number(state.runCoffee || 0))),
           shieldUsed: Boolean(state.runShieldUsed),
           secondChanceUsed: Boolean(state.runSecondChanceUsed),
-          caseDropCaught: Boolean(state.runCaseDropCaught)
+          caseDropCaught: Boolean(state.runCaseDropCaught),
+          caseDropCaughtMilestones: currentRunCaseDropCaughtMilestones()
         };
       }
 
@@ -26159,6 +26216,7 @@ function createTutorialDeck(layer, mount, options, words) {
             shieldUsed: snapshot.shieldUsed,
             secondChanceUsed: snapshot.secondChanceUsed,
             caseDropCaught: snapshot.caseDropCaught,
+            caseDropCaughtMilestones: snapshot.caseDropCaughtMilestones,
             gameVersion: GAME_VERSION
           });
           if (authoritativeRunCheckpointRunId === runId) {
@@ -26166,6 +26224,7 @@ function createTutorialDeck(layer, mount, options, words) {
               authoritativeRunCheckpointLastDurationMs,
               Number(data?.checkpoint?.durationMs || snapshot.durationMs)
             );
+            if (Array.isArray(data?.checkpoint?.caseDrops)) mergeServerRunCaseDrops(data.checkpoint.caseDrops);
           }
           return true;
         } catch (error) {
@@ -26270,6 +26329,7 @@ function createTutorialDeck(layer, mount, options, words) {
             shieldUsed: Boolean(state.runShieldUsed),
             secondChanceUsed: Boolean(state.runSecondChanceUsed),
             caseDropCaught: Boolean(state.runCaseDropCaught),
+            caseDropCaughtMilestones: currentRunCaseDropCaughtMilestones(),
             newRecord: Boolean(runMetrics?.newRecord),
             profileXpLocalAwarded: Math.max(0, Math.floor(Number(runMetrics?.profileXpAwarded || 0))),
             profileXpReconciled: true,
@@ -26303,7 +26363,7 @@ function createTutorialDeck(layer, mount, options, words) {
           const loaded = await leaderboardApiRequest(LEADERBOARD_API_SUBMIT_PATH, { initData, ...run });
           const fastSettlementApplied = applyFastRunSettlementPayload(loaded);
           if (!fastSettlementApplied &amp;&amp; loaded?.caseState) applyServerCasePayload(loaded);
-          if(!silent&amp;&amp;loaded?.runSettlement?.caseDrop?.granted){const t=String(loaded.runSettlement.caseDrop.type||&quot;small&quot;);const title=t===&quot;legendary&quot;?&quot;Легендарный&quot;:t===&quot;mythic&quot;?&quot;Мифический&quot;:t===&quot;gold&quot;?&quot;Золотой&quot;:t===&quot;sweet&quot;?&quot;Серебряный&quot;:&quot;Обычный&quot;;showProfileToast(`🎁 ${title} кейс пойман!`,&quot;success&quot;,3800);}
+          if(!silent){const grantedDrops=Array.isArray(loaded?.runSettlement?.caseDrops)?loaded.runSettlement.caseDrops.filter((drop)=&gt;drop?.granted):(loaded?.runSettlement?.caseDrop?.granted?[loaded.runSettlement.caseDrop]:[]);if(grantedDrops.length===1){const t=String(grantedDrops[0].type||&quot;small&quot;);const title=t===&quot;legendary&quot;?&quot;Легендарный&quot;:t===&quot;mythic&quot;?&quot;Мифический&quot;:t===&quot;gold&quot;?&quot;Золотой&quot;:t===&quot;sweet&quot;?&quot;Серебряный&quot;:&quot;Обычный&quot;;showProfileToast(`🎁 ${title} кейс пойман!`,&quot;success&quot;,3800);}else if(grantedDrops.length&gt;1)showProfileToast(`🎁 Поймано кейсов: ${grantedDrops.length}`,&quot;success&quot;,4200);}
           antiCheatWithTrustedChange(&quot;run-server-settlement&quot;, () =&gt; {
             state.pendingBoosterRuns = normalizePendingBoosterRuns(state.pendingBoosterRuns).filter((id) =&gt; id !== String(run.runId));
             saveProgress();
@@ -27392,18 +27452,27 @@ function createTutorialDeck(layer, mount, options, words) {
         });
       }
 
-      function spawnReservedCaseDrop() {
-        if(!state.runCaseDrop||state.runCaseDropSpawned||state.runCaseDropCaught)return;
-        const caseType=String(state.runCaseDrop.type||&quot;small&quot;);
+      function spawnReservedCaseDrop(drop) {
+        if(!drop||drop.spawned||drop.caught)return;
+        const caseType=String(drop.type||&quot;small&quot;);
         if(!RUN_CASE_DROP_IMAGES[caseType])return;
-        state.runCaseDropSpawned=true;
+        drop.spawned=true;
+        if(Number(drop.milestoneScore||0)===1000)state.runCaseDropSpawned=true;
         const size=caseType===&quot;mythic&quot;||caseType===&quot;legendary&quot;?56:52;
         const laneTop=Math.max(38,ground.y-126);
         const laneBottom=Math.max(laneTop+16,ground.y-88);
         const startX=canvasViewWidth+58;
         const startFloat=Math.random()*Math.PI*2;
-        state.pickups.push({kind:&quot;case_drop&quot;,caseType,x:startX,previousX:startX,y:laneTop+Math.random()*(laneBottom-laneTop),size,float:startFloat,previousFloat:startFloat,got:false});
+        state.pickups.push({kind:&quot;case_drop&quot;,caseType,milestoneScore:Number(drop.milestoneScore||drop.minScore||1000),x:startX,previousX:startX,y:laneTop+Math.random()*(laneBottom-laneTop),size,float:startFloat,previousFloat:startFloat,got:false});
         if(caseType===&quot;gold&quot;||caseType===&quot;mythic&quot;||caseType===&quot;legendary&quot;) hapticImpact(&quot;medium&quot;,120);
+      }
+
+      function spawnNextReservedCaseDrop() {
+        if((state.pickups||[]).some((item)=&gt;item?.kind===&quot;case_drop&quot;&amp;&amp;!item.got))return;
+        const nowMs=Math.max(0,Number(state.time||0)*1000);
+        const score=Math.max(0,Number(state.score||0));
+        const next=(Array.isArray(state.runCaseDrops)?state.runCaseDrops:[]).find((drop)=&gt;!drop.spawned&amp;&amp;!drop.caught&amp;&amp;score&gt;=Number(drop.milestoneScore||drop.minScore||1000)&amp;&amp;nowMs&gt;=Number(drop.spawnAfterMs||0));
+        if(next)spawnReservedCaseDrop(next);
       }
 
       function spawnPickup() {

@@ -91,6 +91,7 @@
     "0088_operational_retention.sql": "9a4015258bbcb0ca8b7669cf43f5ebbcd79f077684b984ae92b952fb64889fb9",
     "0089_season_pass_case_request_recovery.sql": "9ee6a2ed10eb215d70832633bdb62cf6eb27f1ffe50e97254f3958fb8805ccea",
     "0090_schema_contract_v2.sql": "63c458b431001f0f75da3cd1bb44997b93f73690a8a2784644fec5305e83d131",
-    "0091_runner_case_drop_v2.sql": "4554e6c2f057a6a0dd8b314c3e4ac44159c04c19bbdf38e455294ba32ba7a716"
+    "0091_runner_case_drop_v2.sql": "4554e6c2f057a6a0dd8b314c3e4ac44159c04c19bbdf38e455294ba32ba7a716",
+    "0092_runner_case_drop_milestones.sql": "a9f425fe159a89abcc07aec851712a20b130c68677f21958608e47fa9c560c1d"
   }
 }

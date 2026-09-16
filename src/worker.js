@@ -8217,6 +8217,13 @@ async function ensureRunCaseDropSchema(env){
           spawn_after_ms INTEGER NOT NULL CHECK(spawn_after_ms BETWEEN 1000 AND 300000), caught INTEGER NOT NULL DEFAULT 0 CHECK(caught IN (0,1)),
           granted INTEGER NOT NULL DEFAULT 0 CHECK(granted IN (0,1)), created_at INTEGER NOT NULL, updated_at INTEGER NOT NULL)`),
         env.DB.prepare(`CREATE INDEX IF NOT EXISTS idx_game_run_case_drops_player ON game_run_case_drops(telegram_id,created_at DESC)`),
+        env.DB.prepare(`CREATE TABLE IF NOT EXISTS game_run_case_drop_milestones (
+          run_id TEXT NOT NULL, telegram_id TEXT NOT NULL, milestone_score INTEGER NOT NULL CHECK(milestone_score>=1000 AND milestone_score%1000=0),
+          case_type TEXT NOT NULL DEFAULT '' CHECK(case_type IN ('','small','sweet','gold','mythic','legendary')),
+          spawn_after_ms INTEGER NOT NULL DEFAULT 0 CHECK(spawn_after_ms BETWEEN 0 AND 7200000), caught INTEGER NOT NULL DEFAULT 0 CHECK(caught IN (0,1)),
+          granted INTEGER NOT NULL DEFAULT 0 CHECK(granted IN (0,1)), created_at INTEGER NOT NULL, updated_at INTEGER NOT NULL,
+          PRIMARY KEY(run_id,milestone_score))`),
+        env.DB.prepare(`CREATE INDEX IF NOT EXISTS idx_game_run_case_drop_milestones_player ON game_run_case_drop_milestones(telegram_id,created_at DESC)`),
         env.DB.prepare(`INSERT OR IGNORE INTO game_case_drop_settings(config_id,enabled,chance_bps,weight_small,weight_sweet,weight_gold,weight_mythic,weight_legendary,spawn_min_ms,spawn_max_ms,updated_at) VALUES('main',1,5000,9000,500,250,200,50,1000,1000,unixepoch())`)
       ]);
       // 0091 inserts a policy marker instead of mutating the live row while an
@@ -8267,6 +8274,70 @@ function rollRunCaseDrop(config){
   return {type,spawnAfterMs:Math.round(min+Math.random()*(max-min))};
 }
 const RUN_CASE_DROP_MIN_SCORE = 1000;
+const RUN_CASE_DROP_MILESTONE_SCORE = 1000;
+
+function normalizeRunCaseDropCaughtMilestones(value){
+  const source=Array.isArray(value)?value:[];
+  return [...new Set(source.map((item)=>Math.floor(Number(item)||0)).filter((score)=>score>=RUN_CASE_DROP_MILESTONE_SCORE&&score%RUN_CASE_DROP_MILESTONE_SCORE===0))].sort((a,b)=>a-b).slice(0,256);
+}
+
+function runCaseDropMilestoneView(row){
+  if(!row||!String(row.case_type||''))return null;
+  const milestoneScore=Math.max(RUN_CASE_DROP_MILESTONE_SCORE,Math.floor(Number(row.milestone_score)||RUN_CASE_DROP_MILESTONE_SCORE));
+  return {
+    milestoneScore,minScore:milestoneScore,type:String(row.case_type||'small'),
+    spawnAfterMs:Math.max(0,Number(row.spawn_after_ms||0)),
+    caught:Number(row.caught||0)===1,granted:Number(row.granted||0)===1||Number(row.grant_exists||0)===1
+  };
+}
+
+async function importLegacyRunCaseDropMilestone(env,runId,telegramId){
+  await ensureRunCaseDropSchema(env);
+  await env.DB.prepare(`INSERT OR IGNORE INTO game_run_case_drop_milestones(
+      run_id,telegram_id,milestone_score,case_type,spawn_after_ms,caught,granted,created_at,updated_at
+    ) SELECT run_id,telegram_id,?,case_type,spawn_after_ms,caught,granted,created_at,updated_at
+      FROM game_run_case_drops WHERE run_id=? AND telegram_id=? LIMIT 1`)
+    .bind(RUN_CASE_DROP_MILESTONE_SCORE,String(runId),String(telegramId)).run();
+}
+
+async function readRunCaseDropMilestones(env,runId,telegramId,maxScore=Number.MAX_SAFE_INTEGER){
+  const upper=Math.max(0,Math.floor(Number(maxScore)||0));
+  const rows=await env.DB.prepare(`SELECT m.*,CASE WHEN EXISTS(
+      SELECT 1 FROM granted_cases g WHERE g.id=substr('run_case_drop_'||m.run_id||'_'||m.milestone_score,1,180)
+         OR (m.milestone_score=1000 AND g.id=substr('run_case_drop_'||m.run_id,1,180))
+    ) THEN 1 ELSE 0 END AS grant_exists
+    FROM game_run_case_drop_milestones m
+    WHERE m.run_id=? AND m.telegram_id=? AND m.milestone_score<=? AND m.case_type<>''
+    ORDER BY m.milestone_score ASC`).bind(String(runId),String(telegramId),upper).all();
+  return (rows?.results||[]).map(runCaseDropMilestoneView).filter(Boolean);
+}
+
+async function syncRunCaseDropMilestones(env,{runId,telegramId,score,durationMs}){
+  await importLegacyRunCaseDropMilestone(env,runId,telegramId);
+  const safeScore=Math.max(0,Math.floor(Number(score)||0));
+  const maxMilestone=Math.floor(safeScore/RUN_CASE_DROP_MILESTONE_SCORE)*RUN_CASE_DROP_MILESTONE_SCORE;
+  if(maxMilestone<RUN_CASE_DROP_MILESTONE_SCORE)return [];
+  const last=await env.DB.prepare(`SELECT COALESCE(MAX(milestone_score),0) AS value FROM game_run_case_drop_milestones WHERE run_id=? AND telegram_id=?`)
+    .bind(String(runId),String(telegramId)).first();
+  let next=Math.max(RUN_CASE_DROP_MILESTONE_SCORE,Math.floor(Number(last?.value)||0)+RUN_CASE_DROP_MILESTONE_SCORE);
+  if(next<=maxMilestone){
+    const config=await loadRunCaseDropConfig(env);
+    const now=Math.floor(Date.now()/1000);
+    const baseDuration=Math.max(0,Math.floor(Number(durationMs)||0));
+    let batch=[];
+    for(;next<=maxMilestone;next+=RUN_CASE_DROP_MILESTONE_SCORE){
+      const reserved=rollRunCaseDrop(config);
+      const caseType=String(reserved?.type||'');
+      const spawnAfterMs=caseType?Math.min(AUTHORITATIVE_RUN_SESSION_MAX_MS,baseDuration+Math.max(1000,Number(reserved?.spawnAfterMs||1000))):baseDuration;
+      batch.push(env.DB.prepare(`INSERT OR IGNORE INTO game_run_case_drop_milestones(
+        run_id,telegram_id,milestone_score,case_type,spawn_after_ms,caught,granted,created_at,updated_at
+      ) VALUES(?,?,?,?,?,0,0,?,?)`).bind(String(runId),String(telegramId),next,caseType,spawnAfterMs,now,now));
+      if(batch.length>=50){await env.DB.batch(batch);batch=[];}
+    }
+    if(batch.length)await env.DB.batch(batch);
+  }
+  return readRunCaseDropMilestones(env,runId,telegramId,maxMilestone);
+}
 const AUTHORITATIVE_RUN_SESSION_MAX_MS = 2 * 60 * 60 * 1000;
 const AUTHORITATIVE_RUN_CLOCK_GRACE_MS = 7000;
 // A run must prove its progress continuously while the game is actually
@@ -8823,7 +8894,7 @@ async function attestAuthoritativeRunProgress(env, session, rawMetrics, options 
 function isAuthoritativeRunSchemaMissingError(error) {
   const text = String(error?.message || error || '').toLowerCase();
   return (
-    (text.includes('no such table') && (text.includes('game_run_sessions') || text.includes('game_run_live_proofs') || text.includes('game_run_case_drops') || text.includes('game_case_drop_settings'))) ||
+    (text.includes('no such table') && (text.includes('game_run_sessions') || text.includes('game_run_live_proofs') || text.includes('game_run_case_drops') || text.includes('game_run_case_drop_milestones') || text.includes('game_case_drop_settings'))) ||
     (text.includes('no such column') && (
       text.includes('anchor_duration_ms') || text.includes('anchor_server_at_ms') ||
       text.includes('booster_points') || text.includes('booster_treats') || text.includes('booster_coffee') ||
@@ -8856,17 +8927,28 @@ async function checkpointAuthoritativeRunSession(request, env) {
         await env.DB.prepare(`UPDATE game_run_sessions SET shield_used=MAX(shield_used,?),second_chance_used=MAX(second_chance_used,?),updated_at=? WHERE run_id=? AND telegram_id=? AND status='started'`)
           .bind(shieldUsed?1:0,secondChanceUsed?1:0,Math.floor(checkpoint.attestedAtMs/1000),runId,telegramId).run();
       }
+      await syncRunCaseDropMilestones(env,{runId,telegramId,score:checkpoint.score,durationMs:checkpoint.durationMs});
       const submittedCaseDropCaught=Boolean(body.caseDropCaught||body.case_drop_caught);
-      if(submittedCaseDropCaught){
-        await env.DB.prepare(`UPDATE game_run_case_drops SET caught=1,updated_at=? WHERE run_id=? AND telegram_id=? AND caught=0 AND spawn_after_ms<=? AND ?>=?`)
-          .bind(Math.floor(checkpoint.attestedAtMs/1000),runId,telegramId,checkpoint.durationMs,checkpoint.score,RUN_CASE_DROP_MIN_SCORE).run();
+      const submittedCaughtMilestones=normalizeRunCaseDropCaughtMilestones(body.caseDropCaughtMilestones||body.case_drop_caught_milestones);
+      const catchMilestones=submittedCaughtMilestones.length?submittedCaughtMilestones:(submittedCaseDropCaught?[RUN_CASE_DROP_MILESTONE_SCORE]:[]);
+      if(catchMilestones.length){
+        const caughtAt=Math.floor(checkpoint.attestedAtMs/1000);
+        const updates=catchMilestones.map((milestone)=>env.DB.prepare(`UPDATE game_run_case_drop_milestones SET caught=1,updated_at=?
+          WHERE run_id=? AND telegram_id=? AND milestone_score=? AND case_type<>'' AND caught=0 AND spawn_after_ms<=? AND milestone_score<=?`)
+          .bind(caughtAt,runId,telegramId,milestone,checkpoint.durationMs,checkpoint.score));
+        await env.DB.batch(updates);
+        if(catchMilestones.includes(RUN_CASE_DROP_MILESTONE_SCORE)){
+          await env.DB.prepare(`UPDATE game_run_case_drops SET caught=1,updated_at=? WHERE run_id=? AND telegram_id=? AND caught=0 AND spawn_after_ms<=? AND ?>=?`)
+            .bind(caughtAt,runId,telegramId,checkpoint.durationMs,checkpoint.score,RUN_CASE_DROP_MIN_SCORE).run().catch(()=>null);
+        }
       }
+      const caseDrops=await readRunCaseDropMilestones(env,runId,telegramId,checkpoint.score);
       return jsonResponse({ ok: true, checkpoint: {
         runId, seq: checkpoint.proofSeq, durationMs: checkpoint.durationMs, score: checkpoint.score,
         runTreats: checkpoint.runTreats, runCoffee: checkpoint.runCoffee,
         shieldUsed:Boolean(shieldUsed || Number(session.shield_used||0)),
         secondChanceUsed:Boolean(secondChanceUsed || Number(session.second_chance_used||0)),
-        caseDropCaught:submittedCaseDropCaught,
+        caseDropCaught:catchMilestones.length>0,caseDropCaughtMilestones:caseDrops.filter((drop)=>drop.caught).map((drop)=>drop.milestoneScore),caseDrops,
         serverTime: checkpoint.attestedAtMs
       }});
     };
@@ -8964,17 +9046,18 @@ async function startAuthoritativeRunSession(request, env) {
              SELECT 1 FROM game_run_sessions WHERE run_id=? AND telegram_id=? AND started_at_ms=? AND (booster_shield=1 OR booster_second_chance=1 OR booster_pause=1)
            )`
         ).bind(runId,telegramId,nowMs,runId,telegramId,nowMs,runId,telegramId,nowMs,now,telegramId,runId,telegramId,nowMs),
-        env.DB.prepare(`INSERT OR IGNORE INTO game_run_case_drops(run_id,telegram_id,case_type,spawn_after_ms,caught,granted,created_at,updated_at)
-          SELECT run_id,telegram_id,?,?,0,0,created_at,updated_at FROM game_run_sessions
-          WHERE run_id=? AND telegram_id=? AND started_at_ms=? AND status='started' AND ?<>''`).bind(
-            String(reservedCaseDrop?.type||''),Math.max(1000,Number(reservedCaseDrop?.spawnAfterMs||1000)),runId,telegramId,nowMs,String(reservedCaseDrop?.type||'')
+        env.DB.prepare(`INSERT OR IGNORE INTO game_run_case_drop_milestones(
+            run_id,telegram_id,milestone_score,case_type,spawn_after_ms,caught,granted,created_at,updated_at
+          ) SELECT run_id,telegram_id,?,?,?,0,0,created_at,updated_at FROM game_run_sessions
+          WHERE run_id=? AND telegram_id=? AND started_at_ms=? AND status='started'`).bind(
+            RUN_CASE_DROP_MILESTONE_SCORE,String(reservedCaseDrop?.type||''),String(reservedCaseDrop?.type||'')?Math.max(1000,Number(reservedCaseDrop?.spawnAfterMs||1000)):0,runId,telegramId,nowMs
           ),
         env.DB.prepare(
           `SELECT s.run_id,s.telegram_id,s.started_at_ms,s.expires_at_ms,s.status,s.skin_id,
                   s.booster_points,s.booster_treats,s.booster_coffee,s.booster_shield,s.booster_second_chance,s.booster_pause,
                   s.shield_used,s.second_chance_used,d.case_type AS case_drop_type,d.spawn_after_ms AS case_drop_spawn_after_ms,d.caught AS case_drop_caught
-           FROM game_run_sessions s LEFT JOIN game_run_case_drops d ON d.run_id=s.run_id WHERE s.run_id=? LIMIT 1`
-        ).bind(runId)
+           FROM game_run_sessions s LEFT JOIN game_run_case_drop_milestones d ON d.run_id=s.run_id AND d.milestone_score=? WHERE s.run_id=? LIMIT 1`
+        ).bind(RUN_CASE_DROP_MILESTONE_SCORE,runId)
       ]);
 
       const session = result?.[5]?.results?.[0] || null;
@@ -8998,7 +9081,8 @@ async function startAuthoritativeRunSession(request, env) {
             second_chance:Number(session.booster_second_chance||0)===1,
             pause:Number(session.booster_pause||0)===1
           },
-          caseDrop:session.case_drop_type?{type:String(session.case_drop_type),spawnAfterMs:Number(session.case_drop_spawn_after_ms||0),minScore:RUN_CASE_DROP_MIN_SCORE,caught:Number(session.case_drop_caught||0)===1}:null
+          caseDrop:session.case_drop_type?{type:String(session.case_drop_type),spawnAfterMs:Number(session.case_drop_spawn_after_ms||0),minScore:RUN_CASE_DROP_MIN_SCORE,milestoneScore:RUN_CASE_DROP_MILESTONE_SCORE,caught:Number(session.case_drop_caught||0)===1}:null,
+          caseDrops:session.case_drop_type?[{type:String(session.case_drop_type),spawnAfterMs:Number(session.case_drop_spawn_after_ms||0),minScore:RUN_CASE_DROP_MIN_SCORE,milestoneScore:RUN_CASE_DROP_MILESTONE_SCORE,caught:Number(session.case_drop_caught||0)===1}]:[]
         },
         repeated
       });
@@ -13311,12 +13395,17 @@ async function prepareFastSeasonPassRunContext(env, telegramId, input, runCreate
 
 async function buildFastRepeatedRunResponse(env, executionCtx, context) {
   const { ledger, telegramId, runId, submittedMetrics, season, minSeconds, minScore, ratingEntryEnabled, auth } = context;
+  await importLegacyRunCaseDropMilestone(env,runId,telegramId).catch(()=>null);
   const profilePromise = ensureAuthoritativeProfileRow(env, telegramId, `run:${runId}:fast-repeat`);
-  const [profileRow, repeatCaseEnsured, repeatRunCaseDrop] = await Promise.all([
+  const [profileRow, repeatCaseEnsured, repeatRunCaseDropsResult] = await Promise.all([
     profilePromise,
     ensureCasePlayerState(env, telegramId, {}, { profilePromise }),
-    env.DB.prepare(`SELECT d.case_type,d.spawn_after_ms,d.caught,d.granted,CASE WHEN g.id IS NULL THEN 0 ELSE 1 END AS grant_exists FROM game_run_case_drops d LEFT JOIN granted_cases g ON g.id=? WHERE d.run_id=? AND d.telegram_id=? LIMIT 1`).bind(`run_case_drop_${runId}`.slice(0,180),runId,telegramId).first().catch(()=>null)
+    env.DB.prepare(`SELECT m.*,CASE WHEN EXISTS(SELECT 1 FROM granted_cases g
+        WHERE g.id=substr('run_case_drop_'||m.run_id||'_'||m.milestone_score,1,180)
+           OR (m.milestone_score=1000 AND g.id=substr('run_case_drop_'||m.run_id,1,180))) THEN 1 ELSE 0 END AS grant_exists
+      FROM game_run_case_drop_milestones m WHERE m.run_id=? AND m.telegram_id=? AND m.case_type<>'' ORDER BY m.milestone_score ASC`).bind(runId,telegramId).all().catch(()=>({results:[]}))
   ]);
+  const repeatRunCaseDrops=(repeatRunCaseDropsResult?.results||[]).map(runCaseDropMilestoneView).filter(Boolean);
   const repeatCaseState = repeatCaseEnsured.state;
   const acceptedToRating = Number(ledger?.accepted_rating || 0) === 1;
   const qualifies = Number(ledger?.duration_ms || submittedMetrics.durationMs) >= minSeconds * 1000
@@ -13375,7 +13464,8 @@ async function buildFastRepeatedRunResponse(env, executionCtx, context) {
       skinId: normalizeRunSessionSkinId(ledger?.skin_id),
       skinBonus: runSkinBonusView(ledger?.skin_id, qualifies),
       seasonId: String(ledger?.season_id || season.id || ""),
-      caseDrop:repeatRunCaseDrop?{type:String(repeatRunCaseDrop.case_type||''),caught:Number(repeatRunCaseDrop.caught||0)===1,granted:Number(repeatRunCaseDrop.granted||0)===1||Number(repeatRunCaseDrop.grant_exists||0)===1}:null
+      caseDrop:repeatRunCaseDrops[0]||null,
+      caseDrops:repeatRunCaseDrops
     }
   };
 }
@@ -13571,8 +13661,9 @@ async function submitLeaderboardRun(request, env, executionCtx = null) {
     const rewardEligible = metrics.durationMs >= minSeconds * 1000;
     const qualifies = rewardEligible && metrics.score >= minScore;
     const acceptedToRating = ratingEntryEnabled && String(season.status || "") === "active" && qualifies;
+    await importLegacyRunCaseDropMilestone(env,runId,telegramId).catch(()=>null);
     const profileBeforePromise = ensureAuthoritativeProfileRow(env, telegramId, `run:${runId}:prepare`);
-    const [ensured, profileBefore, consumed, fastSeasonPass, testerRow, liveOpsRunEvent, runAchievementContext, reservedCaseDrop, previousSeasonLeader] = await Promise.all([
+    const [ensured, profileBefore, consumed, fastSeasonPass, testerRow, liveOpsRunEvent, runAchievementContext, reservedCaseDropsResult, previousSeasonLeader] = await Promise.all([
       ensureCasePlayerState(env, telegramId, {}, { profilePromise: profileBeforePromise }),
       profileBeforePromise,
       env.DB.prepare(`SELECT booster_type,booster_types_json,telegram_id FROM case_booster_run_consumptions WHERE run_id=? LIMIT 1`).bind(runId).first(),
@@ -13583,7 +13674,7 @@ async function submitLeaderboardRun(request, env, executionCtx = null) {
       acceptedToRating ? getTesterAccountSafe(telegramId, env) : Promise.resolve(null),
       activeRunLiveOpsEvent(env).catch(()=>({active:false,multipliers:{pointsMultiplier:1,treatsMultiplier:1,coffeeMultiplier:1}})),
       rewardEligible ? prepareRunAchievementUnlockContext(env,telegramId,minSeconds*1000) : Promise.resolve(null),
-      env.DB.prepare(`SELECT * FROM game_run_case_drops WHERE run_id=? AND telegram_id=? LIMIT 1`).bind(runId,telegramId).first().catch(()=>null),
+      env.DB.prepare(`SELECT * FROM game_run_case_drop_milestones WHERE run_id=? AND telegram_id=? AND case_type<>'' ORDER BY milestone_score ASC`).bind(runId,telegramId).all().catch(()=>({results:[]})),
       acceptedToRating ? env.DB.prepare(`SELECT telegram_id,display_name,username,best_score,achieved_at FROM leaderboard_entries WHERE season_id=? AND hidden=0 ORDER BY best_score DESC,achieved_at ASC,telegram_id ASC LIMIT 1`).bind(String(season.id || "")).first() : Promise.resolve(null)
     ]);
     if (consumed && String(consumed.telegram_id || "") !== telegramId) throw new ApiError(409, "Этот идентификатор забега уже использован.");
@@ -13624,9 +13715,15 @@ async function submitLeaderboardRun(request, env, executionCtx = null) {
     const ratingHidden = Number(testerRow?.exclude_from_rating || 0) === 1 ? 1 : 0;
     const rejectionReason = acceptedToRating ? "" : (!qualifies ? "below_minimum" : (!ratingEntryEnabled ? "rating_disabled" : `season_${String(season.status || "inactive")}`));
     const submittedCaseDropCaught=Boolean(body.caseDropCaught||body.case_drop_caught);
-    const caseDropCaught=Boolean(reservedCaseDrop && metrics.score>=RUN_CASE_DROP_MIN_SCORE && (Number(reservedCaseDrop.caught||0)===1 || (submittedCaseDropCaught && metrics.durationMs>=Number(reservedCaseDrop.spawn_after_ms||0))));
-    const caseDropType=String(reservedCaseDrop?.case_type||'');
-    const caseDropGrantId=`run_case_drop_${runId}`.slice(0,180);
+    const submittedCaughtMilestones=normalizeRunCaseDropCaughtMilestones(body.caseDropCaughtMilestones||body.case_drop_caught_milestones);
+    const submittedMilestoneSet=new Set(submittedCaughtMilestones.length?submittedCaughtMilestones:(submittedCaseDropCaught?[RUN_CASE_DROP_MILESTONE_SCORE]:[]));
+    const reservedCaseDrops=(reservedCaseDropsResult?.results||[]).map((row)=>({
+      row,milestoneScore:Math.max(RUN_CASE_DROP_MILESTONE_SCORE,Math.floor(Number(row?.milestone_score)||RUN_CASE_DROP_MILESTONE_SCORE)),
+      type:String(row?.case_type||''),
+      caught:Boolean(Number(row?.caught||0)===1 || (submittedMilestoneSet.has(Math.floor(Number(row?.milestone_score)||0)) && metrics.score>=Number(row?.milestone_score||0) && metrics.durationMs>=Number(row?.spawn_after_ms||0)))
+    })).filter((entry)=>entry.type);
+    const settlementCaseDrops=reservedCaseDrops.map((entry)=>({type:entry.type,milestoneScore:entry.milestoneScore,minScore:entry.milestoneScore,spawnAfterMs:Number(entry.row?.spawn_after_ms||0),caught:entry.caught,granted:entry.caught}));
+    const primaryCaseDrop=settlementCaseDrops.find((drop)=>drop.granted)||settlementCaseDrops[0]||null;
 
     if (!boosterAlreadyConsumed && rewardEligible) {
       for (const type of appliedBoosterTypes) {
@@ -13661,11 +13758,16 @@ async function submitLeaderboardRun(request, env, executionCtx = null) {
         `INSERT INTO leaderboard_runs(run_id,season_id,telegram_id,score,duration_ms,run_treats,run_coffee,accepted,rejection_reason,created_at)
          VALUES(?,?,?,?,?,?,?,?,?,?)`
       ).bind(runId, String(season.id || ""), telegramId, metrics.score, metrics.durationMs, metrics.runTreats, metrics.runCoffee, acceptedToRating ? 1 : 0, rejectionReason, now),
-      env.DB.prepare(`UPDATE game_run_case_drops SET caught=MAX(caught,?),updated_at=? WHERE run_id=? AND telegram_id=?`).bind(caseDropCaught?1:0,now,runId,telegramId),
+      ...[...submittedMilestoneSet].map((milestone)=>env.DB.prepare(`UPDATE game_run_case_drop_milestones SET caught=1,updated_at=?
+        WHERE run_id=? AND telegram_id=? AND milestone_score=? AND case_type<>'' AND spawn_after_ms<=? AND milestone_score<=?`)
+        .bind(now,runId,telegramId,milestone,metrics.durationMs,metrics.score)),
       env.DB.prepare(`INSERT OR IGNORE INTO granted_cases(id,telegram_id,case_type,status,granted_by,reason,created_at)
-        SELECT ?,d.telegram_id,d.case_type,'pending','run-case-drop','Редкий кейс, пойманный во время забега',? FROM game_run_case_drops d
-        WHERE d.run_id=? AND d.telegram_id=? AND ?=1`).bind(caseDropGrantId,now,runId,telegramId,caseDropCaught?1:0),
-      env.DB.prepare(`UPDATE game_run_case_drops SET granted=CASE WHEN EXISTS(SELECT 1 FROM granted_cases WHERE id=?) THEN 1 ELSE granted END,updated_at=? WHERE run_id=? AND telegram_id=?`).bind(caseDropGrantId,now,runId,telegramId)
+        SELECT substr('run_case_drop_'||m.run_id||'_'||m.milestone_score,1,180),m.telegram_id,m.case_type,'pending','run-case-drop',
+               'Редкий кейс за '||m.milestone_score||' очков в забеге',?
+        FROM game_run_case_drop_milestones m WHERE m.run_id=? AND m.telegram_id=? AND m.caught=1 AND m.case_type<>''`).bind(now,runId,telegramId),
+      env.DB.prepare(`UPDATE game_run_case_drop_milestones SET granted=CASE WHEN EXISTS(
+        SELECT 1 FROM granted_cases g WHERE g.id=substr('run_case_drop_'||game_run_case_drop_milestones.run_id||'_'||game_run_case_drop_milestones.milestone_score,1,180)
+      ) THEN 1 ELSE granted END,updated_at=? WHERE run_id=? AND telegram_id=?`).bind(now,runId,telegramId)
     ];
     if (!boosterAlreadyConsumed && rewardEligible) {
       statements.push(
@@ -13771,7 +13873,7 @@ async function submitLeaderboardRun(request, env, executionCtx = null) {
       {
         runId, score: metrics.score, durationMs: metrics.durationMs, runTreats: metrics.runTreats, runCoffee: metrics.runCoffee,
         credited: { points: economyPoints, treats: economyTreats, coffee: economyCoffee }, profileXpAwarded,
-        boosterType: appliedBoosterType, boosterTypes: appliedBoosterTypes, runBoosterTypes: sessionBoosterTypes, skinId, newRecord, accepted: acceptedToRating, excludedFromRating: Boolean(ratingHidden), caseDrop:caseDropType?{type:caseDropType,caught:caseDropCaught}:null
+        boosterType: appliedBoosterType, boosterTypes: appliedBoosterTypes, runBoosterTypes: sessionBoosterTypes, skinId, newRecord, accepted: acceptedToRating, excludedFromRating: Boolean(ratingHidden), caseDrop:primaryCaseDrop, caseDrops:settlementCaseDrops
       },
       `run_${runId}`, auth.user, now
     ), "authoritative run timeline failed");
@@ -13816,7 +13918,7 @@ async function submitLeaderboardRun(request, env, executionCtx = null) {
         activeBoosters: caseNormalizeActiveBoosters(caseState.activeBoosters, caseState.activeBooster?.type, caseState.activeBooster?.runsLeft),
         activeBooster: { type: String(caseState.activeBooster?.type || ""), runsLeft: safeAdminNumber(caseState.activeBooster?.runsLeft) },
         skinId, skinBonus: runSkinBonusView(skinId, qualifies), seasonId: String(season.id || ""),
-        caseDrop:caseDropType?{type:caseDropType,caught:caseDropCaught,granted:caseDropCaught}:null,
+        caseDrop:primaryCaseDrop,caseDrops:settlementCaseDrops,
         liveOpsEvent:liveOpsRunEvent?.active?{id:liveOpsRunEvent.id,title:liveOpsRunEvent.title,endsAt:liveOpsRunEvent.endsAt,multipliers:liveOpsRunEvent.multipliers}:null
       }
     });
