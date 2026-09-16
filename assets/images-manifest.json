@@ -1,8 +1,8 @@
 {
   "version": 2,
   "hashAlgorithm": "sha256",
-  "catalogHash": "79d2c61f14b6f782",
-  "count": 458,
+  "catalogHash": "d287ae7f49913db2",
+  "count": 470,
   "images": [
     {
       "fileName": "achievements/background_achivment_panel.webp",
@@ -1373,12 +1373,60 @@
       "size": 318894
     },
     {
+      "fileName": "news/update_v_1_2_2.webp",
+      "label": "Update v 1 2 2",
+      "folder": "news",
+      "path": "/assets/news/update_v_1_2_2.webp",
+      "hash": "de67cfa4069a",
+      "size": 386432
+    },
+    {
       "fileName": "optimized/v0.79.5/background_season2.webp",
       "label": "Background season2",
       "folder": "optimized/v0.79.5",
       "path": "/assets/optimized/v0.79.5/background_season2.webp",
       "hash": "cb34c56cb195",
       "size": 1521024
+    },
+    {
+      "fileName": "optimized/v0.79.5/barricade_game_boock_night.webp",
+      "label": "Barricade game boock night",
+      "folder": "optimized/v0.79.5",
+      "path": "/assets/optimized/v0.79.5/barricade_game_boock_night.webp",
+      "hash": "ec547b66da27",
+      "size": 1193134
+    },
+    {
+      "fileName": "optimized/v0.79.5/barricade_game_group_svechi_night.webp",
+      "label": "Barricade game group svechi night",
+      "folder": "optimized/v0.79.5",
+      "path": "/assets/optimized/v0.79.5/barricade_game_group_svechi_night.webp",
+      "hash": "f6db6a4d1580",
+      "size": 732634
+    },
+    {
+      "fileName": "optimized/v0.79.5/barricade_game_group_telechka.webp",
+      "label": "Barricade game group telechka",
+      "folder": "optimized/v0.79.5",
+      "path": "/assets/optimized/v0.79.5/barricade_game_group_telechka.webp",
+      "hash": "b63ca7b8f622",
+      "size": 1013896
+    },
+    {
+      "fileName": "optimized/v0.79.5/barricade_game_puff_night.webp",
+      "label": "Barricade game puff night",
+      "folder": "optimized/v0.79.5",
+      "path": "/assets/optimized/v0.79.5/barricade_game_puff_night.webp",
+      "hash": "81c64ac125c0",
+      "size": 1217232
+    },
+    {
+      "fileName": "optimized/v0.79.5/barrier_game_bag.webp",
+      "label": "Barrier game bag",
+      "folder": "optimized/v0.79.5",
+      "path": "/assets/optimized/v0.79.5/barrier_game_bag.webp",
+      "hash": "ce2498539fcb",
+      "size": 1046476
     },
     {
       "fileName": "optimized/v0.79.5/cafeBackground.webp",
@@ -1395,6 +1443,22 @@
       "path": "/assets/optimized/v0.79.5/coffeePickup.webp",
       "hash": "396655fa4d00",
       "size": 13068
+    },
+    {
+      "fileName": "optimized/v0.79.5/game_barricade_flovers_night_s2.webp",
+      "label": "Game barricade flovers night s2",
+      "folder": "optimized/v0.79.5",
+      "path": "/assets/optimized/v0.79.5/game_barricade_flovers_night_s2.webp",
+      "hash": "b37ff11cba66",
+      "size": 1258134
+    },
+    {
+      "fileName": "optimized/v0.79.5/game_barricade_tablet.webp",
+      "label": "Game barricade tablet",
+      "folder": "optimized/v0.79.5",
+      "path": "/assets/optimized/v0.79.5/game_barricade_tablet.webp",
+      "hash": "d6d4ebdea360",
+      "size": 787048
     },
     {
       "fileName": "optimized/v0.79.5/iconCoffee.webp",
@@ -1443,6 +1507,14 @@
       "path": "/assets/optimized/v0.79.5/pillowObstacle.webp",
       "hash": "71c6376e2451",
       "size": 14190
+    },
+    {
+      "fileName": "optimized/v0.79.5/road_night_cafe.webp",
+      "label": "Road night cafe",
+      "folder": "optimized/v0.79.5",
+      "path": "/assets/optimized/v0.79.5/road_night_cafe.webp",
+      "hash": "77e503828ca9",
+      "size": 442074
     },
     {
       "fileName": "optimized/v0.79.5/shopAmericano.webp",
@@ -2315,6 +2387,30 @@
       "path": "/assets/rating/v8/season3_reiting_all.webp",
       "hash": "79e6501b7c0e",
       "size": 139882
+    },
+    {
+      "fileName": "runner-builder/previews/pouf.webp",
+      "label": "Pouf",
+      "folder": "runner-builder/previews",
+      "path": "/assets/runner-builder/previews/pouf.webp",
+      "hash": "e3827f576723",
+      "size": 9414
+    },
+    {
+      "fileName": "runner-builder/previews/stool.webp",
+      "label": "Stool",
+      "folder": "runner-builder/previews",
+      "path": "/assets/runner-builder/previews/stool.webp",
+      "hash": "5dfb33f7d161",
+      "size": 11352
+    },
+    {
+      "fileName": "runner-builder/previews/tablePink.webp",
+      "label": "TablePink",
+      "folder": "runner-builder/previews",
+      "path": "/assets/runner-builder/previews/tablePink.webp",
+      "hash": "5eb541f75660",
+      "size": 9068
     },
     {
       "fileName": "season-pass/avatars_season_pass3.webp",

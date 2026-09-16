@@ -1,7 +1,7 @@
 {
   "version": 1,
-  "catalogHash": "573408bbb73b42a1",
-  "count": 11,
+  "catalogHash": "4b24f013e74167bf",
+  "count": 12,
   "images": [
     {
       "fileName": "cases-5.0.1.webp",
@@ -79,6 +79,13 @@
       "path": "/assets/news/update_v_1_2_0.webp",
       "hash": "ca04685df961",
       "size": 318894
+    },
+    {
+      "fileName": "update_v_1_2_2.webp",
+      "label": "Update v 1 2 2",
+      "path": "/assets/news/update_v_1_2_2.webp",
+      "hash": "de67cfa4069a",
+      "size": 386432
     }
   ]
 }
