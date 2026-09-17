@@ -6799,6 +6799,17 @@ function achievementStoryCollectibleArtUrl(definition = {}) {
   const configured=seasonGroup?ACHIEVEMENT_STORY_COLLECTIBLE_ART[seasonGroup]?.[target]:"";
   return String(configured||seasonPassReadinessAssetPath(definition.collectibleArtUrl)||"");
 }
+function achievementArtOverrideUrl(value,{strict=false}={}) {
+  const raw=String(value||"").trim();
+  if(!raw)return "";
+  const valid=raw.length<=500&&raw.startsWith("/assets/")&&!raw.includes("..")&&!raw.includes("\\")&&/\.(?:webp|png|jpe?g|avif)$/i.test(raw);
+  if(!valid){
+    if(strict)throw new ApiError(400,"Картинка достижения должна быть локальным файлом /assets/... в формате WebP, PNG, JPG/JPEG или AVIF.");
+    return "";
+  }
+  return raw;
+}
+
 function achievementArtUrl(achievementId, definition = {}) {
   if(definition?.dynamicStoryCollectible)return achievementStoryCollectibleArtUrl(definition);
   const seasonGroup=achievementSeasonArtGroup(definition);
@@ -6984,6 +6995,7 @@ async function ensureAchievementConfigSchema(env) {
       await addRuntimeColumnIfMissing(env, "achievement_settings", "rarity", "TEXT NOT NULL DEFAULT '' CHECK(rarity IN ('','common','rare','epic','legendary','legacy'))");
       await addRuntimeColumnIfMissing(env, "achievement_settings", "achievement_points", "INTEGER NOT NULL DEFAULT -1 CHECK(achievement_points >= -1 AND achievement_points <= 10000)");
       await addRuntimeColumnIfMissing(env, "achievement_settings", "secret_mode", "INTEGER NOT NULL DEFAULT -1 CHECK(secret_mode IN (-1,0,1))");
+      await addRuntimeColumnIfMissing(env, "achievement_settings", "art_url", "TEXT NOT NULL DEFAULT ''");
       await env.DB.prepare(`UPDATE achievement_settings SET title='Ночь сладких чудес' WHERE achievement_id='season_2_night' AND TRIM(title)='Ночной сезон'`).run();
       await env.DB.batch([
         env.DB.prepare(`CREATE TABLE IF NOT EXISTS achievement_showcase_preferences (telegram_id TEXT PRIMARY KEY,style_id TEXT NOT NULL DEFAULT 'default',updated_at INTEGER NOT NULL DEFAULT 0)`),
@@ -7260,10 +7272,14 @@ async function achievementConfiguredDefinitions(env, options = {}) {
     const achievementPoints = achievementPointsValue(row && Number(row.achievement_points) >= 0 ? row.achievement_points : base.achievementPoints, base.achievementPoints);
     const secretMode=Number(row?.secret_mode);
     const secret=row&&[-1,0,1].includes(secretMode)&&secretMode>=0?secretMode===1:Boolean(base.secret);
-    const artUrl=achievementArtUrl(base.id,base),artReady=Boolean(artUrl),catalogVisible=achievementCatalogPublished(base,artReady,availability);
+    const defaultArtUrl=achievementArtUrl(base.id,base);
+    const artOverrideUrl=achievementArtOverrideUrl(row?.art_url,{strict:false});
+    const artUrl=artOverrideUrl||defaultArtUrl,artReady=Boolean(artUrl),catalogVisible=achievementCatalogPublished(base,artReady,availability);
     return {
       ...base,
       artUrl,
+      artOverrideUrl,
+      defaultArtUrl,
       artReady,
       catalogVisible,
       title:title || base.title,
@@ -7705,10 +7721,10 @@ async function ownerPanelAchievementsConfig(env,ctx){
     rewardPolicy:{simple:"avatar",prestige:"status"},
     achievementPoints:achievementPointsMeta({maxPerAchievement:10000}),
     items:definitions.map((item)=>({
-      id:item.id,category:item.category,icon:item.icon,artUrl:String(item.artUrl||""),artReady:Boolean(item.artReady),catalogVisible:Boolean(item.catalogVisible),enabled:item.enabled,visible:item.visible,title:item.title,description:item.description,secret:Boolean(item.secret),dynamicSeason:Boolean(item.dynamicSeason),seasonId:String(item.seasonId||""),
+      id:item.id,category:item.category,icon:item.icon,artUrl:String(item.artUrl||""),artOverrideUrl:String(item.artOverrideUrl||""),defaultArtUrl:String(item.defaultArtUrl||""),artReady:Boolean(item.artReady),catalogVisible:Boolean(item.catalogVisible),enabled:item.enabled,visible:item.visible,title:item.title,description:item.description,secret:Boolean(item.secret),dynamicSeason:Boolean(item.dynamicSeason),seasonId:String(item.seasonId||""),
       reward:achievementRewardView(item.reward),rewardMode:item.rewardMode,simpleRewardEligible:Boolean(item.simpleRewardEligible),rarity:item.rarity,rarityLabel:item.rarityLabel,achievementPoints:item.achievementPoints,
       sortOrder:item.sortOrder,configured:item.configured,condition:{source:item.source,target:item.target,label:item.conditionLabel,editable:false},availability:{...item.availability,editable:false},
-      defaults:{title:item.defaultTitle,description:item.defaultDescription,reward:achievementRewardView(item.defaultReward),rarity:item.defaultRarity,rarityLabel:ACHIEVEMENT_RARITY_LABELS[item.defaultRarity]||item.defaultRarity,achievementPoints:item.defaultAchievementPoints,secret:Boolean(item.defaultSecret),sortOrder:item.defaultSortOrder}
+      defaults:{title:item.defaultTitle,description:item.defaultDescription,reward:achievementRewardView(item.defaultReward),rarity:item.defaultRarity,rarityLabel:ACHIEVEMENT_RARITY_LABELS[item.defaultRarity]||item.defaultRarity,achievementPoints:item.defaultAchievementPoints,secret:Boolean(item.defaultSecret),sortOrder:item.defaultSortOrder,artUrl:String(item.defaultArtUrl||"")}
     }))
   };
 }
@@ -7719,14 +7735,15 @@ async function ownerPanelAchievementConfigSave(env,ctx){
   const enabled=body.enabled===true||body.enabled===1||String(body.enabled)==="1",visible=body.visible===true||body.visible===1||String(body.visible)==="1",secret=body.secret===true||body.secret===1||String(body.secret)==="1",title=String(body.title||"").trim().replace(/\s+/g," ").slice(0,80),description=String(body.description??"").trim().slice(0,240),sortOrder=Math.max(-9999,Math.min(9999,Math.floor(Number(body.sortOrder??body.sort_order)||0)));
   const rewardMode=String(body.rewardMode||body.reward_mode||"default").trim(),rewardItemId=String(body.rewardItemId||body.reward_item_id||"").trim().slice(0,100),rarity=achievementRarity(body.rarity,achievementRarity(base.rarity,"common"));
   const achievementPointsRaw=body.achievementPoints??body.achievement_points,achievementPointsNumber=Number(achievementPointsRaw);
+  const artUrl=achievementArtOverrideUrl(body.artUrl??body.art_url,{strict:true});
   if(title.length<2)throw new ApiError(400,"Название достижения слишком короткое.");
   if(!ACHIEVEMENT_REWARD_MODES.includes(rewardMode))throw new ApiError(400,"Для достижений доступны только: награда по умолчанию, без приза или специальная аватарка.");
   if(rewardMode==="avatar"&&achievementRewardSnapshot(base.reward).kind!=="avatar")throw new ApiError(400,"Специальные аватарки можно назначать только простым достижениям, которые отмечены сервером как avatar-награда.");
   if(rewardMode==="avatar"&&!ACHIEVEMENT_AVATAR_ID_SET.has(rewardItemId))throw new ApiError(400,"Выберите специальную аватарку достижений.");
   if(achievementPointsRaw==null||String(achievementPointsRaw).trim()===""||!Number.isFinite(achievementPointsNumber)||!Number.isInteger(achievementPointsNumber)||achievementPointsNumber<0||achievementPointsNumber>10000)throw new ApiError(400,"Очки достижений должны быть целым числом от 0 до 10 000.");
   const achievementPoints=achievementPointsNumber,old=(await achievementConfiguredDefinitions(env)).find((item)=>item.id===achievementId),now=Math.floor(Date.now()/1000),actorId=String(ctx.user.id);
-  await env.DB.prepare(`INSERT INTO achievement_settings(achievement_id,enabled,visible,title,description,reward_kind,reward_amount,reward_mode,reward_item_id,rarity,achievement_points,secret_mode,sort_order,revision,updated_at,updated_by) VALUES(?,?,?,?,?,'',0,?,?,?,?,?,?,1,?,?) ON CONFLICT(achievement_id) DO UPDATE SET enabled=excluded.enabled,visible=excluded.visible,title=excluded.title,description=excluded.description,reward_kind='',reward_amount=0,reward_mode=excluded.reward_mode,reward_item_id=excluded.reward_item_id,rarity=excluded.rarity,achievement_points=excluded.achievement_points,secret_mode=excluded.secret_mode,sort_order=excluded.sort_order,revision=achievement_settings.revision+1,updated_at=excluded.updated_at,updated_by=excluded.updated_by`)
-    .bind(achievementId,enabled?1:0,visible?1:0,title,description,rewardMode,rewardMode==="avatar"?rewardItemId:"",rarity,achievementPoints,secret?1:0,sortOrder,now,actorId).run();
+  await env.DB.prepare(`INSERT INTO achievement_settings(achievement_id,enabled,visible,title,description,art_url,reward_kind,reward_amount,reward_mode,reward_item_id,rarity,achievement_points,secret_mode,sort_order,revision,updated_at,updated_by) VALUES(?,?,?,?,?,?,'',0,?,?,?,?,?,?,1,?,?) ON CONFLICT(achievement_id) DO UPDATE SET enabled=excluded.enabled,visible=excluded.visible,title=excluded.title,description=excluded.description,art_url=excluded.art_url,reward_kind='',reward_amount=0,reward_mode=excluded.reward_mode,reward_item_id=excluded.reward_item_id,rarity=excluded.rarity,achievement_points=excluded.achievement_points,secret_mode=excluded.secret_mode,sort_order=excluded.sort_order,revision=achievement_settings.revision+1,updated_at=excluded.updated_at,updated_by=excluded.updated_by`)
+    .bind(achievementId,enabled?1:0,visible?1:0,title,description,artUrl,rewardMode,rewardMode==="avatar"?rewardItemId:"",rarity,achievementPoints,secret?1:0,sortOrder,now,actorId).run();
   await logStaffAction(env,ctx.user,ctx.access,"owner_panel_achievement_config_save",null,"achievement",null,null,{achievementId,conditionLocked:true,availabilityLocked:true,old:{enabled:old?.enabled,visible:old?.visible,secret:old?.secret,title:old?.title,description:old?.description,reward:old?.reward,rarity:old?.rarity,achievementPoints:old?.achievementPoints,sortOrder:old?.sortOrder},next:{enabled,visible,secret,title,description,rewardMode,rewardItemId:rewardMode==="avatar"?rewardItemId:"",rarity,achievementPoints,sortOrder}});
   return ownerPanelAchievementsConfig(env,ctx);
 }

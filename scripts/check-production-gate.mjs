@@ -74,6 +74,7 @@ const steps = [
   ['season 4 hidden content', 'node', ['scripts/check-season4-hidden-content.mjs']],
   ['season story collectibles', 'node', ['scripts/check-season-story-collectibles.mjs']],
   ['season achievements', 'node', ['scripts/check-season-achievements.mjs']],
+  ['achievement art overrides', 'node', ['scripts/check-achievement-art-overrides.mjs']],
   ['health dashboard', 'node', ['scripts/check-health-dashboard.mjs']],
   ['migration history', 'node', ['scripts/check-migrations.mjs']],
   ['schema contract', 'node', ['scripts/check-database-schema.mjs', '--contract-only']],
