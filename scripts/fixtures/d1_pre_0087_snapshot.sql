@@ -11,6 +11,38 @@ CREATE TABLE admin_profile_state(telegram_id TEXT PRIMARY KEY,wallet INTEGER NOT
 CREATE TABLE case_player_state(telegram_id TEXT PRIMARY KEY,revision INTEGER NOT NULL DEFAULT 1,owned_avatars_json TEXT NOT NULL DEFAULT '[]',updated_at INTEGER NOT NULL DEFAULT 0,created_at INTEGER NOT NULL DEFAULT 0);
 CREATE TABLE granted_cases(id TEXT PRIMARY KEY,telegram_id TEXT NOT NULL,case_type TEXT NOT NULL,status TEXT NOT NULL DEFAULT 'pending',granted_by TEXT NOT NULL DEFAULT '',reason TEXT NOT NULL DEFAULT '',rewards_json TEXT NOT NULL DEFAULT '[]',created_at INTEGER NOT NULL,opened_at INTEGER NOT NULL DEFAULT 0,opening_started_at INTEGER NOT NULL DEFAULT 0,opening_token TEXT NOT NULL DEFAULT '');
 CREATE TABLE season_pass_players(season_id TEXT NOT NULL,telegram_id TEXT NOT NULL,xp INTEGER NOT NULL DEFAULT 0,premium_tier TEXT NOT NULL DEFAULT 'none',elite_plus_bonus_granted INTEGER NOT NULL DEFAULT 0,revision INTEGER NOT NULL DEFAULT 1,created_at INTEGER NOT NULL,updated_at INTEGER NOT NULL,PRIMARY KEY(season_id,telegram_id));
+
+
+-- Season Pass season metadata already existed before migration 0087. Keep the
+-- compatibility fixture faithful enough for later migrations that update
+-- seasonal visuals/configuration (for example 0094).
+CREATE TABLE season_pass_seasons(
+ season_id TEXT PRIMARY KEY,
+ title TEXT NOT NULL,
+ starts_at INTEGER NOT NULL,
+ ends_at INTEGER NOT NULL,
+ manual_status TEXT NOT NULL DEFAULT '' CHECK(manual_status IN ('','active','ended')),
+ base_run_xp INTEGER NOT NULL DEFAULT 100,
+ level_price_points INTEGER NOT NULL DEFAULT 0,
+ elite_price_points INTEGER NOT NULL DEFAULT 0,
+ elite_price_treats INTEGER NOT NULL DEFAULT 0,
+ elite_price_coffee INTEGER NOT NULL DEFAULT 0,
+ elite_plus_price_points INTEGER NOT NULL DEFAULT 0,
+ elite_plus_price_treats INTEGER NOT NULL DEFAULT 0,
+ elite_plus_price_coffee INTEGER NOT NULL DEFAULT 0,
+ updated_at INTEGER NOT NULL,
+ updated_by TEXT NOT NULL DEFAULT '',
+ visuals_json TEXT NOT NULL DEFAULT '{}'
+);
+
+-- Story preset bindings are part of the pre-0087 canonical schema (0085).
+-- Migration 0094 uses this table to resolve the authored Season 3 safely.
+CREATE TABLE season_pass_story_presets(
+ preset_id TEXT PRIMARY KEY,
+ season_id TEXT NOT NULL,
+ seeded_at INTEGER NOT NULL,
+ updated_by TEXT NOT NULL DEFAULT ''
+);
 -- Added to the compatibility snapshot so every migration after 0087 can be
 -- applied automatically. This is the pre-0089 shape (no open_request_id yet).
 CREATE TABLE season_pass_case_grants(

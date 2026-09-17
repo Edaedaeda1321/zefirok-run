@@ -8,6 +8,7 @@ const worker=fs.readFileSync(path.join(root,'src/worker.js'),'utf8');
 const owner=fs.readFileSync(path.join(root,'owner.html'),'utf8');
 const migrationName='0094_season_achievement_art_and_belkino_traces.sql';
 const migration=fs.readFileSync(path.join(root,'migrations',migrationName),'utf8');
+const d1Snapshot=fs.readFileSync(path.join(root,'scripts','fixtures','d1_pre_0087_snapshot.sql'),'utf8');
 const lock=JSON.parse(fs.readFileSync(path.join(root,'scripts/migration-history.lock.json'),'utf8'));
 const checks=[];
 function check(name,ok,detail=''){checks.push({name,ok:Boolean(ok),detail});}
@@ -41,6 +42,10 @@ must('migration 25 traces',migration,'{"target":25,"title":"Всё ближе"}'
 must('migration 50 traces',migration,'{"target":50,"title":"Белый Кролик был здесь"}');
 must('migration follows canonical season 3 story',migration,"'season3-belkino-story-v1'");
 check('migration lock updated',typeof lock?.files?.[migrationName]==='string'&&/^[a-f0-9]{64}$/.test(lock.files[migrationName]),'migration missing from lock');
+
+must('D1 pre-0087 snapshot includes season pass seasons',d1Snapshot,'CREATE TABLE season_pass_seasons(');
+must('D1 pre-0087 snapshot includes story preset bindings',d1Snapshot,'CREATE TABLE season_pass_story_presets(');
+must('D1 pre-0087 season table exposes visuals json',d1Snapshot,"visuals_json TEXT NOT NULL DEFAULT '{}'");
 
 const badgeFiles=[
   'season-cafe-joined.webp','season-cafe-complete.webp',
