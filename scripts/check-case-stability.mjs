@@ -27,10 +27,10 @@ assert(index.includes('Array.isArray(data?.giftedCaseOpenings)'),'server opening
 assert(index.includes('for (const [type, requestId] of grantedCasePendingRequests.entries())'),'committed receipt cannot stay discoverable after reload');
 
 const wait = between(index,'async function waitForGrantedCaseResult','async function openGiftedCaseClient');
-assert(wait.includes('CASE_API_OPEN_GRANTED_STATUS_PATH'),'poll loop does not use read-only status endpoint');
-assert(occurrences(wait,'CASE_API_OPEN_GRANTED_PATH')===1,'poll loop may invoke mutation more than once');
+assert(wait.includes('grantedCaseStatusPath(caseType)'),'poll loop does not use the type-aware read-only status endpoint');
+assert(occurrences(wait,'grantedCaseOpenPath(caseType)')===1,'poll loop may invoke mutation more than once');
 assert(wait.includes('requestId: activeRequestId, resume: true'),'mutation retry is not an explicit adopted/same-request resume');
-assert(!wait.includes('CASE_API_OPEN_GRANTED_PATH,\n              { caseType: String(caseType || ""), requestId },'),'poll loop still retries bare mutation endpoint');
+assert(!wait.includes('CASE_API_OPEN_GRANTED_PATH,\n              { caseType: String(caseType || ""), requestId },'),'poll loop still retries bare generic mutation endpoint');
 
 const clientOpen = between(index,'async function openGiftedCaseClient','async function activateCaseBoosterClient');
 assert(clientOpen.includes('const existingOperation = Boolean('),'existing opening detection missing');
@@ -47,7 +47,7 @@ assert(uiDeadline>=8000&&uiDeadline<=20000,'client foreground recovery window mu
 assert(lease*1000>=uiDeadline+5000,'server lease must outlive the client foreground window by at least 5 seconds');
 
 assert(worker.includes('async function getGrantedCaseOpenStatus(request,env)'),'read-only granted case status handler missing');
-const statusHandler=between(worker,'async function getGrantedCaseOpenStatus','async function openGrantedCase');
+const statusHandler=between(worker,'async function getGrantedCaseOpenStatus','const ORDINARY_CASE_FAST_STALE_SECONDS');
 assert(statusHandler.includes("state:'opened'"),'status handler cannot return immutable opened receipt');
 assert(statusHandler.includes("state:'opening'"),'status handler cannot report active operation');
 assert(statusHandler.includes("state:'stale'"),'status handler cannot report safely resumable stale operation');
@@ -89,13 +89,13 @@ assert(occurrences(worker,'async function buildFastCasePurchasePayload')===1,'pu
 assert(occurrences(worker,'async function buildFastCaseRefreshPayload')===1,'refresh payload builder was removed or duplicated');
 assert(purchasePayload.includes('giftedCaseOpenings:inventory.openingOperations||[]'),'purchase payload does not expose active opening operations');
 assert(refreshPayload.includes('giftedCaseOpenings:inventory.openingOperations||[]'),'fast refresh does not expose active opening operations');
-assert(occurrences(worker,'giftedCaseOpenings:inventory.openingOperations||[]')===2,'opening metadata must be exposed by exactly purchase and refresh payloads');
+assert(occurrences(worker,'giftedCaseOpenings:inventory.openingOperations||[]')===3,'opening metadata must be exposed by purchase, refresh and dedicated ordinary payloads');
 assert(worker.includes('...(inventory?.openingOperations ? { giftedCaseOpenings: inventory.openingOperations } : {})'),'open payload does not expose active opening operations');
 
 assert(worker.includes('"/api/cases/open-granted/status"'),'status path missing from worker');
 const recoveryAware=between(worker,'const RECOVERY_AWARE_OPERATION_PATHS = new Set([',']);');
 assert(recoveryAware.includes('/api/cases/open-granted/status'),'read-only status observer must bypass maintenance so a lost committed result remains recoverable');
-assert(worker.includes('"/api/cases/open-granted/status","/api/cases/purchase"'),'Test Project does not isolate the new case status path');
+assert(worker.includes('"/api/cases/open-ordinary/status","/api/cases/open-granted","/api/cases/open-granted/status","/api/cases/purchase"'),'Test Project does not isolate ordinary and generic case status paths');
 
 // Data-plane isolation: opening a case must never bootstrap or migrate the
 // owner/admin LiveOps control plane. Optional configuration reads are fail-soft.
@@ -160,6 +160,47 @@ assert(giftedWait.includes('let activeRequestId = String(requestId || "")'),'cli
 assert(giftedWait.includes('status?.adopted === true'),'client recovery ignores server adoption of an in-flight case');
 assert(giftedWait.includes('requestId: activeRequestId'),'client recovery does not poll/resume the adopted opening token');
 assert(giftedWait.includes('rememberGrantedCasePendingRequest(caseType, activeRequestId'),'adopted opening token is not persisted for reload safety');
+assert(giftedWait.includes('let lastResumeAt = 0'),'client recovery still allows only one resume attempt per user tap');
+assert(giftedWait.includes('Date.now() - lastResumeAt >= 900'),'same idempotent opening is not retried after a transient recovery failure');
+assert(giftedWait.includes('forgetGrantedCasePendingRequest(caseType, activeRequestId);'),'successful adopted resume leaves a stale local opening token behind');
+
+const storageAliases=between(worker,'const CASE_STORAGE_ALIASES','function caseGrantId');
+for(const alias of ['small','standart','standard','common','sweet','silver','gold','mythic','legendary','alex'])assert(storageAliases.includes(`"${alias}"`),`granted case storage alias missing: ${alias}`);
+assert(opening.includes('candidate.case_type IN (${storage.sql})'),'atomic granted-case claim rejects legacy storage aliases');
+assert(opening.includes("case_type IN (${storage.sql}) AND status='opening'"),'same-type opening detection rejects legacy storage aliases');
+assert(statusHandler.includes('case_type IN (${storage.sql})'),'status adoption rejects legacy storage aliases');
+assert(fullCasePayload.includes('giftedCases[type] = safeAdminNumber(giftedCases[type]) + safeAdminNumber(row.count)'),'full inventory overwrites alias counts instead of summing them');
+assert(inventory.includes('giftedCases[type] = safeAdminNumber(giftedCases[type]) + safeAdminNumber(row.count)'),'fast inventory overwrites alias counts instead of summing them');
+
+const reservationRecovery=between(worker,'async function releaseGrantedCaseOpeningReservations','async function recoverGrantedCaseRequestLease');
+assert(!reservationRecovery.includes('ensureShopStockSchema('),'stale case recovery still bootstraps the shop control plane');
+assert(!reservationRecovery.includes('await releaseShopStock('),'stale case recovery still calls schema-bootstrapping stock release');
+assert(reservationRecovery.includes('DELETE FROM shop_stock_consumptions'),'stale case recovery no longer releases an already-existing reservation');
+assert(reservationRecovery.includes('return 0;'),'stock cleanup lookup is not fail-soft');
+const leaseRecovery=between(worker,'async function recoverGrantedCaseRequestLease','async function recoverStaleGrantedCaseOpenings');
+assert(leaseRecovery.includes("console.error('Granted-case lease recovered; stock cleanup deferred'"),'lease recovery can still fail after the case row was safely reset');
+
+
+// Dedicated ordinary-case lane: ordinary is the only historical type that had
+// several legacy ids (standardCase/standart/common/case-small). Keep it fully
+// isolated so generic LiveOps changes cannot strand it again.
+assert(worker.includes('async function openOrdinaryGrantedCase(request,env,ctx=null)'),'dedicated ordinary opening handler missing');
+assert(worker.includes('async function getOrdinaryCaseOpenStatus(request,env)'),'dedicated ordinary status handler missing');
+const ordinary=between(worker,'async function openOrdinaryGrantedCase','async function openGrantedCase');
+assert(ordinary.includes("rollOrdinaryCaseIsolated()"),'ordinary lane does not use isolated code-default roll');
+assert(ordinary.includes("LOWER(TRIM(case_type)) IN"),'ordinary lane does not normalize historical storage ids');
+assert(ordinary.includes("status='pending',opening_started_at=0,opening_token='',case_type='small'"),'ordinary lane cannot reclaim orphaned opening rows');
+assert(ordinary.includes("opening_token=? AND opening_started_at=0"),'ordinary lane cannot repair zero-timestamp legacy opening rows');
+assert(ordinary.includes("granted_case_opening_guards"),'ordinary lane has no atomic opening guard');
+assert(worker.includes('fallbackFromBooster:true'),'ordinary utility-booster failure has no safe reward fallback');
+for(const forbidden of ['readLiveOpsConfig(','readCaseRuntimeConfig(','prepareCasePhysicalRewards(','assertRolledLiveContentCaseRoutes(','releaseShopStock(','ensureShopStockSchema('])assert(!ordinary.includes(forbidden),`ordinary lane reintroduced shared dependency ${forbidden}`);
+for(const legacy of ['standardcase','standartcase','smallcase','ordinarycase','standard_case','standart_case','small_case','ordinary_case','standard-case','standart-case','small-case','ordinary-case','case-small','case_small','ordinary','normal','regular'])assert(worker.includes(`"${legacy}"`),`ordinary legacy alias ${legacy} missing`);
+assert(worker.includes('"/api/cases/open-ordinary"'),'ordinary opening route missing');
+assert(worker.includes('"/api/cases/open-ordinary/status"'),'ordinary status route missing');
+assert(index.includes('CASE_API_OPEN_ORDINARY_PATH = "/api/cases/open-ordinary"'),'client ordinary opening endpoint missing');
+assert(index.includes('CASE_API_OPEN_ORDINARY_STATUS_PATH = "/api/cases/open-ordinary/status"'),'client ordinary status endpoint missing');
+assert(index.includes('caseExperienceNormalizeType(caseType) === "small" ? CASE_API_OPEN_ORDINARY_PATH : CASE_API_OPEN_GRANTED_PATH'),'client does not route small through dedicated opening lane');
+assert(index.includes('caseExperienceNormalizeType(caseType) === "small" ? CASE_API_OPEN_ORDINARY_STATUS_PATH : CASE_API_OPEN_GRANTED_STATUS_PATH'),'client does not route small status through dedicated lane');
 
 assert(gate.includes("['case opening stability', 'node', ['scripts/check-case-stability.mjs']]"),'Production Gate does not enforce case stability');
 

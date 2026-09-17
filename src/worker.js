@@ -2449,6 +2449,14 @@ export default {
         return await withPlayerApiPerformance(env, ctx, "case_open_level", () => openLevelCase(request, env, ctx));
       }
 
+      if (url.pathname === "/api/cases/open-ordinary/status" && request.method === "POST") {
+        return await getOrdinaryCaseOpenStatus(request, env);
+      }
+
+      if (url.pathname === "/api/cases/open-ordinary" && request.method === "POST") {
+        return await withPlayerApiPerformance(env, ctx, "case_open_ordinary", () => openOrdinaryGrantedCase(request, env, ctx));
+      }
+
       if (url.pathname === "/api/cases/open-granted/status" && request.method === "POST") {
         // Observation only. Never run the mutation/recovery path from status polling.
         return await getGrantedCaseOpenStatus(request, env);
@@ -11063,7 +11071,7 @@ async function processPendingLeaderboardStaffNotifications(env, limitValue = 30)
 function normalizeCaseType(value) {
   const raw = String(value || "").trim().toLowerCase();
   const aliases = {
-    small: "small", mini: "small", little: "small", "маленький": "small", "малый": "small", standart: "small", standard: "small", common: "small", "обычный": "small",
+    small: "small", mini: "small", little: "small", "маленький": "small", "малый": "small", standart: "small", standard: "small", common: "small", "обычный": "small", ordinary: "small", normal: "small", regular: "small", "standardcase": "small", "standartcase": "small", "smallcase": "small", "ordinarycase": "small", "standard_case": "small", "standart_case": "small", "small_case": "small", "ordinary_case": "small", "standard-case": "small", "standart-case": "small", "small-case": "small", "ordinary-case": "small", "case-small": "small", "case_small": "small", "standard case": "small", "standart case": "small", "обычный кейс": "small", "обычный_кейс": "small",
     sweet: "sweet", silver: "sweet", "сладкий": "sweet", "средний": "sweet", "серебряный": "sweet",
     gold: "gold", golden: "gold", "золотой": "gold",
     mythic: "mythic", mifik: "mythic", "мифический": "mythic", "мифик": "mythic",
@@ -11071,6 +11079,27 @@ function normalizeCaseType(value) {
     alex: "alex", "алекс": "alex", "кейс алекса": "alex", "кейс-алекса": "alex"
   };
   return aliases[raw] || "";
+}
+
+// Granted-case inventory predates the current canonical ids. Player-facing reads
+// have always normalized aliases (for example standard/standart -> small), so the
+// opening SQL must accept the same aliases instead of showing an inventory row that
+// can never be claimed. New writes remain canonical through normalizeCaseType().
+const CASE_STORAGE_ALIASES = Object.freeze({
+  small: Object.freeze(["small","mini","little","маленький","малый","standart","standard","common","обычный","ordinary","normal","regular","standardcase","standartcase","smallcase","ordinarycase","standard_case","standart_case","small_case","ordinary_case","standard-case","standart-case","small-case","ordinary-case","case-small","case_small","standard case","standart case","обычный кейс","обычный_кейс"]),
+  sweet: Object.freeze(["sweet","silver","сладкий","средний","серебряный"]),
+  gold: Object.freeze(["gold","golden","золотой"]),
+  mythic: Object.freeze(["mythic","mifik","мифический","мифик"]),
+  legendary: Object.freeze(["legendary","legend","легендарный","легенда"]),
+  alex: Object.freeze(["alex","алекс","кейс алекса","кейс-алекса"])
+});
+function grantedCaseStorageAliases(value){
+  const type=normalizeCaseType(value);
+  return type ? (CASE_STORAGE_ALIASES[type] || [type]) : [];
+}
+function grantedCaseStoragePlaceholders(value){
+  const aliases=grantedCaseStorageAliases(value);
+  return {aliases,sql:aliases.map(()=>'?').join(',')};
 }
 
 function caseGrantId(prefix = "grant") {
@@ -11672,7 +11701,7 @@ async function buildCasePayload(env, telegramId, currentProfile, extra = {}, opt
   const giftedCases = { small: 0, sweet: 0, gold: 0, mythic: 0, legendary: 0, alex: 0 };
   for (const row of giftedResult.results || []) {
     const type = normalizeCaseType(row.case_type);
-    if (type) giftedCases[type] = safeAdminNumber(row.count);
+    if (type) giftedCases[type] = safeAdminNumber(giftedCases[type]) + safeAdminNumber(row.count);
   }
   const playerLevel = caseProfileLevel(safeAdminNumber(ensured.profile?.profile_xp));
   const recentOpenings = await recentCaseOpeningsForPlayer(env,telegramId,8);
@@ -11728,7 +11757,7 @@ async function readFastCaseInventory(env, telegramId) {
   const giftedCases = { small:0, sweet:0, gold:0, mythic:0, legendary:0, alex:0 };
   for (const row of giftedResult?.results || []) {
     const type = normalizeCaseType(row.case_type);
-    if (type) giftedCases[type] = safeAdminNumber(row.count);
+    if (type) giftedCases[type] = safeAdminNumber(giftedCases[type]) + safeAdminNumber(row.count);
   }
   const openingOperations=(activeOpeningsResult?.results||[]).map((row)=>({
     caseType:normalizeCaseType(row.case_type)||String(row.case_type||''),
@@ -12642,12 +12671,29 @@ const GRANTED_CASE_RETRY_LEASE_SECONDS = 20;
 async function releaseGrantedCaseOpeningReservations(env, telegramId, caseId, requestId, openingStartedAt = 0) {
   const id=String(telegramId||''), grantId=String(caseId||''), token=String(requestId||''), startedAt=Math.max(0,safeAdminNumber(openingStartedAt));
   if(!id||!grantId||!token)return 0;
-  await ensureShopStockSchema(env);
   const legacyPrefix=`case-reward:grant_${grantId}_${token}:`;
   const attemptPrefix=startedAt>0?`case-reward:grant_${grantId}_${token}_${startedAt}:`:'';
-  const rows=(await env.DB.prepare(`SELECT consumption_id FROM shop_stock_consumptions WHERE telegram_id=? AND committed=0 AND (instr(consumption_id,?)=1 OR (?<>'' AND instr(consumption_id,?)=1)) LIMIT 80`).bind(id,legacyPrefix,attemptPrefix,attemptPrefix).all()).results||[];
+  let rows=[];
+  try{
+    const result=await env.DB.prepare(`SELECT consumption_id FROM shop_stock_consumptions WHERE telegram_id=? AND committed=0 AND (instr(consumption_id,?)=1 OR (?<>'' AND instr(consumption_id,?)=1)) LIMIT 80`).bind(id,legacyPrefix,attemptPrefix,attemptPrefix).all();
+    rows=result?.results||[];
+  }catch(error){
+    // Stock cleanup is best-effort recovery only. A missing/broken shop control
+    // plane must never prevent a case lease from being released or reopened.
+    console.error('Granted-case stock reservation lookup skipped during recovery',error);
+    return 0;
+  }
   let released=0;
-  for(const row of rows){try{await releaseShopStock(env,String(row.consumption_id||''));released+=1;}catch(error){console.error('Failed to release retried granted-case stock',error);}}
+  for(const row of rows){
+    const consumptionId=String(row?.consumption_id||'').trim();if(!consumptionId)continue;
+    try{
+      // Do not call releaseShopStock() here: it bootstraps the shop schema. Case
+      // recovery is a data-plane operation and only deletes a reservation that
+      // already exists. If the table is unavailable, cleanup simply waits.
+      const removed=await env.DB.prepare(`DELETE FROM shop_stock_consumptions WHERE consumption_id=? AND committed=0`).bind(consumptionId).run();
+      if(safeAdminNumber(removed?.meta?.changes)>0){released+=1;invalidateGamePublicConfigCache();}
+    }catch(error){console.error('Failed to release retried granted-case stock',error);}
+  }
   return released;
 }
 
@@ -12658,7 +12704,8 @@ async function recoverGrantedCaseRequestLease(env,telegramId,row,requestId,now=M
   if(!caseId||!token||age<GRANTED_CASE_RETRY_LEASE_SECONDS)return false;
   const reset=await env.DB.prepare(`UPDATE granted_cases SET status='pending',opening_started_at=0,opening_token='' WHERE id=? AND telegram_id=? AND status='opening' AND opening_started_at=? AND opening_token=?`).bind(caseId,String(telegramId),startedAt,token).run();
   if(safeAdminNumber(reset?.meta?.changes)<1)return false;
-  await releaseGrantedCaseOpeningReservations(env,telegramId,caseId,token,startedAt);
+  try{await releaseGrantedCaseOpeningReservations(env,telegramId,caseId,token,startedAt);}
+  catch(error){console.error('Granted-case lease recovered; stock cleanup deferred',error);}
   return true;
 }
 
@@ -12713,7 +12760,8 @@ async function getGrantedCaseOpenStatus(request,env){
       // an opening lease for this exact case type. Adopt that in-flight operation
       // instead of starting (or polling) a second case. This is intentionally
       // generic for every granted-case type, not a one-off fix for one rarity.
-      const adopted=await env.DB.prepare(`SELECT id,case_type,status,rewards_json,opened_at,opening_started_at,opening_token FROM granted_cases WHERE telegram_id=? AND case_type=? AND status='opening' AND opening_token<>'' ORDER BY opening_started_at ASC,id ASC LIMIT 1`).bind(telegramId,caseType).first().catch(()=>null);
+      const storage=grantedCaseStoragePlaceholders(caseType);
+      const adopted=await env.DB.prepare(`SELECT id,case_type,status,rewards_json,opened_at,opening_started_at,opening_token FROM granted_cases WHERE telegram_id=? AND case_type IN (${storage.sql}) AND status='opening' AND opening_token<>'' ORDER BY opening_started_at ASC,id ASC LIMIT 1`).bind(telegramId,...storage.aliases).first().catch(()=>null);
       const adoptedToken=String(adopted?.opening_token||'').trim();
       if(adopted&&adoptedToken){
         row=adopted;
@@ -12743,6 +12791,200 @@ async function getGrantedCaseOpenStatus(request,env){
   }
 }
 
+
+const ORDINARY_CASE_FAST_STALE_SECONDS = 2;
+
+function ordinaryCaseStoragePlaceholders(){
+  const aliases=grantedCaseStorageAliases("small");
+  return {aliases,sql:aliases.map(()=>'?').join(',')};
+}
+
+function rollOrdinaryCaseIsolated(rng=caseSecureFloat){
+  const random=typeof rng==="function"?rng:caseSecureFloat;
+  const roll=Math.max(0,Math.min(.999999999999,Number(random())||0))*100;
+  let points=0,treats=0,coffee=0,boosterType="";
+  const rewards=[];
+  if(roll<40.5){treats=caseRandomInt(10,20,random);rewards.push({kind:"treats",amount:treats});}
+  else if(roll<81){coffee=caseRandomInt(10,20,random);rewards.push({kind:"coffee",amount:coffee});}
+  else if(roll<97.5){points=caseRandomInt(500,1000,random);rewards.push({kind:"points",amount:points});}
+  else {boosterType=caseRandomChoice(CASE_UTILITY_BOOSTER_TYPES,random)||"shield";rewards.push({kind:"booster",boosterType,amount:1,runs:caseBoosterRunsForType(boosterType)});}
+  return {rewards,points,treats,coffee,boosterType};
+}
+
+function ordinaryCaseBoosterStatement(env,telegramId,boosterType,now){
+  const type=CASE_UTILITY_BOOSTER_TYPES.includes(String(boosterType||""))?String(boosterType):"";
+  if(!type)return null;
+  const path=`$.${type}`;
+  return env.DB.prepare(`UPDATE case_player_state SET boosters_extra_json=json_set(CASE WHEN json_valid(boosters_extra_json) THEN boosters_extra_json ELSE '{}' END,?,MIN(999,MAX(0,COALESCE(json_extract(CASE WHEN json_valid(boosters_extra_json) THEN boosters_extra_json ELSE '{}' END,?),0))+1)),revision=revision+1,updated_at=? WHERE telegram_id=?`).bind(path,path,now,String(telegramId));
+}
+
+function ordinaryCaseFallbackBoosterToPoints(outcome,rng=caseSecureFloat){
+  if(!outcome?.boosterType)return outcome;
+  const amount=caseRandomInt(500,1000,rng);
+  outcome.points=safeAdminNumber(Number(outcome.points||0)+amount);
+  outcome.boosterType="";
+  outcome.rewards=(Array.isArray(outcome.rewards)?outcome.rewards:[]).map((reward)=>reward?.kind==="booster"?{kind:"points",amount,fallbackFromBooster:true}:reward);
+  return outcome;
+}
+
+async function ordinaryCaseResponsePayload(env,telegramId,row,requestId,{repeated=false,seasonPassTaskNotice=undefined}={}){
+  let rewards=[];try{const parsed=JSON.parse(String(row?.rewards_json||'[]'));rewards=Array.isArray(parsed)?parsed:[];}catch{}
+  const [profileRow,caseRow,inventory]=await Promise.all([
+    env.DB.prepare(`SELECT wallet,best_score,treats,coffee,profile_xp,revision,updated_at FROM admin_profile_state WHERE telegram_id=? LIMIT 1`).bind(String(telegramId)).first(),
+    env.DB.prepare(`SELECT * FROM case_player_state WHERE telegram_id=? LIMIT 1`).bind(String(telegramId)).first().catch(()=>null),
+    readFastCaseInventory(env,String(telegramId)).catch(()=>({openedLevels:[],giftedCases:{small:0,sweet:0,gold:0,mythic:0,legendary:0,alex:0},openingOperations:[]}))
+  ]);
+  const opened={grantId:String(row?.id||''),source:'gift',caseType:'small',title:LEVEL_CASE_CONFIG.small.title,rewards,resumed:Boolean(repeated),openedAt:safeAdminNumber(row?.opened_at)*1000};
+  return {
+    ok:true,authoritativeProfile:true,
+    caseState:caseStateFromRow(caseRow||{}),
+    profile:authoritativeProfileView(profileRow||{}),
+    opened,
+    openedLevels:inventory.openedLevels||[],giftedCases:inventory.giftedCases||{},giftedCaseOpenings:inventory.openingOperations||[],
+    ...(seasonPassTaskNotice!==undefined?{seasonPassTaskNotice:seasonPassTaskNotice||null}:{}),
+    operation:operationSuccessMeta(String(requestId||row?.opening_token||''),'granted_case_open',Boolean(repeated))
+  };
+}
+
+async function getOrdinaryCaseOpenStatus(request,env){
+  try{
+    requireDatabase(env);requireBotToken(env);
+    const body=await readJson(request),auth=await validateTelegramInitData(String(body.initData||body.init_data||''),env),telegramId=String(auth.user.id),requestId=String(body.requestId||'').trim();
+    if(!/^[A-Za-z0-9_-]{12,96}$/.test(requestId))throw new ApiError(400,'Некорректный идентификатор открытия.');
+    let row=await readGrantedCaseRequestRow(env,telegramId,requestId);
+    if(row&&normalizeCaseType(row.case_type)!=='small')throw new ApiError(409,'Идентификатор открытия относится к другому кейсу.');
+    if(!row){
+      const storage=ordinaryCaseStoragePlaceholders();
+      const adopted=await env.DB.prepare(`SELECT id,case_type,status,rewards_json,opened_at,opening_started_at,opening_token FROM granted_cases WHERE telegram_id=? AND LOWER(TRIM(case_type)) IN (${storage.sql}) AND status='opening' AND opening_token<>'' ORDER BY opening_started_at ASC,id ASC LIMIT 1`).bind(telegramId,...storage.aliases).first().catch(()=>null);
+      const adoptedToken=String(adopted?.opening_token||'').trim();
+      if(adopted&&adoptedToken){
+        const now=Math.floor(Date.now()/1000),startedAt=Math.max(0,safeAdminNumber(adopted.opening_started_at)),ageSeconds=startedAt?Math.max(0,now-startedAt):ORDINARY_CASE_FAST_STALE_SECONDS;
+        const stale=ageSeconds>=ORDINARY_CASE_FAST_STALE_SECONDS;
+        return jsonResponse({ok:true,pending:!stale,stale,state:stale?'stale':'opening',requestId:adoptedToken,requestedRequestId:requestId,adopted:true,caseType:'small',startedAt,ageSeconds,retryAfterMs:stale?0:400},stale?200:202);
+      }
+      return jsonResponse({ok:true,pending:false,missing:true,state:'missing',requestId,caseType:'small'});
+    }
+    const status=String(row.status||'pending');
+    if(status==='opened')return jsonResponse(await ordinaryCaseResponsePayload(env,telegramId,row,requestId,{repeated:true}));
+    if(status==='opening'){
+      const now=Math.floor(Date.now()/1000),startedAt=Math.max(0,safeAdminNumber(row.opening_started_at)),ageSeconds=startedAt?Math.max(0,now-startedAt):ORDINARY_CASE_FAST_STALE_SECONDS;
+      const stale=ageSeconds>=ORDINARY_CASE_FAST_STALE_SECONDS;
+      return jsonResponse({ok:true,pending:!stale,stale,state:stale?'stale':'opening',requestId,caseType:'small',startedAt,ageSeconds,retryAfterMs:stale?0:400},stale?200:202);
+    }
+    return jsonResponse({ok:true,pending:false,state:'pending',requestId,caseType:'small'});
+  }catch(error){
+    if(error instanceof ApiError)return jsonResponse({ok:false,error:error.message},error.status);
+    console.error('getOrdinaryCaseOpenStatus failed',error);
+    return jsonResponse({ok:false,error:'Не удалось проверить открытие обычного кейса.'},500);
+  }
+}
+
+async function openOrdinaryGrantedCase(request,env,ctx=null){
+  let claimedId='',openingClaimAt=0,openingClaimToken='';
+  try{
+    requireDatabase(env);requireBotToken(env);
+    const body=await readJson(request),auth=await validateTelegramInitData(String(body.initData||''),env),telegramId=String(auth.user.id);
+    const requestId=String(body.requestId||'').replace(/[^A-Za-z0-9_-]/g,'').slice(0,96);
+    if(!requestId||requestId.length<12)throw new ApiError(400,'Некорректный идентификатор открытия.');
+    await requireCaseDataPlaneAvailable(env,telegramId,{capabilities:['cases'],featureFlags:['cases']});
+    const now=Math.floor(Date.now()/1000);openingClaimToken=requestId;
+
+    // Exact idempotency first: a committed ordinary case is immutable and is replayed.
+    let exact=await readGrantedCaseRequestRow(env,telegramId,requestId);
+    if(exact&&normalizeCaseType(exact.case_type)!=='small')throw new ApiError(409,'Идентификатор открытия относится к другому кейсу.');
+    if(exact&&String(exact.status||'')==='opened')return jsonResponse(await ordinaryCaseResponsePayload(env,telegramId,exact,requestId,{repeated:true}));
+    if(exact&&String(exact.status||'')==='opening'){
+      claimedId=String(exact.id||'');
+      openingClaimAt=Math.max(0,safeAdminNumber(exact.opening_started_at));
+      if(!openingClaimAt){
+        const repaired=await env.DB.prepare(`UPDATE granted_cases SET case_type='small',opening_started_at=? WHERE id=? AND telegram_id=? AND status='opening' AND opening_token=? AND opening_started_at=0`).bind(now,claimedId,telegramId,requestId).run();
+        if(safeAdminNumber(repaired?.meta?.changes)>0)openingClaimAt=now;
+        else {
+          exact=await readGrantedCaseRequestRow(env,telegramId,requestId);
+          if(exact&&String(exact.status||'')==='opened')return jsonResponse(await ordinaryCaseResponsePayload(env,telegramId,exact,requestId,{repeated:true}));
+          openingClaimAt=Math.max(0,safeAdminNumber(exact?.opening_started_at))||now;
+        }
+      } else if(String(exact.case_type||'')!=='small') {
+        await env.DB.prepare(`UPDATE granted_cases SET case_type='small' WHERE id=? AND telegram_id=? AND status='opening' AND opening_token=?`).bind(claimedId,telegramId,requestId).run().catch(()=>null);
+      }
+    }
+
+    const storage=ordinaryCaseStoragePlaceholders();
+    if(!claimedId){
+      // Ordinary cases get a dedicated self-healing lane. An orphan from any old
+      // ordinary id (standardCase/standart/common/etc.) is released immediately.
+      // A still-running older Worker loses its opening guard and cannot double-grant.
+      await env.DB.prepare(`UPDATE granted_cases SET status='pending',opening_started_at=0,opening_token='',case_type='small' WHERE telegram_id=? AND LOWER(TRIM(case_type)) IN (${storage.sql}) AND status='opening'`).bind(telegramId,...storage.aliases).run();
+      openingClaimAt=now;
+      const claim=await env.DB.prepare(`UPDATE granted_cases SET case_type='small',status='opening',opening_started_at=?,opening_token=? WHERE id=(SELECT id FROM granted_cases WHERE telegram_id=? AND LOWER(TRIM(case_type)) IN (${storage.sql}) AND status='pending' ORDER BY created_at ASC,id ASC LIMIT 1) AND telegram_id=? AND status='pending'`).bind(now,openingClaimToken,telegramId,...storage.aliases,telegramId).run();
+      if(safeAdminNumber(claim?.meta?.changes)<1){
+        exact=await readGrantedCaseRequestRow(env,telegramId,requestId);
+        if(exact&&String(exact.status||'')==='opened')return jsonResponse(await ordinaryCaseResponsePayload(env,telegramId,exact,requestId,{repeated:true}));
+        throw new ApiError(409,'Обычных кейсов для открытия нет.');
+      }
+      const gift=await env.DB.prepare(`SELECT id,opening_started_at FROM granted_cases WHERE telegram_id=? AND opening_token=? AND status='opening' ORDER BY opening_started_at DESC,id ASC LIMIT 1`).bind(telegramId,openingClaimToken).first();
+      if(!gift?.id)throw new ApiError(409,'Не удалось закрепить обычный кейс за операцией.');
+      claimedId=String(gift.id);openingClaimAt=Math.max(0,safeAdminNumber(gift.opening_started_at))||now;
+    }
+
+    // The ordinary lane is pinned to code defaults and never reads LiveOps/admin
+    // tables. 97.5% of outcomes are currency-only; the utility booster branch is
+    // a single direct JSON counter update and falls back to ordinary points if the
+    // optional case-state row is unavailable.
+    let outcome=rollOrdinaryCaseIsolated();
+    let boosterStatement=null;
+    if(outcome.boosterType){
+      const stateRow=await env.DB.prepare(`SELECT telegram_id FROM case_player_state WHERE telegram_id=? LIMIT 1`).bind(telegramId).first().catch(()=>null);
+      if(stateRow?.telegram_id)boosterStatement=ordinaryCaseBoosterStatement(env,telegramId,outcome.boosterType,now);
+      else outcome=ordinaryCaseFallbackBoosterToPoints(outcome);
+    }
+    const profileRow=await env.DB.prepare(`SELECT telegram_id FROM admin_profile_state WHERE telegram_id=? LIMIT 1`).bind(telegramId).first();
+    if(!profileRow?.telegram_id)await ensureAuthoritativeProfileRow(env,telegramId,'ordinary-case-isolated');
+
+    const commitOutcome=async()=>{
+      const guardId=`ordinary-open:${claimedId}:${openingClaimToken}`.slice(0,180);
+      const statements=[
+        env.DB.prepare(`INSERT INTO granted_case_opening_guards(guard_id,ok) VALUES(?,COALESCE((SELECT CASE WHEN status='opening' AND opening_started_at=? AND opening_token=? THEN 1 ELSE 0 END FROM granted_cases WHERE id=? AND telegram_id=? LIMIT 1),0))`).bind(guardId,openingClaimAt,openingClaimToken,claimedId,telegramId),
+        env.DB.prepare(`UPDATE admin_profile_state SET wallet=MIN(999999999,wallet+?),treats=MIN(999999999,treats+?),coffee=MIN(999999999,coffee+?),revision=revision+1,updated_at=?,updated_by=? WHERE telegram_id=?`).bind(safeAdminNumber(outcome.points),safeAdminNumber(outcome.treats),safeAdminNumber(outcome.coffee),now,'gift-case:small-isolated',telegramId),
+        ...(boosterStatement?[boosterStatement]:[]),
+        env.DB.prepare(`UPDATE granted_cases SET case_type='small',status='opened',rewards_json=?,opened_at=?,opening_started_at=0 WHERE id=? AND telegram_id=? AND status='opening' AND opening_started_at=? AND opening_token=?`).bind(JSON.stringify(outcome.rewards),now,claimedId,telegramId,openingClaimAt,openingClaimToken),
+        env.DB.prepare(`DELETE FROM granted_case_opening_guards WHERE guard_id=?`).bind(guardId)
+      ];
+      await env.DB.batch(statements);
+    };
+    try{await commitOutcome();}
+    catch(error){
+      // If the only optional branch (utility booster storage) is unhealthy, do not
+      // sacrifice the case. The transaction is atomic, so convert that slot to the
+      // ordinary points band and retry once without touching case-state storage.
+      if(outcome.boosterType){outcome=ordinaryCaseFallbackBoosterToPoints(outcome);boosterStatement=null;await commitOutcome();}
+      else throw error;
+    }
+
+    let taskEvent=null;
+    try{
+      taskEvent=await prepareSeasonPassTaskProgressEvent(env,telegramId,{cases_opened:1},now);
+      const taskStatements=[...(taskEvent?.progressStatements||[]),...(taskEvent?.notificationStatements||[])];
+      if(taskStatements.length)await env.DB.batch(taskStatements);
+      scheduleRunSettlementBackground(ctx,deliverSeasonPassTaskNotificationsForRows(env,telegramId,taskEvent?.season,taskEvent?.taskRows||[]),'ordinary case season task notification failed');
+    }catch(error){console.error('ordinary case task progress deferred',error);}
+    const row=await env.DB.prepare(`SELECT id,case_type,status,rewards_json,opened_at,opening_started_at,opening_token FROM granted_cases WHERE id=? AND telegram_id=? LIMIT 1`).bind(claimedId,telegramId).first();
+    if(!row||String(row.status||'')!=='opened')throw new ApiError(409,'Обычный кейс ещё не подтверждён. Повторите эту же проверку.');
+    const background=Promise.allSettled([
+      recordCaseRewardsAnalytics(env,telegramId,outcome.rewards,'granted_case',claimedId,now),
+      recordPlayerTimeline(env,telegramId,'case_open',`открыл ${LEVEL_CASE_CONFIG.small.title}`,{caseType:'small',grantId:claimedId,rewards:outcome.rewards},`ordinary_case_${claimedId}`,auth.user,now)
+    ]);
+    if(ctx?.waitUntil)ctx.waitUntil(background);else void background;
+    return jsonResponse(await ordinaryCaseResponsePayload(env,telegramId,row,requestId,{seasonPassTaskNotice:taskEvent?seasonPassTaskNoticePublic(taskEvent.taskRows||[],taskEvent.season):undefined}));
+  }catch(error){
+    if(claimedId){try{await env.DB.prepare(`UPDATE granted_cases SET status='pending',opening_started_at=0,opening_token='' WHERE id=? AND status='opening' AND opening_token=?`).bind(claimedId,openingClaimToken).run();}catch{}
+    if(error instanceof ApiError)return operationErrorResponse(error,'Не удалось открыть обычный кейс.',{operationId:openingClaimToken,operationKind:'granted_case_open'});
+    if(String(error?.message||error).includes('granted_case_opening_guard_ok'))return operationErrorResponse(playerOperationError(409,'Открытие обычного кейса было перехвачено повторной проверкой. Продолжаем эту же операцию.',{code:'STATE_CONFLICT',operationCode:'STATE_CONFLICT',retryable:true,operationId:openingClaimToken,operationKind:'granted_case_open'}),'Открытие обычного кейса продолжается.');
+    console.error('openOrdinaryGrantedCase failed',error);
+    return caseFailureResponse(error,'Не удалось подтвердить обычный кейс. Повторная проверка продолжит эту же операцию.');
+  }
+}
+
 async function openGrantedCase(request, env, ctx = null) {
   let claimedId = "";
   let openingClaimAt = 0;
@@ -12769,11 +13011,12 @@ async function openGrantedCase(request, env, ctx = null) {
     openingClaimToken = requestId || crypto.randomUUID().replace(/-/g, '');
     await recoverStaleGrantedCaseOpenings(env, telegramId, now);
     if (liveOpsCaseConfig(liveops, caseType)?.enabled === false) throw featureUnavailableError("cases", "Этот кейс временно отключён администратором.", "case_item");
+    const storage=grantedCaseStoragePlaceholders(caseType);
     const claim = await env.DB.prepare(
       `UPDATE granted_cases SET status='opening',opening_started_at=?,opening_token=?
        WHERE id=(
          SELECT candidate.id FROM granted_cases candidate
-         WHERE candidate.telegram_id=? AND candidate.case_type=? AND candidate.status='pending'
+         WHERE candidate.telegram_id=? AND candidate.case_type IN (${storage.sql}) AND candidate.status='pending'
            AND NOT EXISTS(
              SELECT 1 FROM granted_cases existing
              WHERE existing.telegram_id=? AND existing.opening_token=? AND existing.status IN ('opening','opened')
@@ -12781,13 +13024,13 @@ async function openGrantedCase(request, env, ctx = null) {
          ORDER BY candidate.created_at ASC,candidate.id ASC LIMIT 1
        )
        AND telegram_id=? AND status='pending'`
-    ).bind(now,openingClaimToken,telegramId,caseType,telegramId,openingClaimToken,telegramId).run();
+    ).bind(now,openingClaimToken,telegramId,...storage.aliases,telegramId,openingClaimToken,telegramId).run();
     if (Number(claim?.meta?.changes || 0) < 1) {
       if (requestId) {
         const racedRequest = await grantedCaseExistingRequestPayload(env, telegramId, requestId);
         if (racedRequest) return jsonResponse({...racedRequest,operation:racedRequest.pending?{id:requestId,kind:"granted_case_open",state:"processing",code:"PROCESSING"}:operationSuccessMeta(requestId,"granted_case_open",true)}, racedRequest.pending ? 202 : 200);
       }
-      const opening = await env.DB.prepare(`SELECT opening_started_at FROM granted_cases WHERE telegram_id=? AND case_type=? AND status='opening' ORDER BY opening_started_at ASC LIMIT 1`).bind(telegramId,caseType).first();
+      const opening = await env.DB.prepare(`SELECT opening_started_at FROM granted_cases WHERE telegram_id=? AND case_type IN (${storage.sql}) AND status='opening' ORDER BY opening_started_at ASC LIMIT 1`).bind(telegramId,...storage.aliases).first();
       if (opening) throw new ApiError(409, "Этот кейс уже открывается. Проверяем текущую операцию, второй кейс не списывается.");
       throw new ApiError(409, "Подарочных кейсов этого типа нет.");
     }
@@ -30632,6 +30875,8 @@ const RECOVERY_AWARE_OPERATION_PATHS = new Set([
   "/api/skins/purchase",
   "/api/skins/bonus-case",
   "/api/cases/open",
+  "/api/cases/open-ordinary",
+  "/api/cases/open-ordinary/status",
   "/api/cases/open-granted",
   "/api/cases/open-granted/status",
   "/api/cases/purchase",
@@ -44926,7 +45171,7 @@ async function ownerPanelTestProjectCaseOpen(env, ctx) {
 const TEST_PROJECT_SANDBOX_API_PATHS = Object.freeze([
   "/api/game/startup","/api/game/runner-scene","/api/achievements","/api/achievements/claim","/api/achievements/showcase","/api/features","/api/profile/sync","/api/shop/config","/api/skins/config",
   "/api/runs/start","/api/runs/checkpoint","/api/leaderboard/state","/api/leaderboard/player-profile","/api/leaderboard/submit","/api/leaderboard/claim",
-  "/api/cases/state","/api/cases/open","/api/cases/open-granted","/api/cases/open-granted/status","/api/cases/purchase","/api/cases/activate","/api/cases/equip","/api/cases/consume-run",
+  "/api/cases/state","/api/cases/open","/api/cases/open-ordinary","/api/cases/open-ordinary/status","/api/cases/open-granted","/api/cases/open-granted/status","/api/cases/purchase","/api/cases/activate","/api/cases/equip","/api/cases/consume-run",
   "/api/skins/purchase","/api/skins/bonus-case","/api/live-content/shop/buy","/api/rewards/create","/api/rewards/mine",
   "/api/mail/state","/api/mail/open","/api/mail/claim","/api/mail/claim/status","/api/mail/claim-all","/api/gifts/state","/api/gifts/read","/api/gifts/claim","/api/friends/coop/state","/api/friends/coop/claim","/api/newcomer/claim","/api/support/state","/api/support/create","/api/support/reply","/api/support/read","/api/news/read",
   "/api/polls/game/next","/api/polls/game/vote","/api/polls/game/snooze",
@@ -45264,10 +45509,10 @@ async function testProjectSandboxGameData(env, ctx) {
 
   if(path==="/api/cases/state")return response(testProjectSandboxCasePayload(state,snapshot));
   if(path==="/api/cases/open")return response(await testProjectSandboxCaseOpenLevel(env,ctx,loaded,payload));
-  if(path==="/api/cases/open-granted"){
-    const caseType=normalizeCaseType(payload?.caseType);if(!caseType||!TEST_PROJECT_CASE_IDS.includes(caseType))throw new ApiError(400,"Выберите тестовый кейс.");const result=await ownerPanelTestProjectCaseOpen(env,{...ctx,body:{caseType,mode:"open",consume:true}});await reload();return response(testProjectSandboxCasePayload(state,snapshot,{opened:{caseType,title:LEVEL_CASE_CONFIG[caseType]?.title||snapshot?.liveops?.cases?.[caseType]?.title||caseType,rewards:result.rewards,points:Number(result.deltas?.points||0),treats:Number(result.deltas?.treats||0),coffee:Number(result.deltas?.coffee||0),...(caseType==="alex"?{alexCollection:result.alexCollection||null,alexCollectionRewardGranted:Boolean(result.alexCollectionRewardGranted),forcedReward:result.forcedReward||null}:{})}}));
+  if(path==="/api/cases/open-ordinary"||path==="/api/cases/open-granted"){
+    const caseType=path==="/api/cases/open-ordinary"?"small":normalizeCaseType(payload?.caseType);if(!caseType||!TEST_PROJECT_CASE_IDS.includes(caseType))throw new ApiError(400,"Выберите тестовый кейс.");const result=await ownerPanelTestProjectCaseOpen(env,{...ctx,body:{caseType,mode:"open",consume:true}});await reload();return response(testProjectSandboxCasePayload(state,snapshot,{opened:{caseType,title:LEVEL_CASE_CONFIG[caseType]?.title||snapshot?.liveops?.cases?.[caseType]?.title||caseType,rewards:result.rewards,points:Number(result.deltas?.points||0),treats:Number(result.deltas?.treats||0),coffee:Number(result.deltas?.coffee||0),...(caseType==="alex"?{alexCollection:result.alexCollection||null,alexCollectionRewardGranted:Boolean(result.alexCollectionRewardGranted),forcedReward:result.forcedReward||null}:{})}}));
   }
-  if(path==="/api/cases/open-granted/status")return response({ok:true,pending:false,missing:true,state:"sandbox",requestId:String(payload?.requestId||"")});
+  if(path==="/api/cases/open-ordinary/status"||path==="/api/cases/open-granted/status")return response({ok:true,pending:false,missing:true,state:"sandbox",requestId:String(payload?.requestId||"")});
   if(path==="/api/cases/purchase"){
     const caseType=normalizeCaseType(payload?.caseType);if(!caseType)throw new ApiError(400,"Выберите тестовый кейс.");const result=await ownerPanelTestProjectAction(env,{...ctx,body:{action:"case_buy",caseType}});await reload();return response(testProjectSandboxCasePayload(state,snapshot,{purchase:{caseType,cost:result.result?.price||{}}}));
   }

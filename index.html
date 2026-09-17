@@ -16051,6 +16051,8 @@ function installProgressInfo(){
       const CASE_API_OPEN_PATH = &quot;/api/cases/open&quot;;
       const CASE_API_OPEN_GRANTED_PATH = &quot;/api/cases/open-granted&quot;;
       const CASE_API_OPEN_GRANTED_STATUS_PATH = &quot;/api/cases/open-granted/status&quot;;
+      const CASE_API_OPEN_ORDINARY_PATH = &quot;/api/cases/open-ordinary&quot;;
+      const CASE_API_OPEN_ORDINARY_STATUS_PATH = &quot;/api/cases/open-ordinary/status&quot;;
       const CASE_OPEN_REQUEST_TIMEOUT_MS = 7000;
       const GRANTED_CASE_OPEN_REQUEST_TIMEOUT_MS = 5000;
       const GRANTED_CASE_STATUS_REQUEST_TIMEOUT_MS = 2200;
@@ -21361,16 +21363,24 @@ function createTutorialDeck(layer, mount, options, words) {
         return /уже открывается|попытка открытия устарела|состояние кейса изменилось|повторите открытие/i.test(String(error?.message || &quot;&quot;));
       }
 
+      function grantedCaseOpenPath(caseType) {
+        return caseExperienceNormalizeType(caseType) === &quot;small&quot; ? CASE_API_OPEN_ORDINARY_PATH : CASE_API_OPEN_GRANTED_PATH;
+      }
+
+      function grantedCaseStatusPath(caseType) {
+        return caseExperienceNormalizeType(caseType) === &quot;small&quot; ? CASE_API_OPEN_ORDINARY_STATUS_PATH : CASE_API_OPEN_GRANTED_STATUS_PATH;
+      }
+
       async function waitForGrantedCaseResult(caseType, requestId, deadline, firstError = null) {
         let lastError = firstError;
-        let resumeAttempted = false;
+        let lastResumeAt = 0;
         let activeRequestId = String(requestId || &quot;&quot;);
         while (Date.now() &lt; deadline) {
           const remaining = deadline - Date.now();
           if (remaining &lt;= 0) break;
           try {
             const status = await caseApiRequest(
-              CASE_API_OPEN_GRANTED_STATUS_PATH,
+              grantedCaseStatusPath(caseType),
               { caseType: String(caseType || &quot;&quot;), requestId: activeRequestId },
               Math.max(1000, Math.min(GRANTED_CASE_STATUS_REQUEST_TIMEOUT_MS, remaining))
             );
@@ -21383,7 +21393,7 @@ function createTutorialDeck(layer, mount, options, words) {
               if (caseOpeningRetryContext?.kind === &quot;gifted&quot; &amp;&amp; caseExperienceNormalizeType(caseOpeningRetryContext?.caseType || &quot;&quot;) === caseExperienceNormalizeType(caseType)) {
                 caseOpeningRetryContext = { ...caseOpeningRetryContext, requestId: activeRequestId, startedAt: adoptedStartedAt };
               }
-              resumeAttempted = false;
+              lastResumeAt = 0;
             }
             if (status?.opened &amp;&amp; !status?.pending) {
               // Clear the local recovery marker before refreshing the authoritative
@@ -21392,18 +21402,25 @@ function createTutorialDeck(layer, mount, options, words) {
               try { await loadCaseStateForOpeningRecovery(); } catch {}
               return status;
             }
-            if ((status?.missing || status?.stale || status?.state === &quot;pending&quot;) &amp;&amp; !resumeAttempted) {
-              resumeAttempted = true;
+            const needsResume = Boolean(status?.missing || status?.stale || status?.state === &quot;pending&quot;);
+            if (needsResume &amp;&amp; (lastResumeAt === 0 || Date.now() - lastResumeAt &gt;= 900)) {
+              lastResumeAt = Date.now();
               try {
                 const resumed = await caseApiRequest(
-                  CASE_API_OPEN_GRANTED_PATH,
+                  grantedCaseOpenPath(caseType),
                   { caseType: String(caseType || &quot;&quot;), requestId: activeRequestId, resume: true },
                   Math.max(1000, Math.min(GRANTED_CASE_OPEN_REQUEST_TIMEOUT_MS, remaining))
                 );
-                if (!resumed?.pending) return resumed;
+                if (!resumed?.pending) {
+                  forgetGrantedCasePendingRequest(caseType, activeRequestId);
+                  return resumed;
+                }
               } catch (error) {
                 lastError = error;
                 if (isCasesTemporarilyUnavailableError(error) || !isGrantedCaseRetryableError(error)) throw error;
+                // A resume can fail after the server has already released a stale
+                // lease. Poll again, then retry the SAME idempotent request inside
+                // this foreground window instead of forcing another user tap.
               }
             }
             const beforeSleep = deadline - Date.now();
@@ -21449,7 +21466,7 @@ function createTutorialDeck(layer, mount, options, words) {
             data = await waitForGrantedCaseResult(type, requestId, deadline);
           } else {
             try {
-              data = await caseApiRequest(CASE_API_OPEN_GRANTED_PATH, { caseType: type, requestId }, GRANTED_CASE_OPEN_REQUEST_TIMEOUT_MS);
+              data = await caseApiRequest(grantedCaseOpenPath(type), { caseType: type, requestId }, GRANTED_CASE_OPEN_REQUEST_TIMEOUT_MS);
             } catch (error) {
               const status = Number(error?.status || 0);
               if (!isCasesTemporarilyUnavailableError(error) &amp;&amp; (error?.timeout || status &gt;= 500 || !status)) data = await waitForGrantedCaseResult(type, requestId, deadline, error);
