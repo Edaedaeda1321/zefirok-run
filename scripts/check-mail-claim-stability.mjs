@@ -1,0 +1,30 @@
+#!/usr/bin/env node
+import fs from 'node:fs';
+
+const raw=fs.readFileSync('index.html','utf8');
+const decode=(text)=>String(text).replace(/&quot;/g,'"').replace(/&#x27;|&#39;/g,"'").replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/&amp;/g,'&');
+const index=decode(raw),worker=fs.readFileSync('src/worker.js','utf8'),gate=fs.readFileSync('scripts/check-production-gate.mjs','utf8');
+let checks=0;const assert=(value,message)=>{checks++;if(!value)throw new Error(`Mail claim stability check failed: ${message}`);};
+const between=(text,start,end)=>{const a=text.indexOf(start);assert(a>=0,`missing ${start}`);const b=text.indexOf(end,a+start.length);assert(b>a,`missing ${end}`);return text.slice(a,b);};
+assert(index.includes('const PLAYER_GIFTS_CLAIM_STATUS_PATH = "/api/mail/claim/status";'),'dedicated claim status path missing');
+assert(index.includes('async function playerMailClaimStatus'),'client status observer missing');
+assert(index.includes('async function waitForPlayerMailClaimResult'),'client polling helper missing');
+assert(index.includes('function markPlayerGiftClaimedLocally'),'local committed receipt helper missing');
+const client=between(index,'async function claimPlayerGiftClient','async function claimAllPlayerGiftsClient');
+assert(client.includes('Promise.race'),'claim response is not raced against dedicated observer');
+assert(client.includes('5000'),'claim mutation timeout is not bounded');
+assert(client.includes('markPlayerGiftClaimedLocally'),'committed mail still waits for full inbox refresh');
+assert(client.includes('void loadPlayerGiftInbox(true)'),'authoritative inbox refresh is not backgrounded');
+assert(worker.includes('async function getPlayerMailV3ClaimStatus'),'server claim status handler missing');
+const status=between(worker,'async function getPlayerMailV3ClaimStatus','async function claimPlayerMailV3');
+for(const forbidden of ['UPDATE player_mail_v3','INSERT INTO player_mail_v3','DELETE FROM player_mail_v3','processPlayerMailV3RewardQueue'])assert(!status.includes(forbidden),`status observer mutates mail state via ${forbidden}`);
+const claim=between(worker,'async function claimPlayerMailV3','async function claimAllPlayerMailV3');
+assert(claim.includes('playerMailV3ClaimStatusPayload(env,telegramId,mailId)'),'claiming row cannot be safely inspected');
+assert(claim.includes('queue?.delivering'),'active queue lease is not respected');
+assert(claim.includes('row={...row,reward_state:"available"'),'abandoned claim cannot resume immediately');
+assert(!claim.includes('const state=await playerMailV3Snapshot(env,telegramId);'),'single claim still blocks on full inbox snapshot after commit');
+assert(claim.includes('rewardState:"claimed"'),'claim does not return compact committed receipt');
+assert(worker.includes('if (url.pathname === "/api/mail/claim/status"'),'production status route missing');
+assert(worker.includes('"/api/mail/claim/status"'),'Test Project route isolation missing');
+assert(gate.includes("['mail claim stability', 'node', ['scripts/check-mail-claim-stability.mjs']]"),'production gate wiring missing');
+console.log(`Mail claim stability checks passed: ${checks} invariants.`);

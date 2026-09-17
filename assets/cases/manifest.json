@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "catalogHash": "4aaf552038b4288a",
+  "catalogHash": "6a80992ba63194e5",
   "count": 102,
   "images": [
     {
@@ -556,20 +556,20 @@
       "size": 359702
     },
     {
-      "fileName": "seasonal/case_white_rabbit_s4_closed.png",
+      "fileName": "seasonal/case_white_rabbit_s4_closed.webp",
       "label": "Case white rabbit s4 closed",
       "folder": "seasonal",
-      "path": "/assets/cases/seasonal/case_white_rabbit_s4_closed.png",
-      "hash": "ced9ea2e7566",
-      "size": 2069761
+      "path": "/assets/cases/seasonal/case_white_rabbit_s4_closed.webp",
+      "hash": "8ecbe856c317",
+      "size": 276158
     },
     {
-      "fileName": "seasonal/case_white_rabbit_s4_open.png",
+      "fileName": "seasonal/case_white_rabbit_s4_open.webp",
       "label": "Case white rabbit s4 open",
       "folder": "seasonal",
-      "path": "/assets/cases/seasonal/case_white_rabbit_s4_open.png",
-      "hash": "42b6bcfe02c5",
-      "size": 2068310
+      "path": "/assets/cases/seasonal/case_white_rabbit_s4_open.webp",
+      "hash": "214e93ab66e2",
+      "size": 286878
     },
     {
       "fileName": "seasonal/season_2_closed.webp",

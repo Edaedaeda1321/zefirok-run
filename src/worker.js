@@ -2294,6 +2294,11 @@ export default {
       if (url.pathname === "/api/mail/open" && request.method === "POST") {
         return await openPlayerMailV3(request, env);
       }
+      if (url.pathname === "/api/mail/claim/status" && request.method === "POST") {
+        // Dedicated read-only observer. Never wait for the full inbox/profile/case
+        // snapshots just to answer whether the economic claim committed.
+        return await getPlayerMailV3ClaimStatus(request, env);
+      }
       if (url.pathname === "/api/mail/claim" && request.method === "POST") {
         return await withPlayerApiPerformance(env, ctx, "mail_claim", () => claimPlayerMailV3(request, env, ctx), request);
       }
@@ -5115,7 +5120,7 @@ function playerMailPreviewText(value, fallback = "") {
 const PLAYER_MAIL_V3_BODY_LIMIT = 32000;
 const PLAYER_MAIL_V3_PREVIEW_LIMIT = 220;
 const PLAYER_MAIL_V3_LIST_LIMIT = 100;
-const PLAYER_MAIL_V3_CLAIM_STALE_SECONDS = 90;
+const PLAYER_MAIL_V3_CLAIM_STALE_SECONDS = 30;
 let playerMailV3SchemaPromise = null;
 
 async function ensurePlayerMailV3Schema(env) {
@@ -5509,6 +5514,36 @@ async function playerMailV3StreakProtectionOverflow(env, telegramId, mailId) {
   }
 }
 
+async function playerMailV3ClaimStatusPayload(env, telegramId, mailId) {
+  await ensurePlayerMailV3Schema(env);
+  const id=String(telegramId||"").trim(),mid=String(mailId||"").trim(),now=Math.floor(Date.now()/1000);
+  const row=await env.DB.prepare(`SELECT reward_state,claimed_at,updated_at FROM player_mail_v3 WHERE telegram_id=? AND mail_id=? LIMIT 1`).bind(id,mid).first();
+  if(!row)return {ok:true,mailId:mid,missing:true,claimed:false,pending:false,state:"missing",rewardState:"missing",claimedAt:0,retryAfterMs:0};
+  const queue=await env.DB.prepare(`SELECT COUNT(*) AS total,
+    SUM(CASE WHEN status='delivered' THEN 1 ELSE 0 END) AS delivered,
+    SUM(CASE WHEN status='delivering' AND lease_until>? THEN 1 ELSE 0 END) AS delivering,
+    SUM(CASE WHEN status IN ('pending','failed') OR (status='delivering' AND lease_until<=?) THEN 1 ELSE 0 END) AS waiting
+    FROM reward_delivery_queue WHERE telegram_id=? AND source_type='player_mail_v3' AND source_id GLOB ?`).bind(now,now,id,`${mid}_*`).first();
+  const rewardState=String(row.reward_state||"none"),total=Math.max(0,Number(queue?.total||0)),delivered=Math.max(0,Number(queue?.delivered||0)),delivering=Math.max(0,Number(queue?.delivering||0)),waiting=Math.max(0,Number(queue?.waiting||0));
+  const claimed=rewardState==="claimed"||Number(row.claimed_at||0)>0;
+  const pending=!claimed&&(rewardState==="claiming"||delivering>0);
+  return {ok:true,mailId:mid,missing:false,claimed,pending,state:claimed?"claimed":pending?"processing":rewardState,rewardState,claimedAt:Math.max(0,Number(row.claimed_at||0)),updatedAt:Math.max(0,Number(row.updated_at||0)),queue:{total,delivered,delivering,waiting},retryAfterMs:pending?550:0};
+}
+
+async function getPlayerMailV3ClaimStatus(request, env) {
+  try{
+    const body=await readJson(request);requireBotToken(env);
+    const auth=await validateTelegramInitData(String(body.initData||""),env),telegramId=String(auth.user.id);
+    const mailId=String(body.mailId||body.giftId||"").trim();
+    if(!/^[A-Za-z0-9:_-]{4,120}$/.test(mailId))throw new ApiError(400,"Некорректное письмо.");
+    return jsonResponse(await playerMailV3ClaimStatusPayload(env,telegramId,mailId));
+  }catch(error){
+    if(error instanceof ApiError)return jsonResponse({ok:false,error:error.message},error.status);
+    console.error("getPlayerMailV3ClaimStatus failed",error);
+    return jsonResponse({ok:false,error:"Не удалось проверить получение вложения."},500);
+  }
+}
+
 async function claimPlayerMailV3(request, env, ctx, preauthorizedTelegramId = "", options = {}) {
   try {
     const body=await readJson(request);requireBotToken(env);
@@ -5526,7 +5561,22 @@ async function claimPlayerMailV3(request, env, ctx, preauthorizedTelegramId = ""
       if(repairedBeforeClaim>0){await ensurePlayerAccountRevisionAvailable(env);await bumpPlayerAccountRevisionStatement(env,telegramId,now).run();row=await env.DB.prepare(`SELECT * FROM player_mail_v3 WHERE telegram_id=? AND mail_id=? AND (expires_at=0 OR expires_at>?) LIMIT 1`).bind(telegramId,mailId,now).first();}
     }
     if(String(row?.reward_state)==="none")throw new ApiError(409,"В этом письме нет награды.");
-    if(String(row.reward_state)==="claimed"){const streakProtectionOverflow=await playerMailV3StreakProtectionOverflow(env,telegramId,mailId);if(options?.suppressState===true)return jsonResponse({ok:true,repeated:true,...(streakProtectionOverflow?{streakProtectionOverflow}:{})});const state=await playerMailV3Snapshot(env,telegramId);return jsonResponse({ok:true,repeated:true,state,gifts:state,...(streakProtectionOverflow?{streakProtectionOverflow}:{})});}
+    if(String(row.reward_state)==="claimed"){
+      const streakProtectionOverflow=await playerMailV3StreakProtectionOverflow(env,telegramId,mailId);
+      return jsonResponse({ok:true,repeated:true,deliveryCommitted:true,mailId,rewardState:"claimed",claimedAt:Math.max(0,Number(row.claimed_at||0)),...(streakProtectionOverflow?{streakProtectionOverflow}:{})});
+    }
+    if(String(row.reward_state)==="claiming"){
+      const claimStatus=await playerMailV3ClaimStatusPayload(env,telegramId,mailId);
+      if(claimStatus.claimed)return jsonResponse({...claimStatus,deliveryCommitted:true,repeated:true});
+      if(Number(claimStatus?.queue?.delivering||0)>0){
+        return jsonResponse({...claimStatus,ok:true,pending:true,deliveryCommitted:false},202);
+      }
+      // No active queue lease means the previous HTTP request disappeared before
+      // finishing. The queue source ids are deterministic, so resuming is safe and
+      // does not duplicate already delivered rewards.
+      await env.DB.prepare(`UPDATE player_mail_v3 SET reward_state='available',updated_at=? WHERE telegram_id=? AND mail_id=? AND reward_state='claiming'`).bind(now,telegramId,mailId).run();
+      row={...row,reward_state:"available",updated_at:now};
+    }
     const lock=await env.DB.prepare(`UPDATE player_mail_v3 SET reward_state='claiming',read_at=CASE WHEN read_at=0 THEN ? ELSE read_at END,updated_at=? WHERE telegram_id=? AND mail_id=? AND reward_state='available'`).bind(now,now,telegramId,mailId).run();
     if(Number(lock?.meta?.changes||0)<1)throw new ApiError(409,"Награда уже обрабатывается. Попробуйте ещё раз через несколько секунд.");
     await ensurePlayerAccountRevisionAvailable(env);await bumpPlayerAccountRevisionStatement(env,telegramId,now).run();
@@ -5540,9 +5590,7 @@ async function claimPlayerMailV3(request, env, ctx, preauthorizedTelegramId = ""
         const taskResult=await claimSeasonPassTaskGiftReward(env,telegramId,seasonTaskRewards[0],ctx);const claimedAt=Math.floor(Date.now()/1000);
         await env.DB.prepare(`UPDATE player_mail_v3 SET reward_state='claimed',claimed_at=CASE WHEN claimed_at>0 THEN claimed_at ELSE ? END,read_at=CASE WHEN read_at=0 THEN ? ELSE read_at END,updated_at=? WHERE telegram_id=? AND mail_id=? AND reward_state IN ('claiming','available')`).bind(claimedAt,claimedAt,claimedAt,telegramId,mailId).run();
         await bumpPlayerAccountRevisionStatement(env,telegramId,claimedAt).run();
-        if(options?.suppressState===true)return jsonResponse({ok:true,deliveryCommitted:true,seasonPassRefreshRequired:true,repeated:Boolean(taskResult?.repeated),receivedSeasonPassXp:Math.max(0,Number(taskResult?.xp||0))});
-        const state=await playerMailV3Snapshot(env,telegramId);
-        return jsonResponse({ok:true,state,gifts:state,deliveryCommitted:true,seasonPassRefreshRequired:true,repeated:Boolean(taskResult?.repeated),receivedSeasonPassXp:Math.max(0,Number(taskResult?.xp||0))});
+        return jsonResponse({ok:true,deliveryCommitted:true,mailId,rewardState:"claimed",claimedAt,seasonPassRefreshRequired:true,repeated:Boolean(taskResult?.repeated),receivedSeasonPassXp:Math.max(0,Number(taskResult?.xp||0))});
       }catch(taskError){const resetAt=Math.floor(Date.now()/1000);await env.DB.prepare(`UPDATE player_mail_v3 SET reward_state='available',updated_at=? WHERE telegram_id=? AND mail_id=? AND reward_state='claiming'`).bind(resetAt,telegramId,mailId).run().catch(()=>null);throw taskError;}
     }
     for(let index=0;index<rewards.length;index+=1)await enqueueRewardDelivery(env,telegramId,"player_mail_v3",`${mailId}_${index}`,rewards[index],String(row.reason||row.title||"Почта Зеффи"));
@@ -5558,7 +5606,8 @@ async function claimPlayerMailV3(request, env, ctx, preauthorizedTelegramId = ""
     const seasonPassRefreshRequired=[...rewardKinds].some((kind)=>["season_pass_tier","season_pass_xp_grant"].includes(kind));
     scheduleRunSettlementBackground(ctx,ensureAuthoritativeProfileRow(env,telegramId,`mail-v3-post-claim:${mailId}`),"mail v3 post-claim profile fold failed");
     scheduleRunSettlementBackground(ctx,reconcileDeliveredSeasonPassCasesForPlayer(env,telegramId),"mail v3 post-claim case reconcile failed");
-    const streakProtectionOverflow=await playerMailV3StreakProtectionOverflow(env,telegramId,mailId);if(options?.suppressState===true)return jsonResponse({ok:true,deliveryCommitted:true,caseRefreshRequired,profileRefreshRequired,seasonPassRefreshRequired,...(streakProtectionOverflow?{streakProtectionOverflow}:{})});const state=await playerMailV3Snapshot(env,telegramId);return jsonResponse({ok:true,state,gifts:state,deliveryCommitted:true,caseRefreshRequired,profileRefreshRequired,seasonPassRefreshRequired,...(streakProtectionOverflow?{streakProtectionOverflow}:{})});
+    const streakProtectionOverflow=await playerMailV3StreakProtectionOverflow(env,telegramId,mailId);
+    return jsonResponse({ok:true,deliveryCommitted:true,mailId,rewardState:"claimed",claimedAt,caseRefreshRequired,profileRefreshRequired,seasonPassRefreshRequired,...(streakProtectionOverflow?{streakProtectionOverflow}:{})});
   } catch(error) {
     if(error instanceof ApiError)return jsonResponse({ok:false,error:error.message},error.status);
     console.error("claimPlayerMailV3 failed",error);return jsonResponse({ok:false,error:"Не удалось получить вложение письма."},500);
@@ -12338,9 +12387,14 @@ async function openLevelCase(request, env, ctx = null) {
       openedAt: now * 1000,
       rewards: rolled.rewards
     };
-    const finalProfile = await ensureAuthoritativeProfileRow(env, telegramId, `case:${requestedLevel}:response`);
-    const nextProfile = authoritativeProfileView(finalProfile);
-    const inventory = await readFastCaseInventory(env, telegramId);
+    // The level-case reward is already committed. Return its immutable receipt
+    // without waiting for a full profile fold or inventory rebuild.
+    const finalProfile = await env.DB.prepare(`SELECT wallet,best_score,treats,coffee,profile_xp FROM admin_profile_state WHERE telegram_id=? LIMIT 1`).bind(telegramId).first();
+    const nextProfile = authoritativeProfileView(finalProfile||{});
+    scheduleRunSettlementBackground(ctx,
+      ensureAuthoritativeProfileRow(env,telegramId,`case:${requestedLevel}:background-fold`),
+      'level case background profile fold failed'
+    );
     scheduleRunSettlementBackground(
       ctx,
       deliverSeasonPassTaskNotificationsForRows(env, telegramId, taskEvent?.season, taskEvent?.taskRows || []),
@@ -12356,7 +12410,6 @@ async function openLevelCase(request, env, ctx = null) {
       liveops,
       profile: nextProfile,
       opened,
-      inventory,
       caseDelta: { openedLevel: requestedLevel },
       seasonPassTaskNotice: taskEvent ? seasonPassTaskNoticePublic(taskEvent.taskRows || [], taskEvent.season) : undefined,
       operation: operationSuccessMeta(`level:${requestedLevel}`,"level_case_open",false)
@@ -12463,8 +12516,8 @@ async function purchaseCaseFromShop(request, env, ctx = null) {
   }
 }
 
-const GRANTED_CASE_OPENING_STALE_SECONDS = 300;
-const GRANTED_CASE_RETRY_LEASE_SECONDS = 120;
+const GRANTED_CASE_OPENING_STALE_SECONDS = 90;
+const GRANTED_CASE_RETRY_LEASE_SECONDS = 20;
 
 async function releaseGrantedCaseOpeningReservations(env, telegramId, caseId, requestId, openingStartedAt = 0) {
   const id=String(telegramId||''), grantId=String(caseId||''), token=String(requestId||''), startedAt=Math.max(0,safeAdminNumber(openingStartedAt));
@@ -12692,9 +12745,15 @@ async function openGrantedCase(request, env, ctx = null) {
         alexCollectionRewardGranted
       } : {})
     };
-    const finalProfile = await ensureAuthoritativeProfileRow(env, telegramId, `gift-case:${caseType}:response`);
-    const nextProfile = authoritativeProfileView(finalProfile);
-    const inventory = await readFastCaseInventory(env, telegramId);
+    // Opening is committed at this point. Keep the response isolated from slow
+    // profile folding and inventory rebuilds: a tiny direct row read plus the
+    // deterministic caseDelta is enough for the client to render the result.
+    const finalProfile = await env.DB.prepare(`SELECT wallet,best_score,treats,coffee,profile_xp FROM admin_profile_state WHERE telegram_id=? LIMIT 1`).bind(telegramId).first();
+    const nextProfile = authoritativeProfileView(finalProfile||{});
+    scheduleRunSettlementBackground(ctx,
+      ensureAuthoritativeProfileRow(env,telegramId,`gift-case:${caseType}:background-fold`),
+      'granted case background profile fold failed'
+    );
     scheduleRunSettlementBackground(
       ctx,
       deliverSeasonPassTaskNotificationsForRows(env, telegramId, taskEvent?.season, taskEvent?.taskRows || []),
@@ -12710,7 +12769,6 @@ async function openGrantedCase(request, env, ctx = null) {
       liveops,
       profile: nextProfile,
       opened,
-      inventory,
       caseDelta: { giftedCaseType: caseType, giftedCaseDelta: -1 },
       seasonPassTaskNotice: taskEvent ? seasonPassTaskNoticePublic(taskEvent.taskRows || [], taskEvent.season) : undefined,
       operation: operationSuccessMeta(requestId || openingClaimToken,"granted_case_open",false)
@@ -44609,7 +44667,7 @@ const TEST_PROJECT_SANDBOX_API_PATHS = Object.freeze([
   "/api/runs/start","/api/runs/checkpoint","/api/leaderboard/state","/api/leaderboard/player-profile","/api/leaderboard/submit","/api/leaderboard/claim",
   "/api/cases/state","/api/cases/open","/api/cases/open-granted","/api/cases/open-granted/status","/api/cases/purchase","/api/cases/activate","/api/cases/equip","/api/cases/consume-run",
   "/api/skins/purchase","/api/skins/bonus-case","/api/live-content/shop/buy","/api/rewards/create","/api/rewards/mine",
-  "/api/mail/state","/api/mail/open","/api/mail/claim","/api/mail/claim-all","/api/gifts/state","/api/gifts/read","/api/gifts/claim","/api/friends/coop/state","/api/friends/coop/claim","/api/newcomer/claim","/api/support/state","/api/support/create","/api/support/reply","/api/support/read","/api/news/read",
+  "/api/mail/state","/api/mail/open","/api/mail/claim","/api/mail/claim/status","/api/mail/claim-all","/api/gifts/state","/api/gifts/read","/api/gifts/claim","/api/friends/coop/state","/api/friends/coop/claim","/api/newcomer/claim","/api/support/state","/api/support/create","/api/support/reply","/api/support/read","/api/news/read",
   "/api/polls/game/next","/api/polls/game/vote","/api/polls/game/snooze",
   "/api/shop/offers","/api/shop/offers/event","/api/shop/offers/purchase",
   "/api/battle-pass/access","/api/battle-pass/state","/api/battle-pass/run","/api/battle-pass/profile-bonus","/api/battle-pass/tier-activation/claim","/api/battle-pass/task-notices/pending","/api/battle-pass/task-notices/read",
@@ -44981,6 +45039,7 @@ async function testProjectSandboxGameData(env, ctx) {
   if(path==="/api/mail/state")return response({ok:true,mailVersion:3,pendingCount:0,unreadCount:0,items:[]});
   if(path==="/api/mail/open")throw new ApiError(404,"Писем Test Project пока нет.");
   if(path==="/api/mail/claim")throw new ApiError(404,"Вложения Production-почты в Test Project не выдаются.");
+  if(path==="/api/mail/claim/status")return response({ok:true,mailId:String(payload?.mailId||""),missing:true,claimed:false,pending:false,state:"missing",rewardState:"missing",retryAfterMs:0});
   if(path==="/api/mail/claim-all")throw new ApiError(404,"Вложения Production-почты в Test Project не выдаются.");
   if(path==="/api/gifts/state")return response({ok:true,pendingCount:0,unreadCount:0,items:[]});
   if(path==="/api/gifts/read")return response({ok:true,pendingCount:0,unreadCount:0,items:[]});

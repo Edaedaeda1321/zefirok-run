@@ -18,6 +18,9 @@ const occurrences=(text,needle)=>text.split(needle).length-1;
 
 assert(index.includes('const CASE_API_OPEN_GRANTED_STATUS_PATH = "/api/cases/open-granted/status";'),'client status path missing');
 assert(index.includes('const GRANTED_CASE_PENDING_TTL_MS = 15 * 60 * 1000;'),'durable operation TTL missing');
+assert(index.includes('const GRANTED_CASE_OPEN_REQUEST_TIMEOUT_MS = 5000;'),'gifted case mutation timeout must stay bounded');
+assert(index.includes('const GRANTED_CASE_STATUS_REQUEST_TIMEOUT_MS = 2200;'),'case observer timeout must stay fast');
+assert(index.includes('updateCaseOpeningPreviewStatus("Проверяем результат…"'),'slow case UI does not transition to recovery status');
 assert(index.includes('restoreGrantedCasePendingRequests();'),'pending operation restore missing');
 assert(index.includes('rememberGrantedCasePendingRequest(type, requestId'),'pending operation persistence missing');
 assert(index.includes('Array.isArray(data?.giftedCaseOpenings)'),'server opening recovery is not consumed by client');
@@ -37,11 +40,11 @@ assert(clientOpen.includes('forgetGrantedCasePendingRequest(type, requestId);'),
 const lease=Number(worker.match(/const GRANTED_CASE_RETRY_LEASE_SECONDS = (\d+);/)?.[1]||0);
 const stale=Number(worker.match(/const GRANTED_CASE_OPENING_STALE_SECONDS = (\d+);/)?.[1]||0);
 const uiDeadline=Number(index.match(/const GRANTED_CASE_OPEN_UI_DEADLINE_MS = (\d+);/)?.[1]||0);
-assert(lease>=120,'same-request lease is shorter than 120 seconds');
-assert(stale>=300,'generic orphan cleanup is shorter than 5 minutes');
-assert(stale>=lease+120,'generic orphan cleanup can race explicit same-request recovery');
-assert(uiDeadline>=60000,'client recovery window is too short');
-assert(lease*1000>=uiDeadline+30000,'server lease must outlive the client recovery window by at least 30 seconds');
+assert(lease>=15,'same-request lease is shorter than 15 seconds');
+assert(stale>=60,'generic orphan cleanup is shorter than 60 seconds');
+assert(stale>=lease+30,'generic orphan cleanup can race explicit same-request recovery');
+assert(uiDeadline>=8000&&uiDeadline<=20000,'client foreground recovery window must stay bounded between 8 and 20 seconds');
+assert(lease*1000>=uiDeadline+5000,'server lease must outlive the client foreground window by at least 5 seconds');
 
 assert(worker.includes('async function getGrantedCaseOpenStatus(request,env)'),'read-only granted case status handler missing');
 const statusHandler=between(worker,'async function getGrantedCaseOpenStatus','async function openGrantedCase');
@@ -66,6 +69,13 @@ assert(opening.includes('{ recoverStale:resumeRequested }'),'only explicit resum
 assert(opening.includes("existing.status IN ('opening','opened')"),'atomic claim does not prevent the same requestId from consuming another grant');
 assert(opening.includes("WHERE id=(\n         SELECT candidate.id"),'claim is not a single atomic candidate update');
 assert(opening.includes("opening_token=? AND status='opening'"),'claimed grant is not re-read by durable request token');
+assert(opening.includes('SELECT wallet,best_score,treats,coffee,profile_xp FROM admin_profile_state'),'committed opening does not use a tiny direct profile receipt');
+assert(!opening.includes('const inventory = await readFastCaseInventory(env, telegramId);'),'committed opening still blocks on full inventory rebuild');
+assert(opening.includes('background-fold'),'post-commit profile fold is not isolated in background');
+const levelOpening=between(worker,'async function openLevelCase','async function purchaseCaseFromShop');
+assert(levelOpening.includes('SELECT wallet,best_score,treats,coffee,profile_xp FROM admin_profile_state'),'level case committed receipt is not using a direct profile row');
+assert(!levelOpening.includes('const inventory = await readFastCaseInventory(env, telegramId);'),'level case still blocks on inventory rebuild after commit');
+assert(levelOpening.includes('background-fold'),'level case profile fold is not backgrounded');
 
 const inventory=between(worker,'async function readFastCaseInventory','async function buildFastCasePurchasePayload');
 assert(inventory.includes("status='opening' AND opening_token<>''"),'server state cannot recover an in-flight granted case after reload');

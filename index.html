@@ -16020,6 +16020,7 @@ function installProgressInfo(){
       const PLAYER_GIFTS_STATE_PATH = &quot;/api/mail/state&quot;;
       const PLAYER_GIFTS_OPEN_PATH = &quot;/api/mail/open&quot;;
       const PLAYER_GIFTS_CLAIM_PATH = &quot;/api/mail/claim&quot;;
+      const PLAYER_GIFTS_CLAIM_STATUS_PATH = &quot;/api/mail/claim/status&quot;;
       const PLAYER_GIFTS_CLAIM_ALL_PATH = &quot;/api/mail/claim-all&quot;;
       const PLAYER_SUPPORT_STATE_PATH = &quot;/api/support/state&quot;;
       const PLAYER_SUPPORT_CREATE_PATH = &quot;/api/support/create&quot;;
@@ -16050,10 +16051,10 @@ function installProgressInfo(){
       const CASE_API_OPEN_PATH = &quot;/api/cases/open&quot;;
       const CASE_API_OPEN_GRANTED_PATH = &quot;/api/cases/open-granted&quot;;
       const CASE_API_OPEN_GRANTED_STATUS_PATH = &quot;/api/cases/open-granted/status&quot;;
-      const CASE_OPEN_REQUEST_TIMEOUT_MS = 10000;
-      const GRANTED_CASE_OPEN_REQUEST_TIMEOUT_MS = 8000;
-      const GRANTED_CASE_STATUS_REQUEST_TIMEOUT_MS = 6500;
-      const GRANTED_CASE_OPEN_UI_DEADLINE_MS = 70000;
+      const CASE_OPEN_REQUEST_TIMEOUT_MS = 7000;
+      const GRANTED_CASE_OPEN_REQUEST_TIMEOUT_MS = 5000;
+      const GRANTED_CASE_STATUS_REQUEST_TIMEOUT_MS = 2200;
+      const GRANTED_CASE_OPEN_UI_DEADLINE_MS = 14000;
       const GRANTED_CASE_PENDING_STORE_KEY = &quot;zefirok-granted-case-ops-v2&quot;;
       const GRANTED_CASE_PENDING_TTL_MS = 15 * 60 * 1000;
       const CASE_API_PURCHASE_PATH = &quot;/api/cases/purchase&quot;;
@@ -20828,6 +20829,7 @@ function createTutorialDeck(layer, mount, options, words) {
         levelCaseOpeningRequestBusy = true;
         if (button) {button.disabled=true;button.textContent=&quot;Открываем…&quot;;}
         showCaseOpeningPreview(retryType);
+        const progressTimer=window.setTimeout(()=&gt;updateCaseOpeningPreviewStatus(&quot;Проверяем результат…&quot;,&quot;Сервер фиксирует награду этого уровня. Повторно кейс не списывается.&quot;),1200);
         try {
           const data = await caseApiRequest(CASE_API_OPEN_PATH, {level:normalizedLevel}, CASE_OPEN_REQUEST_TIMEOUT_MS);
           presentConfirmedLevelCase(data, normalizedLevel);
@@ -20850,7 +20852,7 @@ function createTutorialDeck(layer, mount, options, words) {
             }
           }
           if (button?.isConnected) {button.disabled=false;button.textContent=&quot;Открыть&quot;;}
-        } finally {levelCaseOpeningRequestBusy=false;renderCaseHub();}
+        } finally {window.clearTimeout(progressTimer);levelCaseOpeningRequestBusy=false;renderCaseHub();}
       }
 
       function caseExperienceNormalizeType(caseType) {
@@ -21157,6 +21159,13 @@ function createTutorialDeck(layer, mount, options, words) {
         openCaseLayerShell();
       }
 
+      function updateCaseOpeningPreviewStatus(title, copy = &quot;&quot;) {
+        const shell=caseContentEl?.querySelector(&quot;.case-xp-preparing&quot;);if(!shell)return;
+        const heading=shell.querySelector(&quot;h2&quot;),paragraph=shell.querySelector(&quot;p&quot;);
+        if(heading&amp;&amp;title)heading.textContent=String(title);
+        if(paragraph&amp;&amp;copy)paragraph.textContent=String(copy);
+      }
+
       function isCasesTemporarilyUnavailableError(error) {
         const payload = error?.payload &amp;&amp; typeof error.payload === &quot;object&quot; ? error.payload : {};
         const mode = String(error?.maintenanceMode || payload?.mode || &quot;&quot;).toLowerCase();
@@ -21421,6 +21430,7 @@ function createTutorialDeck(layer, mount, options, words) {
         if (button) { button.disabled = true; button.textContent = existingOperation ? &quot;Проверяем…&quot; : &quot;Открываем…&quot;; }
         const deadline = Date.now() + GRANTED_CASE_OPEN_UI_DEADLINE_MS;
         showCaseOpeningPreview(type);
+        const progressTimer=window.setTimeout(()=&gt;updateCaseOpeningPreviewStatus(&quot;Проверяем результат…&quot;,&quot;Кейс уже закреплён за этой попыткой. Ждём только подтверждение награды.&quot;),1200);
         try {
           let data;
           if (existingOperation) {
@@ -21462,7 +21472,7 @@ function createTutorialDeck(layer, mount, options, words) {
             }
           }
           if (button?.isConnected) { button.disabled = false; button.textContent = grantedCasePendingRequests.has(type) ? &quot;Проверить открытие&quot; : &quot;Открыть&quot;; }
-        } finally { renderCaseHub(); }
+        } finally { window.clearTimeout(progressTimer); renderCaseHub(); }
       }
 
       async function activateCaseBoosterClient(type, button) {
@@ -22753,6 +22763,42 @@ function createTutorialDeck(layer, mount, options, words) {
         return String((Array.isArray(state.playerGifts) ? state.playerGifts : []).find((item) =&gt; String(item?.id || &quot;&quot;) === id)?.status || &quot;&quot;);
       }
 
+      function markPlayerGiftClaimedLocally(giftId, claimedAt = 0) {
+        const id=String(giftId||&quot;&quot;),items=Array.isArray(state.playerGifts)?state.playerGifts:[];
+        const item=items.find((entry)=&gt;String(entry?.id||&quot;&quot;)===id);
+        if(!item)return false;
+        item.status=&quot;claimed&quot;;item.rewardState=&quot;claimed&quot;;item.claimedAt=Math.max(Number(item.claimedAt||0),Number(claimedAt||0),Math.floor(Date.now()/1000));item.unread=false;item.readAt=Math.max(Number(item.readAt||0),Math.floor(Date.now()/1000));
+        state.playerGiftPendingCount=Math.max(0,items.filter((entry)=&gt;entry?.hasRewards&amp;&amp;entry.status!==&quot;claimed&quot;&amp;&amp;!playerMailExpiryMeta(entry.expiresAt).expired).length);
+        state.playerGiftUnreadCount=Math.max(0,items.filter((entry)=&gt;entry?.unread).length);
+        renderPlayerGiftInbox();updateProfileCaseBadges();
+        if(playerMailActiveLetter&amp;&amp;String(playerMailActiveLetter.id||&quot;&quot;)===id){playerMailActiveLetter={...playerMailActiveLetter,...item,status:&quot;claimed&quot;,rewardState:&quot;claimed&quot;};if(!playerMailLayerEl?.hidden)renderPlayerMailLetter(playerMailActiveLetter);}
+        return true;
+      }
+
+      async function playerMailClaimStatus(giftId, timeoutMs = 2200) {
+        const response=await gameFetchWithTimeout(PLAYER_GIFTS_CLAIM_STATUS_PATH,{method:&quot;POST&quot;,headers:{&quot;Content-Type&quot;:&quot;application/json&quot;},body:JSON.stringify({initData:String(telegramProfile?.initData||&quot;&quot;),mailId:String(giftId||&quot;&quot;)}),cache:&quot;no-store&quot;,credentials:&quot;same-origin&quot;},Math.max(1000,Number(timeoutMs||2200)));
+        const data=await response.json().catch(()=&gt;null);
+        if(!response.ok||!data?.ok)throw new Error(data?.error||&quot;Не удалось проверить получение награды.&quot;);
+        if(data.claimed)markPlayerGiftClaimedLocally(giftId,data.claimedAt);
+        return data;
+      }
+
+      async function waitForPlayerMailClaimResult(giftId, deadline = Date.now()+7000, initialDelayMs = 350) {
+        if(initialDelayMs&gt;0)await new Promise((resolve)=&gt;window.setTimeout(resolve,initialDelayMs));
+        let lastError=null;
+        while(Date.now()&lt;deadline){
+          const remaining=deadline-Date.now();if(remaining&lt;=0)break;
+          try{
+            const status=await playerMailClaimStatus(giftId,Math.min(2200,remaining));
+            if(status?.claimed)return status;
+            if(status?.missing)break;
+            const sleep=Math.max(250,Math.min(700,Number(status?.retryAfterMs||450),deadline-Date.now()));
+            if(sleep&gt;0)await new Promise((resolve)=&gt;window.setTimeout(resolve,sleep));
+          }catch(error){lastError=error;const sleep=Math.min(500,Math.max(0,deadline-Date.now()));if(sleep&gt;0)await new Promise((resolve)=&gt;window.setTimeout(resolve,sleep));}
+        }
+        const error=lastError||new Error(&quot;Сервер ещё подтверждает выдачу. Награда не потеряется.&quot;);error.pending=true;throw error;
+      }
+
       async function settlePlayerGiftUi(giftId, attempts = 3) {
         const id = String(giftId || &quot;&quot;);
         const waits = [0, 500, 1100, 1800];
@@ -22801,61 +22847,39 @@ function createTutorialDeck(layer, mount, options, words) {
       }
 
       async function claimPlayerGiftClient(giftId, button) {
-        const id = String(giftId || &quot;&quot;);
-        if (!id || !telegramProfile?.initData || button?.disabled || playerGiftClaimBusy) return false;
+        const id=String(giftId||&quot;&quot;);
+        if(!id||!telegramProfile?.initData||button?.disabled||playerGiftClaimBusy)return false;
         playerGiftClaimBusy=true;
-        const oldText = button?.textContent || &quot;🎁 Забрать&quot;;
-        if (button) { button.disabled = true; button.textContent = &quot;Получаем…&quot;; }
-        let claimFinished = false;
-        // Slow-response watchdog: if the economic transaction has already
-        // committed, a fresh state read can close the UI before the original
-        // HTTP response makes its way back to Telegram WebView.
-        const watchdog = window.setTimeout(() =&gt; {
-          if (claimFinished) return;
-          void settlePlayerGiftUi(id, 3).then((status) =&gt; {
-            if (status === &quot;claimed&quot;) refreshPlayerGiftAccountViews();
-          }).catch(() =&gt; {});
-        }, 1200);
-        try {
-          const response = await gameFetchWithTimeout(PLAYER_GIFTS_CLAIM_PATH, { method:&quot;POST&quot;, headers:{ &quot;Content-Type&quot;:&quot;application/json&quot; }, body:JSON.stringify({ initData:String(telegramProfile.initData), mailId:id, current:caseCurrentSnapshot() }), cache:&quot;no-store&quot;, credentials:&quot;same-origin&quot; }, 7000);
-          const data = await response.json().catch(()=&gt;null);
-          if (!response.ok || !data?.ok) throw new Error(data?.error || &quot;Не удалось получить подарок.&quot;);
-          claimFinished = true;
-          window.clearTimeout(watchdog);
-          if (data.state) applyPlayerGiftPayload(data.state); else if (data.gifts) applyPlayerGiftPayload(data.gifts); else await loadPlayerGiftInbox(true);
+        const oldText=button?.textContent||&quot;🎁 Забрать&quot;;
+        if(button){button.disabled=true;button.textContent=&quot;Получаем…&quot;;}
+        try{
+          const claimAttempt=(async()=&gt;{
+            const response=await gameFetchWithTimeout(PLAYER_GIFTS_CLAIM_PATH,{method:&quot;POST&quot;,headers:{&quot;Content-Type&quot;:&quot;application/json&quot;},body:JSON.stringify({initData:String(telegramProfile.initData),mailId:id,current:caseCurrentSnapshot()}),cache:&quot;no-store&quot;,credentials:&quot;same-origin&quot;},5000);
+            const data=await response.json().catch(()=&gt;null);
+            if(!response.ok||!data?.ok)throw Object.assign(new Error(data?.error||&quot;Не удалось получить подарок.&quot;),{status:Number(response.status||0)});
+            return data;
+          })();
+          const observer=waitForPlayerMailClaimResult(id,Date.now()+7500,650).catch((error)=&gt;({__observerError:error}));
+          const first=await Promise.race([claimAttempt.then((data)=&gt;({source:&quot;claim&quot;,data})).catch((error)=&gt;({source:&quot;claim-error&quot;,error})),observer.then((data)=&gt;({source:&quot;status&quot;,data}))]);
+          let data=null;
+          if(first.source===&quot;status&quot;&amp;&amp;first.data?.claimed){data=first.data;}
+          else if(first.source===&quot;claim&quot;){data=first.data;if(data?.pending&amp;&amp;!data?.deliveryCommitted)data=await waitForPlayerMailClaimResult(id,Date.now()+6500,150);}
+          else if(first.source===&quot;claim-error&quot;){data=await waitForPlayerMailClaimResult(id,Date.now()+5500,100).catch(()=&gt;{throw first.error;});}
+          else{data=await claimAttempt.catch((error)=&gt;{throw error;});}
+          if(data?.state)applyPlayerGiftPayload(data.state);else if(data?.gifts)applyPlayerGiftPayload(data.gifts);
+          if(data?.deliveryCommitted||data?.claimed||String(data?.rewardState||&quot;&quot;)===&quot;claimed&quot;)markPlayerGiftClaimedLocally(id,data?.claimedAt);else await loadPlayerGiftInbox(true);
           playerGiftLastProtectionOverflow=data?.streakProtectionOverflow&amp;&amp;Number(data.streakProtectionOverflow.overflowAmount||0)&gt;0?data.streakProtectionOverflow:null;
-          refreshPlayerGiftAccountViews();
-          if(playerGiftLastProtectionOverflow)showProfileToast(`🛡 Лишняя защита преобразована в компенсацию: ${playerGiftProtectionCompensationLabel(playerGiftLastProtectionOverflow)}`, &quot;success&quot;, 4600);
-          else showProfileToast(&quot;🎁 Подарок получен&quot;, &quot;success&quot;);
-          hapticNotify(&quot;success&quot;);
-          return true;
-        } catch (error) {
-          claimFinished = true;
-          window.clearTimeout(watchdog);
-          // The request can time out after D1 has already committed the reward.
-          // Reconcile against authoritative gift state before showing an error or
-          // offering a second claim. This also repairs older stuck inbox rows.
-          const status = await settlePlayerGiftUi(id, error?.timeout || error?.code === &quot;REQUEST_TIMEOUT&quot; ? 4 : 2).catch(() =&gt; &quot;&quot;);
-          if (status === &quot;claimed&quot;) {
-            playerGiftLastProtectionOverflow=null;
-            refreshPlayerGiftAccountViews();
-            showProfileToast(&quot;🎁 Подарок получен&quot;, &quot;success&quot;);
-            hapticNotify(&quot;success&quot;);
-            return true;
-          }
-          if (button &amp;&amp; status !== &quot;claiming&quot;) { button.disabled = false; button.textContent = oldText; }
-          if (status === &quot;claiming&quot;) {
-            showProfileToast(&quot;Подарок уже выдаётся. Статус обновится автоматически.&quot;, &quot;warning&quot;, 3600);
-          } else {
-            showProfileToast(error?.message || &quot;Не удалось получить подарок.&quot;, &quot;warning&quot;);
-          }
-          hapticNotify(&quot;error&quot;);
-          return false;
-        } finally {
-          playerGiftClaimBusy=false;
-        }
+          refreshPlayerGiftAccountViews();void loadPlayerGiftInbox(true).catch(()=&gt;{});
+          if(playerGiftLastProtectionOverflow)showProfileToast(`🛡 Лишняя защита преобразована в компенсацию: ${playerGiftProtectionCompensationLabel(playerGiftLastProtectionOverflow)}`,&quot;success&quot;,4600);else showProfileToast(&quot;🎁 Подарок получен&quot;,&quot;success&quot;);
+          hapticNotify(&quot;success&quot;);return true;
+        }catch(error){
+          const status=await playerMailClaimStatus(id,2200).catch(()=&gt;null);
+          if(status?.claimed){refreshPlayerGiftAccountViews();void loadPlayerGiftInbox(true).catch(()=&gt;{});showProfileToast(&quot;🎁 Подарок получен&quot;,&quot;success&quot;);hapticNotify(&quot;success&quot;);return true;}
+          if(button){button.disabled=false;button.textContent=oldText;}
+          if(status?.pending)showProfileToast(&quot;Сервер завершает выдачу. Нажмите ещё раз через пару секунд — повторной награды не будет.&quot;,&quot;warning&quot;,4200);else showProfileToast(error?.message||&quot;Не удалось получить подарок.&quot;,&quot;warning&quot;);
+          hapticNotify(&quot;error&quot;);return false;
+        }finally{playerGiftClaimBusy=false;}
       }
-
 
       async function claimAllPlayerGiftsClient(button = playerMailClaimAllButton) {
         if(!telegramProfile?.initData||playerGiftClaimAllBusy||playerGiftClaimBusy)return false;
