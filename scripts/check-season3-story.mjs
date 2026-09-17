@@ -10,9 +10,20 @@ if (!fs.existsSync(workerPath)) {
   process.exit(1);
 }
 const worker = fs.readFileSync(workerPath, 'utf8');
+const battlePassPath = path.join(root, 'battle-pass.html');
+if (!fs.existsSync(battlePassPath)) {
+  console.error('FAIL  battle-pass.html missing');
+  process.exit(1);
+}
+const battlePass = fs.readFileSync(battlePassPath, 'utf8');
 const checks = [];
 function must(label, needle) {
   const ok = worker.includes(needle);
+  checks.push([label, ok]);
+  console.log(`${ok ? 'PASS' : 'FAIL'}  ${label}`);
+}
+function mustClient(label, needle) {
+  const ok = battlePass.includes(needle);
   checks.push([label, ok]);
   console.log(`${ok ? 'PASS' : 'FAIL'}  ${label}`);
 }
@@ -58,6 +69,16 @@ must('leaf bridge star clue', 'лист → мост → звезда');
 must('white rabbit token', 'белый жетон в форме кролика');
 must('white rabbit ending', 'кто такой Белый Кролик и почему он ждал именно Зеффи?');
 must('continuation ending', 'Продолжение следует. 🐾🤍');
+
+mustClient('story music reads shared player music setting', 'const SEASON_STORY_PROGRESS_KEYS=["zefirok-runner-progress-v2","zefirok-runner-progress-v2-secure-backup-v1"]');
+mustClient('story music respects musicEnabled', 'function seasonStoryMusicEnabled(){');
+mustClient('story music keeps blocked autoplay for gesture retry', 'seasonStoryAudioRetryUrl=next;bindSeasonStoryMusicUnlock();');
+mustClient('story music retries on pointer gesture', 'document.addEventListener("pointerdown",retry,{capture:true,passive:true})');
+mustClient('story music retries on touch gesture', 'document.addEventListener("touchend",retry,{capture:true,passive:true})');
+mustClient('story music uses inline playback', 'audio.setAttribute("playsinline","")');
+mustClient('story first page primes music before async open', 'function openPendingSeasonStoryFromGesture(){const pending=seasonStoryData()?.pending;if(pending)primeSeasonStoryMusic(pending);void showPendingSeasonStory();}');
+mustClient('story card opens through user gesture music path', 'el("seasonStoryOpen").addEventListener("click",()=>{passImpactHaptic("medium");openPendingSeasonStoryFromGesture();});');
+mustClient('season path opens through user gesture music path', 'if(status==="available"){openPendingSeasonStoryFromGesture();return;}');
 
 const eventCount = (worker.match(/key:"(?:chapter-[1-5]|finale)", sortOrder:/g) || []).length;
 const eventCountOk = eventCount >= 11; // S2 has 5 existing events; S3 adds 6.

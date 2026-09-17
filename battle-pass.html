@@ -6494,7 +6494,7 @@ img[src$="/xp.webp"]{
   }
   function openSeasonPathStory(eventId,status,unlockLevel){
     const story=seasonStoryData?.()||{},id=String(eventId||""),timeline=seasonPathStoryTimeline(),timelineItem=timeline.find(entry=>String(entry?.eventId||"")===id)||timeline.find(entry=>Number(entry?.unlockLevel)===Number(unlockLevel))||{eventId:id,unlockLevel:Number(unlockLevel)||1,status:"locked",chapterNumber:timeline.findIndex(entry=>Number(entry?.unlockLevel)===Number(unlockLevel))+1};
-    if(status==="available"){void showPendingSeasonStory();return;}
+    if(status==="available"){openPendingSeasonStoryFromGesture();return;}
     if(status==="read"){const item=(Array.isArray(story.archive)?story.archive:[]).find(entry=>String(entry?.eventId||"")===id);if(item){showSeasonStoryEvent(item,{pending:false});return;}}
     showSeasonPathStoryInfo(timelineItem);
   }
@@ -7119,9 +7119,15 @@ img[src$="/xp.webp"]{
   function renderSeasonLetter(){const letter=seasonLetterData(),card=el("seasonLetterCard");if(!card)return;const visible=Boolean(letter?.available);card.hidden=!visible;if(!visible)return;el("seasonLetterCardTitle").textContent=letter.envelopeTitle||letter.title||"Вам письмо";el("seasonLetterCardPreview").textContent=letter.unread?(letter.previewText||"Спойлер следующего сезона ждёт внутри."):(letter.title?`Прочитано · ${letter.title}`:"Письмо уже прочитано");card.classList.toggle("is-read",!letter.unread);}
 
   function seasonStoryData(){return serverPass?.story&&typeof serverPass.story==="object"?serverPass.story:null;}
-  let seasonStoryView=null,seasonStoryAudio=null,seasonStoryAudioUrl="";
-  function stopSeasonStoryMusic(){if(seasonStoryAudio){try{seasonStoryAudio.pause();seasonStoryAudio.currentTime=0;}catch{}seasonStoryAudio=null;}seasonStoryAudioUrl="";}
-  function playSeasonStoryMusic(url){const next=String(url||"").trim();if(!next){stopSeasonStoryMusic();return;}if(seasonStoryAudio&&seasonStoryAudioUrl===next&&!seasonStoryAudio.paused)return;stopSeasonStoryMusic();try{const audio=new Audio(next);audio.loop=true;audio.volume=.34;seasonStoryAudio=audio;seasonStoryAudioUrl=next;audio.play().catch(()=>{});}catch{stopSeasonStoryMusic();}}
+  let seasonStoryView=null,seasonStoryAudio=null,seasonStoryAudioUrl="",seasonStoryAudioRetryUrl="",seasonStoryAudioUnlockBound=false;
+  const SEASON_STORY_PROGRESS_KEYS=["zefirok-runner-progress-v2","zefirok-runner-progress-v2-secure-backup-v1"];
+  function seasonStoryMusicEnabled(){for(const key of SEASON_STORY_PROGRESS_KEYS){try{const saved=JSON.parse(localStorage.getItem(key)||"null");if(saved&&typeof saved==="object"&&typeof saved.musicEnabled==="boolean")return saved.musicEnabled!==false;}catch{}}return true;}
+  function clearSeasonStoryMusicRetry(){seasonStoryAudioRetryUrl="";}
+  function stopSeasonStoryMusic(){clearSeasonStoryMusicRetry();if(seasonStoryAudio){try{seasonStoryAudio.pause();seasonStoryAudio.currentTime=0;}catch{}seasonStoryAudio=null;}seasonStoryAudioUrl="";}
+  function bindSeasonStoryMusicUnlock(){if(seasonStoryAudioUnlockBound)return;seasonStoryAudioUnlockBound=true;const retry=()=>{const next=String(seasonStoryAudioRetryUrl||"").trim();if(!next||!seasonStoryView||el("seasonStoryOverlay")?.hidden!==false||!seasonStoryMusicEnabled()){clearSeasonStoryMusicRetry();return;}clearSeasonStoryMusicRetry();playSeasonStoryMusic(next,{fromGesture:true});};document.addEventListener("pointerdown",retry,{capture:true,passive:true});document.addEventListener("touchend",retry,{capture:true,passive:true});document.addEventListener("keydown",retry,true);}
+  function playSeasonStoryMusic(url,{fromGesture=false}={}){const next=String(url||"").trim();if(!next||!seasonStoryMusicEnabled()){stopSeasonStoryMusic();return;}let audio=seasonStoryAudio;if(!audio||seasonStoryAudioUrl!==next){stopSeasonStoryMusic();try{audio=new Audio(next);audio.loop=true;audio.preload="auto";audio.volume=.34;audio.setAttribute("playsinline","");seasonStoryAudio=audio;seasonStoryAudioUrl=next;}catch{stopSeasonStoryMusic();return;}}if(!audio.paused){clearSeasonStoryMusicRetry();return;}try{const pending=audio.play();if(pending&&typeof pending.catch==="function")pending.catch(()=>{if(seasonStoryAudio===audio&&seasonStoryAudioUrl===next&&seasonStoryMusicEnabled()){seasonStoryAudioRetryUrl=next;bindSeasonStoryMusicUnlock();}});else clearSeasonStoryMusicRetry();}catch{if(seasonStoryAudio===audio&&seasonStoryMusicEnabled()){seasonStoryAudioRetryUrl=next;bindSeasonStoryMusicUnlock();}}}
+  function primeSeasonStoryMusic(item){const page=storyPages(item)[0]||null,next=String(page?.musicUrl||"").trim();if(next&&seasonStoryMusicEnabled())playSeasonStoryMusic(next,{fromGesture:true});}
+  function openPendingSeasonStoryFromGesture(){const pending=seasonStoryData()?.pending;if(pending)primeSeasonStoryMusic(pending);void showPendingSeasonStory();}
   function closeSeasonStory(){stopSeasonStoryMusic();el("seasonStoryOverlay").hidden=true;seasonStoryView=null;if(el("seasonStoryArchiveOverlay").hidden&&el("seasonLetterOverlay").hidden&&el("rewardSummary").hidden&&el("purchaseConfirm").hidden)document.body.style.overflow="";}
   function closeSeasonStoryArchive(){el("seasonStoryArchiveOverlay").hidden=true;if(el("seasonStoryOverlay").hidden&&el("seasonLetterOverlay").hidden&&el("rewardSummary").hidden&&el("purchaseConfirm").hidden)document.body.style.overflow="";}
   function storyPages(item){const pages=Array.isArray(item?.pages)?item.pages:[];if(pages.length)return pages;return [{title:"",bodyText:String(item?.bodyText||""),imageUrl:String(item?.imageUrl||""),buttonText:String(item?.buttonText||"Продолжить"),musicId:"",musicUrl:"",musicTitle:""}];}
@@ -8664,7 +8670,7 @@ img[src$="/xp.webp"]{
   el("seasonLetterClose").addEventListener("click",()=>{passSelectHaptic();closeSeasonLetter();});
   el("seasonLetterReveal").addEventListener("click",()=>{passImpactHaptic("medium");void revealSeasonLetter();});
   el("seasonLetterOverlay").addEventListener("click",event=>{if(event.target===el("seasonLetterOverlay"))closeSeasonLetter();});
-  el("seasonStoryOpen").addEventListener("click",()=>{passImpactHaptic("medium");void showPendingSeasonStory();});
+  el("seasonStoryOpen").addEventListener("click",()=>{passImpactHaptic("medium");openPendingSeasonStoryFromGesture();});
   el("seasonStoryArchive").addEventListener("click",showSeasonStoryArchive);
   el("seasonStoryClose").addEventListener("click",()=>{passSelectHaptic();closeSeasonStory();});
   el("seasonStoryBack").addEventListener("click",()=>{previousSeasonStoryPage();});
