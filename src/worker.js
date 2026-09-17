@@ -12977,7 +12977,7 @@ async function openOrdinaryGrantedCase(request,env,ctx=null){
     if(ctx?.waitUntil)ctx.waitUntil(background);else void background;
     return jsonResponse(await ordinaryCaseResponsePayload(env,telegramId,row,requestId,{seasonPassTaskNotice:taskEvent?seasonPassTaskNoticePublic(taskEvent.taskRows||[],taskEvent.season):undefined}));
   }catch(error){
-    if(claimedId){try{await env.DB.prepare(`UPDATE granted_cases SET status='pending',opening_started_at=0,opening_token='' WHERE id=? AND status='opening' AND opening_token=?`).bind(claimedId,openingClaimToken).run();}catch{}
+    if(claimedId){try{await env.DB.prepare(`UPDATE granted_cases SET status='pending',opening_started_at=0,opening_token='' WHERE id=? AND status='opening' AND opening_token=?`).bind(claimedId,openingClaimToken).run();}catch{}}
     if(error instanceof ApiError)return operationErrorResponse(error,'Не удалось открыть обычный кейс.',{operationId:openingClaimToken,operationKind:'granted_case_open'});
     if(String(error?.message||error).includes('granted_case_opening_guard_ok'))return operationErrorResponse(playerOperationError(409,'Открытие обычного кейса было перехвачено повторной проверкой. Продолжаем эту же операцию.',{code:'STATE_CONFLICT',operationCode:'STATE_CONFLICT',retryable:true,operationId:openingClaimToken,operationKind:'granted_case_open'}),'Открытие обычного кейса продолжается.');
     console.error('openOrdinaryGrantedCase failed',error);

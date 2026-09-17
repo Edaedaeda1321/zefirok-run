@@ -61,6 +61,7 @@ function verifyReleaseWiring() {
 const steps = [
   ['repository hygiene', 'node', ['scripts/check-repo-hygiene.mjs']],
   ['worker syntax', 'node', ['--check', 'src/worker.js']],
+  ['worker strict module syntax', 'node', ['--no-warnings', '--experimental-vm-modules', 'scripts/check-worker-module-syntax.mjs']],
   ['index srcdoc integrity', 'node', ['scripts/check-index-srcdoc.mjs']],
   // Protect the exact regression that previously made rating/profile reads hang:
   // public leaderboard reads must remain read-only and first paint must stay lazy.
