@@ -47,3 +47,8 @@ must('runtime manifest drops index',runtime,"'idx_game_run_story_collectibles_pl
 must('runtime manifest progress index',runtime,"'idx_season_story_collectible_progress_player'");
 must('production gate wiring',gate,"['season story collectibles', 'node', ['scripts/check-season-story-collectibles.mjs']]");
 const failed=checks.filter(x=>!x.ok);for(const item of checks)console.log(`${item.ok?'PASS':'FAIL'}  ${item.name}`);if(failed.length){console.error(`\nSeason story collectible check failed: ${failed.length}/${checks.length}`);for(const f of failed)console.error(`- ${f.name}: ${f.detail}`);process.exit(1);}console.log(`\nSeason story collectible check PASS: ${checks.length} invariants.`);
+
+// story-find fallback resolves Belkino achievement art
+if(!worker.includes('hint.includes("story-find")')){console.error('FAIL story-find fallback missing');process.exit(1);}
+for(const f of ['season-belkino-traces-5-v3.webp','season-belkino-traces-25-v3.webp','season-belkino-traces-50-v3.webp']){if(!worker.includes(f)){console.error('FAIL missing per-step art '+f);process.exit(1);}}
+console.log('PASS story-find fallback resolves Belkino achievement art');

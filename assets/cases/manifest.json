@@ -1,7 +1,7 @@
 {
   "version": 1,
-  "catalogHash": "6a80992ba63194e5",
-  "count": 102,
+  "catalogHash": "b5b4c20e373fbe16",
+  "count": 111,
   "images": [
     {
       "fileName": "398D69BA-8943-4846-94B3-FC5CB717A67F.webp",
@@ -388,6 +388,38 @@
       "size": 206212
     },
     {
+      "fileName": "avatars/season4_avatar_common_1.webp",
+      "label": "Season4 avatar common 1",
+      "folder": "avatars",
+      "path": "/assets/cases/avatars/season4_avatar_common_1.webp",
+      "hash": "f9124fca57f2",
+      "size": 275540
+    },
+    {
+      "fileName": "avatars/season4_avatar_common_2.webp",
+      "label": "Season4 avatar common 2",
+      "folder": "avatars",
+      "path": "/assets/cases/avatars/season4_avatar_common_2.webp",
+      "hash": "c82581887a2f",
+      "size": 283256
+    },
+    {
+      "fileName": "avatars/season4_avatar_epic.webp",
+      "label": "Season4 avatar epic",
+      "folder": "avatars",
+      "path": "/assets/cases/avatars/season4_avatar_epic.webp",
+      "hash": "eac67c779691",
+      "size": 240392
+    },
+    {
+      "fileName": "avatars/season4_avatar_legendary.webp",
+      "label": "Season4 avatar legendary",
+      "folder": "avatars",
+      "path": "/assets/cases/avatars/season4_avatar_legendary.webp",
+      "hash": "0a72bebdcc0a",
+      "size": 341478
+    },
+    {
       "fileName": "boosters/11FDBEBF-D838-4DA5-AA57-9DE0E4BA26AE.webp",
       "label": "11FDBEBF D838 4DA5 AA57 9DE0E4BA26AE",
       "folder": "boosters",
@@ -738,6 +770,46 @@
       "path": "/assets/cases/trails/mifik_sled_season2.webp",
       "hash": "e873276bf565",
       "size": 276320
+    },
+    {
+      "fileName": "trails/season4_trail_common.webp",
+      "label": "Season4 trail common",
+      "folder": "trails",
+      "path": "/assets/cases/trails/season4_trail_common.webp",
+      "hash": "97e3048ff75e",
+      "size": 188678
+    },
+    {
+      "fileName": "trails/season4_trail_legendary.webp",
+      "label": "Season4 trail legendary",
+      "folder": "trails",
+      "path": "/assets/cases/trails/season4_trail_legendary.webp",
+      "hash": "cd39eaa5e951",
+      "size": 193600
+    },
+    {
+      "fileName": "trails/season4_trail_mythic.webp",
+      "label": "Season4 trail mythic",
+      "folder": "trails",
+      "path": "/assets/cases/trails/season4_trail_mythic.webp",
+      "hash": "1a689052aa57",
+      "size": 248934
+    },
+    {
+      "fileName": "trails/season4_trail_rare.webp",
+      "label": "Season4 trail rare",
+      "folder": "trails",
+      "path": "/assets/cases/trails/season4_trail_rare.webp",
+      "hash": "b2f0bedb3f7b",
+      "size": 255756
+    },
+    {
+      "fileName": "trails/season4_trail_superrare.webp",
+      "label": "Season4 trail superrare",
+      "folder": "trails",
+      "path": "/assets/cases/trails/season4_trail_superrare.webp",
+      "hash": "177c6acdc5de",
+      "size": 241728
     },
     {
       "fileName": "trails/sled_alex_collectia.webp",

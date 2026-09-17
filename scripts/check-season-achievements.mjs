@@ -19,18 +19,18 @@ must('season 1 joined art',worker,'season-cafe-joined.webp');
 must('season 1 complete art',worker,'season-cafe-complete.webp');
 must('season 2 joined art',worker,'season-night-joined.webp');
 must('season 2 complete art',worker,'season-night-complete.webp');
-must('season 3 joined art',worker,'season-belkino-joined.webp');
-must('season 3 complete art',worker,'season-belkino-complete.webp');
-must('season 4 joined art',worker,'season-white-rabbit-joined.webp');
-must('season 4 complete art',worker,'season-white-rabbit-complete.webp');
+must('season 3 joined art',worker,'season-belkino-joined-v3.webp');
+must('season 3 complete art',worker,'season-belkino-complete-v3.webp');
+must('season 4 joined art',worker,'season-white-rabbit-joined-v3.webp');
+must('season 4 complete art',worker,'season-white-rabbit-complete-v3.webp');
 must('season 3 joined title',worker,'joinedTitle:"Гость Белкино"');
 must('season 3 complete title',worker,'completeTitle:"Тайны Белкино раскрыты"');
 must('season 4 joined title',worker,'joinedTitle:"Дверь по соседству"');
 must('season 4 complete title',worker,'completeTitle:"Две двери — одна история"');
 must('Belkino trace art map',worker,'const ACHIEVEMENT_STORY_COLLECTIBLE_ART = Object.freeze({');
-must('5 trace art',worker,'season-belkino-traces-5.webp');
-must('25 trace art',worker,'season-belkino-traces-25.webp');
-must('50 trace art',worker,'season-belkino-traces-50.webp');
+must('5 trace art',worker,'season-belkino-traces-5-v3.webp');
+must('25 trace art',worker,'season-belkino-traces-25-v3.webp');
+must('50 trace art',worker,'season-belkino-traces-50-v3.webp');
 must('story collectible uses per-step art',worker,'achievementStoryCollectibleArtUrl(definition)');
 must('season art resolves title/asset/id',worker,'achievementSeasonArtGroup(definition = {})');
 must('season definitions carry asset key',worker,'seasonAssetKey=String(row.asset_key||"")');
@@ -59,9 +59,9 @@ must('D1 pre-0087 season table exposes visuals json',d1Snapshot,"visuals_json TE
 const badgeFiles=[
   'season-cafe-joined.webp','season-cafe-complete.webp',
   'season-night-joined.webp','season-night-complete.webp',
-  'season-belkino-joined.webp','season-belkino-complete.webp',
-  'season-white-rabbit-joined.webp','season-white-rabbit-complete.webp',
-  'season-belkino-traces-5.webp','season-belkino-traces-25.webp','season-belkino-traces-50.webp'
+  'season-belkino-joined-v3.webp','season-belkino-complete-v3.webp',
+  'season-white-rabbit-joined-v3.webp','season-white-rabbit-complete-v3.webp',
+  'season-belkino-traces-5-v3.webp','season-belkino-traces-25-v3.webp','season-belkino-traces-50-v3.webp'
 ];
 for(const file of badgeFiles){
   const rel=path.join('assets','achievements','badges',file),abs=path.join(root,rel);

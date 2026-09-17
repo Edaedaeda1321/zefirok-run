@@ -227,7 +227,11 @@ const FUTURE_SEASON_CONTENT = Object.freeze({
     season3_avatar_mythic_new_1: Object.freeze({ id:"season3_avatar_mythic_new_1", title:"Хрустальная фея", rarity:"mythic", imageUrl:"/assets/cases/avatars/season3_avatar_mythic_new_1.webp" }),
     season3_avatar_mythic_new_2: Object.freeze({ id:"season3_avatar_mythic_new_2", title:"Хрустальное сияние", rarity:"mythic", imageUrl:"/assets/cases/avatars/season3_avatar_mythic_new_2.webp" }),
     season3_avatar_legendary_new_1: Object.freeze({ id:"season3_avatar_legendary_new_1", title:"Золотая корона", rarity:"legendary", imageUrl:"/assets/cases/avatars/season3_avatar_legendary_new_1.webp" }),
-    season3_avatar_legendary_new_2: Object.freeze({ id:"season3_avatar_legendary_new_2", title:"Золотое сердце", rarity:"legendary", imageUrl:"/assets/cases/avatars/season3_avatar_legendary_new_2.webp" })
+    season3_avatar_legendary_new_2: Object.freeze({ id:"season3_avatar_legendary_new_2", title:"Золотое сердце", rarity:"legendary", imageUrl:"/assets/cases/avatars/season3_avatar_legendary_new_2.webp" }),
+    season4_avatar_common_1: Object.freeze({ id:"season4_avatar_common_1", seasonKey:"season4", title:"Белый Кролик · Обычный I", rarity:"common", imageUrl:"/assets/cases/avatars/season4_avatar_common_1.webp" }),
+    season4_avatar_common_2: Object.freeze({ id:"season4_avatar_common_2", seasonKey:"season4", title:"Белый Кролик · Обычный II", rarity:"common", imageUrl:"/assets/cases/avatars/season4_avatar_common_2.webp" }),
+    season4_avatar_epic: Object.freeze({ id:"season4_avatar_epic", seasonKey:"season4", title:"Белый Кролик · Эпический", rarity:"epic", imageUrl:"/assets/cases/avatars/season4_avatar_epic.webp" }),
+    season4_avatar_legendary: Object.freeze({ id:"season4_avatar_legendary", seasonKey:"season4", title:"Белый Кролик · Легендарный", rarity:"legendary", imageUrl:"/assets/cases/avatars/season4_avatar_legendary.webp" })
   }),
   frame: Object.freeze({
     season3_frame_elite_plus: Object.freeze({ id:"season3_frame_elite_plus", seasonKey:"season2", title:"Ночная Королева", rarity:"legendary", imageUrl:"/assets/rating/frames/profile/Elit+ramka_season2_5.webp" }),
@@ -244,7 +248,12 @@ const FUTURE_SEASON_CONTENT = Object.freeze({
     season3_frame_mythic_new_1: Object.freeze({ id:"season3_frame_mythic_new_1", title:"Лотосовый сад", rarity:"mythic", imageUrl:"/assets/rating/frames/profile/ramka_s3_mifik1.webp" }),
     season3_frame_mythic_new_2: Object.freeze({ id:"season3_frame_mythic_new_2", title:"Королевская сакура", rarity:"mythic", imageUrl:"/assets/rating/frames/profile/ramka_s3_mifik2.webp" }),
     season3_frame_legendary_new_1: Object.freeze({ id:"season3_frame_legendary_new_1", title:"Золотой сад", rarity:"legendary", imageUrl:"/assets/rating/frames/profile/ramka_s3_legendary1.webp" }),
-    season3_frame_legendary_new_2: Object.freeze({ id:"season3_frame_legendary_new_2", title:"Королевский сад", rarity:"legendary", imageUrl:"/assets/rating/frames/profile/ramka_s3_legendary2.webp" })
+    season3_frame_legendary_new_2: Object.freeze({ id:"season3_frame_legendary_new_2", title:"Королевский сад", rarity:"legendary", imageUrl:"/assets/rating/frames/profile/ramka_s3_legendary2.webp" }),
+    season4_frame_common: Object.freeze({ id:"season4_frame_common", seasonKey:"season4", title:"Рамка Белого Кролика · Обычная", rarity:"common", imageUrl:"/assets/rating/frames/profile/season4_frame_common.webp" }),
+    season4_frame_epic: Object.freeze({ id:"season4_frame_epic", seasonKey:"season4", title:"Рамка Белого Кролика · Эпическая", rarity:"epic", imageUrl:"/assets/rating/frames/profile/season4_frame_epic.webp" }),
+    season4_frame_mythic: Object.freeze({ id:"season4_frame_mythic", seasonKey:"season4", title:"Рамка Белого Кролика · Мифическая", rarity:"mythic", imageUrl:"/assets/rating/frames/profile/season4_frame_mythic.webp" }),
+    season4_frame_legendary_1: Object.freeze({ id:"season4_frame_legendary_1", seasonKey:"season4", title:"Рамка Белого Кролика · Легендарная I", rarity:"legendary", imageUrl:"/assets/rating/frames/profile/season4_frame_legendary_1.webp" }),
+    season4_frame_legendary_2: Object.freeze({ id:"season4_frame_legendary_2", seasonKey:"season4", title:"Рамка Белого Кролика · Легендарная II", rarity:"legendary", imageUrl:"/assets/rating/frames/profile/season4_frame_legendary_2.webp" })
   }),
   trail: Object.freeze({
     season3_trail_epic: Object.freeze({ id:"season3_trail_epic", seasonKey:"season2", title:"Ночной Волшебный след", rarity:"epic", imageUrl:"/assets/cases/trails/Epik_sled_season2.webp" }),
@@ -260,7 +269,12 @@ const FUTURE_SEASON_CONTENT = Object.freeze({
     season3_trail_epic_new_3: Object.freeze({ id:"season3_trail_epic_new_3", title:"Садовый след", rarity:"epic", imageUrl:"/assets/cases/trails/sled_s3_epick3.webp" }),
     season3_trail_mythic_new_1: Object.freeze({ id:"season3_trail_mythic_new_1", title:"Изумрудная лапка", rarity:"mythic", imageUrl:"/assets/cases/trails/sled_s3_mifik1.webp" }),
     season3_trail_mythic_new_2: Object.freeze({ id:"season3_trail_mythic_new_2", title:"Хрустальная лапка", rarity:"mythic", imageUrl:"/assets/cases/trails/sled_s3_mifik2.webp" }),
-    season3_trail_legendary_new_1: Object.freeze({ id:"season3_trail_legendary_new_1", title:"Королевская лапка", rarity:"legendary", imageUrl:"/assets/cases/trails/sled_s3_legendary1.webp" })
+    season3_trail_legendary_new_1: Object.freeze({ id:"season3_trail_legendary_new_1", title:"Королевская лапка", rarity:"legendary", imageUrl:"/assets/cases/trails/sled_s3_legendary1.webp" }),
+    season4_trail_common: Object.freeze({ id:"season4_trail_common", seasonKey:"season4", title:"След Белого Кролика · Обычный", rarity:"common", imageUrl:"/assets/cases/trails/season4_trail_common.webp" }),
+    season4_trail_rare: Object.freeze({ id:"season4_trail_rare", seasonKey:"season4", title:"След Белого Кролика · Редкий", rarity:"rare", imageUrl:"/assets/cases/trails/season4_trail_rare.webp" }),
+    season4_trail_superrare: Object.freeze({ id:"season4_trail_superrare", seasonKey:"season4", title:"След Белого Кролика · Сверхредкий", rarity:"superrare", imageUrl:"/assets/cases/trails/season4_trail_superrare.webp" }),
+    season4_trail_mythic: Object.freeze({ id:"season4_trail_mythic", seasonKey:"season4", title:"След Белого Кролика · Мифический", rarity:"mythic", imageUrl:"/assets/cases/trails/season4_trail_mythic.webp" }),
+    season4_trail_legendary: Object.freeze({ id:"season4_trail_legendary", seasonKey:"season4", title:"След Белого Кролика · Легендарный", rarity:"legendary", imageUrl:"/assets/cases/trails/season4_trail_legendary.webp" })
   }),
   skin: Object.freeze({}),
   music: Object.freeze({
@@ -276,6 +290,7 @@ const FUTURE_SEASON_CONTENT = Object.freeze({
 
 const FUTURE_SEASON_CONTENT_LABEL = "Тайны Белкино";
 const FUTURE_SEASON2_CONTENT_LABEL = "Сезон 2 · Ночь сладких чудес";
+const FUTURE_SEASON4_CONTENT_LABEL = "Сезон 4 · Белый Кролик";
 function futureSeasonContentCatalog(kind){ return FUTURE_SEASON_CONTENT[String(kind||"")] || Object.freeze({}); }
 function futureSeasonContentItem(kind,itemId){ return futureSeasonContentCatalog(kind)?.[String(itemId||"")] || null; }
 // Publishing an S2 item makes it visible, not owned. Keep historical item IDs.
@@ -286,7 +301,7 @@ function liveContentNativeClaimAllowed(kind,itemId,rule){
   return Boolean(!contentRequiresRewardOwnership(kind,itemId) && rule?.released && liveContentRouteEnabled(rule,"native"));
 }
 function futureSeasonContentSeasonKey(kind,itemId){ return String(futureSeasonContentItem(kind,itemId)?.seasonKey || "season3"); }
-function futureSeasonContentLabel(kind,itemId){ return futureSeasonContentSeasonKey(kind,itemId) === "season2" ? FUTURE_SEASON2_CONTENT_LABEL : FUTURE_SEASON_CONTENT_LABEL; }
+function futureSeasonContentLabel(kind,itemId){ const key=futureSeasonContentSeasonKey(kind,itemId);return key === "season2" ? FUTURE_SEASON2_CONTENT_LABEL : key === "season4" ? FUTURE_SEASON4_CONTENT_LABEL : FUTURE_SEASON_CONTENT_LABEL; }
 function futureSeasonContentMatchesSeasonKey(kind,itemId,seasonKey){ return futureSeasonContentSeasonKey(kind,itemId) === String(seasonKey||""); }
 
 // Draft seasonal case именно для S3 «Тайны Белкино». Исторический S2-контент
@@ -6738,12 +6753,12 @@ const ACHIEVEMENT_SEASON_ART = Object.freeze({
     complete:"/assets/achievements/badges/season-night-complete.webp"
   }),
   belkino:Object.freeze({
-    joined:"/assets/achievements/badges/season-belkino-joined.webp",
-    complete:"/assets/achievements/badges/season-belkino-complete.webp"
+    joined:"/assets/achievements/badges/season-belkino-joined-v3.webp",
+    complete:"/assets/achievements/badges/season-belkino-complete-v3.webp"
   }),
   whiteRabbit:Object.freeze({
-    joined:"/assets/achievements/badges/season-white-rabbit-joined.webp",
-    complete:"/assets/achievements/badges/season-white-rabbit-complete.webp"
+    joined:"/assets/achievements/badges/season-white-rabbit-joined-v3.webp",
+    complete:"/assets/achievements/badges/season-white-rabbit-complete-v3.webp"
   })
 });
 const ACHIEVEMENT_SEASON_PRESENTATION = Object.freeze({
@@ -6758,9 +6773,9 @@ const ACHIEVEMENT_SEASON_PRESENTATION = Object.freeze({
 });
 const ACHIEVEMENT_STORY_COLLECTIBLE_ART = Object.freeze({
   belkino:Object.freeze({
-    5:"/assets/achievements/badges/season-belkino-traces-5.webp",
-    25:"/assets/achievements/badges/season-belkino-traces-25.webp",
-    50:"/assets/achievements/badges/season-belkino-traces-50.webp"
+    5:"/assets/achievements/badges/season-belkino-traces-5-v3.webp",
+    25:"/assets/achievements/badges/season-belkino-traces-25-v3.webp",
+    50:"/assets/achievements/badges/season-belkino-traces-50-v3.webp"
   })
 });
 
@@ -6777,7 +6792,9 @@ function achievementSeasonArtGroup(definition = {}) {
   return "";
 }
 function achievementStoryCollectibleArtUrl(definition = {}) {
-  const seasonGroup=achievementSeasonArtGroup(definition);
+  const hint=achievementSeasonTitleKey([definition?.seasonTitle,definition?.seasonAssetKey,definition?.seasonId,definition?.seriesKey,definition?.collectibleId,definition?.id,definition?.source,definition?.collectibleArtUrl].filter(Boolean).join(" "));
+  let seasonGroup=achievementSeasonArtGroup(definition);
+  if(!seasonGroup&&(hint.includes("story-find")||hint.includes("rabbit_sled")||hint.includes("rabbit-sled")||hint.includes("тайны белкино")||hint.includes("belkino")))seasonGroup="belkino";
   const target=Math.max(0,Math.floor(Number(definition?.target)||0));
   const configured=seasonGroup?ACHIEVEMENT_STORY_COLLECTIBLE_ART[seasonGroup]?.[target]:"";
   return String(configured||seasonPassReadinessAssetPath(definition.collectibleArtUrl)||"");
@@ -24886,13 +24903,14 @@ async function ensureLiveContentReleaseSchema(env){
         env.DB.prepare(`CREATE INDEX IF NOT EXISTS idx_live_content_registry_schedule ON live_content_registry_state(status,release_at)`),
         env.DB.prepare(`CREATE INDEX IF NOT EXISTS idx_live_content_registry_season ON live_content_registry_state(content_season_id,status,release_at)`)
       ]);
-      let boundSeason3Id='',boundSeason2Id='';
+      let boundSeason3Id='',boundSeason2Id='',boundSeason4Id='';
       try{boundSeason3Id=String((await env.DB.prepare(`SELECT season_id FROM season_pass_case_presets WHERE preset_id='season3_belkino_case_v1' LIMIT 1`).first())?.season_id||'');}catch{}
       try{boundSeason2Id=String((await env.DB.prepare(`SELECT season_id FROM season_pass_story_presets WHERE preset_id='season2-night-cafe-story-v1' LIMIT 1`).first())?.season_id||'');}catch{}
+      try{boundSeason4Id=String((await env.DB.prepare(`SELECT season_id FROM season_pass_story_presets WHERE preset_id='season4-white-rabbit-story-v1-canonical' LIMIT 1`).first())?.season_id||'');}catch{}
       const now=Math.floor(Date.now()/1000),statements=[];
       for(const [kind,catalog] of Object.entries(FUTURE_SEASON_CONTENT)){
         for(const [itemId,item] of Object.entries(catalog||{})){
-          const seasonKey=String(item?.seasonKey||'season3'),initialSeasonId=seasonKey==='season2'?boundSeason2Id:boundSeason3Id;
+          const seasonKey=String(item?.seasonKey||'season3'),initialSeasonId=seasonKey==='season2'?boundSeason2Id:seasonKey==='season4'?boundSeason4Id:boundSeason3Id;
           statements.push(env.DB.prepare(`INSERT OR IGNORE INTO live_content_registry_state(item_kind,item_id,content_season_id,status,release_at,routes_json,ever_released,updated_at,updated_by) VALUES(?,?,?,'hidden',0,'{}',0,?,'system')`).bind(kind,itemId,initialSeasonId,now));
           statements.push(env.DB.prepare(`INSERT OR IGNORE INTO live_content_release_rules(item_kind,item_id,content_season_id,released,ever_released,destination_type,destination_id,destination_config_json,updated_at,updated_by) VALUES(?,?,?,0,0,'native','','{}',?,'system')`).bind(kind,itemId,initialSeasonId,now));
           if(initialSeasonId){
@@ -42248,6 +42266,7 @@ async function normalizeValidateLiveContentPayload(env,payload={}){
     try{
       if(seasonKey==='season2')seasonId=String((await env.DB.prepare(`SELECT season_id FROM season_pass_story_presets WHERE preset_id='season2-night-cafe-story-v1' LIMIT 1`).first())?.season_id||'');
       else if(seasonKey==='season3')seasonId=String((await env.DB.prepare(`SELECT season_id FROM season_pass_case_presets WHERE preset_id='season3_belkino_case_v1' LIMIT 1`).first())?.season_id||'');
+      else if(seasonKey==='season4')seasonId=String((await env.DB.prepare(`SELECT season_id FROM season_pass_story_presets WHERE preset_id='season4-white-rabbit-story-v1-canonical' LIMIT 1`).first())?.season_id||'');
     }catch{}
   }
   if(!seasonId&&requestedSeasonId){const bindSeason=await loadSeasonPassSeasonById(env,requestedSeasonId);if(!bindSeason)throw new ApiError(404,'Выбранный seasonId для hidden-item не найден.');if(bindSeason.status==='ended')throw new ApiError(409,'Нельзя впервые привязывать hidden-item к завершённому сезону.');seasonId=requestedSeasonId;}
