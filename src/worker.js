@@ -417,6 +417,97 @@ function season2StoryPresetEvents(){
   ];
 }
 
+
+const SEASON3_STORY_PRESET = Object.freeze({
+  id: "season3-belkino-story-v1",
+  marker: "system-season3-story-v1"
+});
+
+function season3StoryPresetEvents(){
+  const seasonArt="/assets/achievements/showcases/vitrina_s3.webp";
+  return [
+    {
+      key:"chapter-1", sortOrder:10, unlockLevel:1, enabled:true,
+      title:"ГЛАВА I — «За дверями кафе»",
+      pushText:"На подоконнике Зеффи появился странный зелёный лист. Первая глава «Тайн Белкино» открыта.",
+      pages:[
+        {title:"Тайны Белкино",bodyText:"«Иногда достаточно выйти на прогулку, чтобы началось новое приключение».\n\nПосле событий «Ночи сладких чудес» кафе снова открывается утром. Всё выглядит привычно: кофе готовится, на витрине лежит зефир, за окнами начинается новый день.",imageUrl:seasonArt,buttonText:"Далее",musicId:""},
+        {title:"Зелёный лист",bodyText:"Но Зеффи замечает кое-что странное.\n\nНа подоконнике лежит зелёный лист, которого вечером там точно не было. На листе едва заметно мерцают золотые следы лапок, а рядом лежит небольшая записка.",imageUrl:"",buttonText:"Далее",musicId:""},
+        {title:"Записка",bodyText:"«Если хочешь узнать, куда ведёт следующая дорога — ищи место, где шумят деревья, блестит вода и старые дорожки помнят больше, чем кажется».\n\nКот Алекс считает, что после прошлого сезона Зеффи уже начинает видеть загадки буквально повсюду. Но Зеффи уверена: это не случайность.\n\nТак начинается путешествие в Белкино.",imageUrl:"",buttonText:"Далее",musicId:""},
+        {title:"За дверями кафе",bodyText:"Впервые Зеффи отправляется так далеко от привычного кафе.\n\nШум кофемашины постепенно сменяется шелестом листьев, городской фон остаётся позади, а впереди появляются цветочные клумбы, зелёные дорожки и первые посетители парка.\n\nПоначалу это кажется обычной прогулкой.",imageUrl:"",buttonText:"Далее",musicId:""},
+        {title:"Первая прогулка",bodyText:"Зеффи встречает велосипеды, оставленные у дорожек, корзины для пикника, клумбы, небольшие брёвна и другие препятствия. Кот Алекс идёт рядом и постоянно напоминает, что они вообще-то пришли просто погулять.\n\nНо Зеффи начинает замечать маленькие золотые следы.",imageUrl:"",buttonText:"Далее",musicId:""},
+        {title:"Золотые следы",bodyText:"Они появляются на камнях, возле цветов и иногда прямо посреди дорожки.\n\nВ конце главы следы приводят их к небольшому домику для птиц. На жердочке сидит маленькая птичка. Когда Зеффи подходит ближе, птица улетает и оставляет после себя розовую ленточку с маленьким золотым символом сердца.",imageUrl:"",buttonText:"Далее",musicId:""},
+        {title:"Не просто прогулка",bodyText:"Алекс впервые признаёт:\n\n«Ладно… Возможно, это действительно не просто прогулка».",imageUrl:"",buttonText:"Завершить главу",musicId:""}
+      ]
+    },
+    {
+      key:"chapter-2", sortOrder:20, unlockLevel:11, enabled:true,
+      title:"ГЛАВА II — «Следы среди цветов»",
+      pushText:"Золотые следы ведут Зеффи всё глубже в Белкино. Вторая глава уже доступна.",
+      pages:[
+        {title:"Следы среди цветов",bodyText:"Зеффи и Алекс решают разобраться, кому принадлежала ленточка.\n\nЧем глубже они заходят в парк, тем больше странностей замечают.",imageUrl:seasonArt,buttonText:"Далее",musicId:""},
+        {title:"Парк будто отвечает",bodyText:"На некоторых цветах появляются золотые искорки. На дорожках лежат лепестки, образующие небольшие стрелки. Птицы будто специально перелетают вперёд и ждут, пока Зеффи догонит их.",imageUrl:"",buttonText:"Далее",musicId:""},
+        {title:"Глубже в Белкино",bodyText:"Игровое пространство становится ярче: появляются новые цветочные препятствия, декоративные камни, тележки, велосипеды и пикниковые зоны.",imageUrl:"",buttonText:"Далее",musicId:""},
+        {title:"Деревянная табличка",bodyText:"Возле одной из клумб Зеффи находит маленькую деревянную табличку.\n\nНа ней изображены:\n\nлист → мост → звезда\n\nНикакого текста.",imageUrl:"",buttonText:"Далее",musicId:""},
+        {title:"Знакомая звезда",bodyText:"Алекс предполагает, что это старая парковая игра или чей-то забытый квест.\n\nЗеффи замечает другое: символ звезды очень похож на те знаки, которые появлялись во время событий второго сезона.\n\nЗначит, история «Ночи сладких чудес» могла закончиться не полностью.",imageUrl:"",buttonText:"Далее",musicId:""},
+        {title:"Первая часть карты",bodyText:"В конце главы герои находят первую часть старой карты парка.\n\nНо часть карты оборвана.",imageUrl:"",buttonText:"Завершить главу",musicId:""}
+      ]
+    },
+    {
+      key:"chapter-3", sortOrder:30, unlockLevel:21, enabled:true,
+      title:"ГЛАВА III — «Карта Белкино»",
+      pushText:"Старая карта Белкино начинает складываться. Третья глава истории открыта.",
+      pages:[
+        {title:"Карта Белкино",bodyText:"Теперь обычная прогулка превращается в настоящее небольшое расследование.\n\nНа найденной карте отмечено несколько мест, однако большинство обозначений стёрлись. Остался только один хорошо заметный знак — старый мост.",imageUrl:seasonArt,buttonText:"Далее",musicId:""},
+        {title:"Части карты",bodyText:"По пути к нему Зеффи и Алекс находят всё больше частей карты.\n\nОдна оказывается спрятана возле декоративного камня. Другая — рядом с корзиной для пикника. Ещё одну приносит та самая маленькая птица.",imageUrl:"",buttonText:"Далее",musicId:""},
+        {title:"Неизвестное место",bodyText:"Когда части соединяют вместе, становится видно, что дорожка ведёт не просто через парк.\n\nНа карте есть место, которого Зеффи раньше не замечала. Оно отмечено необычным символом — белым силуэтом с длинными ушами.",imageUrl:"",buttonText:"Далее",musicId:""},
+        {title:"Белый Кролик?",bodyText:"Алекс смотрит на карту:\n\n«Это… кролик?»\n\nЗеффи:\n\n«Похоже на то. Только почему он отмечен на карте?»\n\nОни решают продолжить путь.",imageUrl:"",buttonText:"Далее",musicId:""},
+        {title:"У старого моста",bodyText:"Но возле моста золотые следы неожиданно исчезают.\n\nВместо них на перилах висит небольшая карточка.",imageUrl:"",buttonText:"Далее",musicId:""},
+        {title:"Вспомнить дорогу",bodyText:"На карточке написано:\n\n«Иногда дорогу нужно не увидеть. Иногда её нужно вспомнить».",imageUrl:"",buttonText:"Завершить главу",musicId:""}
+      ]
+    },
+    {
+      key:"chapter-4", sortOrder:40, unlockLevel:31, enabled:true,
+      title:"ГЛАВА IV — «Секрет старой дорожки»",
+      pushText:"Старые знаки парка сложились в скрытый маршрут. Четвёртая глава доступна.",
+      pages:[
+        {title:"Секрет старой дорожки",bodyText:"Зеффи начинает внимательно изучать парк.\n\nОна замечает детали, мимо которых раньше просто пробегала: старые узоры, рисунки листьев, необычные отметки на камнях и маленькие символы на декоративных элементах.",imageUrl:seasonArt,buttonText:"Далее",musicId:""},
+        {title:"Скрытый маршрут",bodyText:"Постепенно становится понятно, что все они образуют маршрут.\n\nНо маршрут ведёт в противоположную сторону от обычных дорожек. Зеффи и Алекс следуют по нему.",imageUrl:"",buttonText:"Далее",musicId:""},
+        {title:"Поляна",bodyText:"Парк становится тише.\n\nПоявляется небольшая поляна, практически скрытая цветами и деревьями. В центре находится старая декоративная стойка, а рядом — ещё один домик для птиц.",imageUrl:"",buttonText:"Далее",musicId:""},
+        {title:"Белый жетон",bodyText:"На этот раз на жердочке сидит птица. Когда Зеффи подходит, она не улетает.\n\nПод домиком лежит небольшой предмет — белый жетон в форме кролика.",imageUrl:"",buttonText:"Далее",musicId:""},
+        {title:"Ты почти дошла",bodyText:"На обратной стороне всего несколько слов:\n\n«Ты почти дошла».\n\nАлекс окончательно перестаёт считать происходящее совпадением.",imageUrl:"",buttonText:"Далее",musicId:""},
+        {title:"Белый силуэт",bodyText:"В этот момент вдали между деревьями на секунду появляется белый силуэт.\n\nЗеффи бросается за ним. Но за поворотом никого нет.",imageUrl:"",buttonText:"Далее",musicId:""},
+        {title:"Белые лепестки",bodyText:"Остаются лишь несколько белых лепестков на дорожке.",imageUrl:"",buttonText:"Завершить главу",musicId:""}
+      ]
+    },
+    {
+      key:"chapter-5", sortOrder:50, unlockLevel:41, enabled:true,
+      title:"ГЛАВА V — «Следуй за Белым Кроликом»",
+      pushText:"Белые лепестки снова появились на дорожке. Финальная глава путешествия по Белкино открыта.",
+      pages:[
+        {title:"Следуй за Белым Кроликом",bodyText:"Последняя глава сезона становится погоней за новой загадкой.\n\nБелые лепестки появляются всё дальше по парку. Птицы снова начинают показывать направление. Золотые следы возвращаются и теперь смешиваются с маленькими изображениями кролика.",imageUrl:seasonArt,buttonText:"Далее",musicId:""},
+        {title:"Последний маршрут",bodyText:"Зеффи и Алекс проходят через самые разные части парка, пока дорожка наконец не приводит их к выходу.\n\nНо здесь происходит неожиданное. Все следы заканчиваются.",imageUrl:"",buttonText:"Далее",musicId:""},
+        {title:"За границами парка",bodyText:"Перед Зеффи находится только обычная дорога, ведущая дальше.\n\nРядом стоит небольшая табличка. На ней изображён Белый Кролик.",imageUrl:"",buttonText:"Далее",musicId:""},
+        {title:"Любое приключение",bodyText:"Под изображением написано:\n\n«Любое приключение однажды выводит тебя за знакомые границы».",imageUrl:"",buttonText:"Далее",musicId:""},
+        {title:"До встречи совсем скоро",bodyText:"Зеффи переворачивает жетон, найденный раньше. Теперь на нём появляется ещё одна надпись:\n\n«До встречи совсем скоро».\n\nЗеффи смотрит вдаль. На другой стороне дороги на секунду снова появляется белый силуэт. На этот раз он словно ждёт её.",imageUrl:"",buttonText:"Далее",musicId:""},
+        {title:"Ну конечно пойдём",bodyText:"Алекс:\n\n«Зеффи… Только не говори, что мы пойдём за ним».\n\nЗеффи радостно смотрит на Алекса.\n\nАлекс вздыхает:\n\n«Ну конечно пойдём».\n\nОни делают первый шаг за пределы парка.",imageUrl:"",buttonText:"Далее",musicId:""},
+        {title:"История Зеффи продолжится…",bodyText:"Затемнение.\n\nПоявляется силуэт Белого Кролика.\n\n«История Зеффи продолжится…»",imageUrl:"",buttonText:"Завершить главу",musicId:""}
+      ]
+    },
+    {
+      key:"finale", sortOrder:60, unlockLevel:50, enabled:true,
+      title:"ФИНАЛ — «Тайны Белкино раскрыты… почти»",
+      pushText:"50-й уровень достигнут. Открылся финал истории «Тайны Белкино».",
+      pages:[
+        {title:"Тайны Белкино раскрыты… почти",bodyText:"Зеффи нашла старую карту, прошла по загадочным следам и узнала, что кто-то всё это время направлял её через парк.",imageUrl:seasonArt,buttonText:"Далее",musicId:""},
+        {title:"Главный вопрос",bodyText:"Но главный вопрос остался без ответа:\n\nкто такой Белый Кролик и почему он ждал именно Зеффи?",imageUrl:"",buttonText:"Далее",musicId:""},
+        {title:"Дальше знакомых границ",bodyText:"Похоже, чтобы узнать это, придётся отправиться туда, где Зеффи ещё никогда не была…",imageUrl:"",buttonText:"Далее",musicId:""},
+        {title:"Продолжение следует",bodyText:"Продолжение следует. 🐾🤍",imageUrl:"",buttonText:"Закрыть",musicId:""}
+      ]
+    }
+  ];
+}
+
 const CASE_PHYSICAL_TOTAL_CHANCE = 0.035;
 const CASE_PHYSICAL_REWARDS = Object.freeze({
   zefir: Object.freeze({ id: "zefir", title: PRODUCTS.zefir.title, chance: CASE_PHYSICAL_TOTAL_CHANCE / 3 }),
@@ -32091,6 +32182,8 @@ async function ensureSeasonPassSchema(env) {
     // Seed the authored Season 2 story once. A separate marker table means that
     // later owner edits or deletions are respected and never recreated.
     await ensureSeason2StoryPreset(env);
+    // Seed the authored Season 3 «Тайны Белкино» story once when that season exists.
+    await ensureSeason3StoryPreset(env);
     await markSeasonPassSchemaReady(env);
   })();
   seasonPassSchemaPromise = promise;
@@ -33179,6 +33272,40 @@ async function ensureSeason2StoryPreset(env){
   statements.push(env.DB.prepare(`INSERT OR IGNORE INTO season_pass_story_presets(preset_id,season_id,seeded_at,updated_by) VALUES(?,?,?,?)`).bind(presetId,seasonId,now,SEASON2_STORY_PRESET.marker));
   for(let index=0;index<statements.length;index+=30)await env.DB.batch(statements.slice(index,index+30));
   await bindSeason2ContentCatalogToSeason(env,seasonId).catch(error=>console.error('season2 content binding failed',error));
+  return {ok:true,seeded:true,seasonId,inserted};
+}
+
+
+async function ensureSeason3StoryPreset(env){
+  const presetId=SEASON3_STORY_PRESET.id;
+  const markerRow=await env.DB.prepare(`SELECT preset_id,season_id FROM season_pass_story_presets WHERE preset_id=? LIMIT 1`).bind(presetId).first();
+  if(markerRow?.preset_id)return {ok:true,seeded:false,reason:'already-seeded',seasonId:String(markerRow.season_id||'')};
+
+  const now=Math.floor(Date.now()/1000);
+  const candidates=(await env.DB.prepare(`SELECT season_id,title,starts_at,ends_at,manual_status FROM season_pass_seasons WHERE COALESCE(manual_status,'')<>'ended' ORDER BY starts_at ASC,season_id ASC LIMIT 100`).all()).results||[];
+  const canonical=candidates.filter(row=>season3DraftCasePresetMatchesSeasonTitle(row.title)||/тайны\s+белкино/i.test(String(row.title||'')));
+  const numbered=candidates.filter(row=>/(?:сезон|season)\s*3(?:\D|$)/i.test(String(row.title||'')));
+  const target=canonical.length===1?canonical[0]:(numbered.length===1?numbered[0]:null);
+  if(!target?.season_id)return {ok:true,seeded:false,reason:candidates.length?'season3-season-ambiguous':'season3-season-not-created'};
+
+  const seasonId=String(target.season_id),safeSeason=seasonId.replace(/[^A-Za-z0-9_-]+/g,'_').slice(0,90)||'season3';
+  const existing=(await env.DB.prepare(`SELECT event_id,title FROM season_pass_story_events WHERE season_id=?`).bind(seasonId).all()).results||[];
+  const existingTitles=new Set(existing.map(row=>String(row.title||'').trim()).filter(Boolean));
+  const existingIds=new Set(existing.map(row=>String(row.event_id||'')).filter(Boolean));
+  const statements=[];let inserted=0;
+
+  for(const event of season3StoryPresetEvents()){
+    if(existingTitles.has(event.title))continue;
+    const eventId=`story_${safeSeason}_s3_${event.key}`.slice(0,180);
+    if(existingIds.has(eventId))continue;
+    const pages=event.pages.slice(0,10),first=pages[0]||{};
+    statements.push(env.DB.prepare(`INSERT OR IGNORE INTO season_pass_story_events(event_id,season_id,sort_order,unlock_level,unlock_at,enabled,title,body_text,image_url,button_text,pages_json,push_enabled,push_text,reward_json,created_at,updated_at,updated_by) VALUES(?,?,?,?,0,?,?,?,?,?,?,1,?,'{}',?,?,?)`)
+      .bind(eventId,seasonId,Number(event.sortOrder||0),Math.max(1,Math.min(50,Number(event.unlockLevel)||1)),event.enabled?1:0,String(event.title||''),String(first.bodyText||''),String(first.imageUrl||''),String(first.buttonText||'Продолжить'),JSON.stringify(pages),String(event.pushText||''),now,now,SEASON3_STORY_PRESET.marker));
+    inserted+=1;
+  }
+
+  statements.push(env.DB.prepare(`INSERT OR IGNORE INTO season_pass_story_presets(preset_id,season_id,seeded_at,updated_by) VALUES(?,?,?,?)`).bind(presetId,seasonId,now,SEASON3_STORY_PRESET.marker));
+  for(let index=0;index<statements.length;index+=30)await env.DB.batch(statements.slice(index,index+30));
   return {ok:true,seeded:true,seasonId,inserted};
 }
 
