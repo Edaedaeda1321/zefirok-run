@@ -23,6 +23,15 @@ must('season 3 joined art',worker,'season-belkino-joined.webp');
 must('season 3 complete art',worker,'season-belkino-complete.webp');
 must('season 4 joined art',worker,'season-white-rabbit-joined.webp');
 must('season 4 complete art',worker,'season-white-rabbit-complete.webp');
+must('season 3 joined title',worker,'joinedTitle:"Гость Белкино"');
+must('season 3 complete title',worker,'completeTitle:"Тайны Белкино раскрыты"');
+must('season 4 joined title',worker,'joinedTitle:"Дверь по соседству"');
+must('season 4 complete title',worker,'completeTitle:"Две двери — одна история"');
+must('Belkino trace art map',worker,'const ACHIEVEMENT_STORY_COLLECTIBLE_ART = Object.freeze({');
+must('5 trace art',worker,'season-belkino-traces-5.webp');
+must('25 trace art',worker,'season-belkino-traces-25.webp');
+must('50 trace art',worker,'season-belkino-traces-50.webp');
+must('story collectible uses per-step art',worker,'achievementStoryCollectibleArtUrl(definition)');
 must('season art resolves title/asset/id',worker,'achievementSeasonArtGroup(definition = {})');
 must('season definitions carry asset key',worker,'seasonAssetKey=String(row.asset_key||"")');
 must('future seasonal achievements hidden before start',worker,'String(state?.status||"")==="upcoming"');
@@ -51,7 +60,8 @@ const badgeFiles=[
   'season-cafe-joined.webp','season-cafe-complete.webp',
   'season-night-joined.webp','season-night-complete.webp',
   'season-belkino-joined.webp','season-belkino-complete.webp',
-  'season-white-rabbit-joined.webp','season-white-rabbit-complete.webp'
+  'season-white-rabbit-joined.webp','season-white-rabbit-complete.webp',
+  'season-belkino-traces-5.webp','season-belkino-traces-25.webp','season-belkino-traces-50.webp'
 ];
 for(const file of badgeFiles){
   const rel=path.join('assets','achievements','badges',file),abs=path.join(root,rel);

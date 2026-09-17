@@ -6746,12 +6746,29 @@ const ACHIEVEMENT_SEASON_ART = Object.freeze({
     complete:"/assets/achievements/badges/season-white-rabbit-complete.webp"
   })
 });
+const ACHIEVEMENT_SEASON_PRESENTATION = Object.freeze({
+  belkino:Object.freeze({
+    joinedTitle:"Гость Белкино",
+    completeTitle:"Тайны Белкино раскрыты"
+  }),
+  whiteRabbit:Object.freeze({
+    joinedTitle:"Дверь по соседству",
+    completeTitle:"Две двери — одна история"
+  })
+});
+const ACHIEVEMENT_STORY_COLLECTIBLE_ART = Object.freeze({
+  belkino:Object.freeze({
+    5:"/assets/achievements/badges/season-belkino-traces-5.webp",
+    25:"/assets/achievements/badges/season-belkino-traces-25.webp",
+    50:"/assets/achievements/badges/season-belkino-traces-50.webp"
+  })
+});
 
 function achievementSeasonTitleKey(value) {
   return String(value || "").normalize("NFC").trim().toLocaleLowerCase("ru-RU").replaceAll("ё", "е");
 }
 function achievementSeasonArtGroup(definition = {}) {
-  if (!definition?.dynamicSeason) return "";
+  if (!definition?.dynamicSeason && !definition?.dynamicStoryCollectible) return "";
   const key=achievementSeasonTitleKey([definition?.seasonTitle,definition?.seasonAssetKey,definition?.seasonId].filter(Boolean).join(" "));
   if (key.includes("открытие кафе") || key.includes("cafe opening") || key.includes("season-1-cafe")) return "cafe";
   if (key.includes("ночь сладких чудес") || key.includes("night of sweet wonders") || key.includes("season2") || key.includes("season-2")) return "night";
@@ -6759,8 +6776,14 @@ function achievementSeasonArtGroup(definition = {}) {
   if (key.includes("белый кролик") || key.includes("white rabbit") || key.includes("season4") || key.includes("season-4") || /(?:^|[ _:-])s4(?:$|[ _:-])/.test(key)) return "whiteRabbit";
   return "";
 }
+function achievementStoryCollectibleArtUrl(definition = {}) {
+  const seasonGroup=achievementSeasonArtGroup(definition);
+  const target=Math.max(0,Math.floor(Number(definition?.target)||0));
+  const configured=seasonGroup?ACHIEVEMENT_STORY_COLLECTIBLE_ART[seasonGroup]?.[target]:"";
+  return String(configured||seasonPassReadinessAssetPath(definition.collectibleArtUrl)||"");
+}
 function achievementArtUrl(achievementId, definition = {}) {
-  if(definition?.dynamicStoryCollectible)return seasonPassReadinessAssetPath(definition.collectibleArtUrl);
+  if(definition?.dynamicStoryCollectible)return achievementStoryCollectibleArtUrl(definition);
   const seasonGroup=achievementSeasonArtGroup(definition);
   const seasonArt=seasonGroup?ACHIEVEMENT_SEASON_ART[seasonGroup]:null;
   if(seasonArt){
@@ -7147,8 +7170,12 @@ async function achievementSeasonBaseDefinitions(env) {
       const startsAt=Math.max(0,Number(row.starts_at)||0),endsAt=Math.max(startsAt,Number(row.ends_at)||0);
       const ended=String(row.manual_status||"")==="ended"||(endsAt>0&&endsAt<=now);
       const seasonAssetKey=String(row.asset_key||"").trim().slice(0,120);
-      out.push(Object.freeze({id:achievementSeasonDefinitionId("joined",seasonId),category:"seasons",icon:"🎟️",title:`Участник · ${seasonTitle}`,description:`Прими участие в сезоне «${seasonTitle}».`,target:1,source:"seasonParticipation",seasonId,seasonTitle,seasonAssetKey,availableFrom:startsAt,availableUntil:endsAt,rarity:ended?"legacy":"common",achievementPoints:10,reward:Object.freeze({kind:"none"}),dynamicSeason:true,secret:false}));
-      out.push(Object.freeze({id:achievementSeasonDefinitionId("complete",seasonId),category:"seasons",icon:"👑",title:`${seasonTitle} · завершён`,description:`Достигни 50 уровня сезонного пропуска «${seasonTitle}». После окончания сезона этот трофей остаётся навсегда.`,target:1,source:"seasonComplete",seasonId,seasonTitle,seasonAssetKey,availableFrom:startsAt,availableUntil:endsAt,rarity:ended?"legacy":"legendary",achievementPoints:100,reward:Object.freeze({kind:"none"}),dynamicSeason:true,secret:false}));
+      const seasonGroup=achievementSeasonArtGroup({dynamicSeason:true,seasonId,seasonTitle,seasonAssetKey});
+      const presentation=seasonGroup?ACHIEVEMENT_SEASON_PRESENTATION[seasonGroup]:null;
+      const joinedTitle=String(presentation?.joinedTitle||`Участник · ${seasonTitle}`);
+      const completeTitle=String(presentation?.completeTitle||`${seasonTitle} · завершён`);
+      out.push(Object.freeze({id:achievementSeasonDefinitionId("joined",seasonId),category:"seasons",icon:"🎟️",title:joinedTitle,description:`Прими участие в сезоне «${seasonTitle}».`,target:1,source:"seasonParticipation",seasonId,seasonTitle,seasonAssetKey,availableFrom:startsAt,availableUntil:endsAt,rarity:ended?"legacy":"common",achievementPoints:10,reward:Object.freeze({kind:"none"}),dynamicSeason:true,secret:false}));
+      out.push(Object.freeze({id:achievementSeasonDefinitionId("complete",seasonId),category:"seasons",icon:"👑",title:completeTitle,description:`Достигни 50 уровня сезонного пропуска «${seasonTitle}». После окончания сезона этот трофей остаётся навсегда.`,target:1,source:"seasonComplete",seasonId,seasonTitle,seasonAssetKey,availableFrom:startsAt,availableUntil:endsAt,rarity:ended?"legacy":"legendary",achievementPoints:100,reward:Object.freeze({kind:"none"}),dynamicSeason:true,secret:false}));
     }
     return out;
   } catch(error) {

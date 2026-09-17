@@ -1,8 +1,8 @@
 {
   "version": 2,
   "hashAlgorithm": "sha256",
-  "catalogHash": "6854f4e3b3e111c3",
-  "count": 524,
+  "catalogHash": "d1f364adb0fd85ad",
+  "count": 520,
   "images": [
     {
       "fileName": "achievements/background_achivment_panel.webp",
@@ -11,62 +11,6 @@
       "path": "/assets/achievements/background_achivment_panel.webp",
       "hash": "5b331998c5e4",
       "size": 23354
-    },
-    {
-      "fileName": "achievements/badges/\"Getting closer\".webp",
-      "label": "\"Getting closer\"",
-      "folder": "achievements/badges",
-      "path": "/assets/achievements/badges/%22Getting%20closer%22.webp",
-      "hash": "8f9493f5011f",
-      "size": 299248
-    },
-    {
-      "fileName": "achievements/badges/\"Guest of Belkino\" achivment.webp",
-      "label": "\"Guest of Belkino\" achivment",
-      "folder": "achievements/badges",
-      "path": "/assets/achievements/badges/%22Guest%20of%20Belkino%22%20achivment.webp",
-      "hash": "a1e15233a261",
-      "size": 249392
-    },
-    {
-      "fileName": "achievements/badges/\"On the trail\".webp",
-      "label": "\"On the trail\"",
-      "folder": "achievements/badges",
-      "path": "/assets/achievements/badges/%22On%20the%20trail%22.webp",
-      "hash": "a4efe23d147e",
-      "size": 245880
-    },
-    {
-      "fileName": "achievements/badges/\"The door next door\".webp",
-      "label": "\"The door next door\"",
-      "folder": "achievements/badges",
-      "path": "/assets/achievements/badges/%22The%20door%20next%20door%22.webp",
-      "hash": "e1148d50fab1",
-      "size": 372580
-    },
-    {
-      "fileName": "achievements/badges/\"The secrets of Belkino are revealed\".webp",
-      "label": "\"The secrets of Belkino are revealed\"",
-      "folder": "achievements/badges",
-      "path": "/assets/achievements/badges/%22The%20secrets%20of%20Belkino%20are%20revealed%22.webp",
-      "hash": "4187c60944e5",
-      "size": 364268
-    },
-    {
-      "fileName": "achievements/badges/\"The White Rabbit was here\".webp",
-      "label": "\"The White Rabbit was here\"",
-      "folder": "achievements/badges",
-      "path": "/assets/achievements/badges/%22The%20White%20Rabbit%20was%20here%22.webp",
-      "hash": "4a1fc062e47b",
-      "size": 338342
-    },
-    {
-      "fileName": "achievements/badges/\"Two doors — one story\".webp",
-      "label": "\"Two doors — one story\"",
-      "folder": "achievements/badges",
-      "path": "/assets/achievements/badges/%22Two%20doors%20%E2%80%94%20one%20story%22.webp",
-      "hash": "ecd649c16200",
-      "size": 274714
     },
     {
       "fileName": "achievements/badges/album-complete-1.webp",
@@ -273,16 +217,40 @@
       "label": "Season belkino complete",
       "folder": "achievements/badges",
       "path": "/assets/achievements/badges/season-belkino-complete.webp",
-      "hash": "323172e2339b",
-      "size": 428926
+      "hash": "4187c60944e5",
+      "size": 364268
     },
     {
       "fileName": "achievements/badges/season-belkino-joined.webp",
       "label": "Season belkino joined",
       "folder": "achievements/badges",
       "path": "/assets/achievements/badges/season-belkino-joined.webp",
-      "hash": "aae32731cc43",
-      "size": 346818
+      "hash": "a1e15233a261",
+      "size": 249392
+    },
+    {
+      "fileName": "achievements/badges/season-belkino-traces-25.webp",
+      "label": "Season belkino traces 25",
+      "folder": "achievements/badges",
+      "path": "/assets/achievements/badges/season-belkino-traces-25.webp",
+      "hash": "8f9493f5011f",
+      "size": 299248
+    },
+    {
+      "fileName": "achievements/badges/season-belkino-traces-5.webp",
+      "label": "Season belkino traces 5",
+      "folder": "achievements/badges",
+      "path": "/assets/achievements/badges/season-belkino-traces-5.webp",
+      "hash": "a4efe23d147e",
+      "size": 245880
+    },
+    {
+      "fileName": "achievements/badges/season-belkino-traces-50.webp",
+      "label": "Season belkino traces 50",
+      "folder": "achievements/badges",
+      "path": "/assets/achievements/badges/season-belkino-traces-50.webp",
+      "hash": "4a1fc062e47b",
+      "size": 338342
     },
     {
       "fileName": "achievements/badges/season-cafe-complete.webp",
@@ -337,16 +305,16 @@
       "label": "Season white rabbit complete",
       "folder": "achievements/badges",
       "path": "/assets/achievements/badges/season-white-rabbit-complete.webp",
-      "hash": "9ee4705acb7f",
-      "size": 426368
+      "hash": "ecd649c16200",
+      "size": 274714
     },
     {
       "fileName": "achievements/badges/season-white-rabbit-joined.webp",
       "label": "Season white rabbit joined",
       "folder": "achievements/badges",
       "path": "/assets/achievements/badges/season-white-rabbit-joined.webp",
-      "hash": "a37dce8108e6",
-      "size": 324544
+      "hash": "e1148d50fab1",
+      "size": 372580
     },
     {
       "fileName": "achievements/badges/secret-locked.webp",
