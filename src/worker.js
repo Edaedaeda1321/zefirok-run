@@ -420,7 +420,9 @@ function season2StoryPresetEvents(){
 
 const SEASON3_STORY_PRESET = Object.freeze({
   id: "season3-belkino-story-v1",
-  marker: "system-season3-story-v1"
+  marker: "system-season3-story-v1",
+  canonicalRepairId: "season3-belkino-story-v2-canonical",
+  canonicalRepairMarker: "system-season3-story-v2-canonical"
 });
 
 function season3StoryPresetEvents(){
@@ -32053,9 +32055,16 @@ async function ensureSeason3StoryPresetRuntime(env) {
   if (season3StoryPresetRuntimeReady) return { ok:true, seeded:false, reason:'runtime-ready' };
   if (season3StoryPresetRuntimePromise) return season3StoryPresetRuntimePromise;
   const promise=(async()=>{
-    const result=await ensureSeason3StoryPreset(env);
-    if(result?.seeded||result?.reason==='already-seeded')season3StoryPresetRuntimeReady=true;
-    return result;
+    const seedResult=await ensureSeason3StoryPreset(env);
+    const repairResult=await ensureSeason3StoryCanonicalV2(env);
+    if(repairResult?.repaired||repairResult?.reason==='already-canonical')season3StoryPresetRuntimeReady=true;
+    return {
+      ok:true,
+      seeded:Boolean(seedResult?.seeded),
+      repaired:Boolean(repairResult?.repaired),
+      seasonId:String(repairResult?.seasonId||seedResult?.seasonId||''),
+      reason:String(repairResult?.reason||seedResult?.reason||'')
+    };
   })();
   season3StoryPresetRuntimePromise=promise;
   try{return await promise;}finally{if(season3StoryPresetRuntimePromise===promise)season3StoryPresetRuntimePromise=null;}
@@ -33473,6 +33482,74 @@ async function ensureSeason3StoryPreset(env){
   statements.push(env.DB.prepare(`INSERT OR IGNORE INTO season_pass_story_presets(preset_id,season_id,seeded_at,updated_by) VALUES(?,?,?,?)`).bind(presetId,seasonId,now,SEASON3_STORY_PRESET.marker));
   for(let index=0;index<statements.length;index+=30)await env.DB.batch(statements.slice(index,index+30));
   return {ok:true,seeded:true,seasonId,inserted};
+}
+
+async function ensureSeason3StoryCanonicalV2(env){
+  const repairId=SEASON3_STORY_PRESET.canonicalRepairId;
+  const repairMarker=SEASON3_STORY_PRESET.canonicalRepairMarker;
+  const done=await env.DB.prepare(`SELECT preset_id,season_id FROM season_pass_story_presets WHERE preset_id=? LIMIT 1`).bind(repairId).first();
+  if(done?.preset_id)return {ok:true,repaired:false,reason:'already-canonical',seasonId:String(done.season_id||'')};
+
+  let target=null;
+  const seeded=await env.DB.prepare(`SELECT season_id FROM season_pass_story_presets WHERE preset_id=? LIMIT 1`).bind(SEASON3_STORY_PRESET.id).first();
+  if(seeded?.season_id){
+    target=await env.DB.prepare(`SELECT season_id,title,starts_at,ends_at,manual_status FROM season_pass_seasons WHERE season_id=? LIMIT 1`).bind(String(seeded.season_id)).first();
+  }
+  if(!target?.season_id){
+    const candidates=(await env.DB.prepare(`SELECT season_id,title,starts_at,ends_at,manual_status FROM season_pass_seasons WHERE COALESCE(manual_status,'')<>'ended' ORDER BY starts_at ASC,season_id ASC LIMIT 100`).all()).results||[];
+    const canonical=candidates.filter(row=>season3DraftCasePresetMatchesSeasonTitle(row.title)||/тайны\s+белкино/i.test(String(row.title||'')));
+    const numbered=candidates.filter(row=>/(?:сезон|season)\s*3(?:\D|$)/i.test(String(row.title||'')));
+    target=canonical.length===1?canonical[0]:(numbered.length===1?numbered[0]:null);
+    if(!target?.season_id)return {ok:true,repaired:false,reason:candidates.length?'season3-season-ambiguous':'season3-season-not-created'};
+  }
+
+  const now=Math.floor(Date.now()/1000);
+  const seasonId=String(target.season_id);
+  const safeSeason=seasonId.replace(/[^A-Za-z0-9_-]+/g,'_').slice(0,90)||'season3';
+  const canonicalEvents=season3StoryPresetEvents();
+  const canonicalIds=new Set(canonicalEvents.map(event=>`story_${safeSeason}_s3_${event.key}`.slice(0,180)));
+  const canonicalTitles=new Set(canonicalEvents.map(event=>String(event.title||'').trim()));
+  const existing=(await env.DB.prepare(`SELECT event_id,title,updated_by FROM season_pass_story_events WHERE season_id=? ORDER BY created_at,event_id`).bind(seasonId).all()).results||[];
+  let removed=0,archived=0;
+
+  // Remove only stale duplicates of the authored Belkino chapters. Keep canonical IDs stable
+  // so any future player progress remains attached to the same event.
+  for(const row of existing){
+    const eventId=String(row.event_id||'');
+    const title=String(row.title||'').trim();
+    const authored=canonicalTitles.has(title)||String(row.updated_by||'')===SEASON3_STORY_PRESET.marker;
+    if(!authored||canonicalIds.has(eventId))continue;
+    const progress=Number((await env.DB.prepare(`SELECT COUNT(*) AS count FROM season_pass_story_progress WHERE event_id=?`).bind(eventId).first())?.count||0);
+    if(progress<=0){
+      await env.DB.batch([
+        env.DB.prepare(`DELETE FROM season_pass_story_manual_unlocks WHERE event_id=?`).bind(eventId),
+        env.DB.prepare(`DELETE FROM season_pass_story_tests WHERE event_id=?`).bind(eventId),
+        env.DB.prepare(`DELETE FROM season_pass_story_progress WHERE event_id=?`).bind(eventId),
+        env.DB.prepare(`DELETE FROM season_pass_story_events WHERE event_id=? AND season_id=?`).bind(eventId,seasonId)
+      ]);
+      removed+=1;
+    }else{
+      const archivedTitle=`[АРХИВ] ${title}`.slice(0,240);
+      await env.DB.prepare(`UPDATE season_pass_story_events SET enabled=0,push_enabled=0,title=?,sort_order=sort_order+1000,updated_at=?,updated_by=? WHERE event_id=? AND season_id=?`)
+        .bind(archivedTitle,now,repairMarker,eventId,seasonId).run();
+      archived+=1;
+    }
+  }
+
+  let upserted=0;
+  for(const event of canonicalEvents){
+    const eventId=`story_${safeSeason}_s3_${event.key}`.slice(0,180);
+    const pages=event.pages.slice(0,10);
+    const first=pages[0]||{};
+    await env.DB.prepare(`INSERT INTO season_pass_story_events(event_id,season_id,sort_order,unlock_level,unlock_at,enabled,title,body_text,image_url,button_text,pages_json,push_enabled,push_text,reward_json,actions_json,created_at,updated_at,updated_by) VALUES(?,?,?,?,0,?,?,?,?,?,?,1,?,'{}','[]',?,?,?)
+      ON CONFLICT(event_id) DO UPDATE SET season_id=excluded.season_id,sort_order=excluded.sort_order,unlock_level=excluded.unlock_level,unlock_at=0,enabled=excluded.enabled,title=excluded.title,body_text=excluded.body_text,image_url=excluded.image_url,button_text=excluded.button_text,pages_json=excluded.pages_json,push_enabled=1,push_text=excluded.push_text,reward_json='{}',actions_json='[]',updated_at=excluded.updated_at,updated_by=excluded.updated_by`)
+      .bind(eventId,seasonId,Number(event.sortOrder||0),Math.max(1,Math.min(50,Number(event.unlockLevel)||1)),event.enabled?1:0,String(event.title||''),String(first.bodyText||''),String(first.imageUrl||''),String(first.buttonText||'Продолжить'),JSON.stringify(pages),String(event.pushText||''),now,now,repairMarker).run();
+    upserted+=1;
+  }
+
+  await env.DB.prepare(`INSERT OR IGNORE INTO season_pass_story_presets(preset_id,season_id,seeded_at,updated_by) VALUES(?,?,?,?)`)
+    .bind(repairId,seasonId,now,repairMarker).run();
+  return {ok:true,repaired:true,seasonId,upserted,removed,archived};
 }
 
 async function seasonPassTeaserForPlayer(env,season,telegramId,player){
