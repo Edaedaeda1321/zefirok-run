@@ -510,6 +510,90 @@ function season3StoryPresetEvents(){
   ];
 }
 
+const SEASON4_STORY_PRESET = Object.freeze({
+  id: "season4-white-rabbit-story-v1-canonical",
+  marker: "system-season4-story-v1-canonical"
+});
+
+function season4StoryPresetEvents(){
+  const asset=(name)=>`/assets/letter/pick/${name}`;
+  return [
+    {
+      key:"chapter-1", sortOrder:10, unlockLevel:1, enabled:true,
+      title:"ГЛАВА I — «Дверь по соседству»",
+      pushText:"Золотые следы Белого Кролика привели Зеффи к знакомому зданию. Первая глава 4-го сезона открыта.",
+      pages:[
+        {title:"Дверь по соседству",bodyText:"Золотые следы Белого Кролика заканчиваются прямо возле знакомого здания.\n\nЗеффи удивлённо смотрит на жетон.\n\n— Мы вернулись?\n\nАлекс оглядывается.\n\n— После целого путешествия по Белкино? Очень смешно.",imageUrl:asset("season4_pick_g1.webp"),buttonText:"Далее",musicId:""},
+        {title:"Знакомая вывеска",bodyText:"Рядом сияет знакомая вывеска «Зефирок».\n\nЗдесь всё привычно: запах кофе, сладостей и уютного кафе.\n\nНо жетон указывает совсем не на вход в «Зефирок».\n\nЧуть дальше находится другая дверь.\n\nНад ней — белый силуэт с длинными ушами.\n\n«Белый Кролик»." ,imageUrl:"",buttonText:"Далее",musicId:""},
+        {title:"Тот самый знак",bodyText:"Зеффи замирает.\n\nТот самый знак.\n\nТот самый кролик, следы которого она искала весь прошлый сезон.\n\nДверь неожиданно приоткрывается.",imageUrl:"",buttonText:"Далее",musicId:""},
+        {title:"По ту сторону двери",bodyText:"За ней виден совершенно другой интерьер: большие окна, стекло, светлые стены, тёмные современные детали и мягкий свет.\n\nИ огромный Белый Кролик.\n\nАлекс шепчет:\n\n— Зеффи… кажется, мы его нашли.",imageUrl:"",buttonText:"Далее",musicId:""},
+        {title:"Главная загадка",bodyText:"Зеффи делает шаг внутрь.\n\nНо почти сразу понимает:\n\nглавная загадка только начинается.",imageUrl:"",buttonText:"Завершить главу",musicId:""}
+      ]
+    },
+    {
+      key:"chapter-2", sortOrder:20, unlockLevel:11, enabled:true,
+      title:"ГЛАВА II — «Необычный сосед»",
+      pushText:"Зеффи узнала, что скрывается за дверью Белого Кролика. Вторая глава уже доступна.",
+      pages:[
+        {title:"Необычный сосед",bodyText:"Зеффи осторожно осматривается.\n\nОказывается, «Белый Кролик» — не таинственное королевство и не секретное убежище.\n\nЭто стоматология.\n\nПричём она находится в том же здании, что и «Зефирок».",imageUrl:asset("season4_pick_g2.webp"),buttonText:"Далее",musicId:""},
+        {title:"Буквально рядом",bodyText:"Алекс не может поверить:\n\n— То есть всё это время Белый Кролик был буквально рядом с нами?\n\nЗеффи замечает необычные кресла, зеркала, лампы, красивые шкафчики и небольшие фигурки кроликов.",imageUrl:"",buttonText:"Далее",musicId:""},
+        {title:"Улыбка любит заботу",bodyText:"Ничего страшного здесь нет.\n\nНаоборот — всё выглядит спокойно и дружелюбно.\n\nНа одном из столиков лежит карточка:\n\n«Улыбка любит заботу.»\n\nРядом нарисованы маленький зефир и Белый Кролик.\n\nЗеффи начинает понимать: возможно, её привели сюда не случайно.",imageUrl:"",buttonText:"Далее",musicId:""},
+        {title:"Новый знак",bodyText:"В этот момент происходит ещё одна странность.\n\nПривычный зефир во время забега меняет форму.\n\nТеперь он напоминает маленького Белого Кролика.\n\nНо внутри всё тот же знакомый зефир.",imageUrl:"",buttonText:"Далее",musicId:""},
+        {title:"Сезонный зефир Белого Кролика",bodyText:"С этого момента в забеге:\n\nобычный зефир → сезонный зефир Белого Кролика.\n\nЗеффи улыбается.\n\nБелый Кролик снова оставил ей знак.",imageUrl:"",buttonText:"Завершить главу",musicId:""}
+      ]
+    },
+    {
+      key:"chapter-3", sortOrder:30, unlockLevel:21, enabled:true,
+      title:"ГЛАВА III — «Секрет улыбки»",
+      pushText:"Зеффи начинает понимать, что связывает «Зефирок» и «Белого Кролика». Третья глава открыта.",
+      pages:[
+        {title:"Секрет улыбки",bodyText:"Зеффи продолжает исследовать новое место.\n\nИ всё чаще замечает рядом два символа:\n\n☕ Зефирок\n\n🐇 Белый Кролик",imageUrl:asset("season4_pick_g3.webp"),buttonText:"Далее",musicId:""},
+        {title:"Рисунок на стене",bodyText:"На одной из стен она находит небольшой рисунок.\n\nС одной стороны изображена чашка кофе и зефир.\n\nС другой — улыбающийся Белый Кролик.\n\nМежду ними — сердце.",imageUrl:"",buttonText:"Далее",musicId:""},
+        {title:"Два мира",bodyText:"Алекс задумчиво смотрит на рисунок.\n\n— Кажется, они вообще не такие разные.\n\nЗеффи наклоняет голову.\n\n— В «Зефирке» люди приходят за сладостями, кофе и хорошим настроением…\n\nАлекс заканчивает:\n\n— А здесь заботятся о том, чтобы они продолжали улыбаться.",imageUrl:"",buttonText:"Далее",musicId:""},
+        {title:"Связь",bodyText:"Зеффи радостно виляет хвостиком.\n\nТеперь загадка становится понятнее.\n\nБелый Кролик хотел показать ей не просто новое место.\n\nОн хотел показать связь двух миров.\n\nНа обратной стороне рисунка написано:\n\n«Любишь сладкое — не забывай заботиться об улыбке.»",imageUrl:"",buttonText:"Далее",musicId:""},
+        {title:"Зачем он позвал",bodyText:"Зеффи смотрит в сторону двери, ведущей обратно к «Зефирку».\n\nКажется, теперь она начинает понимать, зачем Белый Кролик позвал её сюда.",imageUrl:"",buttonText:"Завершить главу",musicId:""}
+      ]
+    },
+    {
+      key:"chapter-4", sortOrder:40, unlockLevel:31, enabled:true,
+      title:"ГЛАВА IV — «Два места — одна история»",
+      pushText:"Две соседние двери оказываются частью одной истории. Четвёртая глава уже доступна.",
+      pages:[
+        {title:"Два места — одна история",bodyText:"Зеффи возвращается к самому началу маршрута.\n\nС одной стороны коридора находится знакомый «Зефирок».\n\nС другой — «Белый Кролик».\n\nДва совершенно разных места.",imageUrl:asset("season4_pick_g4.webp"),buttonText:"Далее",musicId:""},
+        {title:"То, чего раньше не было видно",bodyText:"Но теперь Зеффи замечает то, чего раньше не видела.\n\nСердечки.\n\nТёплые цвета.\n\nЗнакомые детали.\n\nМаленькие символы, которые будто связывают оба пространства между собой.",imageUrl:"",buttonText:"Далее",musicId:""},
+        {title:"За соседней дверью",bodyText:"Белый Кролик не пытался увести её из мира «Зефирка».\n\nНаоборот.\n\nОн хотел показать, что приключение может продолжаться буквально за соседней дверью.\n\nАлекс улыбается:\n\n— Получается, никакой далёкой страны Белого Кролика не было?\n\nЗеффи смотрит вокруг.\n\n— Может быть, чудеса просто не всегда находятся далеко.",imageUrl:"",buttonText:"Далее",musicId:""},
+        {title:"Золотой след",bodyText:"На полу появляется очередной золотой след.\n\nОн начинается у «Зефирка», проходит возле двери «Белого Кролика» и превращается в маленькое сердце.\n\nЗеффи наконец понимает главное:",imageUrl:"",buttonText:"Далее",musicId:""},
+        {title:"Одна история",bodyText:"«Зефирок» дарит сладкое настроение.\n\n«Белый Кролик» помогает заботиться об улыбке.\n\nИ оба места являются частью одной истории.",imageUrl:"",buttonText:"Завершить главу",musicId:""}
+      ]
+    },
+    {
+      key:"chapter-5", sortOrder:50, unlockLevel:41, enabled:true,
+      title:"ГЛАВА V — «Улыбка Зеффи»",
+      pushText:"Загадка Белого Кролика почти раскрыта. Пятая глава 4-го сезона открыта.",
+      pages:[
+        {title:"Улыбка Зеффи",bodyText:"Загадка Белого Кролика почти раскрыта.\n\nЗеффи возвращается в кафе.\n\nПеред ней стоит чашка кофе, рядом лежит зефир в форме маленького кролика.\n\nНа стол она кладёт золотой жетон, найденный ещё в Белкино.\n\nТеперь три символа оказываются рядом:\n\n☕ кофе\n\n🍥 зефир\n\n🐇 Белый Кролик",imageUrl:asset("season4_pick_g5.webp"),buttonText:"Далее",musicId:""},
+        {title:"Всё путешествие",bodyText:"Зеффи вспоминает всё путешествие.\n\nКафе научило её радовать окружающих.\n\nНочь сладких чудес показала, что привычные места могут скрывать настоящую магию.\n\nБелкино научило её исследовать мир.\n\nА Белый Кролик напомнил о простой вещи:",imageUrl:"",buttonText:"Далее",musicId:""},
+        {title:"Простая вещь",bodyText:"Можно любить сладости, радоваться маленьким удовольствиям и одновременно заботиться о себе.",imageUrl:"",buttonText:"Далее",musicId:""},
+        {title:"Алекс всё помнит",bodyText:"Алекс тем временем уже берёт со стола зефир.\n\nЗеффи смотрит на него.\n\nАлекс медленно останавливается.\n\n— Что?\n\nЗеффи продолжает смотреть.\n\n— Ладно-ладно. Я помню про улыбку!\n\nЗеффи смеётся.",imageUrl:"",buttonText:"Далее",musicId:""},
+        {title:"Новый конверт",bodyText:"Казалось бы, история Белого Кролика закончена.\n\nНо в этот момент возле двери появляется новый конверт.\n\nНа нём нет изображения кролика.\n\nВместо этого — совершенно незнакомый знак.\n\nАлекс тяжело вздыхает:\n\n— Нет.\n\nЗеффи подходит к письму.\n\n— Зеффи, даже не думай.\n\nОна берёт конверт.\n\n— Я так и знал.",imageUrl:"",buttonText:"Завершить главу",musicId:""}
+      ]
+    },
+    {
+      key:"finale", sortOrder:60, unlockLevel:50, enabled:true,
+      title:"ФИНАЛЬНОЕ ПИСЬМО — «Две двери — одна история»",
+      pushText:"50-й уровень достигнут. Для Зеффи пришло новое письмо: кажется, впереди уже ждёт новое приключение…",
+      pages:[
+        {title:"Для Зеффи",bodyText:"Кажется, впереди уже ждёт новое приключение…",imageUrl:asset("season4_pick_paper.webp"),buttonText:"Открыть письмо",musicId:""},
+        {title:"Две двери — одна история",bodyText:"Зеффи снова сидит в своём любимом кафе.\n\nНа столе стоит чашка кофе.\n\nРядом лежит маленький зефир Белого Кролика.\n\nЗа соседней дверью продолжается обычный день.\n\nТеперь это место больше не кажется Зеффи загадочным.\n\nОна знает его секрет.",imageUrl:"",buttonText:"Далее",musicId:""},
+        {title:"Совсем рядом",bodyText:"«Зефирок» и «Белый Кролик» находятся совсем рядом.\n\nОдин дарит сладкие моменты.\n\nДругой напоминает заботиться об улыбке.\n\nИ иногда между двумя знакомыми дверями может скрываться целое приключение.",imageUrl:"",buttonText:"Далее",musicId:""},
+        {title:"Новый символ",bodyText:"Зеффи смотрит на золотой жетон Белого Кролика.\n\nОн больше не светится.\n\nПохоже, его история закончена.\n\nНо рядом лежит новый конверт.\n\nНа нём совершенно незнакомый символ.\n\nЗеффи открывает письмо.\n\nВнутри всего одна строчка:\n\n«Готова отправиться немного дальше?»",imageUrl:"",buttonText:"Далее",musicId:""},
+        {title:"Даже не начинай",bodyText:"Алекс заглядывает через плечо.\n\n— Нет.\n\nЗеффи смотрит на него.\n\n— Даже не начинай.\n\nХвост Зеффи начинает радостно вилять.\n\nАлекс закрывает глаза.\n\n— Я уже знаю, чем это закончится.",imageUrl:"",buttonText:"Далее",musicId:""},
+        {title:"История продолжается",bodyText:"Зеффи хватает письмо и бежит к выходу.\n\nАлекс бросается следом.\n\nИстория Зеффи продолжится… 🐾",imageUrl:"",buttonText:"Закрыть",musicId:""}
+      ]
+    }
+  ];
+}
+
 const CASE_PHYSICAL_TOTAL_CHANCE = 0.035;
 const CASE_PHYSICAL_REWARDS = Object.freeze({
   zefir: Object.freeze({ id: "zefir", title: PRODUCTS.zefir.title, chance: CASE_PHYSICAL_TOTAL_CHANCE / 3 }),
@@ -32039,6 +32123,8 @@ let seasonPassSchemaReady = false;
 let seasonPassSchemaPromise = null;
 let season3StoryPresetRuntimeReady = false;
 let season3StoryPresetRuntimePromise = null;
+let season4StoryPresetRuntimeReady = false;
+let season4StoryPresetRuntimePromise = null;
 let seasonPassOverflowSchemaReady = false;
 let seasonPassOverflowSchemaPromise = null;
 async function ensureSeasonPassOverflowSchema(env){
@@ -32092,10 +32178,28 @@ async function ensureSeason3StoryPresetRuntime(env) {
   try{return await promise;}finally{if(season3StoryPresetRuntimePromise===promise)season3StoryPresetRuntimePromise=null;}
 }
 
+async function ensureSeason4StoryPresetRuntime(env) {
+  if (season4StoryPresetRuntimeReady) return { ok:true, seeded:false, reason:'runtime-ready' };
+  if (season4StoryPresetRuntimePromise) return season4StoryPresetRuntimePromise;
+  const promise=(async()=>{
+    try{
+      const result=await ensureSeason4StoryPreset(env);
+      if(result?.seeded||result?.reason==='already-seeded')season4StoryPresetRuntimeReady=true;
+      return result;
+    }catch(error){
+      console.error('season4 story preset runtime failed',error);
+      return {ok:false,seeded:false,reason:'runtime-error'};
+    }
+  })();
+  season4StoryPresetRuntimePromise=promise;
+  try{return await promise;}finally{if(season4StoryPresetRuntimePromise===promise)season4StoryPresetRuntimePromise=null;}
+}
+
 async function ensureSeasonPassSchema(env) {
   requireDatabase(env);
   if (seasonPassSchemaReady) {
     await ensureSeason3StoryPresetRuntime(env);
+    await ensureSeason4StoryPresetRuntime(env);
     return;
   }
   if (seasonPassSchemaPromise) return seasonPassSchemaPromise;
@@ -32104,6 +32208,7 @@ async function ensureSeasonPassSchema(env) {
     if (await seasonPassSchemaQuickCheck(env)) {
       if (!markerReady) await markSeasonPassSchemaReady(env);
       await ensureSeason3StoryPresetRuntime(env);
+      await ensureSeason4StoryPresetRuntime(env);
       return;
     }
     await env.DB.batch([
@@ -32381,6 +32486,8 @@ async function ensureSeasonPassSchema(env) {
     // Keep retrying on future Season Pass reads until the season exists; once seeded,
     // the runtime guard removes the extra D1 lookup for the rest of this isolate.
     await ensureSeason3StoryPresetRuntime(env);
+    // Seed the authored Season 4 White Rabbit story once when the next season exists.
+    await ensureSeason4StoryPresetRuntime(env);
     await markSeasonPassSchemaReady(env);
   })();
   seasonPassSchemaPromise = promise;
@@ -33572,6 +33679,105 @@ async function ensureSeason3StoryCanonicalV2(env){
   await env.DB.prepare(`INSERT OR IGNORE INTO season_pass_story_presets(preset_id,season_id,seeded_at,updated_by) VALUES(?,?,?,?)`)
     .bind(repairId,seasonId,now,repairMarker).run();
   return {ok:true,repaired:true,seasonId,upserted,removed,archived};
+}
+
+function season4StoryPresetTitleKey(value){
+  return String(value||'').trim().toLocaleLowerCase('ru-RU').replaceAll('\u0451','\u0435');
+}
+
+function season4StoryPresetMatchesSeasonTitle(title){
+  const raw=String(title||'').trim();
+  const key=season4StoryPresetTitleKey(raw);
+  return key.includes('белый кролик')||/(?:сезон|season)\s*0*4(?:\D|$)/i.test(raw);
+}
+
+function season4StoryPresetMatchesAssetKey(assetKey){
+  const key=String(assetKey||'').trim().toLowerCase();
+  return key==='s4'||key==='season4'||/(?:^|[_-])(?:s4|season4)(?:[_-]|$)/i.test(key);
+}
+
+async function resolveSeason4StoryPresetTarget(env){
+  const candidates=(await env.DB.prepare(`SELECT season_id,title,asset_key,starts_at,ends_at,manual_status FROM season_pass_seasons WHERE COALESCE(manual_status,'')<>'ended' ORDER BY starts_at ASC,season_id ASC LIMIT 120`).all()).results||[];
+  const canonical=candidates.filter(row=>season4StoryPresetMatchesSeasonTitle(row.title));
+  if(canonical.length===1)return {target:canonical[0],reason:'title'};
+  const assetMatches=candidates.filter(row=>season4StoryPresetMatchesAssetKey(row.asset_key));
+  if(assetMatches.length===1)return {target:assetMatches[0],reason:'asset-key'};
+
+  const previousMarker=await env.DB.prepare(`SELECT season_id,preset_id FROM season_pass_story_presets WHERE preset_id IN (?,?) ORDER BY CASE WHEN preset_id=? THEN 0 ELSE 1 END LIMIT 1`)
+    .bind(SEASON3_STORY_PRESET.canonicalRepairId,SEASON3_STORY_PRESET.id,SEASON3_STORY_PRESET.canonicalRepairId).first();
+  if(previousMarker?.season_id){
+    const previous=await env.DB.prepare(`SELECT season_id,starts_at FROM season_pass_seasons WHERE season_id=? LIMIT 1`).bind(String(previousMarker.season_id)).first();
+    if(previous?.season_id){
+      const after=candidates.filter(row=>Number(row.starts_at||0)>Number(previous.starts_at||0));
+      if(after.length)return {target:after[0],reason:'next-after-season3'};
+    }
+  }
+  return {target:null,reason:candidates.length?'season4-season-ambiguous':'season4-season-not-created'};
+}
+
+async function ensureSeason4StoryPreset(env){
+  const presetId=SEASON4_STORY_PRESET.id;
+  const marker=SEASON4_STORY_PRESET.marker;
+  const existingMarker=await env.DB.prepare(`SELECT preset_id,season_id FROM season_pass_story_presets WHERE preset_id=? LIMIT 1`).bind(presetId).first();
+  if(existingMarker?.preset_id){
+    const mapped=await env.DB.prepare(`SELECT season_id FROM season_pass_seasons WHERE season_id=? LIMIT 1`).bind(String(existingMarker.season_id||'')).first();
+    if(mapped?.season_id)return {ok:true,seeded:false,reason:'already-seeded',seasonId:String(mapped.season_id)};
+    await env.DB.prepare(`DELETE FROM season_pass_story_presets WHERE preset_id=?`).bind(presetId).run();
+  }
+
+  const resolved=await resolveSeason4StoryPresetTarget(env);
+  const target=resolved?.target||null;
+  if(!target?.season_id)return {ok:true,seeded:false,reason:String(resolved?.reason||'season4-season-not-created')};
+
+  const now=Math.floor(Date.now()/1000);
+  const seasonId=String(target.season_id);
+  const safeSeason=seasonId.replace(/[^A-Za-z0-9_-]+/g,'_').slice(0,90)||'season4';
+  const canonicalEvents=season4StoryPresetEvents();
+  const canonicalIds=new Set(canonicalEvents.map(event=>`story_${safeSeason}_s4_${event.key}`.slice(0,180)));
+  const canonicalTitles=new Set(canonicalEvents.map(event=>String(event.title||'').trim()));
+  const existing=(await env.DB.prepare(`SELECT event_id,title,updated_by FROM season_pass_story_events WHERE season_id=? ORDER BY created_at,event_id`).bind(seasonId).all()).results||[];
+  let removed=0,archived=0;
+
+  // Canonicalize the authored Season 4 story on the first seed only. A matching
+  // duplicate without player progress can be removed safely; progressed rows are
+  // preserved as disabled archive entries so history is never destroyed.
+  for(const row of existing){
+    const eventId=String(row.event_id||'');
+    const title=String(row.title||'').trim();
+    const authored=canonicalTitles.has(title)||String(row.updated_by||'')===marker;
+    if(!authored||canonicalIds.has(eventId))continue;
+    const progress=Number((await env.DB.prepare(`SELECT COUNT(*) AS count FROM season_pass_story_progress WHERE event_id=?`).bind(eventId).first())?.count||0);
+    if(progress<=0){
+      await env.DB.batch([
+        env.DB.prepare(`DELETE FROM season_pass_story_manual_unlocks WHERE event_id=?`).bind(eventId),
+        env.DB.prepare(`DELETE FROM season_pass_story_tests WHERE event_id=?`).bind(eventId),
+        env.DB.prepare(`DELETE FROM season_pass_story_progress WHERE event_id=?`).bind(eventId),
+        env.DB.prepare(`DELETE FROM season_pass_story_events WHERE event_id=? AND season_id=?`).bind(eventId,seasonId)
+      ]);
+      removed+=1;
+    }else{
+      const archivedTitle=`[АРХИВ] ${title}`.slice(0,240);
+      await env.DB.prepare(`UPDATE season_pass_story_events SET enabled=0,push_enabled=0,title=?,sort_order=sort_order+1000,updated_at=?,updated_by=? WHERE event_id=? AND season_id=?`)
+        .bind(archivedTitle,now,marker,eventId,seasonId).run();
+      archived+=1;
+    }
+  }
+
+  let upserted=0;
+  for(const event of canonicalEvents){
+    const eventId=`story_${safeSeason}_s4_${event.key}`.slice(0,180);
+    const pages=event.pages.slice(0,10);
+    const first=pages[0]||{};
+    await env.DB.prepare(`INSERT INTO season_pass_story_events(event_id,season_id,sort_order,unlock_level,unlock_at,enabled,title,body_text,image_url,button_text,pages_json,push_enabled,push_text,reward_json,actions_json,created_at,updated_at,updated_by) VALUES(?,?,?,?,0,?,?,?,?,?,?,1,?,'{}','[]',?,?,?)
+      ON CONFLICT(event_id) DO UPDATE SET season_id=excluded.season_id,sort_order=excluded.sort_order,unlock_level=excluded.unlock_level,unlock_at=0,enabled=excluded.enabled,title=excluded.title,body_text=excluded.body_text,image_url=excluded.image_url,button_text=excluded.button_text,pages_json=excluded.pages_json,push_enabled=1,push_text=excluded.push_text,reward_json='{}',actions_json='[]',updated_at=excluded.updated_at,updated_by=excluded.updated_by`)
+      .bind(eventId,seasonId,Number(event.sortOrder||0),Math.max(1,Math.min(50,Number(event.unlockLevel)||1)),event.enabled?1:0,String(event.title||''),String(first.bodyText||''),String(first.imageUrl||''),String(first.buttonText||'Продолжить'),JSON.stringify(pages),String(event.pushText||''),now,now,marker).run();
+    upserted+=1;
+  }
+
+  await env.DB.prepare(`INSERT INTO season_pass_story_presets(preset_id,season_id,seeded_at,updated_by) VALUES(?,?,?,?)
+    ON CONFLICT(preset_id) DO UPDATE SET season_id=excluded.season_id,seeded_at=excluded.seeded_at,updated_by=excluded.updated_by`)
+    .bind(presetId,seasonId,now,marker).run();
+  return {ok:true,seeded:true,seasonId,upserted,removed,archived,boundBy:String(resolved?.reason||'')};
 }
 
 async function seasonPassTeaserForPlayer(env,season,telegramId,player){

@@ -42,8 +42,8 @@ must('season 3 canonical upsert', 'ON CONFLICT(event_id) DO UPDATE SET season_id
 must('season 3 duplicate cleanup', 'DELETE FROM season_pass_story_events WHERE event_id=? AND season_id=?');
 must('season 3 progressed duplicate archive', '[АРХИВ] ${title}');
 must('season 3 runtime invokes canonical repair', 'const repairResult=await ensureSeason3StoryCanonicalV2(env);');
-must('season 3 story quick schema path seed', 'if (!markerReady) await markSeasonPassSchemaReady(env);\n      await ensureSeason3StoryPresetRuntime(env);\n      return;');
-must('season 3 story ready-path retry', 'if (seasonPassSchemaReady) {\n    await ensureSeason3StoryPresetRuntime(env);\n    return;');
+must('season 3 story quick schema path seed', 'if (!markerReady) await markSeasonPassSchemaReady(env);\n      await ensureSeason3StoryPresetRuntime(env);');
+must('season 3 story ready-path retry', 'if (seasonPassSchemaReady) {\n    await ensureSeason3StoryPresetRuntime(env);');
 must('season 3 canonical title matcher', '/тайны\\s+белкино/i');
 must('season 3 event ids', 'const eventId=`story_${safeSeason}_s3_${event.key}`');
 must('season 3 owner edit preservation marker', 'INSERT OR IGNORE INTO season_pass_story_presets');
