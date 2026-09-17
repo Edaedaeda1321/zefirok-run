@@ -20796,10 +20796,10 @@ function createTutorialDeck(layer, mount, options, words) {
       }
 
       async function loadCaseStateForOpeningRecovery() {
-        // Recovery is an observation only: it must not apply client-side profile
-        // preferences or advance any server delivery queue while we are resolving
-        // the exact result of an already-started opening.
-        return loadCaseState(true, false, true);
+        // Recovery must stay on the isolated read-only data path. The server
+        // includes recent immutable receipts in this fast recovery snapshot, so
+        // LiveOps/admin control-plane work can never block an opening check.
+        return loadCaseState(true, true, true);
       }
 
       function presentConfirmedLevelCase(data, level, recovered = false) {

@@ -127,7 +127,7 @@ assert(physical.includes('legacyCompatible:false'), 'physical purchase still all
 assert(physical.includes('operationSuccessMeta(requestId,"physical_purchase"'), 'physical purchase has no operation completion metadata');
 
 const levelCase = section(worker, 'async function openLevelCase', '\nasync function purchaseCaseFromShop');
-assertOrder(levelCase, 'if(existing)', 'requirePlayerOperationAvailable', 'level case opening');
+assertOrder(levelCase, 'if(existing)', 'requireCaseDataPlaneAvailable', 'level case opening');
 assert(levelCase.includes('operationSuccessMeta(`level:${requestedLevel}`,"level_case_open",false)'), 'fresh level case has no completion metadata');
 assert(levelCase.includes('CASE_STATE_COMMIT_MAX_ATTEMPTS'), 'level case opening has no bounded revision retry');
 assert(levelCase.includes('caseStateRevisionGuardStatement'), 'level case opening has no explicit revision guard');
@@ -135,12 +135,12 @@ assert(levelCase.includes('{ explicitRevisionGuard:true }'), 'level case opening
 assert(levelCase.includes('if (attempt < CASE_STATE_COMMIT_MAX_ATTEMPTS) continue;'), 'level case state conflict is not retried server-side');
 
 const casePurchase = section(worker, 'async function purchaseCaseFromShop', '\nconst GRANTED_CASE_OPENING_STALE_SECONDS');
-assertOrder(casePurchase, 'if (existing)', 'requirePlayerOperationAvailable', 'case purchase');
+assertOrder(casePurchase, 'if (existing)', 'requireCaseDataPlaneAvailable', 'case purchase');
 assert(casePurchase.includes('legacyCode:"CASE_PRICE_CHANGED"'), 'case price-change compatibility code is missing');
 assert(casePurchase.includes('operationSuccessMeta(requestId,"case_purchase"'), 'case purchase has no operation completion metadata');
 
 const grantedCase = section(worker, 'async function openGrantedCase', '\nasync function grantAdminCaseOrFrame');
-assertOrder(grantedCase, 'grantedCaseExistingRequestPayload', 'requirePlayerOperationAvailable', 'granted case opening');
+assertOrder(grantedCase, 'grantedCaseExistingRequestPayload', 'requireCaseDataPlaneAvailable', 'granted case opening');
 assert(grantedCase.includes('kind:"granted_case_open",state:"processing"'), 'granted case pending operation state is missing');
 assert(grantedCase.includes('operationSuccessMeta(requestId || openingClaimToken,"granted_case_open",false)'), 'fresh granted case has no completion metadata');
 assert(grantedCase.includes('CASE_STATE_COMMIT_MAX_ATTEMPTS'), 'granted case opening has no bounded revision retry');
@@ -189,7 +189,7 @@ assert(worker.includes('CONSTRAINT case_state_revision_guard_ok CHECK(ok=1)'), '
 assert(index.includes('async function operationApiRequest'), 'client shared operation request helper is missing');
 assert(index.includes('error?.operationCode || error?.code || error?.details?.operationCode'), 'case UI does not recognize normalized STATE_CONFLICT');
 assert(index.includes('error?.operationCode === &quot;STATE_CONFLICT&quot;'), 'granted-case retry logic ignores normalized STATE_CONFLICT');
-assert(index.includes('return loadCaseState(true, false, true);'), 'case opening recovery does not request a read-only state check');
+assert(index.includes('return loadCaseState(true, true, true);'), 'case opening recovery does not use the isolated fast read-only state check');
 assert(index.includes('operationContractVersion: 1'), 'client does not send operation contract version');
 assert(index.includes('function operationIssuePresentation'), 'client shared friendly operation state presenter is missing');
 assert(index.includes('Покупки временно недоступны'), 'client friendly purchases-disabled message is missing');

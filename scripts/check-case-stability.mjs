@@ -93,6 +93,66 @@ assert(worker.includes('"/api/cases/open-granted/status"'),'status path missing 
 const recoveryAware=between(worker,'const RECOVERY_AWARE_OPERATION_PATHS = new Set([',']);');
 assert(recoveryAware.includes('/api/cases/open-granted/status'),'read-only status observer must bypass maintenance so a lost committed result remains recoverable');
 assert(worker.includes('"/api/cases/open-granted/status","/api/cases/purchase"'),'Test Project does not isolate the new case status path');
+
+// Data-plane isolation: opening a case must never bootstrap or migrate the
+// owner/admin LiveOps control plane. Optional configuration reads are fail-soft.
+assert(worker.includes('async function readCaseRuntimeConfig(env,force=false)'),'isolated player case runtime reader missing');
+const caseRuntimeReader=between(worker,'async function readCaseRuntimeConfig','const LIVEOPS_CONFIG_CACHE_TTL_MS');
+for(const forbidden of ['ensureLiveOpsAdminSchema(','ensureLiveContentReleaseSchema(','readLiveOpsConfig(','readLiveContentReleaseRules(','CREATE TABLE','ALTER TABLE','INSERT INTO','UPDATE ','DELETE FROM']){
+  assert(!caseRuntimeReader.includes(forbidden),`case runtime reader touches control-plane mutation via ${forbidden}`);
+}
+assert(caseRuntimeReader.includes('case runtime content overrides unavailable; using evergreen defaults'),'content override failure is not fail-soft');
+assert(caseRuntimeReader.includes('case runtime case config unavailable; using code defaults'),'case config failure is not fail-soft');
+assert(caseRuntimeReader.includes('case runtime seasonal registry unavailable; future rewards disabled fail-closed'),'future content failure is not fail-closed');
+assert(caseRuntimeReader.includes('SELECT item_kind,item_id,content_season_id,ever_released,status,release_at,routes_json'),'case runtime does not read release registry directly');
+
+const fullCasePayload=between(worker,'async function buildCasePayload','async function readFastCaseInventory');
+assert(fullCasePayload.includes('readCaseRuntimeConfig(env)'),'full case payload still depends on admin LiveOps reader');
+assert(!fullCasePayload.includes('readLiveOpsConfig(env)'),'full case payload reintroduced control-plane LiveOps dependency');
+assert(levelOpening.includes('readCaseRuntimeConfig(env)'),'level opening does not use isolated case config');
+assert(levelOpening.includes('rollLevelCaseForPlayer('),'level opening does not use fail-soft player roll');
+assert(!levelOpening.includes('readLiveOpsConfig(env)'),'level opening reintroduced owner/admin LiveOps dependency');
+assert(!levelOpening.includes('assertRolledLiveContentCaseRoutes('),'level opening can still fail after claiming because of control-plane route validation');
+assert(opening.includes('readCaseRuntimeConfig(env)'),'granted opening does not use isolated case config');
+assert(opening.includes('rollLevelCaseForPlayer('),'granted opening does not use fail-soft player roll');
+assert(!opening.includes('readLiveOpsConfig(env)'),'granted opening reintroduced owner/admin LiveOps dependency');
+assert(!opening.includes('assertRolledLiveContentCaseRoutes('),'granted opening can still strand a claim on route validation');
+assert(existing.includes('readCaseRuntimeConfig(env)'),'committed receipt replay still depends on owner/admin LiveOps');
+assert(!existing.includes('readLiveOpsConfig(env)'),'committed receipt replay reintroduced control-plane dependency');
+const purchase=between(worker,'async function purchaseCaseFromShop','async function releaseGrantedCaseOpeningReservations');
+assert(purchase.includes('readCaseRuntimeConfig(env)'),'case purchase still bootstraps owner/admin LiveOps');
+assert(!purchase.includes('readLiveOpsConfig(env)'),'case purchase reintroduced owner/admin LiveOps dependency');
+
+const caseAvailability=between(worker,'async function caseDataPlaneFeatureEnabled','async function getLevelCaseState');
+for(const forbidden of ['ensureMaintenanceSchema(','ensureFeatureFlagsSchema(','ensureOperationsSecuritySchema(','CREATE TABLE','ALTER TABLE','INSERT INTO','UPDATE ','DELETE FROM']){
+  assert(!caseAvailability.includes(forbidden),`case availability guard mutates control-plane state via ${forbidden}`);
+}
+assert(caseAvailability.includes('case data-plane feature flag read failed; using enabled default'),'case feature flag storage failure can still take opening down');
+assert(caseAvailability.includes('case data-plane maintenance read failed; keeping cases available'),'maintenance storage failure can still take opening down');
+assert(levelOpening.includes('requireCaseDataPlaneAvailable('),'level opening does not use read-only case availability guard');
+assert(!levelOpening.includes('requirePlayerOperationAvailable('),'level opening still enters generic control-plane availability bootstrap');
+assert(opening.includes('requireCaseDataPlaneAvailable('),'granted opening does not use read-only case availability guard');
+assert(!opening.includes('requirePlayerOperationAvailable('),'granted opening still enters generic control-plane availability bootstrap');
+assert(purchase.includes('requireCaseDataPlaneAvailable('),'case purchase does not use read-only case availability guard');
+assert(!purchase.includes('requirePlayerOperationAvailable('),'case purchase still enters generic control-plane availability bootstrap');
+const physicalPrepare=between(worker,'async function prepareCasePhysicalRewards','async function releaseCasePhysicalStock');
+assert(physicalPrepare.includes('case physical reward subsystem unavailable; falling back to points'),'physical reward subsystem can still abort an otherwise valid case opening');
+assert(physicalPrepare.includes('return { statements:[], stockConsumptionIds:[] }'),'physical reward failure does not release the case into an evergreen points fallback');
+
+const playerRoll=between(worker,'async function rollLevelCaseForPlayer','const LIVEOPS_CONFIG_CACHE_TTL_MS');
+assert(playerRoll.includes('caseFutureRoutesStillValidReadOnly'),'player roll does not recheck future rewards read-only');
+assert(playerRoll.includes('caseRuntimeConfigWithoutFutureContent'),'future content outage cannot fall back to evergreen rewards');
+assert(!playerRoll.includes('assertRolledLiveContentCaseRoutes('),'player roll still calls throwing control-plane validator');
+
+const stateHandler=between(worker,'async function getLevelCaseState','async function readLevelCaseOpening');
+assert(stateHandler.includes('body.fast === true || body.recovery === true'),'opening recovery can still fall into full case payload');
+assert(stateHandler.includes('includeRecentOpenings:body.recovery === true'),'fast recovery does not include immutable receipts');
+const fastRefresh=between(worker,'async function buildFastCaseRefreshPayload','function buildFastCaseOpenPayload');
+assert(fastRefresh.includes('options?.includeRecentOpenings === true'),'fast refresh cannot include recovery receipts');
+assert(fastRefresh.includes('recentCaseOpeningsForPlayer(env,id,8)'),'recovery receipt query missing');
+const clientRecovery=between(index,'async function loadCaseStateForOpeningRecovery','function presentConfirmedLevelCase');
+assert(clientRecovery.includes('loadCaseState(true, true, true)'),'client opening recovery still calls full LiveOps case state');
+
 assert(gate.includes("['case opening stability', 'node', ['scripts/check-case-stability.mjs']]"),'Production Gate does not enforce case stability');
 
 console.log(`Case stability checks passed: ${checks} invariants.`);

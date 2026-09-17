@@ -11647,7 +11647,7 @@ async function buildCasePayload(env, telegramId, currentProfile, extra = {}, opt
   // grant row before reading the warehouse so partial/older cleanups self-heal.
   await reconcileDeliveredSeasonPassCasesForPlayer(env, telegramId);
   const ensured = options.ensured || await ensureCasePlayerState(env, telegramId, currentProfile);
-  const liveops = await readLiveOpsConfig(env);
+  const liveops = await readCaseRuntimeConfig(env);
   const [openingsResult, giftedResult] = await env.DB.batch([
     env.DB.prepare(
       `SELECT level, case_type, rewards_json, opened_at
@@ -11762,7 +11762,7 @@ async function buildFastCasePurchasePayload(env, telegramId, ensured, liveops, e
   };
 }
 
-async function buildFastCaseRefreshPayload(env, telegramId) {
+async function buildFastCaseRefreshPayload(env, telegramId, options = {}) {
   requireDatabase(env);
   const id = String(telegramId || '');
   const readRows = () => Promise.all([
@@ -11796,7 +11796,10 @@ async function buildFastCaseRefreshPayload(env, telegramId) {
   }
 
   const caseState = caseStateFromRow(stateRow || {});
-  const alexCollectionGrant = await env.DB.prepare(`SELECT id FROM granted_cases WHERE id=? AND telegram_id=? LIMIT 1`).bind(alexCaseCollectionGrantId(id),id).first().catch(()=>null);
+  const [alexCollectionGrant, recentOpenings] = await Promise.all([
+    env.DB.prepare(`SELECT id FROM granted_cases WHERE id=? AND telegram_id=? LIMIT 1`).bind(alexCaseCollectionGrantId(id),id).first().catch(()=>null),
+    options?.includeRecentOpenings === true ? recentCaseOpeningsForPlayer(env,id,8).catch((error)=>{ console.error("case recovery receipt read failed",error); return []; }) : Promise.resolve(null)
+  ]);
   const alexCollection = { ...alexCaseCollectionStatus(caseState), rewardCaseType:"gold", rewardTitle:"Золотой кейс", rewardClaimed:Boolean(alexCollectionGrant?.id) };
   // Fast warehouse refresh must not overwrite live-configured pity guarantees
   // with caseStateFromRow fallback constants. The client keeps its current
@@ -11809,6 +11812,7 @@ async function buildFastCaseRefreshPayload(env, telegramId) {
     openedLevels:inventory.openedLevels,
     giftedCases:inventory.giftedCases,
     giftedCaseOpenings:inventory.openingOperations||[],
+    ...(Array.isArray(recentOpenings) ? { recentOpenings } : {}),
     caseState,
     alexCollection,
     profile:{
@@ -12268,7 +12272,18 @@ async function prepareCasePhysicalRewards(env, { rolled, telegramId, ownerName, 
     return { statements, stockConsumptionIds };
   } catch (error) {
     await releaseCasePhysicalStock(env, stockConsumptionIds);
-    throw error;
+    console.error("case physical reward subsystem unavailable; falling back to points", error);
+    const configuredRange = rolled?.caseConfig?.ranges?.points;
+    const [min, max] = Array.isArray(configuredRange)
+      ? [Number(configuredRange[0] || 35000), Number(configuredRange[1] || 150000)]
+      : caseCurrencyRange("legendary", "points");
+    for (let index = 0; index < rewards.length; index += 1) {
+      if (rewards[index]?.kind !== "physical") continue;
+      const amount = caseRandomInt(min, max);
+      rolled.points = safeAdminNumber(Number(rolled.points || 0) + amount);
+      rewards[index] = { kind:"points", amount, fallbackFromPhysical:true, fallbackReason:"physical_subsystem_unavailable" };
+    }
+    return { statements:[], stockConsumptionIds:[] };
   }
 }
 
@@ -12302,6 +12317,50 @@ function caseFailureResponse(error, fallbackMessage) {
   return jsonResponse({ ok:false,error:failure.error,code:failure.code,operationCode,retryable:Boolean(failure.details?.retryable),details:{...failure.details,code:failure.code,operationCode} },failure.status);
 }
 
+async function caseDataPlaneFeatureEnabled(env,flagKey,telegramId){
+  try{
+    const row=await env.DB.prepare(`SELECT mode,rollout_percent FROM live_feature_flags WHERE flag_key=? LIMIT 1`).bind(String(flagKey||"")).first();
+    if(!row||String(row.mode||"all")==="all")return true;
+    if(String(row.mode)==="off")return false;
+    if(String(row.mode)==="percent")return stableRolloutBucket(`${String(flagKey||"")}:${String(telegramId||"")}`)<Math.max(0,Math.min(100,Number(row.rollout_percent||0)));
+    if(String(row.mode)==="testers"){
+      try{return Boolean(await env.DB.prepare(`SELECT telegram_id FROM tester_accounts WHERE telegram_id=? LIMIT 1`).bind(String(telegramId||"")).first());}
+      catch(error){console.error("case data-plane tester flag read failed",error);return false;}
+    }
+    return true;
+  }catch(error){
+    // Feature flag storage is optional control-plane state. Missing/broken flag
+    // tables must not take the core case data plane down.
+    console.error("case data-plane feature flag read failed; using enabled default",error);
+    return true;
+  }
+}
+async function requireCaseDataPlaneAvailable(env,telegramId,options={}){
+  const id=String(telegramId||"");
+  const capabilities=new Set(Array.isArray(options?.capabilities)?options.capabilities.map(String):["cases"]);
+  try{
+    const row=await env.DB.prepare(`SELECT full_closed,purchases_disabled,cases_disabled,testers_only,message FROM maintenance_settings WHERE id=1 LIMIT 1`).first();
+    if(row){
+      const restricted=Number(row.full_closed||0)===1||Number(row.testers_only||0)===1;
+      const identity=restricted?await maintenanceAccessIdentity(id,env).catch(()=>({allowed:false})):({allowed:false});
+      const privileged=Boolean(identity?.allowed);
+      const message=String(row.message||DEFAULT_MAINTENANCE_SETTINGS.message);
+      if(Number(row.testers_only||0)===1&&!privileged)throw featureUnavailableError("game",message,"testers_only");
+      if(Number(row.full_closed||0)===1&&!privileged)throw featureUnavailableError("game",message,"full");
+      if(capabilities.has("purchases")&&Number(row.purchases_disabled||0)===1)throw featureUnavailableError("purchases",message,"purchases");
+      if(capabilities.has("cases")&&Number(row.cases_disabled||0)===1)throw featureUnavailableError("cases",message,"cases");
+    }
+  }catch(error){
+    if(error instanceof ApiError)throw error;
+    console.error("case data-plane maintenance read failed; keeping cases available",error);
+  }
+  for(const flagKey of Array.isArray(options?.featureFlags)?options.featureFlags.map(String):["cases"]){
+    if(await caseDataPlaneFeatureEnabled(env,flagKey,id))continue;
+    const feature=flagKey==="shop"?"purchases":flagKey;
+    throw featureUnavailableError(feature,`Функция «${FEATURE_FLAG_LABELS[flagKey]||flagKey}» временно недоступна.`,flagKey);
+  }
+}
+
 async function getLevelCaseState(request, env, internal = null, ctx = null) {
   try {
     requireDatabase(env);
@@ -12312,11 +12371,10 @@ async function getLevelCaseState(request, env, internal = null, ctx = null) {
     // Recovery/state refresh must stay read-only for case_player_state.
     // Delivery queues can bump the same revision and previously caused a retry loop
     // while an opening was being committed.
-    if (body.fast === true) {
-      // Warehouse/case tabs only need the authoritative case snapshot here.
-      // Gift inbox is fetched by its own tab; waiting for it made a supposedly
-      // fast case refresh as slow as the full startup package.
-      const fastPayload = await buildFastCaseRefreshPayload(env,telegramId);
+    if (body.fast === true || body.recovery === true) {
+      // Recovery is deliberately isolated from LiveOps/admin control-plane reads.
+      // It only observes durable case state and immutable opening receipts.
+      const fastPayload = await buildFastCaseRefreshPayload(env,telegramId,{ includeRecentOpenings:body.recovery === true });
       return internal?.raw ? fastPayload : jsonResponse(fastPayload);
     }
     const payload = await buildCasePayload(env, telegramId, body.recovery === true ? {} : (body.current || {}), {}, {
@@ -12369,11 +12427,11 @@ async function openLevelCase(request, env, ctx = null) {
     if (!caseType) throw new ApiError(400, "На этом уровне кейс не выдаётся.");
     const now = Math.floor(Date.now() / 1000);
     const [liveops, existing] = await Promise.all([
-      readLiveOpsConfig(env),
+      readCaseRuntimeConfig(env),
       readLevelCaseOpening(env,telegramId,requestedLevel)
     ]);
     if(existing)return await replayLevelCaseOpening(env,telegramId,existing,liveops);
-    await requirePlayerOperationAvailable(env,telegramId,{capabilities:["cases"],featureFlags:["cases"]});
+    await requireCaseDataPlaneAvailable(env,telegramId,{capabilities:["cases"],featureFlags:["cases"]});
     if (liveOpsCaseConfig(liveops, caseType)?.enabled === false) throw featureUnavailableError("cases", "Этот кейс временно отключён администратором.", "case_item");
 
     let committed = null;
@@ -12387,8 +12445,7 @@ async function openLevelCase(request, env, ctx = null) {
       if (playerLevel < requestedLevel) throw new ApiError(403, `Кейс откроется на ${requestedLevel} уровне.`);
       const taskEvent = await prepareSeasonPassTaskProgressEvent(env, telegramId, {cases_opened:1}, now)
         .catch(error => {console.error("level case task progress prepare failed",error);return null;});
-      const rolled = rollLevelCase(caseType, ensured.state, ensured.state.ownedSkins, liveops);
-      await assertRolledLiveContentCaseRoutes(env,rolled,"case",caseType);
+      const rolled = await rollLevelCaseForPlayer(env,caseType,ensured.state,ensured.state.ownedSkins,liveops);
       const physicalRewards = await prepareCasePhysicalRewards(env, {
         rolled,
         telegramId,
@@ -12499,7 +12556,7 @@ async function purchaseCaseFromShop(request, env, ctx = null) {
     const grantId = `shopcase_${telegramId}_${requestId}`;
     let ensured;
     const [liveops, assortmentProduct, ensuredResult, existing] = await Promise.all([
-      readLiveOpsConfig(env), readShopAssortmentProduct(env, baseProduct.id), ensureCasePlayerState(env, telegramId, {}),
+      readCaseRuntimeConfig(env), readShopAssortmentProduct(env, baseProduct.id), ensureCasePlayerState(env, telegramId, {}),
       env.DB.prepare(`SELECT id FROM granted_cases WHERE id=? AND telegram_id=? LIMIT 1`).bind(grantId,telegramId).first()
     ]);
     ensured=ensuredResult;
@@ -12511,7 +12568,7 @@ async function purchaseCaseFromShop(request, env, ctx = null) {
         repeated:true,purchase:{productId:product.id,caseType,title:product.title},operation:operationSuccessMeta(requestId,"case_purchase",true)
       }));
     }
-    await requirePlayerOperationAvailable(env,telegramId,{capabilities:["purchases","cases"],featureFlags:["shop","cases"]});
+    await requireCaseDataPlaneAvailable(env,telegramId,{capabilities:["purchases","cases"],featureFlags:["shop","cases"]});
     const currentPrice={points:product.points,treats:product.treats,coffee:product.coffee};
     assertOperationQuotedPrice(body,currentPrice,{operationId:requestId,operationKind:"case_purchase",productId:product.id,legacyCode:"CASE_PRICE_CHANGED",legacyCompatible:false});
     if (liveOpsCaseConfig(liveops, caseType)?.enabled === false) throw featureUnavailableError("cases", "Этот кейс временно отключён администратором.", "case_item");
@@ -12637,7 +12694,7 @@ async function grantedCaseExistingRequestPayload(env,telegramId,requestId,option
   }
   if(String(row.status||'')!=='opened')return null;
   const caseType=normalizeCaseType(row.case_type);if(!caseType)return null;
-  const [ensured,liveops,inventory]=await Promise.all([ensureCasePlayerState(env,telegramId,{}),readLiveOpsConfig(env),readFastCaseInventory(env,telegramId)]);
+  const [ensured,liveops,inventory]=await Promise.all([ensureCasePlayerState(env,telegramId,{}),readCaseRuntimeConfig(env),readFastCaseInventory(env,telegramId)]);
   let rewards=[];try{const parsed=JSON.parse(String(row.rewards_json||'[]'));rewards=Array.isArray(parsed)?parsed:[];}catch{}
   const opened={grantId:String(row.id||''),source:'gift',caseType,title:LEVEL_CASE_CONFIG[caseType]?.title||'Кейс',rewards,resumed:true,openedAt:safeAdminNumber(row.opened_at)*1000};
   if(caseType==='alex'){const collection=alexCaseCollectionStatus(ensured.state);const collectionGrant=await env.DB.prepare(`SELECT id FROM granted_cases WHERE id=? AND telegram_id=? LIMIT 1`).bind(alexCaseCollectionGrantId(String(telegramId)),String(telegramId)).first().catch(()=>null);opened.alexCollection={...collection,rewardCaseType:'gold',rewardTitle:'Золотой кейс',rewardClaimed:Boolean(collectionGrant?.id)};}
@@ -12691,9 +12748,9 @@ async function openGrantedCase(request, env, ctx = null) {
       const existingRequest = await grantedCaseExistingRequestPayload(env, telegramId, requestId, { recoverStale:resumeRequested });
       if (existingRequest) return jsonResponse({...existingRequest,operation:existingRequest.pending?{id:requestId,kind:"granted_case_open",state:"processing",code:"PROCESSING"}:operationSuccessMeta(requestId,"granted_case_open",true)}, existingRequest.pending ? 202 : 200);
     }
-    await requirePlayerOperationAvailable(env,telegramId,{capabilities:["cases"],featureFlags:["cases"]});
+    await requireCaseDataPlaneAvailable(env,telegramId,{capabilities:["cases"],featureFlags:["cases"]});
     const now = Math.floor(Date.now() / 1000);
-    const liveops = await readLiveOpsConfig(env);
+    const liveops = await readCaseRuntimeConfig(env);
     openingClaimAt = now;
     openingClaimToken = requestId || crypto.randomUUID().replace(/-/g, '');
     await recoverStaleGrantedCaseOpenings(env, telegramId, now);
@@ -12734,8 +12791,7 @@ async function openGrantedCase(request, env, ctx = null) {
         .catch((error) => { console.error("granted case task progress prepare failed", error); return null; });
       const rolled = caseType === "alex"
         ? rollAlexCase(ensured.state, ensured.state.ownedSkins)
-        : rollLevelCase(caseType, ensured.state, ensured.state.ownedSkins, liveops);
-      if(caseType!=="alex")await assertRolledLiveContentCaseRoutes(env,rolled,"case",caseType);
+        : await rollLevelCaseForPlayer(env,caseType,ensured.state,ensured.state.ownedSkins,liveops);
       const alexCollection = caseType === "alex" ? alexCaseCollectionStatus(rolled.state) : null;
       const alexCollectionRewardGranted = Boolean(caseType === "alex" && alexCollection?.complete && !priorAlexCollectionGrant?.id);
       const physicalRewards = await prepareCasePhysicalRewards(env, {
@@ -25146,6 +25202,124 @@ function liveOpsCaseConfigFromRow(row) {
   };
 }
 
+// Player case opening is a data-plane operation. It must never create, migrate or
+// seed owner/admin tables. If an optional LiveOps table is temporarily missing or
+// unreadable, evergreen case rewards keep working from code defaults; future
+// seasonal content fails closed until its registry can be read again.
+const CASE_RUNTIME_CONFIG_CACHE_TTL_MS = 5 * 1000;
+let caseRuntimeConfigMemory = { value:null, expiresAt:0, promise:null, generation:0 };
+function invalidateCaseRuntimeConfigCache(){
+  caseRuntimeConfigMemory.value=null;
+  caseRuntimeConfigMemory.expiresAt=0;
+  caseRuntimeConfigMemory.promise=null;
+  caseRuntimeConfigMemory.generation+=1;
+}
+function caseRuntimeDefaultConfig(caseId){
+  const id=String(caseId||"");
+  const fallback=LIVEOPS_CASE_DEFAULTS[id]||LIVEOPS_CASE_DEFAULTS.small;
+  return {id,enabled:fallback.enabled!==false,title:String(fallback.title||LEVEL_CASE_CONFIG[id]?.title||id),guaranteeCount:Math.max(0,Math.floor(Number(fallback.guaranteeCount)||0)),chances:{...(fallback.chances||{})},ranges:{...(fallback.ranges||{})},updatedAt:0,updatedBy:"code-default"};
+}
+async function readCaseRuntimeConfig(env,force=false){
+  requireDatabase(env);
+  const nowMs=Date.now();
+  if(!force&&caseRuntimeConfigMemory.value&&caseRuntimeConfigMemory.expiresAt>nowMs)return caseRuntimeConfigMemory.value;
+  if(!force&&caseRuntimeConfigMemory.promise)return caseRuntimeConfigMemory.promise;
+  const generation=caseRuntimeConfigMemory.generation;
+  const promise=(async()=>{
+    const content={avatar:{},frame:{},trail:{},skin:{},music:{}};
+    const cases={};
+    let contentRows=[],caseRows=[],registryRows=[];
+    try{
+      const result=await env.DB.prepare(`SELECT item_kind,item_id,title,rarity,weight,enabled,is_new,legendary_only,image_url,updated_at FROM liveops_content_items ORDER BY item_kind,item_id`).all();
+      contentRows=Array.isArray(result?.results)?result.results:[];
+    }catch(error){console.error("case runtime content overrides unavailable; using evergreen defaults",error);}
+    try{
+      const result=await env.DB.prepare(`SELECT case_id,enabled,title,guarantee_count,chances_json,ranges_json,updated_at,updated_by FROM liveops_case_configs ORDER BY case_id`).all();
+      caseRows=Array.isArray(result?.results)?result.results:[];
+    }catch(error){console.error("case runtime case config unavailable; using code defaults",error);}
+    try{
+      const result=await env.DB.prepare(`SELECT item_kind,item_id,content_season_id,ever_released,status,release_at,routes_json,updated_at,updated_by FROM live_content_registry_state ORDER BY item_kind,item_id`).all();
+      registryRows=Array.isArray(result?.results)?result.results:[];
+    }catch(error){console.error("case runtime seasonal registry unavailable; future rewards disabled fail-closed",error);}
+
+    for(const row of contentRows){
+      const kind=String(row?.item_kind||"");if(!content[kind])continue;
+      const itemId=String(row?.item_id||"");if(!itemId)continue;
+      // Future content is controlled exclusively by the release registry below.
+      if(futureSeasonContentItem(kind,itemId))continue;
+      content[kind][itemId]={title:String(row?.title||itemId),rarity:String(row?.rarity||"common"),weight:Math.max(0,Number(row?.weight||0)),enabled:Number(row?.enabled||0)===1,isNew:Number(row?.is_new||0)===1,legendaryOnly:Number(row?.legendary_only||0)===1,imageUrl:liveOpsCanonicalContentImage(kind,itemId,row?.image_url)};
+    }
+    for(const row of caseRows){
+      const caseId=String(row?.case_id||"");if(!LIVEOPS_CASE_IDS.includes(caseId))continue;
+      cases[caseId]=liveOpsCaseConfigFromRow(row);
+    }
+    for(const caseId of LIVEOPS_CASE_IDS)if(!cases[caseId])cases[caseId]=caseRuntimeDefaultConfig(caseId);
+
+    const releaseRules=new Map();
+    for(const row of registryRows){
+      const rule=liveContentRuleFromRow(row);
+      releaseRules.set(liveContentReleaseKey(rule.kind,rule.itemId),rule);
+    }
+    for(const rule of releaseRules.values()){
+      if(!rule.released)continue;
+      const item=futureSeasonContentItem(rule.kind,rule.itemId);if(!item||!content[rule.kind])continue;
+      content[rule.kind][rule.itemId]={
+        title:String(item.title||rule.itemId),rarity:String(item.rarity||"common"),weight:Math.max(0,Number((liveContentRoute(rule,"case")||{}).weight)||1),enabled:true,isNew:true,legendaryOnly:false,
+        imageUrl:String(item.imageUrl||""),audioUrl:String(item.audioUrl||item.src||""),future:true,ownershipRequired:contentRequiresRewardOwnership(rule.kind,rule.itemId),seasonKey:futureSeasonContentSeasonKey(rule.kind,rule.itemId),released:true,everReleased:Boolean(rule.everReleased),status:String(rule.status||"open"),releaseAt:Number(rule.releaseAt||0),routes:rule.routes||{},seasonId:String(rule.seasonId||""),destinationType:rule.destinationType,destinationId:rule.destinationId,destinationConfig:rule.destinationConfig||{},seasonLabel:futureSeasonContentLabel(rule.kind,rule.itemId)
+      };
+    }
+    const revision=Math.max(0,...contentRows.map(row=>Number(row?.updated_at||0)),...caseRows.map(row=>Number(row?.updated_at||0)),...registryRows.map(row=>Number(row?.updated_at||0)));
+    const value={content,cases,version:4,revision,dataPlane:true};
+    if(generation===caseRuntimeConfigMemory.generation){caseRuntimeConfigMemory.value=value;caseRuntimeConfigMemory.expiresAt=Date.now()+CASE_RUNTIME_CONFIG_CACHE_TTL_MS;}
+    return value;
+  })();
+  caseRuntimeConfigMemory.promise=promise;
+  try{return await promise;}finally{if(caseRuntimeConfigMemory.promise===promise)caseRuntimeConfigMemory.promise=null;}
+}
+
+function rolledCaseFutureContent(rolled){
+  const out=[];
+  for(const reward of Array.isArray(rolled?.rewards)?rolled.rewards:[]){
+    const kind=String(reward?.kind||""),itemId=String(reward?.id||reward?.itemId||"");
+    if(!SEASON_PASS_COSMETIC_KINDS.includes(kind)||!futureSeasonContentItem(kind,itemId))continue;
+    out.push({kind,itemId});
+  }
+  return out;
+}
+async function caseFutureRoutesStillValidReadOnly(env,rolled,caseType){
+  const future=rolledCaseFutureContent(rolled);if(!future.length)return true;
+  try{
+    const rows=await Promise.all(future.map(({kind,itemId})=>env.DB.prepare(`SELECT item_kind,item_id,content_season_id,ever_released,status,release_at,routes_json,updated_at,updated_by FROM live_content_registry_state WHERE item_kind=? AND item_id=? LIMIT 1`).bind(kind,itemId).first()));
+    return rows.every((row,index)=>{
+      if(!row)return false;
+      const rule=liveContentRuleFromRow(row),item=future[index];
+      return rule.kind===item.kind&&rule.itemId===item.itemId&&rule.released&&liveContentRouteEnabled(rule,"case",String(caseType||""));
+    });
+  }catch(error){
+    console.error("case future-route recheck unavailable; rerolling without future content",error);
+    return false;
+  }
+}
+function caseRuntimeConfigWithoutFutureContent(liveops){
+  const content={};
+  for(const kind of ["avatar","frame","trail","skin","music"]){
+    content[kind]={};
+    for(const [itemId,item] of Object.entries(liveops?.content?.[kind]||{})){
+      if(item?.future===true||futureSeasonContentItem(kind,itemId))continue;
+      content[kind][itemId]=item;
+    }
+  }
+  return {...(liveops||{}),content};
+}
+async function rollLevelCaseForPlayer(env,caseType,sourceState,currentOwnedSkins=[],liveops=null,rng=caseSecureFloat){
+  const safeLiveops=liveops||await readCaseRuntimeConfig(env);
+  const rolled=rollLevelCase(caseType,sourceState,currentOwnedSkins,safeLiveops,rng);
+  if(await caseFutureRoutesStillValidReadOnly(env,rolled,caseType))return rolled;
+  // Control-plane races or outages must never strand a claimed case. Future
+  // content is simply removed from this roll and the same durable case opens.
+  return rollLevelCase(caseType,sourceState,currentOwnedSkins,caseRuntimeConfigWithoutFutureContent(safeLiveops),rng);
+}
+
 const LIVEOPS_CONFIG_CACHE_TTL_MS = 15 * 1000;
 let liveOpsConfigMemory = { value: null, expiresAt: 0, promise: null, generation: 0 };
 function invalidateLiveOpsConfigCache() {
@@ -25153,6 +25327,7 @@ function invalidateLiveOpsConfigCache() {
   liveOpsConfigMemory.expiresAt = 0;
   liveOpsConfigMemory.promise = null;
   liveOpsConfigMemory.generation += 1;
+  invalidateCaseRuntimeConfigCache();
 }
 async function readLiveOpsConfig(env, force = false) {
   await ensureLiveOpsAdminSchema(env);
