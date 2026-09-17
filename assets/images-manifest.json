@@ -1,8 +1,8 @@
 {
   "version": 2,
   "hashAlgorithm": "sha256",
-  "catalogHash": "d287ae7f49913db2",
-  "count": 470,
+  "catalogHash": "b6e07217789407e6",
+  "count": 481,
   "images": [
     {
       "fileName": "achievements/background_achivment_panel.webp",
@@ -1413,6 +1413,14 @@
       "size": 1013896
     },
     {
+      "fileName": "optimized/v0.79.5/barricade_game_park_flowers_s3.webp",
+      "label": "Barricade game park flowers s3",
+      "folder": "optimized/v0.79.5",
+      "path": "/assets/optimized/v0.79.5/barricade_game_park_flowers_s3.webp",
+      "hash": "b55aa207b614",
+      "size": 93144
+    },
+    {
       "fileName": "optimized/v0.79.5/barricade_game_puff_night.webp",
       "label": "Barricade game puff night",
       "folder": "optimized/v0.79.5",
@@ -1451,6 +1459,70 @@
       "path": "/assets/optimized/v0.79.5/game_barricade_flovers_night_s2.webp",
       "hash": "b37ff11cba66",
       "size": 1258134
+    },
+    {
+      "fileName": "optimized/v0.79.5/game_barricade_park_bike_s3.webp",
+      "label": "Game barricade park bike s3",
+      "folder": "optimized/v0.79.5",
+      "path": "/assets/optimized/v0.79.5/game_barricade_park_bike_s3.webp",
+      "hash": "31b0b2311072",
+      "size": 186980
+    },
+    {
+      "fileName": "optimized/v0.79.5/game_barricade_park_birdhouse_bird_s3.webp",
+      "label": "Game barricade park birdhouse bird s3",
+      "folder": "optimized/v0.79.5",
+      "path": "/assets/optimized/v0.79.5/game_barricade_park_birdhouse_bird_s3.webp",
+      "hash": "0d4f5dfff9cf",
+      "size": 71152
+    },
+    {
+      "fileName": "optimized/v0.79.5/game_barricade_park_birdhouse_s3.webp",
+      "label": "Game barricade park birdhouse s3",
+      "folder": "optimized/v0.79.5",
+      "path": "/assets/optimized/v0.79.5/game_barricade_park_birdhouse_s3.webp",
+      "hash": "edc04a6b7c79",
+      "size": 62666
+    },
+    {
+      "fileName": "optimized/v0.79.5/game_barricade_park_flowebed_s3.webp",
+      "label": "Game barricade park flowebed s3",
+      "folder": "optimized/v0.79.5",
+      "path": "/assets/optimized/v0.79.5/game_barricade_park_flowebed_s3.webp",
+      "hash": "e2d568ac16db",
+      "size": 88792
+    },
+    {
+      "fileName": "optimized/v0.79.5/game_barricade_park_log_s3.webp",
+      "label": "Game barricade park log s3",
+      "folder": "optimized/v0.79.5",
+      "path": "/assets/optimized/v0.79.5/game_barricade_park_log_s3.webp",
+      "hash": "6546188436ca",
+      "size": 54950
+    },
+    {
+      "fileName": "optimized/v0.79.5/game_barricade_park_picknik_basket_s3.webp",
+      "label": "Game barricade park picknik basket s3",
+      "folder": "optimized/v0.79.5",
+      "path": "/assets/optimized/v0.79.5/game_barricade_park_picknik_basket_s3.webp",
+      "hash": "140132a617d2",
+      "size": 105866
+    },
+    {
+      "fileName": "optimized/v0.79.5/game_barricade_park_scooter_s3.webp",
+      "label": "Game barricade park scooter s3",
+      "folder": "optimized/v0.79.5",
+      "path": "/assets/optimized/v0.79.5/game_barricade_park_scooter_s3.webp",
+      "hash": "a5773bc235a6",
+      "size": 68620
+    },
+    {
+      "fileName": "optimized/v0.79.5/game_barricade_park_stone_s3.webp",
+      "label": "Game barricade park stone s3",
+      "folder": "optimized/v0.79.5",
+      "path": "/assets/optimized/v0.79.5/game_barricade_park_stone_s3.webp",
+      "hash": "4085fc5a32da",
+      "size": 60740
     },
     {
       "fileName": "optimized/v0.79.5/game_barricade_tablet.webp",
@@ -1515,6 +1587,14 @@
       "path": "/assets/optimized/v0.79.5/road_night_cafe.webp",
       "hash": "77e503828ca9",
       "size": 442074
+    },
+    {
+      "fileName": "optimized/v0.79.5/road_park_day_s3.webp",
+      "label": "Road park day s3",
+      "folder": "optimized/v0.79.5",
+      "path": "/assets/optimized/v0.79.5/road_park_day_s3.webp",
+      "hash": "63056468621f",
+      "size": 126442
     },
     {
       "fileName": "optimized/v0.79.5/shopAmericano.webp",
@@ -2411,6 +2491,14 @@
       "path": "/assets/runner-builder/previews/tablePink.webp",
       "hash": "5eb541f75660",
       "size": 9068
+    },
+    {
+      "fileName": "season-pass/avatars_season_pass_3.webp",
+      "label": "Avatars season pass 3",
+      "folder": "season-pass",
+      "path": "/assets/season-pass/avatars_season_pass_3.webp",
+      "hash": "036cb6fd1740",
+      "size": 475136
     },
     {
       "fileName": "season-pass/avatars_season_pass3.webp",

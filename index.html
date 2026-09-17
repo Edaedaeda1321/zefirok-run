@@ -14292,7 +14292,17 @@ function installProgressInfo(){
         barricade_game_puff_night: &quot;/assets/optimized/v0.79.5/barricade_game_puff_night.webp?v=0.79.5&quot;,
         barricade_game_boock_night: &quot;/assets/optimized/v0.79.5/barricade_game_boock_night.webp?v=0.79.5&quot;,
         barricade_game_group_svechi_night: &quot;/assets/optimized/v0.79.5/barricade_game_group_svechi_night.webp?v=0.79.5&quot;,
-        barricade_game_group_telechka: &quot;/assets/optimized/v0.79.5/barricade_game_group_telechka.webp?v=0.79.5&quot;
+        barricade_game_group_telechka: &quot;/assets/optimized/v0.79.5/barricade_game_group_telechka.webp?v=0.79.5&quot;,
+        game_barricade_park_birdhouse_s3: &quot;/assets/optimized/v0.79.5/game_barricade_park_birdhouse_s3.webp?v=0.79.5&quot;,
+        game_barricade_park_scooter_s3: &quot;/assets/optimized/v0.79.5/game_barricade_park_scooter_s3.webp?v=0.79.5&quot;,
+        game_barricade_park_stone_s3: &quot;/assets/optimized/v0.79.5/game_barricade_park_stone_s3.webp?v=0.79.5&quot;,
+        game_barricade_park_flowebed_s3: &quot;/assets/optimized/v0.79.5/game_barricade_park_flowebed_s3.webp?v=0.79.5&quot;,
+        game_barricade_park_birdhouse_bird_s3: &quot;/assets/optimized/v0.79.5/game_barricade_park_birdhouse_bird_s3.webp?v=0.79.5&quot;,
+        game_barricade_park_log_s3: &quot;/assets/optimized/v0.79.5/game_barricade_park_log_s3.webp?v=0.79.5&quot;,
+        game_barricade_park_picknik_basket_s3: &quot;/assets/optimized/v0.79.5/game_barricade_park_picknik_basket_s3.webp?v=0.79.5&quot;,
+        game_barricade_park_bike_s3: &quot;/assets/optimized/v0.79.5/game_barricade_park_bike_s3.webp?v=0.79.5&quot;,
+        barricade_game_park_flowers_s3: &quot;/assets/optimized/v0.79.5/barricade_game_park_flowers_s3.webp?v=0.79.5&quot;,
+        road_park_day_s3: &quot;/assets/optimized/v0.79.5/road_park_day_s3.webp?v=0.79.5&quot;
       });
       // Новый стандартный аватар Зеффи в шапке основного экрана.
       // Не влияет на игровой спрайт и портрет выбранного скина в забеге.
@@ -14713,6 +14723,7 @@ function installProgressInfo(){
       });
       const runnerDynamicImages = new Map();
       const RUNNER_SEASON2_OBSTACLE_IDS = new Set([&quot;flowers-night-s2&quot;, &quot;wet-floor-sign&quot;, &quot;client-bag&quot;, &quot;pouf-night-s2&quot;, &quot;books-menu-night&quot;, &quot;candles-night&quot;, &quot;waiter-cart&quot;]);
+      const RUNNER_SEASON3_OBSTACLE_IDS = new Set([&quot;birdhouse-s3&quot;, &quot;scooter-s3&quot;, &quot;stone-s3&quot;, &quot;flowerbox-s3&quot;, &quot;birdhouse-bird-s3&quot;, &quot;log-s3&quot;, &quot;picnic-basket-s3&quot;, &quot;bike-s3&quot;, &quot;flowerbed-s3&quot;]);
       let remoteRunnerScene = LEGACY_RUNNER_SCENE;
 
       function normalizeRunnerHitboxClient(value) {
@@ -14745,7 +14756,11 @@ function installProgressInfo(){
         let roadAssetKey = String(backgroundRaw.roadAssetKey || &quot;roadStrip&quot;).trim() || &quot;roadStrip&quot;;
         const sceneMarker = `${String(raw.sceneId || &quot;&quot;)} ${String(raw.title || &quot;&quot;)} ${String(backgroundRaw.id || &quot;&quot;)} ${String(backgroundRaw.title || &quot;&quot;)}`;
         const season2Scene = obstacles.some((item) =&gt; RUNNER_SEASON2_OBSTACLE_IDS.has(item.id)) || /(?:night|ноч|season[\s_-]*2|сезон[\s_-]*2|(?:^|[^a-z0-9])s2(?:[^a-z0-9]|$))/i.test(sceneMarker);
-        if (season2Scene &amp;&amp; !roadAssetPath &amp;&amp; (!roadAssetKey || roadAssetKey === &quot;roadStrip&quot;)) roadAssetKey = &quot;road_night_cafe&quot;;
+        const season3Scene = obstacles.some((item) =&gt; RUNNER_SEASON3_OBSTACLE_IDS.has(item.id)) || /(?:park|парк|belkino|белкин|season[\s_-]*3|сезон[\s_-]*3|(?:^|[^a-z0-9])s3(?:[^a-z0-9]|$))/i.test(sceneMarker);
+        if (!roadAssetPath &amp;&amp; (!roadAssetKey || roadAssetKey === &quot;roadStrip&quot;)) {
+          if (season3Scene) roadAssetKey = &quot;road_park_day_s3&quot;;
+          else if (season2Scene) roadAssetKey = &quot;road_night_cafe&quot;;
+        }
         return {
           version: Math.max(1, Number(raw.version) || 1),
           revision: Math.max(1, Number(raw.revision) || 1),
@@ -27736,6 +27751,8 @@ function createTutorialDeck(layer, mount, options, words) {
         const runnerBackground = remoteRunnerScene?.background || LEGACY_RUNNER_SCENE.background;
         const roadIdentity = `${String(runnerBackground.roadAssetKey || &quot;&quot;)}|${String(runnerBackground.roadAssetPath || &quot;&quot;)}`;
         const nightCafeRoad = roadIdentity.includes(&quot;road_night_cafe&quot;);
+        const parkDayRoad = roadIdentity.includes(&quot;road_park_day_s3&quot;);
+        const seasonalRoad = nightCafeRoad || parkDayRoad;
         if (
           !roadDrawMetricsCache ||
           roadDrawMetricsCache.width !== w ||
@@ -27744,20 +27761,20 @@ function createTutorialDeck(layer, mount, options, words) {
           roadDrawMetricsCache.sourceHeight !== img.naturalHeight ||
           roadDrawMetricsCache.variant !== roadIdentity
         ) {
-          const sxRatio = nightCafeRoad ? 0.04 : 0.12;
-          const swRatio = nightCafeRoad ? 0.92 : 0.76;
-          const syRatio = nightCafeRoad ? 0.30 : 0;
-          const shRatio = nightCafeRoad ? 0.52 : 1;
+          const sxRatio = nightCafeRoad ? 0.04 : parkDayRoad ? 0.02 : 0.12;
+          const swRatio = nightCafeRoad ? 0.92 : parkDayRoad ? 0.96 : 0.76;
+          const syRatio = nightCafeRoad ? 0.30 : parkDayRoad ? 0.01 : 0;
+          const shRatio = nightCafeRoad ? 0.52 : parkDayRoad ? 0.98 : 1;
           const sx = Math.floor(img.naturalWidth * sxRatio);
           const sw = Math.max(1, Math.floor(img.naturalWidth * swRatio));
           const sy = Math.max(0, Math.floor(img.naturalHeight * syRatio));
           const sh = Math.max(1, Math.min(img.naturalHeight - sy, Math.floor(img.naturalHeight * shRatio)));
-          const roadH = nightCafeRoad
+          const roadH = seasonalRoad
             ? Math.max(118, Math.min(156, w * 0.30))
             : Math.max(58, Math.min(76, w * 0.15));
-          const roadWidthScale = nightCafeRoad ? 1.08 : 1;
+          const roadWidthScale = seasonalRoad ? 1.08 : 1;
           const tileW = roadH * (sw / sh) * roadWidthScale;
-          const visibleLift = nightCafeRoad
+          const visibleLift = seasonalRoad
             ? Math.round(Math.max(38, Math.min(52, roadH * 0.32)))
             : 8;
           roadDrawMetricsCache = { width: w, pixelRatio: canvasPixelRatio, sourceWidth: img.naturalWidth, sourceHeight: img.naturalHeight, sx, sy, sw, sh, roadH, tileW, visibleLift, variant: roadIdentity };
@@ -27773,7 +27790,7 @@ function createTutorialDeck(layer, mount, options, words) {
         const renderedDistance = Math.max(0, simulationRenderHorizontal(state.previousVisualDistance, state.visualDistance, Number(state.renderSpeed || state.speed || 0)));
         const offset = -((renderedDistance * 0.86) % tileW);
         ctx.save();
-        ctx.globalAlpha = nightCafeRoad ? 0.99 : 0.96;
+        ctx.globalAlpha = seasonalRoad ? 0.99 : 0.96;
         for (let x = offset - tileW; x &lt; w + tileW; x += tileW) {
           if (roadTileCache) ctx.drawImage(roadTileCache, x, y, tileW + 1, roadH);
           else ctx.drawImage(img, sx, sy, sw, sh, x, y, tileW + 1, roadH);

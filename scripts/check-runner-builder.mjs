@@ -118,7 +118,7 @@ must('scene preview uses framed background',owner,"rbBackgroundFrameMarkup(bg,'r
 must('background cards use framed preview',owner,"rbBackgroundFrameMarkup(item,'rb-bg-preview')");
 
 
-must('runner builder config v3',worker,'RUNNER_BUILDER_CONFIG_VERSION = 3');
+must('runner builder config v4',worker,'RUNNER_BUILDER_CONFIG_VERSION = 4');
 must('season 2 seed function',worker,'function runnerBuilderSeason2Seed()');
 must('season 2 one-time upgrade',worker,'function runnerBuilderUpgradeConfig(raw)');
 must('season 2 road builtin allowed',worker,'"road_night_cafe"');
@@ -146,10 +146,10 @@ must('owner previews waiter cart',owner,"barricade_game_group_telechka:'/assets/
 must('client registers season 2 road asset',index,'road_night_cafe: &quot;/assets/optimized/v0.79.5/road_night_cafe.webp?v=0.79.5&quot;');
 must('client lazy loads builtin runner assets',index,'const builtInSrc = String(assetSources[key] || &quot;&quot;).trim();');
 must('season 2 road variant detection',index,'const nightCafeRoad = roadIdentity.includes(&quot;road_night_cafe&quot;);');
-must('season 2 road trims transparent top',index,'const syRatio = nightCafeRoad ? 0.30 : 0;');
-must('season 2 road trims transparent height',index,'const shRatio = nightCafeRoad ? 0.52 : 1;');
+must('season 2 road trims transparent top',index,'const syRatio = nightCafeRoad ? 0.30 : parkDayRoad ? 0.01 : 0;');
+must('season 2 road trims transparent height',index,'const shRatio = nightCafeRoad ? 0.52 : parkDayRoad ? 0.98 : 1;');
 must('season 2 road taller',index,'Math.max(118, Math.min(156, w * 0.30))');
-must('season 2 road wider',index,'const roadWidthScale = nightCafeRoad ? 1.08 : 1;');
+must('seasonal roads wider',index,'const roadWidthScale = seasonalRoad ? 1.08 : 1;');
 must('season 2 road lifted',index,'Math.max(38, Math.min(52, roadH * 0.32))');
 must('road cache crops source vertically',index,'createRoadTileCache(img, sx, sy, sw, sh, tileW, roadH)');
 must('road direct draw crops source vertically',index,'ctx.drawImage(img, sx, sy, sw, sh, x, y, tileW + 1, roadH)');
@@ -178,6 +178,29 @@ must('dynamic builtin runner art renders',index,'else drawn = drawContain(image,
 must('runner mobile containment style',owner,'id="runnerBuilderMobileContainmentHotfix"');
 must('runner live chips wrap on mobile',owner,'.rb-live-obstacles{display:flex;flex-wrap:wrap;overflow:visible;gap:5px}');
 must('runner cards stay inside viewport',owner,'.rb-card{overflow:hidden}');
+
+must('season 3 seed function',worker,'function runnerBuilderSeason3Seed()');
+must('season 3 obstacle set',worker,'RUNNER_BUILDER_SEASON3_OBSTACLE_IDS');
+must('season 3 road builtin allowed',worker,'"road_park_day_s3"');
+must('season 3 group seed',worker,'title:"Парк Белкино · сезон 3"');
+must('season 3 birdhouse seed',worker,'id:"birdhouse-s3", title:"Скворечник"');
+must('season 3 birdhouse bird low seed',worker,'id:"birdhouse-bird-s3", title:"Скворечник с птичкой", enabled:true, assetKey:"game_barricade_park_birdhouse_bird_s3", assetPath:"", width:68, height:48');
+must('season 3 scooter seed',worker,'id:"scooter-s3", title:"Самокат"');
+must('season 3 stone seed',worker,'id:"stone-s3", title:"Камень"');
+must('season 3 flowerbox seed',worker,'id:"flowerbox-s3", title:"Ящик с цветами"');
+must('season 3 log seed',worker,'id:"log-s3", title:"Бревно"');
+must('season 3 basket seed',worker,'id:"picnic-basket-s3", title:"Корзинка для пикника"');
+must('season 3 bike seed',worker,'id:"bike-s3", title:"Велосипед"');
+must('season 3 flowerbed seed',worker,'id:"flowerbed-s3", title:"Клумба"');
+must('season 3 scene template disabled',worker,'{ id:"park-belkino-s3", title:"Парк Белкино · сезон 3", enabled:false, backgroundId:"park-belkino-s3"');
+must('season 3 road repair',worker,'background.roadAssetKey="road_park_day_s3";');
+must('season 3 public road',worker,'if(season3Scene)publicRoadKey="road_park_day_s3";');
+must('client season 3 IDs',index,'const RUNNER_SEASON3_OBSTACLE_IDS = new Set');
+must('client season 3 road',index,'if (season3Scene) roadAssetKey = &quot;road_park_day_s3&quot;;');
+must('park road renderer',index,'const parkDayRoad = roadIdentity.includes(&quot;road_park_day_s3&quot;);');
+must('park road same seasonal dimensions',index,'const seasonalRoad = nightCafeRoad || parkDayRoad;');
+must('owner park road preview',owner,"road_park_day_s3:'/assets/optimized/v0.79.5/road_park_day_s3.webp?v=0.79.5'");
+for(const file of ['game_barricade_park_birdhouse_s3.webp','game_barricade_park_scooter_s3.webp','game_barricade_park_stone_s3.webp','game_barricade_park_flowebed_s3.webp','game_barricade_park_birdhouse_bird_s3.webp','game_barricade_park_log_s3.webp','game_barricade_park_picknik_basket_s3.webp','game_barricade_park_bike_s3.webp','barricade_game_park_flowers_s3.webp','road_park_day_s3.webp'])checks.push({name:`season 3 asset ${file}`,ok:fs.existsSync(new URL(`../assets/optimized/v0.79.5/${file}`,import.meta.url)),detail:file});
 
 const failed=checks.filter(x=>!x.ok);
 for(const item of checks)console.log(`${item.ok?'PASS':'FAIL'}  ${item.name}`);
