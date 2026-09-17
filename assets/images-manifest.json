@@ -1,8 +1,8 @@
 {
   "version": 2,
   "hashAlgorithm": "sha256",
-  "catalogHash": "899196c266911a3c",
-  "count": 541,
+  "catalogHash": "9ee2379bf48d46bd",
+  "count": 542,
   "images": [
     {
       "fileName": "achievements/background_achivment_panel.webp",
@@ -3947,6 +3947,14 @@
       "path": "/assets/sounds/covers/season3_lunar_music.webp",
       "hash": "1bf1dcc6e09e",
       "size": 212428
+    },
+    {
+      "fileName": "sounds/covers/season4_white_rabbit_soundtrack.webp",
+      "label": "Season4 white rabbit soundtrack",
+      "folder": "sounds/covers",
+      "path": "/assets/sounds/covers/season4_white_rabbit_soundtrack.webp",
+      "hash": "7f2f8aaff09b",
+      "size": 305852
     },
     {
       "fileName": "ui/background_referals.webp",

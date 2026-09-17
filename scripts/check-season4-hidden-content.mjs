@@ -18,7 +18,9 @@ const items=[
 ['trail','season4_trail_rare','rare','/assets/cases/trails/season4_trail_rare.webp'],
 ['trail','season4_trail_superrare','superrare','/assets/cases/trails/season4_trail_superrare.webp'],
 ['trail','season4_trail_mythic','mythic','/assets/cases/trails/season4_trail_mythic.webp'],
-['trail','season4_trail_legendary','legendary','/assets/cases/trails/season4_trail_legendary.webp']];
+['trail','season4_trail_legendary','legendary','/assets/cases/trails/season4_trail_legendary.webp'],
+['music','season4_music_magical_run_epic','epic','/assets/sounds/covers/season4_white_rabbit_soundtrack.webp'],
+['music','season4_music_following_rabbit_mythic','mythic','/assets/sounds/covers/season4_white_rabbit_soundtrack.webp']];
 let failed=0;function ok(name,v){console.log(`${v?'PASS':'FAIL'}  ${name}`);if(!v)failed++;}
 for(const [,id,rarity,url] of items){
  ok(`${id} catalog`,worker.includes(`${id}: Object.freeze({ id:"${id}"`));
@@ -29,6 +31,13 @@ for(const [,id,rarity,url] of items){
 ok('season4 label',worker.includes('const FUTURE_SEASON4_CONTENT_LABEL = "Сезон 4 · Белый Кролик";'));
 ok('season4 registry binding',worker.includes('boundSeason4Id=String')&&worker.includes("season4-white-rabbit-story-v1-canonical"));
 ok('season4 editor binding',worker.includes("else if(seasonKey==='season4')seasonId=String"));
+for(const [id,url] of [
+ ['season4_music_magical_run_epic','/assets/sounds/season4/magical_run_epic.ogg'],
+ ['season4_music_following_rabbit_mythic','/assets/sounds/season4/following_the_rabbit_mythic.ogg']
+]){
+ ok(`${id} audio catalog`,worker.includes(`id:"${id}"`)&&worker.includes(`audioUrl:"${url}"`));
+ const f=path.join(root,url.slice(1));ok(`${id} audio asset`,fs.existsSync(f)&&fs.statSync(f).size>1024);
+}
 for(const f of ['season-belkino-joined-v3.webp','season-belkino-complete-v3.webp','season-white-rabbit-joined-v3.webp','season-white-rabbit-complete-v3.webp','season-belkino-traces-5-v3.webp','season-belkino-traces-25-v3.webp','season-belkino-traces-50-v3.webp']){
  ok(`achievement ${f}`,worker.includes(`/assets/achievements/badges/${f}`)&&fs.existsSync(path.join(root,'assets','achievements','badges',f)));
 }

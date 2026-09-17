@@ -284,7 +284,9 @@ const FUTURE_SEASON_CONTENT = Object.freeze({
     season3_music_lunar_run_mythic: Object.freeze({ id:"season3_music_lunar_run_mythic", seasonKey:"season2", title:"Лунный забег II", rarity:"mythic", imageUrl:"/assets/sounds/covers/season3_lunar_music.webp", audioUrl:"/assets/sounds/new_song_season2_2(Mifik).mp3" }),
     season3_music_puppy_parade_epic: Object.freeze({ id:"season3_music_puppy_parade_epic", title:"Belkino Puppy Parade", rarity:"epic", imageUrl:"/assets/sounds/covers/img_sound_s3.webp", audioUrl:"/assets/sounds/season3/belkino_puppy_parade.mp3" }),
     season3_music_puppy_trails_mythic: Object.freeze({ id:"season3_music_puppy_trails_mythic", title:"Belkino Puppy Trails I", rarity:"mythic", imageUrl:"/assets/sounds/covers/img_sound_s3.webp", audioUrl:"/assets/sounds/season3/belkino_puppy_trails_1.mp3" }),
-    season3_music_puppy_trails_legendary: Object.freeze({ id:"season3_music_puppy_trails_legendary", title:"Belkino Puppy Trails II", rarity:"legendary", imageUrl:"/assets/sounds/covers/img_sound_s3.webp", audioUrl:"/assets/sounds/season3/belkino_puppy_trails_2.mp3" })
+    season3_music_puppy_trails_legendary: Object.freeze({ id:"season3_music_puppy_trails_legendary", title:"Belkino Puppy Trails II", rarity:"legendary", imageUrl:"/assets/sounds/covers/img_sound_s3.webp", audioUrl:"/assets/sounds/season3/belkino_puppy_trails_2.mp3" }),
+    season4_music_magical_run_epic: Object.freeze({ id:"season4_music_magical_run_epic", seasonKey:"season4", title:"Magical Run", rarity:"epic", imageUrl:"/assets/sounds/covers/season4_white_rabbit_soundtrack.webp", audioUrl:"/assets/sounds/season4/magical_run_epic.ogg" }),
+    season4_music_following_rabbit_mythic: Object.freeze({ id:"season4_music_following_rabbit_mythic", seasonKey:"season4", title:"Following the Rabbit", rarity:"mythic", imageUrl:"/assets/sounds/covers/season4_white_rabbit_soundtrack.webp", audioUrl:"/assets/sounds/season4/following_the_rabbit_mythic.ogg" })
   })
 });
 
@@ -24892,11 +24894,12 @@ function liveContentLegacyRouteConfig(type,route){
 }
 function liveContentRuleFromRow(row){
   let status=liveContentStatus(row?.status,"hidden");
+  const wasReleased=Number(row?.ever_released||0)===1;
   const releaseAt=Math.max(0,Math.floor(Number(row?.release_at)||0));
-  const routes=liveContentRoutesFromRegistryStorage(row?.routes_json);if(status==="open"&&liveContentRouteCount(routes)<=0)status="hidden";const released=status==="open",primary=liveContentPrimaryRoute(routes);
+  const routes=liveContentRoutesFromRegistryStorage(row?.routes_json);if(status==="open"&&liveContentRouteCount(routes)<=0)status="hidden";if(status==="hidden"&&wasReleased)status="archived";const released=status==="open",primary=liveContentPrimaryRoute(routes);
   const destinationType=primary.type,destinationId=String(primary.route?.destinationId||""),destinationConfig=liveContentLegacyRouteConfig(destinationType,primary.route);
   return {
-    kind:String(row?.item_kind||""),itemId:String(row?.item_id||""),seasonId:String(row?.content_season_id||""),status,releaseAt,released,everReleased:Number(row?.ever_released||0)===1||released,
+    kind:String(row?.item_kind||""),itemId:String(row?.item_id||""),seasonId:String(row?.content_season_id||""),status,releaseAt,released,everReleased:wasReleased||released,
     routes,destinationType,destinationId,destinationConfig,
     updatedAt:Math.max(0,Number(row?.updated_at||0)),updatedBy:String(row?.updated_by||"")
   };
@@ -24944,6 +24947,9 @@ async function ensureLiveContentReleaseSchema(env){
       for(let i=0;i<statements.length;i+=40)await env.DB.batch(statements.slice(i,i+40));
       await env.DB.prepare(`INSERT OR IGNORE INTO live_content_registry_state(item_kind,item_id,status,release_at,routes_json,updated_at,updated_by,content_season_id,ever_released)
         SELECT item_kind,item_id,CASE WHEN released=1 THEN 'open' ELSE 'hidden' END,0,'{}',updated_at,updated_by,content_season_id,CASE WHEN released=1 OR ever_released=1 THEN 1 ELSE 0 END FROM live_content_release_rules`).run();
+      // Released content must never return to the working Hidden queue. Closing an
+      // item after publication moves it to Archive; ownership is preserved.
+      await env.DB.prepare(`UPDATE live_content_registry_state SET status='archived',release_at=0 WHERE status='hidden' AND ever_released=1`).run();
     })().catch(error=>{liveContentReleaseSchemaPromise=null;throw error;});
   }
   await liveContentReleaseSchemaPromise;
@@ -42294,6 +42300,9 @@ async function normalizeValidateLiveContentPayload(env,payload={}){
   if(explicitStatus){if(!LIVE_CONTENT_STATUSES.includes(explicitStatus))throw new ApiError(400,'Неизвестный статус контента.');status=explicitStatus;}
   else if(Object.prototype.hasOwnProperty.call(payload||{},'released'))status=Boolean(payload?.released)?'open':'hidden';
   else status=liveContentStatus(before.status,before.released?'open':'hidden');
+  // Hidden is the working queue for never-published content only. Once an item
+  // has been released, closing it archives it automatically instead of cluttering Hidden.
+  if(status==='hidden'&&before.everReleased)status='archived';
   const now=Math.floor(Date.now()/1000);let releaseAt=Math.max(0,Math.floor(Number(payload?.releaseAt??before.releaseAt)||0));
   if(status==='scheduled'){
     if(releaseAt<=now){if(payload?.allowPastSchedule===true)status='open';else throw new ApiError(400,'Для запланированного релиза укажите будущую дату и время.');}
@@ -48844,7 +48853,11 @@ async function processDueLiveContentReleases(env){
 }
 
 async function ownerPanelLiveContentRegistry(env,ctx){
-  await Promise.all([ensureLiveOpsAdminSchema(env),ensureSeasonPassSchema(env),ensureSeasonPassCaseSpecialItemsSchema(env)]);const now=Math.floor(Date.now()/1000),rules=await readLiveContentReleaseRules(env,true);
+  await Promise.all([ensureLiveOpsAdminSchema(env),ensureSeasonPassSchema(env),ensureSeasonPassCaseSpecialItemsSchema(env)]);
+  // The manager is the bootstrap point for newly added catalog entries. Seed and
+  // reconcile the registry before reading it so fresh assets appear immediately.
+  await ensureLiveContentReleaseSchema(env);
+  const now=Math.floor(Date.now()/1000),rules=await readLiveContentReleaseRules(env,true);
   const [seasonRows,caseRows,ownerRows,historyRows]=await Promise.all([
     env.DB.prepare(`SELECT * FROM season_pass_seasons ORDER BY starts_at DESC,updated_at DESC LIMIT 40`).all().catch(()=>({results:[]})),
     env.DB.prepare(`SELECT case_id,season_id,title,enabled,release_at FROM season_pass_case_definitions ORDER BY release_at DESC,updated_at DESC LIMIT 80`).all().catch(()=>({results:[]})),
@@ -48870,14 +48883,15 @@ async function ownerPanelLiveContentRollback(env,ctx){
 
 async function ownerPanelLiveContentBatch(env,ctx){
   await ensureLiveOpsAdminSchema(env);const raw=Array.isArray(ctx.body?.items)?ctx.body.items:[],unique=[],seen=new Set();for(const entry of raw){const kind=String(entry?.kind||""),itemId=String(entry?.itemId||"");const key=liveContentReleaseKey(kind,itemId);if(!futureSeasonContentItem(kind,itemId)||seen.has(key))continue;seen.add(key);unique.push({kind,itemId});if(unique.length>=50)break;}if(!unique.length)throw new ApiError(400,"Select at least one content item.");
-  const status=liveContentStatus(ctx.body?.status,"open");if(String(ctx.body?.status||"")&&!LIVE_CONTENT_STATUSES.includes(String(ctx.body.status)))throw new ApiError(400,"Unknown package status.");const releaseAt=status==="scheduled"?Math.max(0,Math.floor(Number(ctx.body?.releaseAt)||0)):0,reason=String(ctx.body?.reason||"").slice(0,300),title=String(ctx.body?.title||"Content package").trim().slice(0,120)||"Content package",now=Math.floor(Date.now()/1000),rules=await readLiveContentReleaseRules(env,true),normalizedList=[];
-  for(const ref of unique){const current=rules.get(liveContentReleaseKey(ref.kind,ref.itemId));if(!current)throw new ApiError(404,`Content item ${ref.kind}:${ref.itemId} was not initialized.`);normalizedList.push(await normalizeValidateLiveContentPayload(env,{...liveContentRulePayload(current,ref.kind,ref.itemId,reason),status,releaseAt}));}if(status==="open"||status==="scheduled")await validateLiveContentReleaseAssets(env,normalizedList);
+  const status=liveContentStatus(ctx.body?.status,"open");if(String(ctx.body?.status||"")&&!LIVE_CONTENT_STATUSES.includes(String(ctx.body.status)))throw new ApiError(400,"Unknown package status.");const releaseAt=status==="scheduled"?Math.max(0,Math.floor(Number(ctx.body?.releaseAt)||0)):0,reason=String(ctx.body?.reason||"").slice(0,300),title=String(ctx.body?.title||"Content package").trim().slice(0,120)||"Content package",applyRoutes=ctx.body?.applyRoutes===true,sharedRoutes=applyRoutes&&ctx.body?.routes&&typeof ctx.body.routes==="object"&&!Array.isArray(ctx.body.routes)?ctx.body.routes:null,now=Math.floor(Date.now()/1000),rules=await readLiveContentReleaseRules(env,true),normalizedList=[];
+  if(applyRoutes&&!sharedRoutes)throw new ApiError(400,"Shared routes are required when applyRoutes is enabled.");
+  for(const ref of unique){const current=rules.get(liveContentReleaseKey(ref.kind,ref.itemId));if(!current)throw new ApiError(404,`Content item ${ref.kind}:${ref.itemId} was not initialized.`);const payload={...liveContentRulePayload(current,ref.kind,ref.itemId,reason),status,releaseAt};if(applyRoutes)payload.routes=testProjectClone(sharedRoutes);normalizedList.push(await normalizeValidateLiveContentPayload(env,payload));}if(status==="open"||status==="scheduled")await validateLiveContentReleaseAssets(env,normalizedList);
   const passTargets=new Map(),vacatedPassKeys=new Set(),vacatedPassRewards=new Map();for(const normalized of normalizedList){const beforePass=normalized.before?.released?liveContentRoute(normalized.before,"season_pass"):null,newPass=normalized.released?liveContentRoute({routes:normalized.routes},"season_pass"):null;if(beforePass&&!liveContentSamePassRoute(beforePass,newPass)){const key=liveContentReleaseKey(normalized.kind,normalized.itemId);vacatedPassKeys.add(key);vacatedPassRewards.set(key,beforePass.previousReward&&typeof beforePass.previousReward==="object"?beforePass.previousReward:null);}if(newPass){const slot=`${newPass.destinationId}:${newPass.level}:${newPass.lane}`;if(passTargets.has(slot))throw new ApiError(409,`Package contains two items for Season Pass slot ${slot}.`);passTargets.set(slot,liveContentReleaseKey(normalized.kind,normalized.itemId));}}
   const orderedNormalized=normalizedList.slice().sort((a,b)=>{const aBefore=a.before?.released?liveContentRoute(a.before,"season_pass"):null,bBefore=b.before?.released?liveContentRoute(b.before,"season_pass"):null,aAfter=a.released?liveContentRoute({routes:a.routes},"season_pass"):null,bAfter=b.released?liveContentRoute({routes:b.routes},"season_pass"):null;const aVacates=Boolean(aBefore&&!liveContentSamePassRoute(aBefore,aAfter)),bVacates=Boolean(bBefore&&!liveContentSamePassRoute(bBefore,bAfter)),aAcquires=Boolean(aAfter&&!liveContentSamePassRoute(aBefore,aAfter)),bAcquires=Boolean(bAfter&&!liveContentSamePassRoute(bBefore,bAfter));const rank=x=>x.vacates&&!x.acquires?0:x.vacates&&x.acquires?1:x.acquires?2:1;return rank({vacates:aVacates,acquires:aAcquires})-rank({vacates:bVacates,acquires:bAcquires});});
   const statements=[],preparedList=[];for(const normalized of orderedNormalized){const prepared=await prepareLiveContentMutation(env,normalized,String(ctx.user.id),{now,vacatedPassKeys,vacatedPassRewards});preparedList.push({normalized,prepared});statements.push(...prepared.statements);statements.push(liveContentHistoryStatement(env,ctx.user,"live_content_release",`${normalized.kind}:${normalized.itemId}`,liveContentActionForStatus(normalized.status,"package"),normalized.before,prepared.after,reason,now));}
   for(const {normalized,prepared} of preparedList){const pass=prepared.after?.released?liveContentRoute(prepared.after,"season_pass"):null;if(!pass)continue;const reward=ownerPanelSeasonPassRewardPresentation(normalized.kind,1,normalized.itemId),passSeasonId=String(pass.destinationId||""),level=Math.max(1,Math.min(50,Math.floor(Number(pass.level)||1))),lane=String(pass.lane||"")==="premium"?"premium":"free";statements.push(env.DB.prepare(`INSERT INTO season_pass_rewards(season_id,level,lane,reward_type,amount,item_id,title,image_url,enabled,updated_at,updated_by) VALUES(?,?,?,?,?,?,?,?,1,?,?) ON CONFLICT(season_id,level,lane) DO UPDATE SET reward_type=excluded.reward_type,amount=excluded.amount,item_id=excluded.item_id,title=excluded.title,image_url=excluded.image_url,enabled=1,updated_at=excluded.updated_at,updated_by=excluded.updated_by`).bind(passSeasonId,level,lane,reward.rewardType,reward.amount,reward.itemId,reward.title,reward.imageUrl,now,String(ctx.user.id)));}
-  const packageId=`content_package_${now}_${Math.random().toString(36).slice(2,10)}`,packageBefore={items:normalizedList.map(n=>({kind:n.kind,itemId:n.itemId,status:n.before?.status||"hidden"}))},packageAfter={title,status,releaseAt,items:normalizedList.map(n=>({kind:n.kind,itemId:n.itemId,status:n.status}))};statements.push(liveContentHistoryStatement(env,ctx.user,"live_content_package",packageId,liveContentActionForStatus(status,"package"),packageBefore,packageAfter,reason,now));
-  await env.DB.batch(statements);invalidateLiveContentReleaseCache();const afterRules=await readLiveContentReleaseRules(env,true);invalidateGamePublicConfigCache();const items=normalizedList.map(n=>liveContentRulePublicView(n.kind,n.itemId,afterRules.get(liveContentReleaseKey(n.kind,n.itemId))));await logStaffAction(env,ctx.user,ctx.access,"owner_panel_live_content_package",null,"live_content_package",null,null,{packageId,title,status,releaseAt,count:items.length,items:items.map(item=>`${item.kind}:${item.itemId}`)});return {ok:true,packageId,title,status,releaseAt,count:items.length,items};
+  const packageId=`content_package_${now}_${Math.random().toString(36).slice(2,10)}`,packageBefore={items:normalizedList.map(n=>({kind:n.kind,itemId:n.itemId,status:n.before?.status||"hidden"}))},packageAfter={title,status,releaseAt,applyRoutes,routes:applyRoutes?testProjectClone(sharedRoutes||{}):null,items:normalizedList.map(n=>({kind:n.kind,itemId:n.itemId,status:n.status}))};statements.push(liveContentHistoryStatement(env,ctx.user,"live_content_package",packageId,liveContentActionForStatus(status,"package"),packageBefore,packageAfter,reason,now));
+  await env.DB.batch(statements);invalidateLiveContentReleaseCache();const afterRules=await readLiveContentReleaseRules(env,true);invalidateGamePublicConfigCache();const items=normalizedList.map(n=>liveContentRulePublicView(n.kind,n.itemId,afterRules.get(liveContentReleaseKey(n.kind,n.itemId))));await logStaffAction(env,ctx.user,ctx.access,"owner_panel_live_content_package",null,"live_content_package",null,null,{packageId,title,status,releaseAt,applyRoutes,count:items.length,items:items.map(item=>`${item.kind}:${item.itemId}`)});return {ok:true,packageId,title,status,releaseAt,applyRoutes,count:items.length,items};
 }
 
 async function ownerPanelSeasonPass(env, ctx) {

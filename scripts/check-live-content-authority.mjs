@@ -5,17 +5,29 @@ import process from 'node:process';
 
 const root = process.cwd();
 const worker = await readFile(path.join(root, 'src', 'worker.js'), 'utf8');
+const owner = await readFile(path.join(root, 'owner.html'), 'utf8');
 const migration = await readFile(path.join(root, 'migrations', '0086_live_content_registry_authority.sql'), 'utf8');
 const problems = [];
 
 function need(text, label) { if (!worker.includes(text)) problems.push(`Worker missing: ${label}`); }
 function forbid(text, label) { if (worker.includes(text)) problems.push(`Worker still contains legacy authority path: ${label}`); }
+function needOwner(text, label) { if (!owner.includes(text)) problems.push(`Owner missing: ${label}`); }
 
 need('FROM live_content_registry_state ORDER BY item_kind,item_id', 'authoritative Live Content read from registry_state');
 need('INSERT INTO live_content_registry_state(item_kind,item_id,content_season_id,status,release_at,routes_json,ever_released,updated_at,updated_by)', 'authoritative registry mutation');
 need('INSERT INTO live_content_release_rules(item_kind,item_id,content_season_id,released,ever_released,destination_type,destination_id,destination_config_json,updated_at,updated_by)', 'legacy shadow mutation');
 need("SELECT item_kind,item_id FROM live_content_registry_state WHERE status='scheduled'", 'scheduler reads authoritative registry');
 need('function liveContentRoutesFromRegistryStorage(raw)', 'registry-only route parser');
+need('if(status==="hidden"&&wasReleased)status="archived"', 'legacy hidden published rows are exposed as archived');
+need('await ensureLiveContentReleaseSchema(env);\n  const now=Math.floor(Date.now()/1000),rules=await readLiveContentReleaseRules(env,true);', 'content manager seeds new catalog entries before reading');
+need("UPDATE live_content_registry_state SET status='archived',release_at=0 WHERE status='hidden' AND ever_released=1", 'existing published-hidden rows are self-healed into Archive');
+need("if(status==='hidden'&&before.everReleased)status='archived'", 'future close-after-release automatically archives');
+need('applyRoutes=ctx.body?.applyRoutes===true', 'batch route replacement switch');
+need('payload.routes=testProjectClone(sharedRoutes)', 'batch shared routes are validated per selected item');
+needOwner('contentManagerSelectionMode:false', 'explicit content selection mode');
+needOwner("selecting?'Готово':'ВЫБРАТЬ'", 'visible SELECT button');
+needOwner('contentPackageApplyRoutes', 'bulk shared-route editor');
+needOwner("state.contentManagerFilter={...state.contentManagerFilter", 'content-manager filters remain stateful');
 forbid('FROM live_content_release_rules r LEFT JOIN live_content_registry_state', 'joined legacy-first read');
 forbid("PRAGMA table_info(live_content_release_rules)", 'lazy ALTER for release_rules');
 
