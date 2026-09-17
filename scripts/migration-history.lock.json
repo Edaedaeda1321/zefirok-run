@@ -93,6 +93,7 @@
     "0090_schema_contract_v2.sql": "63c458b431001f0f75da3cd1bb44997b93f73690a8a2784644fec5305e83d131",
     "0091_runner_case_drop_v2.sql": "4554e6c2f057a6a0dd8b314c3e4ac44159c04c19bbdf38e455294ba32ba7a716",
     "0092_runner_case_drop_milestones.sql": "a9f425fe159a89abcc07aec851712a20b130c68677f21958608e47fa9c560c1d",
-    "0093_season_story_collectibles.sql": "ae6be71081fcb78889320873469eb7063fced6d88f5cc31703de2c911b85d2eb"
+    "0093_season_story_collectibles.sql": "ae6be71081fcb78889320873469eb7063fced6d88f5cc31703de2c911b85d2eb",
+    "0094_season_achievement_art_and_belkino_traces.sql": "ffc8a316ee66de0e00b63bb00316cd7bfba4733a2a0890b314623a7681583a75"
   }
 }

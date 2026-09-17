@@ -1,7 +1,7 @@
 {
   "version": 1,
-  "catalogHash": "f23af0c1fdd99a6f",
-  "count": 100,
+  "catalogHash": "4aaf552038b4288a",
+  "count": 102,
   "images": [
     {
       "fileName": "398D69BA-8943-4846-94B3-FC5CB717A67F.webp",
@@ -554,6 +554,22 @@
       "path": "/assets/cases/Mifik_case_open.webp",
       "hash": "f24b813eb954",
       "size": 359702
+    },
+    {
+      "fileName": "seasonal/case_white_rabbit_s4_closed.png",
+      "label": "Case white rabbit s4 closed",
+      "folder": "seasonal",
+      "path": "/assets/cases/seasonal/case_white_rabbit_s4_closed.png",
+      "hash": "ced9ea2e7566",
+      "size": 2069761
+    },
+    {
+      "fileName": "seasonal/case_white_rabbit_s4_open.png",
+      "label": "Case white rabbit s4 open",
+      "folder": "seasonal",
+      "path": "/assets/cases/seasonal/case_white_rabbit_s4_open.png",
+      "hash": "42b6bcfe02c5",
+      "size": 2068310
     },
     {
       "fileName": "seasonal/season_2_closed.webp",

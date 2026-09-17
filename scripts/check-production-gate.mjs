@@ -71,6 +71,7 @@ const steps = [
   ['season 3 story', 'node', ['scripts/check-season3-story.mjs']],
   ['season 4 story', 'node', ['scripts/check-season4-story.mjs']],
   ['season story collectibles', 'node', ['scripts/check-season-story-collectibles.mjs']],
+  ['season achievements', 'node', ['scripts/check-season-achievements.mjs']],
   ['health dashboard', 'node', ['scripts/check-health-dashboard.mjs']],
   ['migration history', 'node', ['scripts/check-migrations.mjs']],
   ['schema contract', 'node', ['scripts/check-database-schema.mjs', '--contract-only']],
