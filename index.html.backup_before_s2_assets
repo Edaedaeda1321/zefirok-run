@@ -12534,7 +12534,7 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
     &lt;span class=&quot;profile-support-meta&quot; data-profile-support-meta&gt;Обращения ещё не загружены&lt;/span&gt;
   &lt;/section&gt;
 
-  &lt;div class=&quot;profile-version-row&quot;&gt;&lt;span&gt;Версия игры&lt;/span&gt;&lt;strong data-profile-game-version&gt;1.2.2&lt;/strong&gt;&lt;/div&gt;
+  &lt;div class=&quot;profile-version-row&quot;&gt;&lt;span&gt;Версия игры&lt;/span&gt;&lt;strong data-profile-game-version&gt;1.2.1&lt;/strong&gt;&lt;/div&gt;
   &lt;div aria-live=&quot;polite&quot; class=&quot;profile-toast&quot; data-profile-toast hidden&gt;&lt;/div&gt;
 &lt;/div&gt;
 &lt;/section&gt;
@@ -12673,8 +12673,8 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
 
 &lt;div aria-hidden=&quot;true&quot; class=&quot;release-layer&quot; data-release-layer hidden&gt;
   &lt;div aria-labelledby=&quot;release-dialog-title&quot; aria-modal=&quot;true&quot; class=&quot;release-dialog&quot; role=&quot;dialog&quot; tabindex=&quot;-1&quot;&gt;
-    &lt;div class=&quot;release-image-wrap&quot; data-release-image-wrap aria-hidden=&quot;true&quot; style=&quot;aspect-ratio:1672/941&quot;&gt;
-      &lt;img class=&quot;release-image&quot; data-release-image src=&quot;/assets/news/update_v_1_2_2.webp?v=de67cfa4069a&quot; alt=&quot;Сладкий Забег — обновление 1.2.2&quot; width=&quot;1672&quot; height=&quot;941&quot; decoding=&quot;async&quot; loading=&quot;lazy&quot; fetchpriority=&quot;low&quot;/&gt;
+    &lt;div class=&quot;release-image-wrap&quot; data-release-image-wrap aria-hidden=&quot;true&quot;&gt;
+      &lt;img class=&quot;release-image&quot; data-release-image src=&quot;/assets/news/news_post_final_season1.webp?v=bedb6870bd5d&quot; alt=&quot;Финал Сезона I — кафе закрывается, чудеса только начинаются&quot; width=&quot;941&quot; height=&quot;1672&quot; decoding=&quot;async&quot; loading=&quot;lazy&quot; fetchpriority=&quot;low&quot;/&gt;
     &lt;/div&gt;
     &lt;div class=&quot;release-kicker&quot; data-release-kicker&gt;Новое обновление&lt;/div&gt;
     &lt;h2 id=&quot;release-dialog-title&quot; data-release-title&gt;Обновление&lt;/h2&gt;
@@ -13904,44 +13904,22 @@ function installProgressInfo(){
       // Заголовок, текст и кнопку ниже можно свободно редактировать.
       // Переносы строк внутри UPDATE_NOTICE_TEXT сохраняются.
       // Версия: год игры.сезонное обновление.исправление.
-      const GAME_VERSION = &quot;1.2.2&quot;;
+      const GAME_VERSION = &quot;1.2.1&quot;;
       const ECONOMY_RESET_KEY = &quot;economy-reset-0.1.1-beta-purchase-limit-fix-2026-07-23&quot;;
-      const UPDATE_NOTICE_KEY = &quot;release-1-2-2-critical-fixes-2026-09-16&quot;;
+      const UPDATE_NOTICE_KEY = &quot;release-1-2-1-release-center-2-2026-09-09&quot;;
       const UPDATE_NOTICE_ENABLED = true;
-      const UPDATE_NOTICE_TITLE = &quot;Обновление 1.2.2 — исправления и улучшения&quot;;
-      const UPDATE_NOTICE_TEXT = `В 1.2.2 мы исправили критические ошибки и обновили ключевые системы игры.
+      const UPDATE_NOTICE_TITLE = &quot;Кафе закрывается… но это только начало&quot;;
+      const UPDATE_NOTICE_TEXT = `Сезон I подходит к концу. В кафе остаются последние гости, а Зеффи готовится закрыть двери этой главы.
 
-Исправлено: игроки снова корректно учитываются в рейтинге, усилители активируются автоматически, устранены ошибки при открытии кейсов, снова открывается Альбом.
+Уже 13 сентября стартует Сезон II — «Ночь сладких чудес». В этой версии мы подготовили игру к новой главе, обновили обратную связь и поддержку, а также переработали паузу и экран результатов забега.
 
-Добавлено и обновлено: новые сезонные препятствия и дорожка витрины, полностью обновлённые обучения, более информативный дизайн разделов и уведомлений, Telegram-сообщение при смещении с первого места рейтинга, новый дизайн сезонного пропуска, актуализированное содержимое кейсов и переработанные анимации их открытия.
-
-Теперь кейсы можно встретить прямо в забеге на каждом пороге в 1000 очков — обычный, серебряный, золотой, мифический или легендарный.
-
-Мы также обновили архитектуру проекта и улучшили инструменты сотрудников кафе. Старые ошибки соединения должны возникать реже. Если заметите баг — обязательно сообщите нам!`;
+Обычный прогресс профиля, коллекции и покупки при смене сезона сохраняются. Спасибо, что были с нами в Сезоне I.`;
       const UPDATE_NOTICE_BUTTON = &quot;Продолжить&quot;;
       const RELEASE_CENTER_SEASON_2_START_MS = Date.parse(&quot;2026-09-13T00:00:00+03:00&quot;);
       const RELEASE_CENTER_RELEASES = Object.freeze([
         Object.freeze({
-          version: &quot;1.2.2&quot;,
-          current: true,
-          type: &quot;Исправление критических ошибок и обновление систем&quot;,
-          date: &quot;16 сентября 2026&quot;,
-          title: &quot;Стабильнее, понятнее и больше нового в забеге&quot;,
-          summary: &quot;Исправили критические ошибки, обновили сезонный контент, кейсы, обучение, интерфейс и архитектуру проекта.&quot;,
-          highlights: Object.freeze([
-            Object.freeze({ icon: &quot;/assets/ui/icon_reiting.webp&quot;, title: &quot;Критические исправления&quot;, text: &quot;Рейтинг снова учитывает игроков корректно; исправлены усилители, кейсы и открытие Альбома.&quot; }),
-            Object.freeze({ icon: &quot;/assets/ui/icon_game_button.webp&quot;, title: &quot;Сезонный забег&quot;, text: &quot;Добавлены новые сезонные препятствия и обновлена дорожка витрины. Новые препятствия будут появляться каждый сезон.&quot; }),
-            Object.freeze({ icon: &quot;/assets/ui/icon_documents.webp&quot;, title: &quot;Обучение и интерфейс&quot;, text: &quot;Полностью обновлены обучения, разделы, вкладки и уведомления — они стали информативнее и дружелюбнее.&quot; }),
-            Object.freeze({ icon: &quot;/assets/ui/icon_battlepass.webp&quot;, title: &quot;Сезонный пропуск&quot;, text: &quot;Обновлён дизайн сезонного пропуска и актуализировано содержимое кейсов под текущие реалии проекта.&quot; }),
-            Object.freeze({ icon: &quot;/assets/cases/standart_closed.webp&quot;, title: &quot;Кейсы в забеге&quot;, text: &quot;На каждом пороге в 1000 очков может появиться обычный, серебряный, золотой, мифический или легендарный кейс.&quot; }),
-            Object.freeze({ icon: &quot;/assets/ui/icon_sepport.webp&quot;, title: &quot;Связь и архитектура&quot;, text: &quot;Обновлена архитектура проекта — старые ошибки соединения должны возникать реже.&quot; }),
-            Object.freeze({ icon: &quot;/assets/ui/icon_message_season.webp&quot;, title: &quot;Уведомления рейтинга&quot;, text: &quot;Если вас сместят с первого места рейтинга, Telegram-бот сообщит об этом.&quot; }),
-            Object.freeze({ icon: &quot;/assets/ui/icon_maintenance_tools.webp&quot;, title: &quot;Команда кафе&quot;, text: &quot;Улучшена работа сотрудников кафе и расширен их рабочий функционал.&quot; })
-          ])
-        }),
-        Object.freeze({
           version: &quot;1.2.1&quot;,
-          current: false,
+          current: true,
           type: &quot;Предсезонное обновление&quot;,
           date: &quot;8 сентября 2026&quot;,
           title: &quot;Подготовка к «Ночи сладких чудес»&quot;,
@@ -14284,26 +14262,6 @@ function installProgressInfo(){
       const assetSources = JSON.parse(root.querySelector(&quot;[data-zefirok-assets]&quot;).textContent);
       // 1.2.1 · Предсезонная сцена: сохраняем существующий canvas-пайплайн и cover-масштабирование.
       assetSources.cafeBackground = &quot;/assets/optimized/v0.79.5/background_season2.webp?v=1.2.1&quot;;
-      Object.assign(assetSources, {
-        game_barricade_flovers_night_s2: &quot;/assets/optimized/v0.79.5/game_barricade_flovers_night_s2.webp?v=0.79.5&quot;,
-        road_night_cafe: &quot;/assets/optimized/v0.79.5/road_night_cafe.webp?v=0.79.5&quot;,
-        game_barricade_tablet: &quot;/assets/optimized/v0.79.5/game_barricade_tablet.webp?v=0.79.5&quot;,
-        barrier_game_bag: &quot;/assets/optimized/v0.79.5/barrier_game_bag.webp?v=0.79.5&quot;,
-        barricade_game_puff_night: &quot;/assets/optimized/v0.79.5/barricade_game_puff_night.webp?v=0.79.5&quot;,
-        barricade_game_boock_night: &quot;/assets/optimized/v0.79.5/barricade_game_boock_night.webp?v=0.79.5&quot;,
-        barricade_game_group_svechi_night: &quot;/assets/optimized/v0.79.5/barricade_game_group_svechi_night.webp?v=0.79.5&quot;,
-        barricade_game_group_telechka: &quot;/assets/optimized/v0.79.5/barricade_game_group_telechka.webp?v=0.79.5&quot;,
-        game_barricade_park_birdhouse_s3: &quot;/assets/optimized/v0.79.5/game_barricade_park_birdhouse_s3.webp?v=0.79.5&quot;,
-        game_barricade_park_scooter_s3: &quot;/assets/optimized/v0.79.5/game_barricade_park_scooter_s3.webp?v=0.79.5&quot;,
-        game_barricade_park_stone_s3: &quot;/assets/optimized/v0.79.5/game_barricade_park_stone_s3.webp?v=0.79.5&quot;,
-        game_barricade_park_flowebed_s3: &quot;/assets/optimized/v0.79.5/game_barricade_park_flowebed_s3.webp?v=0.79.5&quot;,
-        game_barricade_park_birdhouse_bird_s3: &quot;/assets/optimized/v0.79.5/game_barricade_park_birdhouse_bird_s3.webp?v=0.79.5&quot;,
-        game_barricade_park_log_s3: &quot;/assets/optimized/v0.79.5/game_barricade_park_log_s3.webp?v=0.79.5&quot;,
-        game_barricade_park_picknik_basket_s3: &quot;/assets/optimized/v0.79.5/game_barricade_park_picknik_basket_s3.webp?v=0.79.5&quot;,
-        game_barricade_park_bike_s3: &quot;/assets/optimized/v0.79.5/game_barricade_park_bike_s3.webp?v=0.79.5&quot;,
-        barricade_game_park_flowers_s3: &quot;/assets/optimized/v0.79.5/barricade_game_park_flowers_s3.webp?v=0.79.5&quot;,
-        road_park_day_s3: &quot;/assets/optimized/v0.79.5/road_park_day_s3.webp?v=0.79.5&quot;
-      });
       // Новый стандартный аватар Зеффи в шапке основного экрана.
       // Не влияет на игровой спрайт и портрет выбранного скина в забеге.
       assetSources.skinDefaultAvatar = &quot;/assets/ui/new_avatars_game.webp&quot;;
@@ -14722,8 +14680,6 @@ function installProgressInfo(){
         ])
       });
       const runnerDynamicImages = new Map();
-      const RUNNER_SEASON2_OBSTACLE_IDS = new Set([&quot;flowers-night-s2&quot;, &quot;wet-floor-sign&quot;, &quot;client-bag&quot;, &quot;pouf-night-s2&quot;, &quot;books-menu-night&quot;, &quot;candles-night&quot;, &quot;waiter-cart&quot;]);
-      const RUNNER_SEASON3_OBSTACLE_IDS = new Set([&quot;birdhouse-s3&quot;, &quot;scooter-s3&quot;, &quot;stone-s3&quot;, &quot;flowerbox-s3&quot;, &quot;birdhouse-bird-s3&quot;, &quot;log-s3&quot;, &quot;picnic-basket-s3&quot;, &quot;bike-s3&quot;, &quot;flowerbed-s3&quot;]);
       let remoteRunnerScene = LEGACY_RUNNER_SCENE;
 
       function normalizeRunnerHitboxClient(value) {
@@ -14752,15 +14708,6 @@ function installProgressInfo(){
           hitboxes: (Array.isArray(item?.hitboxes) ? item.hitboxes : []).slice(0, 3).map(normalizeRunnerHitboxClient)
         })).filter((item) =&gt; item.id &amp;&amp; item.hitboxes.length);
         if (!obstacles.length) return LEGACY_RUNNER_SCENE;
-        const roadAssetPath = String(backgroundRaw.roadAssetPath || &quot;&quot;).trim();
-        let roadAssetKey = String(backgroundRaw.roadAssetKey || &quot;roadStrip&quot;).trim() || &quot;roadStrip&quot;;
-        const sceneMarker = `${String(raw.sceneId || &quot;&quot;)} ${String(raw.title || &quot;&quot;)} ${String(backgroundRaw.id || &quot;&quot;)} ${String(backgroundRaw.title || &quot;&quot;)}`;
-        const season2Scene = obstacles.some((item) =&gt; RUNNER_SEASON2_OBSTACLE_IDS.has(item.id)) || /(?:night|ноч|season[\s_-]*2|сезон[\s_-]*2|(?:^|[^a-z0-9])s2(?:[^a-z0-9]|$))/i.test(sceneMarker);
-        const season3Scene = obstacles.some((item) =&gt; RUNNER_SEASON3_OBSTACLE_IDS.has(item.id)) || /(?:park|парк|belkino|белкин|season[\s_-]*3|сезон[\s_-]*3|(?:^|[^a-z0-9])s3(?:[^a-z0-9]|$))/i.test(sceneMarker);
-        if (!roadAssetPath &amp;&amp; (!roadAssetKey || roadAssetKey === &quot;roadStrip&quot;)) {
-          if (season3Scene) roadAssetKey = &quot;road_park_day_s3&quot;;
-          else if (season2Scene) roadAssetKey = &quot;road_night_cafe&quot;;
-        }
         return {
           version: Math.max(1, Number(raw.version) || 1),
           revision: Math.max(1, Number(raw.revision) || 1),
@@ -14777,8 +14724,8 @@ function installProgressInfo(){
             positionX: Number.isFinite(Number(backgroundRaw.positionX)) ? Math.max(0, Math.min(1, Number(backgroundRaw.positionX))) : 0.5,
             positionY: Number.isFinite(Number(backgroundRaw.positionY)) ? Math.max(0, Math.min(1, Number(backgroundRaw.positionY))) : 0.5,
             roadEnabled: backgroundRaw.roadEnabled !== false,
-            roadAssetKey,
-            roadAssetPath
+            roadAssetKey: String(backgroundRaw.roadAssetKey || &quot;roadStrip&quot;),
+            roadAssetPath: String(backgroundRaw.roadAssetPath || &quot;&quot;)
           },
           obstacles
         };
@@ -14803,18 +14750,15 @@ function installProgressInfo(){
         const path = String(assetPath || &quot;&quot;).trim();
         if (path) return ensureRunnerDynamicImage(path);
         const key = String(assetKey || &quot;&quot;).trim();
-        if (!key) return null;
-        if (assets[key]) return assets[key];
-        const builtInSrc = String(assetSources[key] || &quot;&quot;).trim();
-        return builtInSrc ? ensureRunnerDynamicImage(builtInSrc) : null;
+        return key ? assets[key] || null : null;
       }
 
       function applyRemoteRunnerScene(raw) {
         remoteRunnerScene = normalizeRunnerSceneClient(raw);
         const background = remoteRunnerScene.background || {};
-        runnerSceneImage(background.assetKey || &quot;cafeBackground&quot;, background.assetPath || &quot;&quot;);
-        if (background.roadEnabled !== false) runnerSceneImage(background.roadAssetKey || &quot;roadStrip&quot;, background.roadAssetPath || &quot;&quot;);
-        for (const obstacle of remoteRunnerScene.obstacles || []) runnerSceneImage(obstacle.assetKey || &quot;&quot;, obstacle.assetPath || &quot;&quot;);
+        if (background.assetPath) ensureRunnerDynamicImage(background.assetPath);
+        if (background.roadEnabled !== false &amp;&amp; background.roadAssetPath) ensureRunnerDynamicImage(background.roadAssetPath);
+        for (const obstacle of remoteRunnerScene.obstacles || []) if (obstacle.assetPath) ensureRunnerDynamicImage(obstacle.assetPath);
         invalidateGameRenderCaches();
       }
 
@@ -14836,18 +14780,9 @@ function installProgressInfo(){
           || null;
       }
 
-      function runnerObstacleImageReady(entry) {
-        if (!entry) return false;
-        const image = runnerSceneImage(entry.assetKey || &quot;&quot;, entry.assetPath || &quot;&quot;);
-        return Boolean(image &amp;&amp; image.complete &amp;&amp; image.naturalWidth &gt; 0 &amp;&amp; image.naturalHeight &gt; 0);
-      }
-
       function chooseRunnerObstacleDefinition() {
         const pool = (remoteRunnerScene?.obstacles || []).filter((entry) =&gt; Number(entry.weight || 0) &gt; 0);
-        for (const entry of pool) runnerSceneImage(entry.assetKey || &quot;&quot;, entry.assetPath || &quot;&quot;);
-        const readyPool = pool.filter(runnerObstacleImageReady);
-        const source = pool.length ? readyPool : LEGACY_RUNNER_SCENE.obstacles.filter(runnerObstacleImageReady);
-        if (!source.length) return null;
+        const source = pool.length ? pool : LEGACY_RUNNER_SCENE.obstacles;
         const total = source.reduce((sum, entry) =&gt; sum + Math.max(0, Number(entry.weight || 0)), 0);
         if (total &lt;= 0) return source[0] || null;
         let roll = Math.random() * total;
@@ -15142,12 +15077,6 @@ function installProgressInfo(){
         runCaseDrop: null,
         runCaseDropSpawned: false,
         runCaseDropCaught: false,
-        runCaseDrops: [],
-        runCaseDropCaughtMilestones: [],
-        runCaseDropCheckpointMilestone: 0,
-        storyCollectible: null,
-        storyCollectibleCaughtSlots: [],
-        storyCollectibleSpawnedSlots: [],
         runSkinId: &quot;default&quot;,
         wallet: 0,
         inventory: {},
@@ -17029,12 +16958,6 @@ function createTutorialDeck(layer, mount, options, words) {
         state.runCaseDrop = null;
         state.runCaseDropSpawned = false;
         state.runCaseDropCaught = false;
-        state.runCaseDrops = [];
-        state.runCaseDropCaughtMilestones = [];
-        state.storyCollectible = null;
-        state.storyCollectibleCaughtSlots = [];
-        state.storyCollectibleSpawnedSlots = [];
-        state.runCaseDropCheckpointMilestone = 0;
         state.wallet = 0;
         state.inventory = {};
         state.redemptionCodes = [];
@@ -18078,12 +18001,6 @@ function createTutorialDeck(layer, mount, options, words) {
         state.runCaseDrop = null;
         state.runCaseDropSpawned = false;
         state.runCaseDropCaught = false;
-        state.runCaseDrops = [];
-        state.runCaseDropCaughtMilestones = [];
-        state.storyCollectible = null;
-        state.storyCollectibleCaughtSlots = [];
-        state.storyCollectibleSpawnedSlots = [];
-        state.runCaseDropCheckpointMilestone = 0;
         state.speed = runtimeGameplayConfig.startSpeed;
         state.renderSpeed = state.speed;
         state.visualDistance = 0;
@@ -18474,11 +18391,7 @@ function createTutorialDeck(layer, mount, options, words) {
       function runResultsEvents(payload) {
         const settlement = payload?.runSettlement || {};
         const events = [];
-        const grantedCaseDrops=Array.isArray(settlement?.caseDrops)?settlement.caseDrops.filter((drop)=&gt;drop?.granted):(settlement?.caseDrop?.granted?[settlement.caseDrop]:[]);
-        if(grantedCaseDrops.length===1)events.push(runResultsEventMarkup(RUN_RESULT_ICONS.caseDrop,&quot;\u041a\u0435\u0439\u0441 \u043f\u043e\u0439\u043c\u0430\u043d!&quot;,`${runResultCaseTitle(grantedCaseDrops[0].type)} \u0434\u043e\u0431\u0430\u0432\u043b\u0435\u043d \u0432 \u043f\u0440\u043e\u0444\u0438\u043b\u044c`));
-        else if(grantedCaseDrops.length&gt;1)events.push(runResultsEventMarkup(RUN_RESULT_ICONS.caseDrop,`\u041f\u043e\u0439\u043c\u0430\u043d\u043e \u043a\u0435\u0439\u0441\u043e\u0432: ${grantedCaseDrops.length}`,grantedCaseDrops.map((drop)=&gt;runResultCaseTitle(drop.type)).join(&quot; · &quot;)));
-        const storyCollectible=settlement?.storyCollectible&amp;&amp;typeof settlement.storyCollectible===&quot;object&quot;?settlement.storyCollectible:null;
-        if(storyCollectible?.showAfterRun&amp;&amp;Number(storyCollectible.caughtThisRun||0)&gt;0)events.push(runResultsEventMarkup(String(storyCollectible.iconUrl||RUN_RESULT_ICONS.achievement),`${String(storyCollectible.title||&quot;Сюжетная находка&quot;)} · +${formatter.format(Number(storyCollectible.caughtThisRun||0))}`,`Всего найдено: ${formatter.format(Number(storyCollectible.totalCollected||0))}`));
+        if (settlement?.caseDrop?.granted) events.push(runResultsEventMarkup(RUN_RESULT_ICONS.caseDrop, &quot;\u041a\u0435\u0439\u0441 \u043f\u043e\u0439\u043c\u0430\u043d!&quot;, `${runResultCaseTitle(settlement.caseDrop.type)} \u0434\u043e\u0431\u0430\u0432\u043b\u0435\u043d \u0432 \u043f\u0440\u043e\u0444\u0438\u043b\u044c`));
         const achievement = Array.isArray(payload?.achievementUnlocks) ? payload.achievementUnlocks[0] : null;
         if (achievement) events.push(runResultsEventMarkup(RUN_RESULT_ICONS.achievement, &quot;\u041d\u043e\u0432\u043e\u0435 \u0434\u043e\u0441\u0442\u0438\u0436\u0435\u043d\u0438\u0435&quot;, String(achievement.title || &quot;\u0414\u043e\u0441\u0442\u0438\u0436\u0435\u043d\u0438\u0435 \u043e\u0442\u043a\u0440\u044b\u0442\u043e&quot;)));
         const task = Array.isArray(payload?.seasonPassAward?.taskNotice?.tasks) ? payload.seasonPassAward.taskNotice.tasks[0] : null;
@@ -18966,13 +18879,7 @@ function createTutorialDeck(layer, mount, options, words) {
           state.spawn = nextObstacleDelay();
         }
 
-        const reachedCaseMilestone=Math.floor(Math.max(0,Number(state.score||0))/1000)*1000;
-        if(reachedCaseMilestone&gt;=1000&amp;&amp;reachedCaseMilestone&gt;Number(state.runCaseDropCheckpointMilestone||0)){
-          state.runCaseDropCheckpointMilestone=reachedCaseMilestone;
-          void sendAuthoritativeRunCheckpoint(true);
-        }
-        spawnNextReservedCaseDrop();
-        spawnNextStoryCollectible();
+        if(state.runCaseDrop&amp;&amp;!state.runCaseDropSpawned&amp;&amp;!state.runCaseDropCaught&amp;&amp;state.score&gt;=Math.max(1000,Number(state.runCaseDrop.minScore||1000))&amp;&amp;state.time*1000&gt;=Number(state.runCaseDrop.spawnAfterMs||0)) spawnReservedCaseDrop();
 
         state.treatSpawn -= dt;
         if (state.treatSpawn &lt;= 0) {
@@ -19015,14 +18922,8 @@ function createTutorialDeck(layer, mount, options, words) {
             item.x + 2, item.y + 2, item.size - 4, item.size - 4
           )) {
             item.got = true;
-            if(item.kind===&quot;story_collectible&quot;){
-              const slot=Math.max(1,Math.min(10,Math.floor(Number(item.storySlot)||1))),drop=state.storyCollectible?.drops?.find((entry)=&gt;Number(entry.slot)===slot);if(drop)drop.caught=true;state.storyCollectibleCaughtSlots=[...new Set([...currentStoryCollectibleCaughtSlots(),slot])].sort((a,b)=&gt;a-b);playGameSound(&quot;collectCoffee&quot;);hapticImpact(&quot;medium&quot;,150);puff(item.x+item.size/2,item.y+item.size/2,16);const pickupText=String(state.storyCollectible?.pickupText||&quot;Сюжетная находка: +1&quot;),reaction=String(state.storyCollectible?.reactionText||&quot;&quot;);showProfileToast(reaction?`${pickupText} · ${reaction}`:pickupText,&quot;success&quot;,3200);void sendAuthoritativeRunCheckpoint(true);
-            } else if(item.kind===&quot;case_drop&quot;){
-              const milestoneScore=Math.max(1000,Math.floor(Number(item.milestoneScore||1000)/1000)*1000);
-              const drop=(Array.isArray(state.runCaseDrops)?state.runCaseDrops:[]).find((entry)=&gt;Number(entry.milestoneScore||0)===milestoneScore);
-              if(drop)drop.caught=true;
+            if(item.kind===&quot;case_drop&quot;){
               state.runCaseDropCaught=true;
-              state.runCaseDropCaughtMilestones=[...new Set([...currentRunCaseDropCaughtMilestones(),milestoneScore])].sort((a,b)=&gt;a-b);
               playGameSound(&quot;collectCoffee&quot;);
               hapticImpact(&quot;heavy&quot;,180);
               puff(item.x+item.size/2,item.y+item.size/2,18);
@@ -26137,52 +26038,6 @@ function createTutorialDeck(layer, mount, options, words) {
         return delta;
       }
 
-      function normalizeRunCaseDropMilestone(raw) {
-        if (!raw || typeof raw !== &quot;object&quot;) return null;
-        const milestoneScore = Math.max(1000, Math.floor(Number(raw.milestoneScore || raw.minScore || 1000) / 1000) * 1000);
-        const type = String(raw.type || &quot;small&quot;);
-        if (!RUN_CASE_DROP_IMAGES[type]) return null;
-        return {
-          type, milestoneScore, minScore: milestoneScore,
-          spawnAfterMs: Math.max(0, Number(raw.spawnAfterMs || 0)),
-          caught: Boolean(raw.caught), granted: Boolean(raw.granted), spawned: Boolean(raw.spawned)
-        };
-      }
-
-      function mergeServerRunCaseDrops(rawDrops) {
-        const source = Array.isArray(rawDrops) ? rawDrops : [];
-        const previous = new Map((Array.isArray(state.runCaseDrops) ? state.runCaseDrops : []).map((drop) =&gt; [Number(drop.milestoneScore || 0), drop]));
-        const merged = source.map(normalizeRunCaseDropMilestone).filter(Boolean).map((drop) =&gt; {
-          const old = previous.get(drop.milestoneScore);
-          return { ...drop, spawned: Boolean(old?.spawned), caught: Boolean(drop.caught || old?.caught) };
-        });
-        for (const old of previous.values()) {
-          if (!merged.some((drop) =&gt; drop.milestoneScore === Number(old.milestoneScore || 0))) merged.push(old);
-        }
-        merged.sort((a,b) =&gt; a.milestoneScore - b.milestoneScore);
-        state.runCaseDrops = merged;
-        state.runCaseDropCaughtMilestones = [...new Set(merged.filter((drop) =&gt; drop.caught).map((drop) =&gt; drop.milestoneScore))].sort((a,b) =&gt; a-b);
-        state.runCaseDropCaught = state.runCaseDropCaughtMilestones.length &gt; 0;
-        state.runCaseDrop = merged[0] || null;
-        state.runCaseDropSpawned = Boolean(merged[0]?.spawned);
-      }
-
-      function normalizeRunStoryCollectible(raw) {
-        if (!raw || typeof raw !== &quot;object&quot;) return null;
-        const drops=(Array.isArray(raw.drops)?raw.drops:[]).map((drop)=&gt;({slot:Math.max(1,Math.min(10,Math.floor(Number(drop?.slot)||1))),spawnAfterMs:Math.max(0,Math.floor(Number(drop?.spawnAfterMs)||0)),caught:Boolean(drop?.caught),spawned:false})).sort((a,b)=&gt;a.slot-b.slot);
-        if(!drops.length||!String(raw.iconUrl||&quot;&quot;).trim())return null;
-        return {seasonId:String(raw.seasonId||&quot;&quot;),collectibleId:String(raw.collectibleId||raw.id||&quot;&quot;),id:String(raw.id||raw.collectibleId||&quot;&quot;),title:String(raw.title||&quot;Сюжетная находка&quot;),iconUrl:String(raw.iconUrl||&quot;&quot;),pickupText:String(raw.pickupText||&quot;Сюжетная находка: +1&quot;),reactionText:String(raw.reactionText||&quot;&quot;),showAfterRun:raw.showAfterRun!==false,totalCollected:Math.max(0,Number(raw.totalCollected||0)),achievementSeries:raw.achievementSeries&amp;&amp;typeof raw.achievementSeries===&quot;object&quot;?raw.achievementSeries:{enabled:false,steps:[]},drops};
-      }
-      function mergeServerStoryCollectible(raw) {
-        const incoming=normalizeRunStoryCollectible(raw);if(!incoming){state.storyCollectible=null;state.storyCollectibleCaughtSlots=[];state.storyCollectibleSpawnedSlots=[];return;}
-        const prev=new Map((state.storyCollectible?.drops||[]).map((drop)=&gt;[Number(drop.slot),drop]));incoming.drops=incoming.drops.map((drop)=&gt;({...drop,spawned:Boolean(prev.get(drop.slot)?.spawned),caught:Boolean(drop.caught||prev.get(drop.slot)?.caught)}));state.storyCollectible=incoming;state.storyCollectibleCaughtSlots=[...new Set(incoming.drops.filter((drop)=&gt;drop.caught).map((drop)=&gt;drop.slot))].sort((a,b)=&gt;a-b);state.storyCollectibleSpawnedSlots=[...new Set(incoming.drops.filter((drop)=&gt;drop.spawned).map((drop)=&gt;drop.slot))].sort((a,b)=&gt;a-b);runnerSceneImage(&quot;&quot;,incoming.iconUrl);
-      }
-      function currentStoryCollectibleCaughtSlots(){return [...new Set((Array.isArray(state.storyCollectibleCaughtSlots)?state.storyCollectibleCaughtSlots:[]).map((value)=&gt;Math.floor(Number(value)||0)).filter((value)=&gt;value&gt;=1&amp;&amp;value&lt;=10))].sort((a,b)=&gt;a-b);}
-
-      function currentRunCaseDropCaughtMilestones() {
-        return [...new Set((Array.isArray(state.runCaseDropCaughtMilestones) ? state.runCaseDropCaughtMilestones : []).map((value) =&gt; Math.floor(Number(value) || 0)).filter((value) =&gt; value &gt;= 1000 &amp;&amp; value % 1000 === 0))].sort((a,b) =&gt; a-b);
-      }
-
       async function startAuthoritativeRunSession(runId) {
         const id = String(runId || &quot;&quot;).trim();
         if (!/^[A-Za-z0-9_-]{12,96}$/.test(id)) return false;
@@ -26195,18 +26050,14 @@ function createTutorialDeck(layer, mount, options, words) {
             if (authoritativeRunSessionId !== id) return false;
             const runBoosters = normalizeRunCaseBoosters(data?.runSession?.boosters);
             const serverRunSkinId = normalizeRunSkinId(data?.runSession?.skinId || state.runSkinId);
-            const serverCaseDrop=data?.runSession?.caseDrop&amp;&amp;typeof data.runSession.caseDrop===&quot;object&quot;?normalizeRunCaseDropMilestone(data.runSession.caseDrop):null;
-            const serverCaseDrops=Array.isArray(data?.runSession?.caseDrops)?data.runSession.caseDrops:(serverCaseDrop?[serverCaseDrop]:[]);
-            const serverStoryCollectible=data?.runSession?.storyCollectible&amp;&amp;typeof data.runSession.storyCollectible===&quot;object&quot;?data.runSession.storyCollectible:null;
+            const serverCaseDrop=data?.runSession?.caseDrop&amp;&amp;typeof data.runSession.caseDrop===&quot;object&quot;?{type:String(data.runSession.caseDrop.type||&quot;small&quot;),spawnAfterMs:Math.max(0,Number(data.runSession.caseDrop.spawnAfterMs||0)),minScore:Math.max(1000,Number(data.runSession.caseDrop.minScore||1000))}:null;
             if (String(state.caseRunId || &quot;&quot;) === id) {
               state.runSkinId=serverRunSkinId;
               ensureGameplayDogSprites(serverRunSkinId);
               ensureSkinPortraitImage(runDogRunPortraitSrc(serverRunSkinId));
-              state.runCaseDrops=[];
-              state.runCaseDropCaughtMilestones=[];
-              state.runCaseDropCheckpointMilestone=0;
-              mergeServerRunCaseDrops(serverCaseDrops);
-              mergeServerStoryCollectible(serverStoryCollectible);
+              state.runCaseDrop=serverCaseDrop;
+              state.runCaseDropSpawned=false;
+              state.runCaseDropCaught=false;
               antiCheatWithTrustedChange(&quot;run-booster-snapshot&quot;, () =&gt; {
                 state.runCaseBoosters = runBoosters;
                 const active = normalizeActiveCaseBoosters(state.activeCaseBoosters, state.activeCaseBooster);
@@ -26240,9 +26091,7 @@ function createTutorialDeck(layer, mount, options, words) {
           runCoffee: Math.max(0, Math.floor(Number(state.runCoffee || 0))),
           shieldUsed: Boolean(state.runShieldUsed),
           secondChanceUsed: Boolean(state.runSecondChanceUsed),
-          caseDropCaught: Boolean(state.runCaseDropCaught),
-          caseDropCaughtMilestones: currentRunCaseDropCaughtMilestones(),
-          storyCollectibleCaughtSlots: currentStoryCollectibleCaughtSlots()
+          caseDropCaught: Boolean(state.runCaseDropCaught)
         };
       }
 
@@ -26282,8 +26131,6 @@ function createTutorialDeck(layer, mount, options, words) {
             shieldUsed: snapshot.shieldUsed,
             secondChanceUsed: snapshot.secondChanceUsed,
             caseDropCaught: snapshot.caseDropCaught,
-            caseDropCaughtMilestones: snapshot.caseDropCaughtMilestones,
-            storyCollectibleCaughtSlots: snapshot.storyCollectibleCaughtSlots,
             gameVersion: GAME_VERSION
           });
           if (authoritativeRunCheckpointRunId === runId) {
@@ -26291,8 +26138,6 @@ function createTutorialDeck(layer, mount, options, words) {
               authoritativeRunCheckpointLastDurationMs,
               Number(data?.checkpoint?.durationMs || snapshot.durationMs)
             );
-            if (Array.isArray(data?.checkpoint?.caseDrops)) mergeServerRunCaseDrops(data.checkpoint.caseDrops);
-            if (data?.checkpoint?.storyCollectible) mergeServerStoryCollectible(data.checkpoint.storyCollectible);
           }
           return true;
         } catch (error) {
@@ -26397,8 +26242,6 @@ function createTutorialDeck(layer, mount, options, words) {
             shieldUsed: Boolean(state.runShieldUsed),
             secondChanceUsed: Boolean(state.runSecondChanceUsed),
             caseDropCaught: Boolean(state.runCaseDropCaught),
-            caseDropCaughtMilestones: currentRunCaseDropCaughtMilestones(),
-            storyCollectibleCaughtSlots: currentStoryCollectibleCaughtSlots(),
             newRecord: Boolean(runMetrics?.newRecord),
             profileXpLocalAwarded: Math.max(0, Math.floor(Number(runMetrics?.profileXpAwarded || 0))),
             profileXpReconciled: true,
@@ -26432,7 +26275,7 @@ function createTutorialDeck(layer, mount, options, words) {
           const loaded = await leaderboardApiRequest(LEADERBOARD_API_SUBMIT_PATH, { initData, ...run });
           const fastSettlementApplied = applyFastRunSettlementPayload(loaded);
           if (!fastSettlementApplied &amp;&amp; loaded?.caseState) applyServerCasePayload(loaded);
-          if(!silent){const grantedDrops=Array.isArray(loaded?.runSettlement?.caseDrops)?loaded.runSettlement.caseDrops.filter((drop)=&gt;drop?.granted):(loaded?.runSettlement?.caseDrop?.granted?[loaded.runSettlement.caseDrop]:[]);if(grantedDrops.length===1){const t=String(grantedDrops[0].type||&quot;small&quot;);const title=t===&quot;legendary&quot;?&quot;Легендарный&quot;:t===&quot;mythic&quot;?&quot;Мифический&quot;:t===&quot;gold&quot;?&quot;Золотой&quot;:t===&quot;sweet&quot;?&quot;Серебряный&quot;:&quot;Обычный&quot;;showProfileToast(`🎁 ${title} кейс пойман!`,&quot;success&quot;,3800);}else if(grantedDrops.length&gt;1)showProfileToast(`🎁 Поймано кейсов: ${grantedDrops.length}`,&quot;success&quot;,4200);}
+          if(!silent&amp;&amp;loaded?.runSettlement?.caseDrop?.granted){const t=String(loaded.runSettlement.caseDrop.type||&quot;small&quot;);const title=t===&quot;legendary&quot;?&quot;Легендарный&quot;:t===&quot;mythic&quot;?&quot;Мифический&quot;:t===&quot;gold&quot;?&quot;Золотой&quot;:t===&quot;sweet&quot;?&quot;Серебряный&quot;:&quot;Обычный&quot;;showProfileToast(`🎁 ${title} кейс пойман!`,&quot;success&quot;,3800);}
           antiCheatWithTrustedChange(&quot;run-server-settlement&quot;, () =&gt; {
             state.pendingBoosterRuns = normalizePendingBoosterRuns(state.pendingBoosterRuns).filter((id) =&gt; id !== String(run.runId));
             saveProgress();
@@ -27521,32 +27364,18 @@ function createTutorialDeck(layer, mount, options, words) {
         });
       }
 
-      function spawnReservedCaseDrop(drop) {
-        if(!drop||drop.spawned||drop.caught)return;
-        const caseType=String(drop.type||&quot;small&quot;);
+      function spawnReservedCaseDrop() {
+        if(!state.runCaseDrop||state.runCaseDropSpawned||state.runCaseDropCaught)return;
+        const caseType=String(state.runCaseDrop.type||&quot;small&quot;);
         if(!RUN_CASE_DROP_IMAGES[caseType])return;
-        drop.spawned=true;
-        if(Number(drop.milestoneScore||0)===1000)state.runCaseDropSpawned=true;
+        state.runCaseDropSpawned=true;
         const size=caseType===&quot;mythic&quot;||caseType===&quot;legendary&quot;?56:52;
         const laneTop=Math.max(38,ground.y-126);
         const laneBottom=Math.max(laneTop+16,ground.y-88);
         const startX=canvasViewWidth+58;
         const startFloat=Math.random()*Math.PI*2;
-        state.pickups.push({kind:&quot;case_drop&quot;,caseType,milestoneScore:Number(drop.milestoneScore||drop.minScore||1000),x:startX,previousX:startX,y:laneTop+Math.random()*(laneBottom-laneTop),size,float:startFloat,previousFloat:startFloat,got:false});
+        state.pickups.push({kind:&quot;case_drop&quot;,caseType,x:startX,previousX:startX,y:laneTop+Math.random()*(laneBottom-laneTop),size,float:startFloat,previousFloat:startFloat,got:false});
         if(caseType===&quot;gold&quot;||caseType===&quot;mythic&quot;||caseType===&quot;legendary&quot;) hapticImpact(&quot;medium&quot;,120);
-      }
-
-      function spawnNextReservedCaseDrop() {
-        if((state.pickups||[]).some((item)=&gt;item?.kind===&quot;case_drop&quot;&amp;&amp;!item.got))return;
-        const nowMs=Math.max(0,Number(state.time||0)*1000);
-        const score=Math.max(0,Number(state.score||0));
-        const next=(Array.isArray(state.runCaseDrops)?state.runCaseDrops:[]).find((drop)=&gt;!drop.spawned&amp;&amp;!drop.caught&amp;&amp;score&gt;=Number(drop.milestoneScore||drop.minScore||1000)&amp;&amp;nowMs&gt;=Number(drop.spawnAfterMs||0));
-        if(next)spawnReservedCaseDrop(next);
-      }
-
-      function spawnNextStoryCollectible() {
-        const config=state.storyCollectible;if(!config||!Array.isArray(config.drops)||!config.iconUrl)return;const elapsedMs=Math.max(0,Math.floor(Number(state.time||0)*1000));const image=runnerSceneImage(&quot;&quot;,config.iconUrl);if(!image||!image.complete||!image.naturalWidth)return;
-        for(const drop of config.drops){if(drop.caught||drop.spawned||elapsedMs&lt;Number(drop.spawnAfterMs||0))continue;drop.spawned=true;state.storyCollectibleSpawnedSlots=[...new Set([...(state.storyCollectibleSpawnedSlots||[]),Number(drop.slot)])].sort((a,b)=&gt;a-b);const size=48;const startX=canvas.width/CANVAS_DPR+26;state.pickups.push({kind:&quot;story_collectible&quot;,storySlot:Number(drop.slot),storyIconUrl:config.iconUrl,x:startX,y:ground.y-88-Math.random()*64,size,float:Math.random()*Math.PI*2,previousX:startX,previousFloat:0,got:false});break;}
       }
 
       function spawnPickup() {
@@ -27768,8 +27597,8 @@ function createTutorialDeck(layer, mount, options, words) {
         else drawFlowers(w - 48, ground.y - 98, 0.58);
       }
 
-      function createRoadTileCache(img, sx, sy, sw, sh, tileW, roadH) {
-        if (!CLIENT_OPT_ROAD_TILE_CACHE || !img || tileW &lt;= 0 || roadH &lt;= 0 || sw &lt;= 0 || sh &lt;= 0) return null;
+      function createRoadTileCache(img, sx, sw, tileW, roadH) {
+        if (!CLIENT_OPT_ROAD_TILE_CACHE || !img || tileW &lt;= 0 || roadH &lt;= 0) return null;
         const cache = document.createElement(&quot;canvas&quot;);
         cache.width = Math.max(1, Math.ceil(tileW * canvasPixelRatio));
         cache.height = Math.max(1, Math.ceil(roadH * canvasPixelRatio));
@@ -27778,59 +27607,41 @@ function createTutorialDeck(layer, mount, options, words) {
         cacheContext.imageSmoothingEnabled = true;
         try { cacheContext.imageSmoothingQuality = &quot;medium&quot;; } catch (error) {}
         cacheContext.clearRect(0, 0, cache.width, cache.height);
-        cacheContext.drawImage(img, sx, sy, sw, sh, 0, 0, cache.width, cache.height);
+        cacheContext.drawImage(img, sx, 0, sw, img.naturalHeight, 0, 0, cache.width, cache.height);
         return cache;
       }
 
-      function drawRoad(w) {
+            function drawRoad(w) {
         const img = runnerSceneRoadImage();
         if (!img || !img.complete || !img.naturalWidth || !img.naturalHeight) return false;
-        const runnerBackground = remoteRunnerScene?.background || LEGACY_RUNNER_SCENE.background;
-        const roadIdentity = `${String(runnerBackground.roadAssetKey || &quot;&quot;)}|${String(runnerBackground.roadAssetPath || &quot;&quot;)}`;
-        const nightCafeRoad = roadIdentity.includes(&quot;road_night_cafe&quot;);
-        const parkDayRoad = roadIdentity.includes(&quot;road_park_day_s3&quot;);
-        const seasonalRoad = nightCafeRoad || parkDayRoad;
         if (
           !roadDrawMetricsCache ||
           roadDrawMetricsCache.width !== w ||
           roadDrawMetricsCache.pixelRatio !== canvasPixelRatio ||
           roadDrawMetricsCache.sourceWidth !== img.naturalWidth ||
-          roadDrawMetricsCache.sourceHeight !== img.naturalHeight ||
-          roadDrawMetricsCache.variant !== roadIdentity
+          roadDrawMetricsCache.sourceHeight !== img.naturalHeight
         ) {
-          const sxRatio = nightCafeRoad ? 0.04 : parkDayRoad ? 0.02 : 0.12;
-          const swRatio = nightCafeRoad ? 0.92 : parkDayRoad ? 0.96 : 0.76;
-          const syRatio = nightCafeRoad ? 0.30 : parkDayRoad ? 0.01 : 0;
-          const shRatio = nightCafeRoad ? 0.52 : parkDayRoad ? 0.98 : 1;
-          const sx = Math.floor(img.naturalWidth * sxRatio);
-          const sw = Math.max(1, Math.floor(img.naturalWidth * swRatio));
-          const sy = Math.max(0, Math.floor(img.naturalHeight * syRatio));
-          const sh = Math.max(1, Math.min(img.naturalHeight - sy, Math.floor(img.naturalHeight * shRatio)));
-          const roadH = seasonalRoad
-            ? Math.max(118, Math.min(156, w * 0.30))
-            : Math.max(58, Math.min(76, w * 0.15));
-          const roadWidthScale = seasonalRoad ? 1.08 : 1;
-          const tileW = roadH * (sw / sh) * roadWidthScale;
-          const visibleLift = seasonalRoad
-            ? Math.round(Math.max(38, Math.min(52, roadH * 0.32)))
-            : 8;
-          roadDrawMetricsCache = { width: w, pixelRatio: canvasPixelRatio, sourceWidth: img.naturalWidth, sourceHeight: img.naturalHeight, sx, sy, sw, sh, roadH, tileW, visibleLift, variant: roadIdentity };
+          const sx = Math.floor(img.naturalWidth * 0.12);
+          const sw = Math.max(1, Math.floor(img.naturalWidth * 0.76));
+          const roadH = Math.max(58, Math.min(76, w * 0.15));
+          const tileW = roadH * (sw / img.naturalHeight);
+          roadDrawMetricsCache = { width: w, pixelRatio: canvasPixelRatio, sourceWidth: img.naturalWidth, sourceHeight: img.naturalHeight, sx, sw, roadH, tileW };
           roadTileCache = null;
         }
-        const { sx, sy, sw, sh, roadH, tileW, visibleLift } = roadDrawMetricsCache;
+        const { sx, sw, roadH, tileW } = roadDrawMetricsCache;
         if (CLIENT_OPT_ROAD_TILE_CACHE &amp;&amp; !roadTileCache) {
           clientPerformance.roadTileCacheMisses += 1;
-          roadTileCache = createRoadTileCache(img, sx, sy, sw, sh, tileW, roadH);
+          roadTileCache = createRoadTileCache(img, sx, sw, tileW, roadH);
         }
         if (roadTileCache) clientPerformance.roadTileCacheHits += 1;
-        const y = ground.y - visibleLift;
+        const y = ground.y - 8;
         const renderedDistance = Math.max(0, simulationRenderHorizontal(state.previousVisualDistance, state.visualDistance, Number(state.renderSpeed || state.speed || 0)));
         const offset = -((renderedDistance * 0.86) % tileW);
         ctx.save();
-        ctx.globalAlpha = seasonalRoad ? 0.99 : 0.96;
+        ctx.globalAlpha = 0.96;
         for (let x = offset - tileW; x &lt; w + tileW; x += tileW) {
-          if (roadTileCache) ctx.drawImage(roadTileCache, x, y, tileW + 1, roadH);
-          else ctx.drawImage(img, sx, sy, sw, sh, x, y, tileW + 1, roadH);
+          if (roadTileCache) ctx.drawImage(roadTileCache, x, y, tileW, roadH);
+          else ctx.drawImage(img, sx, 0, sw, img.naturalHeight, x, y, tileW, roadH);
         }
         ctx.restore();
         return true;
@@ -28119,11 +27930,8 @@ function createTutorialDeck(layer, mount, options, words) {
           }
         }
         let drawn = false;
-        if (image?.complete &amp;&amp; image.naturalWidth &amp;&amp; image.naturalHeight) {
-          if (assetPath) drawn = drawContain(image, renderX, renderY, item.w, item.h, 1, &quot;bottom&quot;);
-          else if (assetKey &amp;&amp; assets[assetKey] === image) drawn = drawAsset(assetKey, renderX, renderY, item.w, item.h);
-          else drawn = drawContain(image, renderX, renderY, item.w, item.h, 1, &quot;bottom&quot;);
-        }
+        if (assetPath &amp;&amp; image?.complete &amp;&amp; image.naturalWidth) drawn = drawContain(image, renderX, renderY, item.w, item.h, 1, &quot;bottom&quot;);
+        else if (assetKey &amp;&amp; isReady(assetKey)) drawn = drawAsset(assetKey, renderX, renderY, item.w, item.h);
         if (!drawn) {
           const id = String(definition?.id || item.obstacleId || item.type || &quot;&quot;);
           if (id === &quot;pouf&quot; || id === &quot;pillow&quot;) drawPouf(renderX, renderY, item.w, item.h);
@@ -28196,9 +28004,6 @@ function createTutorialDeck(layer, mount, options, words) {
         const renderX = simulationRenderHorizontal(item.previousX, item.x, -Number(state.renderSpeed || state.speed || 0));
         const renderFloat = simulationRenderValue(item.previousFloat, item.float);
         const y = item.y + Math.sin(renderFloat) * 5;
-        if(item.kind===&quot;story_collectible&quot;){
-          const img=runnerSceneImage(&quot;&quot;,String(item.storyIconUrl||state.storyCollectible?.iconUrl||&quot;&quot;));ctx.save();ctx.shadowColor=&quot;#fff0a6&quot;;ctx.shadowBlur=20;ctx.fillStyle=&quot;rgba(255,246,198,.3)&quot;;ctx.beginPath();ctx.arc(renderX+item.size/2,y+item.size/2,item.size*.46,0,Math.PI*2);ctx.fill();if(img&amp;&amp;img.complete&amp;&amp;img.naturalWidth){ctx.translate(renderX+item.size/2,y+item.size/2);ctx.rotate(Math.sin(renderFloat)*.09);ctx.drawImage(img,-item.size/2,-item.size/2,item.size,item.size);}ctx.restore();return;
-        }
         if(item.kind===&quot;case_drop&quot;){
           const caseType=String(item.caseType||&quot;small&quot;),img=RUN_CASE_DROP_IMAGES[caseType];
           ctx.save();

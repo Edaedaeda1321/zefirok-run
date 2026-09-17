@@ -1,8 +1,8 @@
 {
   "version": 2,
   "hashAlgorithm": "sha256",
-  "catalogHash": "b6e07217789407e6",
-  "count": 481,
+  "catalogHash": "c70541e52ac47264",
+  "count": 505,
   "images": [
     {
       "fileName": "achievements/background_achivment_panel.webp",
@@ -1285,6 +1285,102 @@
       "size": 296866
     },
     {
+      "fileName": "letter/pick/season3_pick_g1.webp",
+      "label": "Season3 pick g1",
+      "folder": "letter/pick",
+      "path": "/assets/letter/pick/season3_pick_g1.webp",
+      "hash": "57989e807968",
+      "size": 456564
+    },
+    {
+      "fileName": "letter/pick/season3_pick_g2.webp",
+      "label": "Season3 pick g2",
+      "folder": "letter/pick",
+      "path": "/assets/letter/pick/season3_pick_g2.webp",
+      "hash": "c8c3c0d7c2a2",
+      "size": 527182
+    },
+    {
+      "fileName": "letter/pick/season3_pick_g3.webp",
+      "label": "Season3 pick g3",
+      "folder": "letter/pick",
+      "path": "/assets/letter/pick/season3_pick_g3.webp",
+      "hash": "1f03062f9afb",
+      "size": 487568
+    },
+    {
+      "fileName": "letter/pick/season3_pick_g4.webp",
+      "label": "Season3 pick g4",
+      "folder": "letter/pick",
+      "path": "/assets/letter/pick/season3_pick_g4.webp",
+      "hash": "e781da556c79",
+      "size": 499250
+    },
+    {
+      "fileName": "letter/pick/season3_pick_g5.webp",
+      "label": "Season3 pick g5",
+      "folder": "letter/pick",
+      "path": "/assets/letter/pick/season3_pick_g5.webp",
+      "hash": "b528bd7f50b8",
+      "size": 489570
+    },
+    {
+      "fileName": "letter/pick/season3_pick_paper.webp",
+      "label": "Season3 pick paper",
+      "folder": "letter/pick",
+      "path": "/assets/letter/pick/season3_pick_paper.webp",
+      "hash": "9c1c0f28333b",
+      "size": 391176
+    },
+    {
+      "fileName": "letter/pick/season4_pick_g1.webp",
+      "label": "Season4 pick g1",
+      "folder": "letter/pick",
+      "path": "/assets/letter/pick/season4_pick_g1.webp",
+      "hash": "4c6c19e7e81c",
+      "size": 488772
+    },
+    {
+      "fileName": "letter/pick/season4_pick_g2.webp",
+      "label": "Season4 pick g2",
+      "folder": "letter/pick",
+      "path": "/assets/letter/pick/season4_pick_g2.webp",
+      "hash": "a19e76a5111c",
+      "size": 593982
+    },
+    {
+      "fileName": "letter/pick/season4_pick_g3.webp",
+      "label": "Season4 pick g3",
+      "folder": "letter/pick",
+      "path": "/assets/letter/pick/season4_pick_g3.webp",
+      "hash": "d4484e591872",
+      "size": 541618
+    },
+    {
+      "fileName": "letter/pick/season4_pick_g4.webp",
+      "label": "Season4 pick g4",
+      "folder": "letter/pick",
+      "path": "/assets/letter/pick/season4_pick_g4.webp",
+      "hash": "4ed849df7c0f",
+      "size": 688368
+    },
+    {
+      "fileName": "letter/pick/season4_pick_g5.webp",
+      "label": "Season4 pick g5",
+      "folder": "letter/pick",
+      "path": "/assets/letter/pick/season4_pick_g5.webp",
+      "hash": "ad693827da90",
+      "size": 569072
+    },
+    {
+      "fileName": "letter/pick/season4_pick_paper.webp",
+      "label": "Season4 pick paper",
+      "folder": "letter/pick",
+      "path": "/assets/letter/pick/season4_pick_paper.webp",
+      "hash": "392777f996f1",
+      "size": 484826
+    },
+    {
       "fileName": "news/cases-5.0.1.webp",
       "label": "Cases 5.0.1",
       "folder": "news",
@@ -2493,6 +2589,14 @@
       "size": 9068
     },
     {
+      "fileName": "season-pass/5Levels_white_rabbit_s4.webp",
+      "label": "5Levels white rabbit s4",
+      "folder": "season-pass",
+      "path": "/assets/season-pass/5Levels_white_rabbit_s4.webp",
+      "hash": "c0418ea4505d",
+      "size": 403404
+    },
+    {
       "fileName": "season-pass/avatars_season_pass_3.webp",
       "label": "Avatars season pass 3",
       "folder": "season-pass",
@@ -2507,6 +2611,14 @@
       "path": "/assets/season-pass/avatars_season_pass3.webp",
       "hash": "c618b716950a",
       "size": 328530
+    },
+    {
+      "fileName": "season-pass/avatars_white_rabbit_s4.webp",
+      "label": "Avatars white rabbit s4",
+      "folder": "season-pass",
+      "path": "/assets/season-pass/avatars_white_rabbit_s4.webp",
+      "hash": "447c61f1c62c",
+      "size": 363924
     },
     {
       "fileName": "season-pass/elite_plus.webp",
@@ -2573,6 +2685,14 @@
       "size": 597916
     },
     {
+      "fileName": "season-pass/quest_white_rabbit_s4.webp",
+      "label": "Quest white rabbit s4",
+      "folder": "season-pass",
+      "path": "/assets/season-pass/quest_white_rabbit_s4.webp",
+      "hash": "a37dce8108e6",
+      "size": 324544
+    },
+    {
       "fileName": "season-pass/quest.webp",
       "label": "Quest",
       "folder": "season-pass",
@@ -2587,6 +2707,62 @@
       "path": "/assets/season-pass/season_3_pass.webp",
       "hash": "ee0b79e19268",
       "size": 290120
+    },
+    {
+      "fileName": "season-pass/season_pass_park_2xp.webp",
+      "label": "Season pass park 2xp",
+      "folder": "season-pass",
+      "path": "/assets/season-pass/season_pass_park_2xp.webp",
+      "hash": "c08bb6e691f5",
+      "size": 409468
+    },
+    {
+      "fileName": "season-pass/season_pass_park_5levels.webp",
+      "label": "Season pass park 5levels",
+      "folder": "season-pass",
+      "path": "/assets/season-pass/season_pass_park_5levels.webp",
+      "hash": "75239f8f82ee",
+      "size": 379176
+    },
+    {
+      "fileName": "season-pass/season_pass_park_Avatars.webp",
+      "label": "Season pass park Avatars",
+      "folder": "season-pass",
+      "path": "/assets/season-pass/season_pass_park_Avatars.webp",
+      "hash": "9bf020241ee9",
+      "size": 312032
+    },
+    {
+      "fileName": "season-pass/season_pass_park_prize.webp",
+      "label": "Season pass park prize",
+      "folder": "season-pass",
+      "path": "/assets/season-pass/season_pass_park_prize.webp",
+      "hash": "c7e5eb8090e9",
+      "size": 357714
+    },
+    {
+      "fileName": "season-pass/season_pass_park_quest.webp",
+      "label": "Season pass park quest",
+      "folder": "season-pass",
+      "path": "/assets/season-pass/season_pass_park_quest.webp",
+      "hash": "6d10eb6e0e8a",
+      "size": 343304
+    },
+    {
+      "fileName": "season-pass/season_pass_park_XP.webp",
+      "label": "Season pass park XP",
+      "folder": "season-pass",
+      "path": "/assets/season-pass/season_pass_park_XP.webp",
+      "hash": "d43d357eae10",
+      "size": 337918
+    },
+    {
+      "fileName": "season-pass/season_pass_white_rabbit_s4.webp",
+      "label": "Season pass white rabbit s4",
+      "folder": "season-pass",
+      "path": "/assets/season-pass/season_pass_white_rabbit_s4.webp",
+      "hash": "9ee4705acb7f",
+      "size": 426368
     },
     {
       "fileName": "season-pass/season_pass1.webp",
@@ -2651,6 +2827,22 @@
       "path": "/assets/season-pass/season.webp",
       "hash": "f0e1ed581093",
       "size": 213746
+    },
+    {
+      "fileName": "season-pass/X2 XP_white_rabbit_s4.webp",
+      "label": "X2 XP white rabbit s4",
+      "folder": "season-pass",
+      "path": "/assets/season-pass/X2%20XP_white_rabbit_s4.webp",
+      "hash": "3e5a781ad943",
+      "size": 390910
+    },
+    {
+      "fileName": "season-pass/XP_white_rabbit_s4.webp",
+      "label": "XP white rabbit s4",
+      "folder": "season-pass",
+      "path": "/assets/season-pass/XP_white_rabbit_s4.webp",
+      "hash": "9a832d58db64",
+      "size": 391286
     },
     {
       "fileName": "season-pass/xp_x2.webp",

@@ -1,9 +1,0 @@
-SweetRun Season 2 UI Hotfix v3 (cumulative)
-Base: current Game.zip from conversation
-Files to replace:
-  index.html
-  achievements.html
-  battle-pass.html
-  src/worker.js
-No new assets.
-No D1 migration.

@@ -1,0 +1,39 @@
+Сладкий Забег — ассеты ночного сезона 2
+
+Что внутри:
+- index.html — готовая версия с подключением новых ассетов и препятствий
+- assets/optimized/v0.79.5/ — 8 новых WEBP-ассетов
+
+Установка из корня проекта:
+
+1. Сделать резервную копию текущего index.html:
+   cp index.html index.html.backup_before_s2_assets
+
+2. Распаковать архив с заменой файлов:
+   unzip -o s2_night_assets_install.zip
+
+3. Проверить изменения:
+   git status
+   git diff --check
+
+4. Добавить изменения в git:
+   git add index.html assets/optimized/v0.79.5/
+
+5. Создать коммит:
+   git commit -m "Add season 2 night runner assets"
+
+6. Отправить в main:
+   git push origin main
+
+7. Задеплоить проект актуальным проектным способом:
+   ./update.sh
+
+Добавленные ассеты:
+- game_barricade_flovers_night_s2.webp
+- road_night_cafe.webp
+- game_barricade_tablet.webp
+- barrier_game_bag.webp
+- barricade_game_puff_night.webp
+- barricade_game_boock_night.webp
+- barricade_game_group_svechi_night.webp
+- barricade_game_group_telechka.webp
