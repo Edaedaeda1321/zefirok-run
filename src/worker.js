@@ -2458,11 +2458,24 @@ export default {
       }
 
       if (url.pathname === "/api/cases/open-granted/status" && request.method === "POST") {
+        // Backward-compatibility lane for already-open Telegram WebViews. Older
+        // clients still post ordinary cases to the generic endpoint even after the
+        // dedicated /open-ordinary route ships. Detect the type from a clone so
+        // the original request body remains untouched for the selected handler.
+        const caseTypeHint = await request.clone().json().then((body) => normalizeCaseType(body?.caseType)).catch(() => "");
+        if (caseTypeHint === "small") return await getOrdinaryCaseOpenStatus(request, env);
         // Observation only. Never run the mutation/recovery path from status polling.
         return await getGrantedCaseOpenStatus(request, env);
       }
 
       if (url.pathname === "/api/cases/open-granted" && request.method === "POST") {
+        // Server-side compatibility is intentional: cached/old clients must never
+        // be able to bypass the isolated ordinary-case data plane. This keeps the
+        // fix effective without requiring the player to reload Telegram first.
+        const caseTypeHint = await request.clone().json().then((body) => normalizeCaseType(body?.caseType)).catch(() => "");
+        if (caseTypeHint === "small") {
+          return await withPlayerApiPerformance(env, ctx, "case_open_ordinary_compat", () => openOrdinaryGrantedCase(request, env, ctx));
+        }
         return await withPlayerApiPerformance(env, ctx, "case_open_granted", () => openGrantedCase(request, env, ctx));
       }
 
@@ -11762,7 +11775,7 @@ async function readFastCaseInventory(env, telegramId) {
   const openingOperations=(activeOpeningsResult?.results||[]).map((row)=>({
     caseType:normalizeCaseType(row.case_type)||String(row.case_type||''),
     requestId:String(row.opening_token||''),
-    startedAt:Math.max(0,safeAdminNumber(row.opening_started_at))
+    startedAt:caseEpochSeconds(row.opening_started_at)
   })).filter((row)=>row.caseType&&row.requestId);
   return { openedLevels, giftedCases, openingOperations };
 }
@@ -12322,6 +12335,12 @@ async function releaseCasePhysicalStock(env, consumptionIds) {
   }
 }
 
+function caseEpochSeconds(value) {
+  const number = Number(value);
+  if (!Number.isFinite(number) || number <= 0) return 0;
+  return Math.min(Number.MAX_SAFE_INTEGER, Math.floor(number));
+}
+
 function classifyCaseOperationFailure(error, fallbackMessage = "Не удалось выполнить операцию с кейсом.") {
   const text=String(error?.message||error||"");
   const lower=text.toLowerCase();
@@ -12699,7 +12718,7 @@ async function releaseGrantedCaseOpeningReservations(env, telegramId, caseId, re
 
 async function recoverGrantedCaseRequestLease(env,telegramId,row,requestId,now=Math.floor(Date.now()/1000)){
   if(String(row?.status||'')!=='opening')return false;
-  const caseId=String(row?.id||''),token=String(requestId||''),startedAt=Math.max(0,safeAdminNumber(row?.opening_started_at));
+  const caseId=String(row?.id||''),token=String(requestId||''),startedAt=caseEpochSeconds(row?.opening_started_at);
   const age=startedAt>0?Math.max(0,Number(now||0)-startedAt):GRANTED_CASE_RETRY_LEASE_SECONDS;
   if(!caseId||!token||age<GRANTED_CASE_RETRY_LEASE_SECONDS)return false;
   const reset=await env.DB.prepare(`UPDATE granted_cases SET status='pending',opening_started_at=0,opening_token='' WHERE id=? AND telegram_id=? AND status='opening' AND opening_started_at=? AND opening_token=?`).bind(caseId,String(telegramId),startedAt,token).run();
@@ -12714,7 +12733,7 @@ async function recoverStaleGrantedCaseOpenings(env,telegramId,now=Math.floor(Dat
   const stale=(await env.DB.prepare(`SELECT id,opening_token,opening_started_at FROM granted_cases WHERE telegram_id=? AND status='opening' AND (opening_started_at=0 OR opening_started_at<=?) ORDER BY opening_started_at ASC LIMIT 20`).bind(id,cutoff).all()).results||[];
   let recovered=0;
   for(const row of stale){
-    const caseId=String(row.id||''),token=String(row.opening_token||''),startedAt=Math.max(0,safeAdminNumber(row.opening_started_at));
+    const caseId=String(row.id||''),token=String(row.opening_token||''),startedAt=caseEpochSeconds(row.opening_started_at);
     const result=await env.DB.prepare(`UPDATE granted_cases SET status='pending',opening_started_at=0,opening_token='' WHERE id=? AND telegram_id=? AND status='opening' AND opening_started_at=? AND opening_token=?`).bind(caseId,id,startedAt,token).run();
     if(safeAdminNumber(result?.meta?.changes)<1)continue;
     recovered+=1;
@@ -12735,7 +12754,7 @@ async function grantedCaseExistingRequestPayload(env,telegramId,requestId,option
     if(options?.recoverStale===true&&await recoverGrantedCaseRequestLease(env,telegramId,row,token))return null;
     row=await readGrantedCaseRequestRow(env,telegramId,token);if(!row)return null;
     if(String(row.status||'')==='opening'){
-      const startedAt=Math.max(0,safeAdminNumber(row.opening_started_at)),ageSeconds=startedAt?Math.max(0,Math.floor(Date.now()/1000)-startedAt):0;
+      const startedAt=caseEpochSeconds(row.opening_started_at),ageSeconds=startedAt?Math.max(0,Math.floor(Date.now()/1000)-startedAt):0;
       return {ok:true,pending:true,requestId:token,caseType:String(row.case_type||''),state:ageSeconds>=GRANTED_CASE_RETRY_LEASE_SECONDS?'stale':'opening',stale:ageSeconds>=GRANTED_CASE_RETRY_LEASE_SECONDS,startedAt,ageSeconds,retryAfterMs:900};
     }
   }
@@ -12743,7 +12762,7 @@ async function grantedCaseExistingRequestPayload(env,telegramId,requestId,option
   const caseType=normalizeCaseType(row.case_type);if(!caseType)return null;
   const [ensured,liveops,inventory]=await Promise.all([ensureCasePlayerState(env,telegramId,{}),readCaseRuntimeConfig(env),readFastCaseInventory(env,telegramId)]);
   let rewards=[];try{const parsed=JSON.parse(String(row.rewards_json||'[]'));rewards=Array.isArray(parsed)?parsed:[];}catch{}
-  const opened={grantId:String(row.id||''),source:'gift',caseType,title:LEVEL_CASE_CONFIG[caseType]?.title||'Кейс',rewards,resumed:true,openedAt:safeAdminNumber(row.opened_at)*1000};
+  const opened={grantId:String(row.id||''),source:'gift',caseType,title:LEVEL_CASE_CONFIG[caseType]?.title||'Кейс',rewards,resumed:true,openedAt:caseEpochSeconds(row.opened_at)*1000};
   if(caseType==='alex'){const collection=alexCaseCollectionStatus(ensured.state);const collectionGrant=await env.DB.prepare(`SELECT id FROM granted_cases WHERE id=? AND telegram_id=? LIMIT 1`).bind(alexCaseCollectionGrantId(String(telegramId)),String(telegramId)).first().catch(()=>null);opened.alexCollection={...collection,rewardCaseType:'gold',rewardTitle:'Золотой кейс',rewardClaimed:Boolean(collectionGrant?.id)};}
   return buildFastCaseOpenPayload({state:ensured.state,liveops,profile:authoritativeProfileView(ensured.profile),opened,inventory,caseDelta:{}});
 }
@@ -12765,7 +12784,7 @@ async function getGrantedCaseOpenStatus(request,env){
       const adoptedToken=String(adopted?.opening_token||'').trim();
       if(adopted&&adoptedToken){
         row=adopted;
-        const now=Math.floor(Date.now()/1000),startedAt=Math.max(0,safeAdminNumber(row.opening_started_at)),ageSeconds=startedAt?Math.max(0,now-startedAt):GRANTED_CASE_RETRY_LEASE_SECONDS;
+        const now=Math.floor(Date.now()/1000),startedAt=caseEpochSeconds(row.opening_started_at),ageSeconds=startedAt?Math.max(0,now-startedAt):GRANTED_CASE_RETRY_LEASE_SECONDS;
         const stale=ageSeconds>=GRANTED_CASE_RETRY_LEASE_SECONDS;
         return jsonResponse({ok:true,pending:!stale,stale,state:stale?'stale':'opening',requestId:adoptedToken,requestedRequestId:requestId,adopted:true,caseType,startedAt,ageSeconds,retryAfterMs:stale?0:750},stale?200:202);
       }
@@ -12776,10 +12795,10 @@ async function getGrantedCaseOpenStatus(request,env){
     const status=String(row.status||'pending');
     if(status==='opened'){
       let rewards=[];try{const parsed=JSON.parse(String(row.rewards_json||'[]'));rewards=Array.isArray(parsed)?parsed:[];}catch{}
-      return jsonResponse({ok:true,pending:false,state:'opened',requestId,opened:{grantId:String(row.id||''),source:'gift',caseType:rowCaseType,title:LEVEL_CASE_CONFIG[rowCaseType]?.title||'Кейс',rewards,resumed:true,openedAt:safeAdminNumber(row.opened_at)*1000},operation:operationSuccessMeta(requestId,'granted_case_open',true)});
+      return jsonResponse({ok:true,pending:false,state:'opened',requestId,opened:{grantId:String(row.id||''),source:'gift',caseType:rowCaseType,title:LEVEL_CASE_CONFIG[rowCaseType]?.title||'Кейс',rewards,resumed:true,openedAt:caseEpochSeconds(row.opened_at)*1000},operation:operationSuccessMeta(requestId,'granted_case_open',true)});
     }
     if(status==='opening'){
-      const now=Math.floor(Date.now()/1000),startedAt=Math.max(0,safeAdminNumber(row.opening_started_at)),ageSeconds=startedAt?Math.max(0,now-startedAt):0;
+      const now=Math.floor(Date.now()/1000),startedAt=caseEpochSeconds(row.opening_started_at),ageSeconds=startedAt?Math.max(0,now-startedAt):0;
       if(ageSeconds>=GRANTED_CASE_RETRY_LEASE_SECONDS)return jsonResponse({ok:true,pending:false,stale:true,state:'stale',requestId,caseType:rowCaseType,startedAt,ageSeconds});
       return jsonResponse({ok:true,pending:true,state:'opening',requestId,caseType:rowCaseType,startedAt,ageSeconds,retryAfterMs:750},202);
     }
@@ -12834,7 +12853,7 @@ async function ordinaryCaseResponsePayload(env,telegramId,row,requestId,{repeate
     env.DB.prepare(`SELECT * FROM case_player_state WHERE telegram_id=? LIMIT 1`).bind(String(telegramId)).first().catch(()=>null),
     readFastCaseInventory(env,String(telegramId)).catch(()=>({openedLevels:[],giftedCases:{small:0,sweet:0,gold:0,mythic:0,legendary:0,alex:0},openingOperations:[]}))
   ]);
-  const opened={grantId:String(row?.id||''),source:'gift',caseType:'small',title:LEVEL_CASE_CONFIG.small.title,rewards,resumed:Boolean(repeated),openedAt:safeAdminNumber(row?.opened_at)*1000};
+  const opened={grantId:String(row?.id||''),source:'gift',caseType:'small',title:LEVEL_CASE_CONFIG.small.title,rewards,resumed:Boolean(repeated),openedAt:caseEpochSeconds(row?.opened_at)*1000};
   return {
     ok:true,authoritativeProfile:true,
     caseState:caseStateFromRow(caseRow||{}),
@@ -12858,7 +12877,7 @@ async function getOrdinaryCaseOpenStatus(request,env){
       const adopted=await env.DB.prepare(`SELECT id,case_type,status,rewards_json,opened_at,opening_started_at,opening_token FROM granted_cases WHERE telegram_id=? AND LOWER(TRIM(case_type)) IN (${storage.sql}) AND status='opening' AND opening_token<>'' ORDER BY opening_started_at ASC,id ASC LIMIT 1`).bind(telegramId,...storage.aliases).first().catch(()=>null);
       const adoptedToken=String(adopted?.opening_token||'').trim();
       if(adopted&&adoptedToken){
-        const now=Math.floor(Date.now()/1000),startedAt=Math.max(0,safeAdminNumber(adopted.opening_started_at)),ageSeconds=startedAt?Math.max(0,now-startedAt):ORDINARY_CASE_FAST_STALE_SECONDS;
+        const now=Math.floor(Date.now()/1000),startedAt=caseEpochSeconds(adopted.opening_started_at),ageSeconds=startedAt?Math.max(0,now-startedAt):ORDINARY_CASE_FAST_STALE_SECONDS;
         const stale=ageSeconds>=ORDINARY_CASE_FAST_STALE_SECONDS;
         return jsonResponse({ok:true,pending:!stale,stale,state:stale?'stale':'opening',requestId:adoptedToken,requestedRequestId:requestId,adopted:true,caseType:'small',startedAt,ageSeconds,retryAfterMs:stale?0:400},stale?200:202);
       }
@@ -12867,7 +12886,7 @@ async function getOrdinaryCaseOpenStatus(request,env){
     const status=String(row.status||'pending');
     if(status==='opened')return jsonResponse(await ordinaryCaseResponsePayload(env,telegramId,row,requestId,{repeated:true}));
     if(status==='opening'){
-      const now=Math.floor(Date.now()/1000),startedAt=Math.max(0,safeAdminNumber(row.opening_started_at)),ageSeconds=startedAt?Math.max(0,now-startedAt):ORDINARY_CASE_FAST_STALE_SECONDS;
+      const now=Math.floor(Date.now()/1000),startedAt=caseEpochSeconds(row.opening_started_at),ageSeconds=startedAt?Math.max(0,now-startedAt):ORDINARY_CASE_FAST_STALE_SECONDS;
       const stale=ageSeconds>=ORDINARY_CASE_FAST_STALE_SECONDS;
       return jsonResponse({ok:true,pending:!stale,stale,state:stale?'stale':'opening',requestId,caseType:'small',startedAt,ageSeconds,retryAfterMs:stale?0:400},stale?200:202);
     }
@@ -12880,11 +12899,13 @@ async function getOrdinaryCaseOpenStatus(request,env){
 }
 
 async function openOrdinaryGrantedCase(request,env,ctx=null){
-  let claimedId='',openingClaimAt=0,openingClaimToken='';
+  let claimedId='',openingClaimAt=0,openingClaimToken='',ordinaryTelegramId='',ordinaryRequestId='',ordinaryAuthUser=null;
   try{
     requireDatabase(env);requireBotToken(env);
     const body=await readJson(request),auth=await validateTelegramInitData(String(body.initData||''),env),telegramId=String(auth.user.id);
+    ordinaryTelegramId=telegramId;ordinaryAuthUser=auth.user;
     const requestId=String(body.requestId||'').replace(/[^A-Za-z0-9_-]/g,'').slice(0,96);
+    ordinaryRequestId=requestId;
     if(!requestId||requestId.length<12)throw new ApiError(400,'Некорректный идентификатор открытия.');
     await requireCaseDataPlaneAvailable(env,telegramId,{capabilities:['cases'],featureFlags:['cases']});
     const now=Math.floor(Date.now()/1000);openingClaimToken=requestId;
@@ -12895,14 +12916,14 @@ async function openOrdinaryGrantedCase(request,env,ctx=null){
     if(exact&&String(exact.status||'')==='opened')return jsonResponse(await ordinaryCaseResponsePayload(env,telegramId,exact,requestId,{repeated:true}));
     if(exact&&String(exact.status||'')==='opening'){
       claimedId=String(exact.id||'');
-      openingClaimAt=Math.max(0,safeAdminNumber(exact.opening_started_at));
+      openingClaimAt=caseEpochSeconds(exact.opening_started_at);
       if(!openingClaimAt){
         const repaired=await env.DB.prepare(`UPDATE granted_cases SET case_type='small',opening_started_at=? WHERE id=? AND telegram_id=? AND status='opening' AND opening_token=? AND opening_started_at=0`).bind(now,claimedId,telegramId,requestId).run();
         if(safeAdminNumber(repaired?.meta?.changes)>0)openingClaimAt=now;
         else {
           exact=await readGrantedCaseRequestRow(env,telegramId,requestId);
           if(exact&&String(exact.status||'')==='opened')return jsonResponse(await ordinaryCaseResponsePayload(env,telegramId,exact,requestId,{repeated:true}));
-          openingClaimAt=Math.max(0,safeAdminNumber(exact?.opening_started_at))||now;
+          openingClaimAt=caseEpochSeconds(exact?.opening_started_at)||now;
         }
       } else if(String(exact.case_type||'')!=='small') {
         await env.DB.prepare(`UPDATE granted_cases SET case_type='small' WHERE id=? AND telegram_id=? AND status='opening' AND opening_token=?`).bind(claimedId,telegramId,requestId).run().catch(()=>null);
@@ -12924,7 +12945,7 @@ async function openOrdinaryGrantedCase(request,env,ctx=null){
       }
       const gift=await env.DB.prepare(`SELECT id,opening_started_at FROM granted_cases WHERE telegram_id=? AND opening_token=? AND status='opening' ORDER BY opening_started_at DESC,id ASC LIMIT 1`).bind(telegramId,openingClaimToken).first();
       if(!gift?.id)throw new ApiError(409,'Не удалось закрепить обычный кейс за операцией.');
-      claimedId=String(gift.id);openingClaimAt=Math.max(0,safeAdminNumber(gift.opening_started_at))||now;
+      claimedId=String(gift.id);openingClaimAt=caseEpochSeconds(gift.opening_started_at)||now;
     }
 
     // The ordinary lane is pinned to code defaults and never reads LiveOps/admin
@@ -12978,6 +12999,13 @@ async function openOrdinaryGrantedCase(request,env,ctx=null){
     return jsonResponse(await ordinaryCaseResponsePayload(env,telegramId,row,requestId,{seasonPassTaskNotice:taskEvent?seasonPassTaskNoticePublic(taskEvent.taskRows||[],taskEvent.season):undefined}));
   }catch(error){
     if(claimedId){try{await env.DB.prepare(`UPDATE granted_cases SET status='pending',opening_started_at=0,opening_token='' WHERE id=? AND status='opening' AND opening_token=?`).bind(claimedId,openingClaimToken).run();}catch{}}
+    if(ordinaryTelegramId){
+      const auditRequestId=String(ordinaryRequestId||openingClaimToken||'').slice(0,96);
+      const auditReason=String(error?.message||error||'Неизвестная ошибка открытия').slice(0,500);
+      const auditCode=String(error?.details?.operationCode||error?.details?.code||error?.code||'').slice(0,80);
+      const auditTask=recordPlayerTimeline(env,ordinaryTelegramId,'case_open_failed','Ошибка открытия Обычного кейса',{caseType:'small',grantId:String(claimedId||''),requestId:auditRequestId,reason:auditReason,code:auditCode,openingStartedAt:caseEpochSeconds(openingClaimAt)},`ordinary_case_failed_${auditRequestId||claimedId||Date.now()}`,ordinaryAuthUser,Math.floor(Date.now()/1000));
+      if(ctx?.waitUntil)ctx.waitUntil(auditTask);else void auditTask;
+    }
     if(error instanceof ApiError)return operationErrorResponse(error,'Не удалось открыть обычный кейс.',{operationId:openingClaimToken,operationKind:'granted_case_open'});
     if(String(error?.message||error).includes('granted_case_opening_guard_ok'))return operationErrorResponse(playerOperationError(409,'Открытие обычного кейса было перехвачено повторной проверкой. Продолжаем эту же операцию.',{code:'STATE_CONFLICT',operationCode:'STATE_CONFLICT',retryable:true,operationId:openingClaimToken,operationKind:'granted_case_open'}),'Открытие обычного кейса продолжается.');
     console.error('openOrdinaryGrantedCase failed',error);

@@ -46,6 +46,17 @@ assert(stale>=lease+30,'generic orphan cleanup can race explicit same-request re
 assert(uiDeadline>=8000&&uiDeadline<=20000,'client foreground recovery window must stay bounded between 8 and 20 seconds');
 assert(lease*1000>=uiDeadline+5000,'server lease must outlive the client foreground window by at least 5 seconds');
 
+
+// Epoch timestamps are > 999,999,999 in 2026. safeAdminNumber() is an economy
+// clamp and must never be used for opening_started_at/opened_at, otherwise every
+// ordinary opening guard compares against the wrong timestamp and self-conflicts.
+const epochMatch=worker.match(/function caseEpochSeconds\(value\)\s*\{([\s\S]*?)\n\}/);
+assert(Boolean(epochMatch),'case epoch timestamp helper missing');
+const epochFn=new Function('value',epochMatch[1]);
+assert(epochFn(1789680000)===1789680000,'case epoch helper truncates a 2026 timestamp');
+assert(epochFn('1789680000')===1789680000,'case epoch helper does not preserve numeric D1 timestamps');
+assert(!/safeAdminNumber\([^\n)]*(?:opening_started_at|opened_at)/.test(worker),'case timestamp still uses the 999,999,999 economy clamp');
+
 assert(worker.includes('async function getGrantedCaseOpenStatus(request,env)'),'read-only granted case status handler missing');
 const statusHandler=between(worker,'async function getGrantedCaseOpenStatus','const ORDINARY_CASE_FAST_STALE_SECONDS');
 assert(statusHandler.includes("state:'opened'"),'status handler cannot return immutable opened receipt');
@@ -59,8 +70,13 @@ for(const forbidden of ['UPDATE granted_cases','INSERT INTO granted_cases','DELE
 }
 
 const route=between(worker,'if (url.pathname === "/api/cases/open-granted/status"','if (url.pathname === "/api/cases/purchase"');
-assert(route.includes('return await getGrantedCaseOpenStatus(request, env);'),'status route does not call dedicated observer');
-assert(!route.slice(0,route.indexOf('if (url.pathname === "/api/cases/open-granted"')).includes('withPlayerApiPerformance'),'status route is not storage-read-only because it is performance-sampled');
+assert(route.includes('request.clone().json()'),'generic case route cannot inspect cached-client case type without consuming the request');
+assert(route.includes('if (caseTypeHint === "small") return await getOrdinaryCaseOpenStatus(request, env);'),'cached ordinary status requests do not enter the isolated observer');
+assert(route.includes('case_open_ordinary_compat'),'cached ordinary open requests do not enter the isolated mutation lane');
+assert(route.includes('() => openOrdinaryGrantedCase(request, env, ctx)'),'generic endpoint does not delegate ordinary opens server-side');
+assert(route.includes('return await getGrantedCaseOpenStatus(request, env);'),'status route does not retain the generic observer for other case types');
+const genericStatusPrefix=route.slice(0,route.indexOf('if (url.pathname === "/api/cases/open-granted"'));
+assert(!genericStatusPrefix.includes('withPlayerApiPerformance'),'status route is not storage-read-only because it is performance-sampled');
 
 const existing=between(worker,'async function grantedCaseExistingRequestPayload','async function getGrantedCaseOpenStatus');
 assert(existing.includes('options?.recoverStale===true'),'lease recovery is not explicit');
@@ -192,6 +208,11 @@ assert(ordinary.includes("LOWER(TRIM(case_type)) IN"),'ordinary lane does not no
 assert(ordinary.includes("status='pending',opening_started_at=0,opening_token='',case_type='small'"),'ordinary lane cannot reclaim orphaned opening rows');
 assert(ordinary.includes("opening_token=? AND opening_started_at=0"),'ordinary lane cannot repair zero-timestamp legacy opening rows');
 assert(ordinary.includes("granted_case_opening_guards"),'ordinary lane has no atomic opening guard');
+assert(ordinary.includes('caseEpochSeconds(exact.opening_started_at)'),'ordinary existing-operation guard still truncates the opening timestamp');
+assert(ordinary.includes('caseEpochSeconds(gift.opening_started_at)'),'ordinary fresh-claim guard still truncates the opening timestamp');
+assert(ordinary.includes("'case_open_failed'"),'ordinary failures are invisible to the case audit');
+assert(ordinary.includes('ordinary_case_failed_'),'ordinary failure audit has no stable source id');
+
 assert(worker.includes('fallbackFromBooster:true'),'ordinary utility-booster failure has no safe reward fallback');
 for(const forbidden of ['readLiveOpsConfig(','readCaseRuntimeConfig(','prepareCasePhysicalRewards(','assertRolledLiveContentCaseRoutes(','releaseShopStock(','ensureShopStockSchema('])assert(!ordinary.includes(forbidden),`ordinary lane reintroduced shared dependency ${forbidden}`);
 for(const legacy of ['standardcase','standartcase','smallcase','ordinarycase','standard_case','standart_case','small_case','ordinary_case','standard-case','standart-case','small-case','ordinary-case','case-small','case_small','ordinary','normal','regular'])assert(worker.includes(`"${legacy}"`),`ordinary legacy alias ${legacy} missing`);
@@ -201,6 +222,8 @@ assert(index.includes('CASE_API_OPEN_ORDINARY_PATH = "/api/cases/open-ordinary"'
 assert(index.includes('CASE_API_OPEN_ORDINARY_STATUS_PATH = "/api/cases/open-ordinary/status"'),'client ordinary status endpoint missing');
 assert(index.includes('caseExperienceNormalizeType(caseType) === "small" ? CASE_API_OPEN_ORDINARY_PATH : CASE_API_OPEN_GRANTED_PATH'),'client does not route small through dedicated opening lane');
 assert(index.includes('caseExperienceNormalizeType(caseType) === "small" ? CASE_API_OPEN_ORDINARY_STATUS_PATH : CASE_API_OPEN_GRANTED_STATUS_PATH'),'client does not route small status through dedicated lane');
+assert(route.includes('normalizeCaseType(body?.caseType)'),'server compatibility shim does not normalize historical ordinary ids');
+assert(route.includes('caseTypeHint === "small"'),'server compatibility shim does not recognize canonical ordinary cases');
 
 assert(gate.includes("['case opening stability', 'node', ['scripts/check-case-stability.mjs']]"),'Production Gate does not enforce case stability');
 
