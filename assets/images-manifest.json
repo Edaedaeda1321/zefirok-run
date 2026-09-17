@@ -1,8 +1,8 @@
 {
   "version": 2,
   "hashAlgorithm": "sha256",
-  "catalogHash": "9ee2379bf48d46bd",
-  "count": 542,
+  "catalogHash": "33d759a55d2f9bd0",
+  "count": 543,
   "images": [
     {
       "fileName": "achievements/background_achivment_panel.webp",
@@ -1891,6 +1891,14 @@
       "path": "/assets/optimized/v0.79.5/pillowObstacle.webp",
       "hash": "71c6376e2451",
       "size": 14190
+    },
+    {
+      "fileName": "optimized/v0.79.5/road_default_cafe.webp",
+      "label": "Road default cafe",
+      "folder": "optimized/v0.79.5",
+      "path": "/assets/optimized/v0.79.5/road_default_cafe.webp",
+      "hash": "b2d32e442fb3",
+      "size": 5636
     },
     {
       "fileName": "optimized/v0.79.5/road_night_cafe.webp",

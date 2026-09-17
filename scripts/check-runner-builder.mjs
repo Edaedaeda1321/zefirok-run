@@ -87,6 +87,12 @@ mustNot('legacy card hitbox overlay removed',owner,'.rb-object-preview>i{positio
 mustNot('legacy card image contain sizing removed',owner,'.rb-object-preview img{max-width:82%');
 for(const file of ['pouf.webp','stool.webp','tablePink.webp'])checks.push({name:`builtin preview asset ${file}`,ok:fs.existsSync(new URL(`../assets/runner-builder/previews/${file}`,import.meta.url)),detail:file});
 must('production save API',owner,"api('/api/owner/runner-builder/save'");
+must('standard cafe road owner preview',owner,"roadStrip:'/assets/optimized/v0.79.5/road_default_cafe.webp?v=1.2.2'");
+must('standard cafe road button',owner,'id="rbRoadClear" type="button">Стандартная</button>');
+must('standard cafe road action',owner,"input.value='/assets/optimized/v0.79.5/road_default_cafe.webp'");
+must('primary scene clears active season override',owner,'if(activeSeasonId)delete cfg.seasonBindings[activeSeasonId];');
+must('already-primary scene can be applied now',owner,'>Применить сейчас</button>');
+checks.push({name:'standard cafe road physical asset',ok:fs.existsSync(new URL('../assets/optimized/v0.79.5/road_default_cafe.webp',import.meta.url)),detail:'road_default_cafe.webp'});
 
 must('client legacy scene fallback',index,'const LEGACY_RUNNER_SCENE = Object.freeze');
 must('client runner normalization',index,'function normalizeRunnerSceneClient(raw)');
