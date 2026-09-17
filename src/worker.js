@@ -32013,6 +32013,8 @@ async function markSeasonPassSchemaReady(env) {
 
 let seasonPassSchemaReady = false;
 let seasonPassSchemaPromise = null;
+let season3StoryPresetRuntimeReady = false;
+let season3StoryPresetRuntimePromise = null;
 let seasonPassOverflowSchemaReady = false;
 let seasonPassOverflowSchemaPromise = null;
 async function ensureSeasonPassOverflowSchema(env){
@@ -32047,14 +32049,30 @@ async function ensureSeasonPassCaseOperationSchema(env){
   seasonPassCaseOperationSchemaPromise=promise;
   try{await promise;seasonPassCaseOperationSchemaReady=true;}finally{if(seasonPassCaseOperationSchemaPromise===promise)seasonPassCaseOperationSchemaPromise=null;}
 }
+async function ensureSeason3StoryPresetRuntime(env) {
+  if (season3StoryPresetRuntimeReady) return { ok:true, seeded:false, reason:'runtime-ready' };
+  if (season3StoryPresetRuntimePromise) return season3StoryPresetRuntimePromise;
+  const promise=(async()=>{
+    const result=await ensureSeason3StoryPreset(env);
+    if(result?.seeded||result?.reason==='already-seeded')season3StoryPresetRuntimeReady=true;
+    return result;
+  })();
+  season3StoryPresetRuntimePromise=promise;
+  try{return await promise;}finally{if(season3StoryPresetRuntimePromise===promise)season3StoryPresetRuntimePromise=null;}
+}
+
 async function ensureSeasonPassSchema(env) {
   requireDatabase(env);
-  if (seasonPassSchemaReady) return;
+  if (seasonPassSchemaReady) {
+    await ensureSeason3StoryPresetRuntime(env);
+    return;
+  }
   if (seasonPassSchemaPromise) return seasonPassSchemaPromise;
   const promise = (async () => {
     const markerReady = await seasonPassSchemaMarkerReady(env);
     if (await seasonPassSchemaQuickCheck(env)) {
       if (!markerReady) await markSeasonPassSchemaReady(env);
+      await ensureSeason3StoryPresetRuntime(env);
       return;
     }
     await env.DB.batch([
@@ -32329,7 +32347,9 @@ async function ensureSeasonPassSchema(env) {
     // later owner edits or deletions are respected and never recreated.
     await ensureSeason2StoryPreset(env);
     // Seed the authored Season 3 «Тайны Белкино» story once when that season exists.
-    await ensureSeason3StoryPreset(env);
+    // Keep retrying on future Season Pass reads until the season exists; once seeded,
+    // the runtime guard removes the extra D1 lookup for the rest of this isolate.
+    await ensureSeason3StoryPresetRuntime(env);
     await markSeasonPassSchemaReady(env);
   })();
   seasonPassSchemaPromise = promise;
