@@ -29,7 +29,7 @@ assert(index.includes('for (const [type, requestId] of grantedCasePendingRequest
 const wait = between(index,'async function waitForGrantedCaseResult','async function openGiftedCaseClient');
 assert(wait.includes('CASE_API_OPEN_GRANTED_STATUS_PATH'),'poll loop does not use read-only status endpoint');
 assert(occurrences(wait,'CASE_API_OPEN_GRANTED_PATH')===1,'poll loop may invoke mutation more than once');
-assert(wait.includes('requestId, resume: true'),'mutation retry is not an explicit same-request resume');
+assert(wait.includes('requestId: activeRequestId, resume: true'),'mutation retry is not an explicit adopted/same-request resume');
 assert(!wait.includes('CASE_API_OPEN_GRANTED_PATH,\n              { caseType: String(caseType || ""), requestId },'),'poll loop still retries bare mutation endpoint');
 
 const clientOpen = between(index,'async function openGiftedCaseClient','async function activateCaseBoosterClient');
@@ -51,6 +51,9 @@ const statusHandler=between(worker,'async function getGrantedCaseOpenStatus','as
 assert(statusHandler.includes("state:'opened'"),'status handler cannot return immutable opened receipt');
 assert(statusHandler.includes("state:'opening'"),'status handler cannot report active operation');
 assert(statusHandler.includes("state:'stale'"),'status handler cannot report safely resumable stale operation');
+assert(statusHandler.includes("status='opening' AND opening_token<>''"),'status handler cannot adopt an orphaned same-type opening');
+assert(statusHandler.includes('adopted:true'),'status handler does not mark adopted opening tokens');
+assert(statusHandler.includes('requestedRequestId:requestId'),'status handler does not preserve the superseded client request id');
 for(const forbidden of ['UPDATE granted_cases','INSERT INTO granted_cases','DELETE FROM granted_cases','recoverGrantedCaseRequestLease(','prepareCasePhysicalRewards(','rollLevelCase(','rollAlexCase(','caseStateUpdateStatement(']){
   assert(!statusHandler.includes(forbidden),`status handler mutates case operation via ${forbidden}`);
 }
@@ -152,6 +155,11 @@ assert(fastRefresh.includes('options?.includeRecentOpenings === true'),'fast ref
 assert(fastRefresh.includes('recentCaseOpeningsForPlayer(env,id,8)'),'recovery receipt query missing');
 const clientRecovery=between(index,'async function loadCaseStateForOpeningRecovery','function presentConfirmedLevelCase');
 assert(clientRecovery.includes('loadCaseState(true, true, true)'),'client opening recovery still calls full LiveOps case state');
+const giftedWait=between(index,'async function waitForGrantedCaseResult','async function openGiftedCaseClient');
+assert(giftedWait.includes('let activeRequestId = String(requestId || "")'),'client recovery cannot switch to the server-owned opening token');
+assert(giftedWait.includes('status?.adopted === true'),'client recovery ignores server adoption of an in-flight case');
+assert(giftedWait.includes('requestId: activeRequestId'),'client recovery does not poll/resume the adopted opening token');
+assert(giftedWait.includes('rememberGrantedCasePendingRequest(caseType, activeRequestId'),'adopted opening token is not persisted for reload safety');
 
 assert(gate.includes("['case opening stability', 'node', ['scripts/check-case-stability.mjs']]"),'Production Gate does not enforce case stability');
 

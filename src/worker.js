@@ -12707,8 +12707,22 @@ async function getGrantedCaseOpenStatus(request,env){
     const body=await readJson(request),auth=await validateTelegramInitData(String(body.initData||body.init_data||''),env),telegramId=String(auth.user.id),caseType=normalizeCaseType(body.caseType),requestId=String(body.requestId||'').trim();
     if(!caseType)throw new ApiError(400,'Неизвестный тип кейса.');
     if(!/^[A-Za-z0-9_-]{12,96}$/.test(requestId))throw new ApiError(400,'Некорректный идентификатор открытия.');
-    const row=await readGrantedCaseRequestRow(env,telegramId,requestId);
-    if(!row)return jsonResponse({ok:true,pending:false,missing:true,state:'missing',requestId,caseType});
+    let row=await readGrantedCaseRequestRow(env,telegramId,requestId);
+    if(!row){
+      // A previous client can lose its local request id while the server still owns
+      // an opening lease for this exact case type. Adopt that in-flight operation
+      // instead of starting (or polling) a second case. This is intentionally
+      // generic for every granted-case type, not a one-off fix for one rarity.
+      const adopted=await env.DB.prepare(`SELECT id,case_type,status,rewards_json,opened_at,opening_started_at,opening_token FROM granted_cases WHERE telegram_id=? AND case_type=? AND status='opening' AND opening_token<>'' ORDER BY opening_started_at ASC,id ASC LIMIT 1`).bind(telegramId,caseType).first().catch(()=>null);
+      const adoptedToken=String(adopted?.opening_token||'').trim();
+      if(adopted&&adoptedToken){
+        row=adopted;
+        const now=Math.floor(Date.now()/1000),startedAt=Math.max(0,safeAdminNumber(row.opening_started_at)),ageSeconds=startedAt?Math.max(0,now-startedAt):GRANTED_CASE_RETRY_LEASE_SECONDS;
+        const stale=ageSeconds>=GRANTED_CASE_RETRY_LEASE_SECONDS;
+        return jsonResponse({ok:true,pending:!stale,stale,state:stale?'stale':'opening',requestId:adoptedToken,requestedRequestId:requestId,adopted:true,caseType,startedAt,ageSeconds,retryAfterMs:stale?0:750},stale?200:202);
+      }
+      return jsonResponse({ok:true,pending:false,missing:true,state:'missing',requestId,caseType});
+    }
     const rowCaseType=normalizeCaseType(row.case_type);
     if(rowCaseType!==caseType)throw new ApiError(409,'Идентификатор открытия относится к другому кейсу.');
     const status=String(row.status||'pending');

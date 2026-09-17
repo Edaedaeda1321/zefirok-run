@@ -21364,19 +21364,31 @@ function createTutorialDeck(layer, mount, options, words) {
       async function waitForGrantedCaseResult(caseType, requestId, deadline, firstError = null) {
         let lastError = firstError;
         let resumeAttempted = false;
+        let activeRequestId = String(requestId || &quot;&quot;);
         while (Date.now() &lt; deadline) {
           const remaining = deadline - Date.now();
           if (remaining &lt;= 0) break;
           try {
             const status = await caseApiRequest(
               CASE_API_OPEN_GRANTED_STATUS_PATH,
-              { caseType: String(caseType || &quot;&quot;), requestId },
+              { caseType: String(caseType || &quot;&quot;), requestId: activeRequestId },
               Math.max(1000, Math.min(GRANTED_CASE_STATUS_REQUEST_TIMEOUT_MS, remaining))
             );
+            const adoptedRequestId = status?.adopted === true ? String(status?.requestId || &quot;&quot;).trim() : &quot;&quot;;
+            if (adoptedRequestId &amp;&amp; adoptedRequestId !== activeRequestId) {
+              forgetGrantedCasePendingRequest(caseType, activeRequestId);
+              activeRequestId = adoptedRequestId;
+              const adoptedStartedAt = Number(status?.startedAt || 0) &gt; 0 ? Number(status.startedAt) * 1000 : Date.now();
+              rememberGrantedCasePendingRequest(caseType, activeRequestId, adoptedStartedAt);
+              if (caseOpeningRetryContext?.kind === &quot;gifted&quot; &amp;&amp; caseExperienceNormalizeType(caseOpeningRetryContext?.caseType || &quot;&quot;) === caseExperienceNormalizeType(caseType)) {
+                caseOpeningRetryContext = { ...caseOpeningRetryContext, requestId: activeRequestId, startedAt: adoptedStartedAt };
+              }
+              resumeAttempted = false;
+            }
             if (status?.opened &amp;&amp; !status?.pending) {
               // Clear the local recovery marker before refreshing the authoritative
               // inventory, otherwise the temporary recovery card could survive one render.
-              forgetGrantedCasePendingRequest(caseType, requestId);
+              forgetGrantedCasePendingRequest(caseType, activeRequestId);
               try { await loadCaseStateForOpeningRecovery(); } catch {}
               return status;
             }
@@ -21385,7 +21397,7 @@ function createTutorialDeck(layer, mount, options, words) {
               try {
                 const resumed = await caseApiRequest(
                   CASE_API_OPEN_GRANTED_PATH,
-                  { caseType: String(caseType || &quot;&quot;), requestId, resume: true },
+                  { caseType: String(caseType || &quot;&quot;), requestId: activeRequestId, resume: true },
                   Math.max(1000, Math.min(GRANTED_CASE_OPEN_REQUEST_TIMEOUT_MS, remaining))
                 );
                 if (!resumed?.pending) return resumed;
