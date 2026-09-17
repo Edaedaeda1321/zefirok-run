@@ -14810,12 +14810,14 @@ function installProgressInfo(){
       }
 
       function applyRemoteRunnerScene(raw) {
+        if (!raw || typeof raw !== &quot;object&quot; || !Array.isArray(raw.obstacles) || raw.obstacles.length === 0) return false;
         remoteRunnerScene = normalizeRunnerSceneClient(raw);
         const background = remoteRunnerScene.background || {};
         runnerSceneImage(background.assetKey || &quot;cafeBackground&quot;, background.assetPath || &quot;&quot;);
         if (background.roadEnabled !== false) runnerSceneImage(background.roadAssetKey || &quot;roadStrip&quot;, background.roadAssetPath || &quot;&quot;);
         for (const obstacle of remoteRunnerScene.obstacles || []) runnerSceneImage(obstacle.assetKey || &quot;&quot;, obstacle.assetPath || &quot;&quot;);
         invalidateGameRenderCaches();
+        return String(raw.source || &quot;&quot;) !== &quot;fallback&quot;;
       }
 
       function runnerSceneBackgroundImage() {
@@ -16061,6 +16063,7 @@ function installProgressInfo(){
       const PROFILE_SYNC_PATH = &quot;/api/profile/sync&quot;;
       const SHOP_CONFIG_PATH = &quot;/api/shop/config&quot;;
       const SKIN_CONFIG_PATH = &quot;/api/skins/config&quot;;
+      const RUNNER_SCENE_CONFIG_PATH = &quot;/api/game/runner-scene&quot;;
       const SKIN_BONUS_CASE_PATH = &quot;/api/skins/bonus-case&quot;;
       const SKIN_PURCHASE_PATH = &quot;/api/skins/purchase&quot;;
       const LIVE_CONTENT_PURCHASE_PATH = &quot;/api/live-content/shop/buy&quot;;
@@ -25612,6 +25615,22 @@ function createTutorialDeck(layer, mount, options, words) {
         }
       }
 
+      async function loadRemoteRunnerScene(force = false) {
+        try {
+          if (force) sharedApiCache.delete(`GET:${RUNNER_SCENE_CONFIG_PATH}`);
+          const { response, data } = await sharedJsonApiRequest(RUNNER_SCENE_CONFIG_PATH, {
+            method: &quot;GET&quot;,
+            cache: &quot;no-store&quot;,
+            credentials: &quot;same-origin&quot;
+          }, { key: `GET:${RUNNER_SCENE_CONFIG_PATH}`, ttlMs: PUBLIC_CONFIG_CLIENT_CACHE_MS });
+          if (!response.ok || !data?.ok) return false;
+          return applyRemoteRunnerScene(data.runnerScene);
+        } catch (error) {
+          console.warn(&quot;Runner scene load failed&quot;, error);
+          return false;
+        }
+      }
+
       function applyServerProfilePayload(data) {
         const profile = data?.profile || {};
         let changed = false;
@@ -25681,7 +25700,8 @@ function createTutorialDeck(layer, mount, options, words) {
 
           const publicConfig = data.publicConfig || {};
           applyRemoteGameplayConfig(publicConfig.gameplay);
-          applyRemoteRunnerScene(publicConfig.runnerScene);
+          const runnerSceneLoaded = applyRemoteRunnerScene(publicConfig.runnerScene);
+          if (!runnerSceneLoaded) void loadRemoteRunnerScene(force);
           const nextFeatureFlags = data.flags || {};
           window.__ZEFIROK_FEATURE_FLAGS__ = nextFeatureFlags;
           try { window.dispatchEvent(new CustomEvent(&quot;zefirok-feature-flags&quot;, { detail: nextFeatureFlags })); } catch (error) {}
@@ -25737,7 +25757,8 @@ function createTutorialDeck(layer, mount, options, words) {
           console.warn(&quot;Game startup package failed, using compatible API fallback&quot;, error);
           await Promise.all([
             loadRemoteShopPrices(force),
-            loadRemoteSkinPrices(force)
+            loadRemoteSkinPrices(force),
+            loadRemoteRunnerScene(force)
           ]);
           if (initData) {
             await Promise.all([

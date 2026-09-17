@@ -2305,6 +2305,10 @@ export default {
         return await getShopConfig(env);
       }
 
+      if (url.pathname === "/api/game/runner-scene" && request.method === "GET") {
+        return await getRunnerSceneConfig(env);
+      }
+
       if (url.pathname === "/api/shop/offers" && request.method === "POST") {
         const gate = await enforceFeatureFlagForRequest(request, env, "shop"); if (gate) return gate;
         return await getFlashOffersForPlayer(request, env);
@@ -7545,9 +7549,17 @@ function startupBounded(label, promise, timeoutMs = 2500) {
 async function getGameStartupPackage(request, env, ctx = null) {
   try {
     const body = await readJson(request);
-    const publicConfigPromise = readGamePublicConfig(env).catch((error) => {
+    const publicConfigPromise = readGamePublicConfig(env).catch(async (error) => {
       console.error("startup public config failed", error);
-      return fallbackGamePublicConfig();
+      const fallback = fallbackGamePublicConfig();
+      try {
+        // Runner Builder is independent from shop/skins/live-content. A failure in one
+        // public-config section must not reset the live road and obstacle scene.
+        fallback.runnerScene = await readRunnerScenePublicConfigStrict(env);
+      } catch (runnerError) {
+        console.error("startup runner scene recovery failed", runnerError);
+      }
+      return fallback;
     });
     const initData = String(body.initData || "");
     if (!initData) {
@@ -7914,6 +7926,16 @@ async function getShopConfig(env) {
   } catch (error) {
     console.error("getShopConfig failed", error);
     return jsonResponse({ ok: true, ...fallbackGamePublicConfig().shop });
+  }
+}
+
+async function getRunnerSceneConfig(env) {
+  try {
+    const runnerScene = await readRunnerScenePublicConfigStrict(env);
+    return jsonResponse({ ok: true, runnerScene });
+  } catch (error) {
+    console.error("getRunnerSceneConfig failed", error);
+    return jsonResponse({ ok: false, error: "Сцена забега временно недоступна." }, 503);
   }
 }
 
@@ -30199,7 +30221,7 @@ const RECOVERY_AWARE_OPERATION_PATHS = new Set([
 
 async function enforceMaintenanceForRequest(request, url, env) {
   const path = String(url.pathname || "");
-  if (path === "/api/health" || path === "/api/access/bootstrap" || path === "/api/maintenance/access" || path === "/api/shop/config" || path === "/api/skins/config" || path === "/api/features" || path === "/owner.html" || path.startsWith("/api/owner/") || path.startsWith("/api/admin/") || path.startsWith("/api/bot/") || path === "/telegram/webhook") return null;
+  if (path === "/api/health" || path === "/api/access/bootstrap" || path === "/api/maintenance/access" || path === "/api/shop/config" || path === "/api/skins/config" || path === "/api/game/runner-scene" || path === "/api/features" || path === "/owner.html" || path.startsWith("/api/owner/") || path.startsWith("/api/admin/") || path.startsWith("/api/bot/") || path === "/telegram/webhook") return null;
   let settings;
   try { settings = await getMaintenanceSettings(env); } catch { return null; }
   if (!settings.fullClosed && !settings.ratingDisabled && !settings.purchasesDisabled && !settings.casesDisabled && !settings.physicalRewardsDisabled && !settings.testersOnly) return null;
@@ -39528,7 +39550,7 @@ function runnerBuilderValidateConfig(config){
   for(const scene of config.scenes.filter(x=>x.enabled)){if(!backgroundIds.has(scene.backgroundId))throw new ApiError(400,`Сцена «${scene.title}»: выбран выключенный или отсутствующий фон.`);if(!runnerBuilderScenePool(config,scene).length)throw new ApiError(400,`Сцена «${scene.title}»: нет ни одного активного препятствия.`);}
   if(!config.scenes.some(x=>x.id===config.defaultSceneId&&x.enabled))throw new ApiError(400,"Основная сцена должна быть включена.");
 }
-function runnerBuilderFallbackPublicScene(){return runnerBuilderResolvePublicScene(runnerBuilderDefaultConfig(),"");}
+function runnerBuilderFallbackPublicScene(){return {...runnerBuilderResolvePublicScene(runnerBuilderDefaultConfig(),""),source:"fallback"};}
 function runnerBuilderResolvePublicScene(configInput,seasonId=""){
   const config=normalizeRunnerBuilderConfig(configInput),boundId=seasonId?String(config.seasonBindings?.[String(seasonId)]||""):"",requested=config.scenes.find(x=>x.id===boundId&&x.enabled)||config.scenes.find(x=>x.id===config.defaultSceneId&&x.enabled)||config.scenes.find(x=>x.enabled)||config.scenes[0],fallback=runnerBuilderDefaultConfig();
   let scene=requested,pool=runnerBuilderScenePool(config,scene);if(!scene||!pool.length){const fallbackConfig=normalizeRunnerBuilderConfig(fallback);scene=fallbackConfig.scenes[0];pool=runnerBuilderScenePool(fallbackConfig,scene);config.backgrounds=fallbackConfig.backgrounds;}
@@ -39546,9 +39568,36 @@ function runnerBuilderResolvePublicScene(configInput,seasonId=""){
   return {version:RUNNER_BUILDER_CONFIG_VERSION,revision:config.revision,sceneId:scene.id,title:scene.title,seasonId:String(seasonId||""),background:{id:background.id,title:background.title,assetKey:background.assetKey||"",assetPath:background.assetPath||"",fitMode:background.fitMode==="contain"?"contain":"cover",zoom:Number(background.zoom||1),positionX:Number.isFinite(Number(background.positionX))?Number(background.positionX):.5,positionY:Number.isFinite(Number(background.positionY))?Number(background.positionY):.5,roadEnabled:background.roadEnabled!==false,roadAssetKey:publicRoadKey,roadAssetPath:background.roadAssetPath||""},obstacles:pool.map(item=>({id:item.id,title:item.title,assetKey:item.assetKey||"",assetPath:item.assetPath||"",width:item.width,height:item.height,shadow:item.shadow!==false,weight:Number(item.weight||item.defaultWeight||1),hitboxes:(item.hitboxes||[]).slice(0,3)})),source:"d1"};
 }
 function invalidateRunnerBuilderConfigCache(){runnerBuilderConfigMemory={value:null,expiresAt:0};invalidateGamePublicConfigCache();}
-async function readRunnerBuilderConfig(env,force=false){const now=Date.now();if(!force&&runnerBuilderConfigMemory.value&&runnerBuilderConfigMemory.expiresAt>now)return runnerBuilderConfigMemory.value;let config=runnerBuilderDefaultConfig();try{const row=await getSystemState(env,RUNNER_BUILDER_STATE_KEY);if(row?.value)config=normalizeRunnerBuilderConfig(safeJson(row.value,config));}catch(error){console.error("runner builder config fallback",error);}runnerBuilderConfigMemory={value:config,expiresAt:Date.now()+15000};return config;}
-async function runnerBuilderActiveSeasonId(env){const now=Math.floor(Date.now()/1000);try{const row=await env.DB.prepare(`SELECT season_id FROM season_pass_seasons WHERE manual_status!='ended' AND starts_at<=? AND ends_at>? ORDER BY CASE WHEN manual_status='active' THEN 0 ELSE 1 END,starts_at DESC,season_id DESC LIMIT 1`).bind(now,now).first();return String(row?.season_id||"");}catch(error){const text=String(error?.message||error||"");if(!/no such table|does not exist/i.test(text))console.error("runner active season lookup failed",error);return "";}}
-async function readRunnerScenePublicConfig(env){try{const [config,seasonId]=await Promise.all([readRunnerBuilderConfig(env),runnerBuilderActiveSeasonId(env)]);return runnerBuilderResolvePublicScene(config,seasonId);}catch(error){console.error("runner public scene fallback",error);return runnerBuilderFallbackPublicScene();}}
+async function readRunnerBuilderConfigStrict(env,force=false){
+  const now=Date.now();
+  if(!force&&runnerBuilderConfigMemory.value&&runnerBuilderConfigMemory.expiresAt>now)return runnerBuilderConfigMemory.value;
+  let config=runnerBuilderDefaultConfig();
+  const row=await getSystemState(env,RUNNER_BUILDER_STATE_KEY);
+  if(row?.value)config=normalizeRunnerBuilderConfig(safeJson(row.value,config));
+  runnerBuilderConfigMemory={value:config,expiresAt:Date.now()+15000};
+  return config;
+}
+async function readRunnerBuilderConfig(env,force=false){
+  try{return await readRunnerBuilderConfigStrict(env,force);}
+  catch(error){console.error("runner builder config fallback",error);return runnerBuilderDefaultConfig();}
+}
+async function runnerBuilderActiveSeasonIdStrict(env){
+  const now=Math.floor(Date.now()/1000);
+  const row=await env.DB.prepare(`SELECT season_id FROM season_pass_seasons WHERE manual_status!='ended' AND starts_at<=? AND ends_at>? ORDER BY CASE WHEN manual_status='active' THEN 0 ELSE 1 END,starts_at DESC,season_id DESC LIMIT 1`).bind(now,now).first();
+  return String(row?.season_id||"");
+}
+async function runnerBuilderActiveSeasonId(env){
+  try{return await runnerBuilderActiveSeasonIdStrict(env);}
+  catch(error){const text=String(error?.message||error||"");if(!/no such table|does not exist/i.test(text))console.error("runner active season lookup failed",error);return "";}
+}
+async function readRunnerScenePublicConfigStrict(env){
+  const [config,seasonId]=await Promise.all([readRunnerBuilderConfigStrict(env),runnerBuilderActiveSeasonIdStrict(env)]);
+  return runnerBuilderResolvePublicScene(config,seasonId);
+}
+async function readRunnerScenePublicConfig(env){
+  try{return await readRunnerScenePublicConfigStrict(env);}
+  catch(error){console.error("runner public scene fallback",error);return runnerBuilderFallbackPublicScene();}
+}
 async function ownerPanelRunnerBuilder(env,ctx){
   await ensureSeasonPassSchema(env);const [config,seasonsResult,activeSeasonId]=await Promise.all([readRunnerBuilderConfig(env,true),env.DB.prepare(`SELECT season_id,title,starts_at,ends_at,manual_status FROM season_pass_seasons ORDER BY starts_at DESC,season_id DESC LIMIT 120`).all(),runnerBuilderActiveSeasonId(env)]);const stateRow=await getSystemState(env,RUNNER_BUILDER_STATE_KEY);
   return {ok:true,config,revision:config.revision,updatedAt:Number(stateRow?.updatedAt||0),activeSeasonId,seasons:(seasonsResult.results||[]).map(row=>({id:String(row.season_id),title:String(row.title||row.season_id),startsAt:Number(row.starts_at||0),endsAt:Number(row.ends_at||0),status:String(row.manual_status||"scheduled")})),activeScene:runnerBuilderResolvePublicScene(config,activeSeasonId)};
@@ -44327,7 +44376,7 @@ async function ownerPanelTestProjectCaseOpen(env, ctx) {
 }
 
 const TEST_PROJECT_SANDBOX_API_PATHS = Object.freeze([
-  "/api/game/startup","/api/achievements","/api/achievements/claim","/api/achievements/showcase","/api/features","/api/profile/sync","/api/shop/config","/api/skins/config",
+  "/api/game/startup","/api/game/runner-scene","/api/achievements","/api/achievements/claim","/api/achievements/showcase","/api/features","/api/profile/sync","/api/shop/config","/api/skins/config",
   "/api/runs/start","/api/runs/checkpoint","/api/leaderboard/state","/api/leaderboard/player-profile","/api/leaderboard/submit","/api/leaderboard/claim",
   "/api/cases/state","/api/cases/open","/api/cases/open-granted","/api/cases/open-granted/status","/api/cases/purchase","/api/cases/activate","/api/cases/equip","/api/cases/consume-run",
   "/api/skins/purchase","/api/skins/bonus-case","/api/live-content/shop/buy","/api/rewards/create","/api/rewards/mine",
@@ -44638,6 +44687,7 @@ async function testProjectSandboxGameData(env, ctx) {
   if(path==="/api/profile/sync")return response({ok:true,profile:testProjectSandboxProfile(state)});
   if(path==="/api/shop/config")return response({ok:true,...testProjectClone(snapshot?.publicConfig?.shop||fallbackGamePublicConfig().shop)});
   if(path==="/api/skins/config")return response({ok:true,...testProjectClone(snapshot?.publicConfig?.skins||fallbackGamePublicConfig().skins)});
+  if(path==="/api/game/runner-scene")return response({ok:true,runnerScene:testProjectClone(snapshot?.publicConfig?.runnerScene||fallbackGamePublicConfig().runnerScene)});
 
   if(path==="/api/runs/start"){
     const runId=String(payload?.runId||"").trim();if(!/^[A-Za-z0-9_-]{12,96}$/.test(runId))throw new ApiError(400,"Некорректный test runId.");
