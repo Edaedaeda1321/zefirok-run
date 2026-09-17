@@ -24,6 +24,12 @@ if(quickAt<0||markerReturn<0||quickAt<markerReturn)fail('Season schema marker/qu
 
 if(!worker.includes('/api/profile/overview'))fail('Consolidated profile overview endpoint missing');
 if(!index.includes('/api/profile/overview'))fail('Profile UI does not use consolidated overview endpoint');
+if(!index.includes('fetchShowcaseDirect'))fail('Profile showcase has no dedicated recovery request');
+if(!index.includes('fetch(&quot;/api/achievements&quot;'))fail('Profile showcase does not recover through the achievements endpoint');
+if(!index.includes('scope:&quot;profile&quot;'))fail('Profile showcase recovery does not request the lightweight profile scope');
+if(!index.includes('SHOWCASE_CACHE_PREFIX'))fail('Profile showcase has no last-known-good cache');
+if(!index.includes('_showcaseStale'))fail('Profile showcase cache is not marked stale for immediate refresh');
+if(!index.includes('Загружаем витрину…'))fail('Profile showcase still exposes the false empty initial state');
 if(!index.includes('controller.abort(), 4000'))fail('Account revision fetch has no bounded timeout');
 if(!worker.includes("startupBounded('cases'"))fail('Startup cases section is not bounded');
 if(!worker.includes("startupBounded('news'"))fail('Startup side sections are not bounded');
