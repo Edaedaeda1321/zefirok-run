@@ -12861,15 +12861,22 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
         return Math.max(0, RUNNER_STARTUP_GATE_TIMEOUT_MS - (performance.now() - runnerStartupGateStartedAt));
       }
 
+      function runnerStartupInputLocked() {
+        const gate = root.querySelector(&quot;[data-runner-startup-gate]&quot;);
+        if (!gate) return !runnerStartupGateReleased;
+        return !gate.classList.contains(&quot;is-ready&quot;) || gate.getAttribute(&quot;aria-hidden&quot;) !== &quot;true&quot;;
+      }
+
       const blockRunnerStartupInput = (event) =&gt; {
-        if (runnerStartupGateReleased) return;
-        event.preventDefault();
-        event.stopPropagation();
+        if (!runnerStartupInputLocked()) return;
+        if (event.cancelable) event.preventDefault();
+        event.stopImmediatePropagation();
       };
-      runnerStartupGateEl?.addEventListener(&quot;pointerdown&quot;, blockRunnerStartupInput);
-      runnerStartupGateEl?.addEventListener(&quot;pointerup&quot;, blockRunnerStartupInput);
-      runnerStartupGateEl?.addEventListener(&quot;click&quot;, blockRunnerStartupInput);
-      runnerStartupGateEl?.addEventListener(&quot;touchstart&quot;, blockRunnerStartupInput, { passive: false });
+      runnerStartupGateEl?.addEventListener(&quot;pointerdown&quot;, blockRunnerStartupInput, true);
+      runnerStartupGateEl?.addEventListener(&quot;pointerup&quot;, blockRunnerStartupInput, true);
+      runnerStartupGateEl?.addEventListener(&quot;click&quot;, blockRunnerStartupInput, true);
+      runnerStartupGateEl?.addEventListener(&quot;touchstart&quot;, blockRunnerStartupInput, { capture: true, passive: false });
+      runnerStartupGateEl?.addEventListener(&quot;touchend&quot;, blockRunnerStartupInput, { capture: true, passive: false });
 
       function releaseRunnerStartupGate(reason = &quot;ready&quot;) {
         if (runnerStartupGateReleased) return;
@@ -12964,7 +12971,7 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
       }
 
       async function flashStartButtonAndRun() {
-        if (!runnerStartupGateReleased) return;
+        if (!runnerStartupGateReleased || runnerStartupInputLocked()) return;
         if (startBtn.dataset.locked === &quot;true&quot;) return;
         startBtn.dataset.locked = &quot;true&quot;;
         const mode = startBtn.dataset.mode || &quot;start&quot;;
@@ -18252,6 +18259,7 @@ function createTutorialDeck(layer, mount, options, words) {
       }
 
       function reset(preserveButtonVisual = false, preservePauseVisual = false) {
+        if (runnerStartupInputLocked()) return false;
         cancelGameLoop();
         cancelZeffiPauseCountdown();
         visibilityPauseActive = false;
@@ -18390,7 +18398,7 @@ function createTutorialDeck(layer, mount, options, words) {
       }
 
       function jump() {
-        if (!runnerStartupGateReleased) return;
+        if (!runnerStartupGateReleased || runnerStartupInputLocked()) return;
         if (overlay?.classList.contains(&quot;is-second-chance-modal&quot;) || overlay?.classList.contains(&quot;is-pause-modal&quot;) || overlay?.classList.contains(&quot;is-run-results-modal&quot;)) return;
         if (state.running &amp;&amp; state.caseRunId &amp;&amp; authoritativeRunSessionReadyId !== String(state.caseRunId)) {
           hapticImpact(&quot;light&quot;, 50);
@@ -29315,9 +29323,19 @@ function createTutorialDeck(layer, mount, options, words) {
         event.stopPropagation();
         setGameExpanded(!gameExpanded);
       });
+      const blockStageInputDuringStartup = (event) =&gt; {
+        if (!runnerStartupInputLocked()) return;
+        if (event.cancelable) event.preventDefault();
+        event.stopImmediatePropagation();
+      };
+      stage.addEventListener(&quot;pointerdown&quot;, blockStageInputDuringStartup, true);
+      stage.addEventListener(&quot;pointerup&quot;, blockStageInputDuringStartup, true);
+      stage.addEventListener(&quot;click&quot;, blockStageInputDuringStartup, true);
+      stage.addEventListener(&quot;touchstart&quot;, blockStageInputDuringStartup, { capture:true, passive:false });
+      stage.addEventListener(&quot;touchend&quot;, blockStageInputDuringStartup, { capture:true, passive:false });
       stage.addEventListener(&quot;pointerdown&quot;, (event) =&gt; {
-        if (!runnerStartupGateReleased) {
-          event.preventDefault();
+        if (runnerStartupInputLocked()) {
+          if (event.cancelable) event.preventDefault();
           return;
         }
         jump();
