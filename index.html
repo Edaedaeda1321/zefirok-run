@@ -9295,7 +9295,7 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
 &lt;/style&gt;
 &lt;/head&gt;
 &lt;body&gt;
-&lt;div aria-label=&quot;Мини-игра Сладкий забег&quot; class=&quot;zefirok-runner&quot; id=&quot;zefirok-maltipoo-runner&quot;&gt;
+&lt;div aria-label=&quot;Мини-игра Сладкий забег&quot; class=&quot;zefirok-runner is-startup-locked&quot; id=&quot;zefirok-maltipoo-runner&quot;&gt;
 &lt;style&gt;
     #zefirok-maltipoo-runner {
       --cream: #fff9f4;
@@ -9555,6 +9555,24 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
       opacity: 0;
       visibility: hidden;
       pointer-events: none;
+    }
+
+    /* Startup is a real presentation state, not only a disabled Start button.
+       Keep every idle/run UI layer hidden until the authoritative scene is ready. */
+    #zefirok-maltipoo-runner.is-startup-locked .overlay,
+    #zefirok-maltipoo-runner.is-startup-locked .actions.game-actions-v2,
+    #zefirok-maltipoo-runner.is-startup-locked .run-focus-hud,
+    #zefirok-maltipoo-runner.is-startup-locked .liveops-run-banner,
+    #zefirok-maltipoo-runner.is-startup-locked .run-booster-pill,
+    #zefirok-maltipoo-runner.is-startup-locked .stage-status {
+      visibility: hidden !important;
+      pointer-events: none !important;
+    }
+    #zefirok-maltipoo-runner.is-startup-locked .actions.game-actions-v2,
+    #zefirok-maltipoo-runner.is-startup-locked .run-focus-hud,
+    #zefirok-maltipoo-runner.is-startup-locked .liveops-run-banner,
+    #zefirok-maltipoo-runner.is-startup-locked .run-booster-pill {
+      display: none !important;
     }
 
     #zefirok-maltipoo-runner .runner-startup-card {
@@ -12518,7 +12536,7 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
 
   &lt;section class=&quot;profile-section profile-section--cases&quot; aria-labelledby=&quot;profile-collection-title&quot;&gt;
     &lt;div class=&quot;profile-section-head&quot;&gt;&lt;div&gt;&lt;h3 id=&quot;profile-collection-title&quot;&gt;Оформление и коллекции&lt;/h3&gt;&lt;/div&gt;&lt;/div&gt;
-    &lt;button class=&quot;zms-entry&quot; type=&quot;button&quot; data-my-style-entry aria-label=&quot;Мой стиль&quot;&gt;&lt;span class=&quot;zms-entry-copy&quot;&gt;&lt;strong&gt;Мой стиль&lt;/strong&gt;&lt;small&gt;Примерить аватарку, рамку, след и музыку&lt;/small&gt;&lt;/span&gt;&lt;/button&gt;
+    &lt;button class=&quot;zms-entry&quot; type=&quot;button&quot; data-my-style-entry aria-label=&quot;Мой стиль&quot;&gt;&lt;span class=&quot;zms-entry-copy&quot;&gt;&lt;strong&gt;Мой стиль&lt;/strong&gt;&lt;small&gt;Примерить аватарку, рамку, след, музыку и игру&lt;/small&gt;&lt;/span&gt;&lt;/button&gt;
     &lt;div class=&quot;album-profile-card&quot;&gt;
       &lt;div class=&quot;album-profile-icon&quot; aria-hidden=&quot;true&quot;&gt;&lt;img src=&quot;/assets/ui/icon_albom.webp&quot; alt=&quot;&quot; loading=&quot;lazy&quot;&gt;&lt;/div&gt;
       &lt;div class=&quot;album-profile-copy&quot;&gt;&lt;strong&gt;Альбом Зеффи&lt;/strong&gt;&lt;span&gt;Тематические коллекции, секретные находки и награды за завершение историй.&lt;/span&gt;&lt;/div&gt;
@@ -12669,13 +12687,14 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
     &lt;header class=&quot;zs-header&quot; data-service-drag&gt;
       &lt;button class=&quot;zs-grip&quot; data-service-grip type=&quot;button&quot; aria-label=&quot;Закрыть примерку&quot; title=&quot;Потяни вниз, чтобы закрыть&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/button&gt;
       &lt;div class=&quot;zs-top&quot;&gt;&lt;h2 id=&quot;zms-title&quot;&gt;Мой стиль&lt;/h2&gt;&lt;button class=&quot;zs-close&quot; data-ms-close type=&quot;button&quot; aria-label=&quot;Закрыть примерку&quot;&gt;×&lt;/button&gt;&lt;/div&gt;
-      &lt;p class=&quot;zms-subtitle&quot;&gt;Твой образ — твои сладкие детали&lt;/p&gt;
+      &lt;p class=&quot;zms-subtitle&quot;&gt;Твой образ и любимая версия забега&lt;/p&gt;
     &lt;/header&gt;
     &lt;div class=&quot;zms-tabs&quot; role=&quot;tablist&quot; aria-label=&quot;Категория оформления&quot;&gt;
       &lt;button type=&quot;button&quot; role=&quot;tab&quot; id=&quot;ms-tab-avatar&quot; data-ms-tab=&quot;avatar&quot; aria-selected=&quot;true&quot; aria-controls=&quot;ms-content&quot;&gt;&lt;svg class=&quot;zms-icon&quot; viewBox=&quot;0 0 24 24&quot; fill=&quot;none&quot; stroke=&quot;currentColor&quot; stroke-width=&quot;1.7&quot; aria-hidden=&quot;true&quot;&gt;&lt;circle cx=&quot;12&quot; cy=&quot;8&quot; r=&quot;3&quot;/&gt;&lt;path d=&quot;M5 21v-3a7 7 0 0 1 14 0v3&quot;/&gt;&lt;/svg&gt;Аватарки&lt;/button&gt;
       &lt;button type=&quot;button&quot; role=&quot;tab&quot; id=&quot;ms-tab-frame&quot; data-ms-tab=&quot;frame&quot; aria-selected=&quot;false&quot; aria-controls=&quot;ms-content&quot; tabindex=&quot;-1&quot;&gt;&lt;svg class=&quot;zms-icon&quot; viewBox=&quot;0 0 24 24&quot; fill=&quot;none&quot; stroke=&quot;currentColor&quot; stroke-width=&quot;1.7&quot; aria-hidden=&quot;true&quot;&gt;&lt;rect x=&quot;3&quot; y=&quot;3&quot; width=&quot;18&quot; height=&quot;18&quot; rx=&quot;4&quot;/&gt;&lt;rect x=&quot;7&quot; y=&quot;7&quot; width=&quot;10&quot; height=&quot;10&quot; rx=&quot;2&quot;/&gt;&lt;/svg&gt;Рамки&lt;/button&gt;
       &lt;button type=&quot;button&quot; role=&quot;tab&quot; id=&quot;ms-tab-trail&quot; data-ms-tab=&quot;trail&quot; aria-selected=&quot;false&quot; aria-controls=&quot;ms-content&quot; tabindex=&quot;-1&quot;&gt;&lt;svg class=&quot;zms-icon&quot; viewBox=&quot;0 0 24 24&quot; fill=&quot;none&quot; stroke=&quot;currentColor&quot; stroke-width=&quot;1.7&quot; aria-hidden=&quot;true&quot;&gt;&lt;ellipse cx=&quot;12&quot; cy=&quot;16&quot; rx=&quot;5&quot; ry=&quot;4&quot;/&gt;&lt;circle cx=&quot;5&quot; cy=&quot;10&quot; r=&quot;2&quot;/&gt;&lt;circle cx=&quot;10&quot; cy=&quot;5&quot; r=&quot;2&quot;/&gt;&lt;circle cx=&quot;16&quot; cy=&quot;6&quot; r=&quot;2&quot;/&gt;&lt;circle cx=&quot;20&quot; cy=&quot;11&quot; r=&quot;2&quot;/&gt;&lt;/svg&gt;Следы&lt;/button&gt;
       &lt;button type=&quot;button&quot; role=&quot;tab&quot; id=&quot;ms-tab-music&quot; data-ms-tab=&quot;music&quot; aria-selected=&quot;false&quot; aria-controls=&quot;ms-content&quot; tabindex=&quot;-1&quot;&gt;&lt;svg class=&quot;zms-icon&quot; viewBox=&quot;0 0 24 24&quot; fill=&quot;none&quot; stroke=&quot;currentColor&quot; stroke-width=&quot;1.7&quot; aria-hidden=&quot;true&quot;&gt;&lt;path d=&quot;M9 18V5l11-2v13M9 9l11-2&quot;/&gt;&lt;ellipse cx=&quot;6&quot; cy=&quot;18&quot; rx=&quot;3&quot; ry=&quot;2&quot;/&gt;&lt;ellipse cx=&quot;17&quot; cy=&quot;16&quot; rx=&quot;3&quot; ry=&quot;2&quot;/&gt;&lt;/svg&gt;Музыка&lt;/button&gt;
+      &lt;button type=&quot;button&quot; role=&quot;tab&quot; id=&quot;ms-tab-game&quot; data-ms-tab=&quot;game&quot; aria-selected=&quot;false&quot; aria-controls=&quot;ms-content&quot; tabindex=&quot;-1&quot;&gt;&lt;svg class=&quot;zms-icon&quot; viewBox=&quot;0 0 24 24&quot; fill=&quot;none&quot; stroke=&quot;currentColor&quot; stroke-width=&quot;1.7&quot; aria-hidden=&quot;true&quot;&gt;&lt;path d=&quot;M7 8h10a4 4 0 0 1 3.8 5.2l-1.1 3.4a2 2 0 0 1-3.2.9L14 15h-4l-2.5 2.5a2 2 0 0 1-3.2-.9l-1.1-3.4A4 4 0 0 1 7 8Z&quot;/&gt;&lt;path d=&quot;M7 12h4M9 10v4M16.5 11.5h.01M18.5 13.5h.01&quot;/&gt;&lt;/svg&gt;Игра&lt;/button&gt;
     &lt;/div&gt;
     &lt;div class=&quot;zms-scroll&quot; id=&quot;ms-content&quot; role=&quot;tabpanel&quot; aria-labelledby=&quot;ms-tab-avatar&quot; tabindex=&quot;-1&quot;&gt;&lt;/div&gt;
     &lt;footer class=&quot;zms-footer&quot;&gt;
@@ -12840,6 +12859,7 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
       const RUNNER_STARTUP_GATE_TIMEOUT_MS = 8000;
       const runnerStartupGateStartedAt = performance.now();
       let runnerStartupGateReleased = !runnerStartupGateEl;
+      root.classList.toggle(&quot;is-startup-locked&quot;, !runnerStartupGateReleased);
       let runnerStartupGateTimer = 0;
       let runnerInitialPresentationPromise = null;
       const pauseBtn = root.querySelector(&quot;[data-pause]&quot;);
@@ -12861,23 +12881,6 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
         return Math.max(0, RUNNER_STARTUP_GATE_TIMEOUT_MS - (performance.now() - runnerStartupGateStartedAt));
       }
 
-      function runnerStartupInputLocked() {
-        const gate = root.querySelector(&quot;[data-runner-startup-gate]&quot;);
-        if (!gate) return !runnerStartupGateReleased;
-        return !gate.classList.contains(&quot;is-ready&quot;) || gate.getAttribute(&quot;aria-hidden&quot;) !== &quot;true&quot;;
-      }
-
-      const blockRunnerStartupInput = (event) =&gt; {
-        if (!runnerStartupInputLocked()) return;
-        if (event.cancelable) event.preventDefault();
-        event.stopImmediatePropagation();
-      };
-      runnerStartupGateEl?.addEventListener(&quot;pointerdown&quot;, blockRunnerStartupInput, true);
-      runnerStartupGateEl?.addEventListener(&quot;pointerup&quot;, blockRunnerStartupInput, true);
-      runnerStartupGateEl?.addEventListener(&quot;click&quot;, blockRunnerStartupInput, true);
-      runnerStartupGateEl?.addEventListener(&quot;touchstart&quot;, blockRunnerStartupInput, { capture: true, passive: false });
-      runnerStartupGateEl?.addEventListener(&quot;touchend&quot;, blockRunnerStartupInput, { capture: true, passive: false });
-
       function releaseRunnerStartupGate(reason = &quot;ready&quot;) {
         if (runnerStartupGateReleased) return;
         runnerStartupGateReleased = true;
@@ -12885,6 +12888,7 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
         runnerStartupGateTimer = 0;
         runnerStartupGateEl?.classList.add(&quot;is-ready&quot;);
         runnerStartupGateEl?.setAttribute(&quot;aria-hidden&quot;, &quot;true&quot;);
+        root.classList.remove(&quot;is-startup-locked&quot;);
         startBtn.disabled = false;
         startBtn.setAttribute(&quot;aria-busy&quot;, &quot;false&quot;);
         if (reason === &quot;timeout&quot;) console.warn(&quot;Runner startup gate fail-open timeout reached; showing best available scene.&quot;);
@@ -12971,7 +12975,7 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
       }
 
       async function flashStartButtonAndRun() {
-        if (!runnerStartupGateReleased || runnerStartupInputLocked()) return;
+        if (!runnerStartupGateReleased) return;
         if (startBtn.dataset.locked === &quot;true&quot;) return;
         startBtn.dataset.locked = &quot;true&quot;;
         const mode = startBtn.dataset.mode || &quot;start&quot;;
@@ -13528,21 +13532,24 @@ function installProgressInfo(){
         ready:false, kind:&#x27;avatar&#x27;, selected:&#x27;&#x27;, filter:&#x27;all&#x27;, busy:false, uncertain:false,
         message:&#x27;&#x27;, failed:false, focus:null, fromSettings:false, motion:null, renderFrame:0,
         audio:null, audioToken:0, audioTimer:0, audioStatus:&#x27;&#x27;, listening:false, backButton:null,
-        previousBackVisible:false, inertNodes:[], sources:null, resumeAudioOnFocus:false
+        previousBackVisible:false, inertNodes:[], sources:null, resumeAudioOnFocus:false,
+        gameState:null, gameLoading:false, gameSelected:&#x27;all::auto&#x27;
       };
       let myStyleAudioPreviewActive = false;
       const MY_STYLE_KINDS = Object.freeze({
         avatar:{title:&#x27;Аватарки&#x27;,single:&#x27;Аватарка&#x27;,key:&#x27;caseActiveAvatar&#x27;,owned:&#x27;caseOwnedAvatars&#x27;,server:&#x27;activeAvatarId&#x27;},
         frame:{title:&#x27;Рамки&#x27;,single:&#x27;Рамка&#x27;,key:&#x27;caseActiveFrame&#x27;,owned:&#x27;caseOwnedFrames&#x27;,server:&#x27;activeFrameId&#x27;},
         trail:{title:&#x27;Следы&#x27;,single:&#x27;След&#x27;,key:&#x27;caseActiveTrail&#x27;,owned:&#x27;caseOwnedTrails&#x27;,server:&#x27;activeTrailId&#x27;},
-        music:{title:&#x27;Музыка&#x27;,single:&#x27;Музыка&#x27;,key:&#x27;activeMusicTrack&#x27;,owned:&#x27;ownedMusicTracks&#x27;,server:&#x27;activeMusicTrackId&#x27;}
+        music:{title:&#x27;Музыка&#x27;,single:&#x27;Музыка&#x27;,key:&#x27;activeMusicTrack&#x27;,owned:&#x27;ownedMusicTracks&#x27;,server:&#x27;activeMusicTrackId&#x27;},
+        game:{title:&#x27;Игра&#x27;,single:&#x27;Оформление игры&#x27;}
       });
       function myStyleIsOpen(){return Boolean(myStyleLayer&amp;&amp;!myStyleLayer.hidden);}
       function myStyleBase(kind){return ({avatar:CASE_AVATAR_CATALOG,frame:CASE_FRAME_CATALOG,trail:CASE_TRAIL_CATALOG,music:MUSIC_TRACK_CATALOG})[kind]||{};}
       function myStyleCurrent(kind){
+        if(kind===&#x27;game&#x27;)return &#x27;&#x27;;
         return kind===&#x27;music&#x27;?activeMusicTrackId():normalizeCaseCosmetic(kind,state[MY_STYLE_KINDS[kind].key]);
       }
-      function myStyleOwned(kind){return new Set(kind===&#x27;music&#x27;?normalizeOwnedMusicTracks(state.ownedMusicTracks):normalizeCaseOwned(kind,state[MY_STYLE_KINDS[kind].owned]));}
+      function myStyleOwned(kind){if(kind===&#x27;game&#x27;)return new Set();return new Set(kind===&#x27;music&#x27;?normalizeOwnedMusicTracks(state.ownedMusicTracks):normalizeCaseOwned(kind,state[MY_STYLE_KINDS[kind].owned]));}
       const REWARD_OWNED_SEASON2_IDS = new Set([&quot;season3_avatar_elite&quot;, &quot;season3_avatar_epic&quot;, &quot;season3_avatar_epic_2&quot;, &quot;season3_avatar_mythic&quot;, &quot;season3_avatar_elite_plus&quot;, &quot;season3_frame_elite_plus&quot;, &quot;season3_frame_elite_1&quot;, &quot;season3_frame_elite_4&quot;, &quot;season3_frame_epic&quot;, &quot;season3_frame_mythic&quot;, &quot;season3_trail_epic&quot;, &quot;season3_trail_epic_2&quot;, &quot;season3_trail_legendary_plus&quot;, &quot;season3_trail_legendary&quot;, &quot;season3_trail_mythic&quot;, &quot;season3_music_moon_cafe_epic&quot;, &quot;season3_music_moon_cafe_epic_2&quot;, &quot;season3_music_lunar_run_legendary&quot;, &quot;season3_music_lunar_run_mythic&quot;]);
       function cosmeticNeedsOwnership(kind,id,item){
         return Boolean(item?.ownershipRequired || item?.seasonKey===&#x27;season2&#x27; || REWARD_OWNED_SEASON2_IDS.has(String(id||&#x27;&#x27;)));
@@ -13573,6 +13580,7 @@ function installProgressInfo(){
           frame:&#x27;&lt;rect x=&quot;3&quot; y=&quot;3&quot; width=&quot;18&quot; height=&quot;18&quot; rx=&quot;4&quot;/&gt;&lt;rect x=&quot;7&quot; y=&quot;7&quot; width=&quot;10&quot; height=&quot;10&quot; rx=&quot;2&quot;/&gt;&#x27;,
           trail:&#x27;&lt;ellipse cx=&quot;12&quot; cy=&quot;16&quot; rx=&quot;5&quot; ry=&quot;4&quot;/&gt;&lt;circle cx=&quot;5&quot; cy=&quot;10&quot; r=&quot;2&quot;/&gt;&lt;circle cx=&quot;10&quot; cy=&quot;5&quot; r=&quot;2&quot;/&gt;&lt;circle cx=&quot;16&quot; cy=&quot;6&quot; r=&quot;2&quot;/&gt;&lt;circle cx=&quot;20&quot; cy=&quot;11&quot; r=&quot;2&quot;/&gt;&#x27;,
           music:&#x27;&lt;path d=&quot;M9 18V5l11-2v13M9 9l11-2&quot;/&gt;&lt;ellipse cx=&quot;6&quot; cy=&quot;18&quot; rx=&quot;3&quot; ry=&quot;2&quot;/&gt;&lt;ellipse cx=&quot;17&quot; cy=&quot;16&quot; rx=&quot;3&quot; ry=&quot;2&quot;/&gt;&#x27;,
+          game:&#x27;&lt;path d=&quot;M7 8h10a4 4 0 0 1 3.8 5.2l-1.1 3.4a2 2 0 0 1-3.2.9L14 15h-4l-2.5 2.5a2 2 0 0 1-3.2-.9l-1.1-3.4A4 4 0 0 1 7 8Z&quot;/&gt;&lt;path d=&quot;M7 12h4M9 10v4M16.5 11.5h.01M18.5 13.5h.01&quot;/&gt;&#x27;,
           check:&#x27;&lt;path d=&quot;m5 12 4 4L19 6&quot;/&gt;&#x27;,
           play:&#x27;&lt;path d=&quot;m9 5 10 7-10 7Z&quot;/&gt;&#x27;,
           stop:&#x27;&lt;rect x=&quot;6&quot; y=&quot;6&quot; width=&quot;12&quot; height=&quot;12&quot; rx=&quot;2&quot;/&gt;&#x27;
@@ -13639,11 +13647,79 @@ function installProgressInfo(){
         if(!myStyle.ready)return;
         const entry=root.querySelector(&#x27;[data-my-style-entry]&#x27;);if(!entry)return;
         const name=telegramProfile?.firstName||&#x27;Твой образ&#x27;;
-        const html=`&lt;span class=&quot;zms-entry-art&quot;&gt;${myStyleAvatarMarkup(myStyleCurrent(&#x27;avatar&#x27;),myStyleCurrent(&#x27;frame&#x27;))}&lt;/span&gt;&lt;span class=&quot;zms-entry-copy&quot;&gt;&lt;strong&gt;Мой стиль&lt;/strong&gt;&lt;small&gt;Аватарка, рамка, след и музыка&lt;/small&gt;&lt;span class=&quot;zms-entry-link&quot;&gt;Примерить оформление &lt;b aria-hidden=&quot;true&quot;&gt;›&lt;/b&gt;&lt;/span&gt;&lt;/span&gt;`;
+        const html=`&lt;span class=&quot;zms-entry-art&quot;&gt;${myStyleAvatarMarkup(myStyleCurrent(&#x27;avatar&#x27;),myStyleCurrent(&#x27;frame&#x27;))}&lt;/span&gt;&lt;span class=&quot;zms-entry-copy&quot;&gt;&lt;strong&gt;Мой стиль&lt;/strong&gt;&lt;small&gt;Аватарка, рамка, след, музыка и игра&lt;/small&gt;&lt;span class=&quot;zms-entry-link&quot;&gt;Примерить оформление &lt;b aria-hidden=&quot;true&quot;&gt;›&lt;/b&gt;&lt;/span&gt;&lt;/span&gt;`;
         setStableMarkup(entry,html,&#x27;my-style-entry&#x27;);
         entry.setAttribute(&#x27;aria-label&#x27;,&#x27;Мой стиль: примерить и выбрать оформление&#x27;);
         if(myStyleIsOpen()&amp;&amp;!myStyle.renderFrame)myStyle.renderFrame=requestAnimationFrame(()=&gt;{myStyle.renderFrame=0;renderMyStyle(true);});
       }
+      function myGameStyleKey(slot,id){return `${String(slot||&#x27;all&#x27;)}::${String(id||&#x27;auto&#x27;)}`;}
+      function myGameStyleParse(value){const raw=String(value||&#x27;all::auto&#x27;),split=raw.indexOf(&#x27;::&#x27;);return {slot:split&gt;=0?raw.slice(0,split):&#x27;all&#x27;,id:split&gt;=0?raw.slice(split+2):&#x27;auto&#x27;};}
+      function myGameStyleCatalog(slot){const data=myStyle.gameState?.catalog||{};return slot===&#x27;scene&#x27;?(Array.isArray(data.scenes)?data.scenes:[]):Array.isArray(data[slot])?data[slot]:[];}
+      function myGameStyleChoices(){return myStyle.gameState?.state?.choices||{scene:&#x27;auto&#x27;,treats:&#x27;auto&#x27;,coffee:&#x27;auto&#x27;};}
+      function myGameStyleSelection(){
+        const parsed=myGameStyleParse(myStyle.gameSelected);
+        if(parsed.slot===&#x27;all&#x27;&amp;&amp;parsed.id===&#x27;auto&#x27;)return {slot:&#x27;all&#x27;,id:&#x27;auto&#x27;,title:&#x27;Авто · по текущему сюжету&#x27;,unlocked:true,sourceText:&#x27;Сцена, зефир и кофе автоматически следуют актуальному сезону и открытым сюжетным главам.&#x27;};
+        return myGameStyleCatalog(parsed.slot).find(item=&gt;String(item?.id||&#x27;&#x27;)===parsed.id)||null;
+      }
+      function myGameStyleAsset(item,slot){
+        if(item?.assetPath)return String(item.assetPath);
+        if(item?.assetKey&amp;&amp;assetSources[String(item.assetKey)])return assetSources[String(item.assetKey)];
+        if(slot===&#x27;treats&#x27;)return assetSources.marshmallow||&#x27;/assets/ui/error404-no-icon.webp&#x27;;
+        if(slot===&#x27;coffee&#x27;)return assetSources.coffeePickup||&#x27;/assets/ui/error404-no-icon.webp&#x27;;
+        return assetSources.cafeBackground||&#x27;/assets/ui/error404-no-icon.webp&#x27;;
+      }
+      function myGameStyleActive(slot,item){return String(myGameStyleChoices()?.[slot]||&#x27;auto&#x27;)===String(item?.id||&#x27;&#x27;);}
+      function myGameStyleItemMarkup(item,slot){
+        const selected=myStyle.gameSelected===myGameStyleKey(slot,item.id),active=myGameStyleActive(slot,item),locked=item?.unlocked!==true,src=myGameStyleAsset(item,slot);
+        const art=slot===&#x27;scene&#x27;?`&lt;span class=&quot;zms-game-scene-art&quot; style=&quot;background-image:url(&amp;quot;${escapePurchaseText(src)}&amp;quot;)&quot;&gt;&lt;/span&gt;`:myStyleImage(src,&#x27;zms-game-pickup-art&#x27;);
+        const meta=item?.sourceType===&#x27;auto&#x27;?&#x27;Следует сюжету&#x27;:item?.sourceType===&#x27;default&#x27;?&#x27;Базовый вариант&#x27;:item?.seasonTitle||&#x27;Сюжетный эксклюзив&#x27;;
+        return `&lt;button type=&quot;button&quot; class=&quot;zms-game-item${locked?&#x27; is-locked&#x27;:&#x27;&#x27;}${active?&#x27; is-equipped&#x27;:&#x27;&#x27;}${selected?&#x27; is-previewed&#x27;:&#x27;&#x27;}&quot; data-ms-game-item=&quot;${escapePurchaseText(myGameStyleKey(slot,item.id))}&quot; aria-pressed=&quot;${selected}&quot;&gt;&lt;span class=&quot;zms-game-art&quot;&gt;${art}${locked?`&lt;span class=&quot;zms-lock&quot;&gt;${myStyleIcon(&#x27;lock&#x27;)}&lt;/span&gt;`:active?`&lt;span class=&quot;zms-equipped&quot;&gt;${myStyleIcon(&#x27;check&#x27;)}&lt;/span&gt;`:&#x27;&#x27;}&lt;/span&gt;&lt;span class=&quot;zms-game-copy&quot;&gt;&lt;strong&gt;${escapePurchaseText(item.title||&#x27;Оформление&#x27;)}&lt;/strong&gt;&lt;small&gt;${escapePurchaseText(meta)}&lt;/small&gt;&lt;em&gt;${locked?&#x27;Закрыто&#x27;:active?&#x27;Используется&#x27;:item.exclusive?&#x27;Эксклюзив сюжета&#x27;:&#x27;Доступно&#x27;}&lt;/em&gt;&lt;/span&gt;&lt;/button&gt;`;
+      }
+      function renderMyGameStyle(keepScroll=false){
+        const scroller=myStyleLayer.querySelector(&#x27;.zms-scroll&#x27;),y=scroller.scrollTop,previous=document.activeElement,focusKey=previous?.getAttribute?.(&#x27;data-ms-game-item&#x27;),choices=myGameStyleChoices(),selected=myGameStyleSelection();
+        scroller.setAttribute(&#x27;aria-labelledby&#x27;,&#x27;ms-tab-game&#x27;);
+        myStyleLayer.querySelectorAll(&#x27;[data-ms-tab]&#x27;).forEach(b=&gt;{const active=b.dataset.msTab===&#x27;game&#x27;;b.setAttribute(&#x27;aria-selected&#x27;,String(active));b.tabIndex=active?0:-1;b.disabled=myStyle.busy;});
+        if(myStyle.gameLoading&amp;&amp;!myStyle.gameState?.catalog){setStableMarkup(scroller,&#x27;&lt;div class=&quot;zms-game-loading&quot;&gt;&lt;span class=&quot;runner-startup-spinner&quot;&gt;&lt;/span&gt;&lt;strong&gt;Загружаем оформление игры…&lt;/strong&gt;&lt;small&gt;Проверяем сюжетные награды и сохранённый выбор.&lt;/small&gt;&lt;/div&gt;&#x27;,&#x27;game-style-loading&#x27;);}
+        else if(!myStyle.gameState?.catalog){setStableMarkup(scroller,&#x27;&lt;div class=&quot;zms-empty&quot;&gt;Не удалось загрузить оформление игры. Нажми «Проверить состояние».&lt;/div&gt;&#x27;,&#x27;game-style-error&#x27;);}
+        else{
+          const modeAuto=String(choices.scene||&#x27;auto&#x27;)===&#x27;auto&#x27;&amp;&amp;String(choices.treats||&#x27;auto&#x27;)===&#x27;auto&#x27;&amp;&amp;String(choices.coffee||&#x27;auto&#x27;)===&#x27;auto&#x27;;
+          const section=(slot,title,copy)=&gt;{const list=myGameStyleCatalog(slot);return `&lt;section class=&quot;zms-game-section&quot;&gt;&lt;div class=&quot;zms-game-section-head&quot;&gt;&lt;span&gt;&lt;h3&gt;${title}&lt;/h3&gt;&lt;small&gt;${copy}&lt;/small&gt;&lt;/span&gt;&lt;b&gt;${list.filter(x=&gt;x.unlocked).length}/${list.length}&lt;/b&gt;&lt;/div&gt;&lt;div class=&quot;zms-game-grid ${slot===&#x27;scene&#x27;?&#x27;is-scene&#x27;:&#x27;is-pickup&#x27;}&quot;&gt;${list.map(item=&gt;myGameStyleItemMarkup(item,slot)).join(&#x27;&#x27;)}&lt;/div&gt;&lt;/section&gt;`;};
+          const selectionHtml=selected?`&lt;section class=&quot;zms-game-selection&quot;&gt;&lt;div&gt;&lt;span class=&quot;zms-game-kicker&quot;&gt;${selected.exclusive?&#x27;ЭКСКЛЮЗИВ СЮЖЕТА&#x27;:selected.id===&#x27;auto&#x27;?&#x27;АВТОМАТИЧЕСКИ&#x27;:&#x27;ОФОРМЛЕНИЕ ИГРЫ&#x27;}&lt;/span&gt;&lt;h3 tabindex=&quot;-1&quot;&gt;${escapePurchaseText(selected.title||&#x27;Оформление&#x27;)}&lt;/h3&gt;&lt;p&gt;${escapePurchaseText(selected.sourceText||&#x27;Выбери оформление, которое будет использоваться в забеге.&#x27;)}&lt;/p&gt;&lt;/div&gt;${selected.unlocked===false?`&lt;span class=&quot;zms-state is-locked&quot;&gt;${myStyleIcon(&#x27;lock&#x27;)}Закрыто&lt;/span&gt;`:`&lt;span class=&quot;zms-state is-owned&quot;&gt;${myStyleIcon(&#x27;check&#x27;)}${selected.slot===&#x27;all&#x27;&amp;&amp;modeAuto?&#x27;Используется&#x27;:&#x27;Доступно&#x27;}&lt;/span&gt;`}&lt;/section&gt;`:&#x27;&#x27;;
+          const html=`&lt;section class=&quot;zms-game-mode${modeAuto?&#x27; is-auto&#x27;:&#x27;&#x27;}&quot;&gt;&lt;span class=&quot;zms-game-mode-icon&quot;&gt;${myStyleIcon(&#x27;game&#x27;)}&lt;/span&gt;&lt;span&gt;&lt;strong&gt;Авто · по текущему сюжету&lt;/strong&gt;&lt;small&gt;${modeAuto?&#x27;Сейчас включено: новые главы сами меняют вид забега.&#x27;:&#x27;Сейчас выбран ручной вариант. Можно одним нажатием вернуть сюжетное оформление.&#x27;}&lt;/small&gt;&lt;/span&gt;&lt;button type=&quot;button&quot; data-ms-game-item=&quot;all::auto&quot; aria-pressed=&quot;${myStyle.gameSelected===&#x27;all::auto&#x27;}&quot;&gt;${modeAuto?&#x27;Включено&#x27;:&#x27;Вернуть Авто&#x27;}&lt;/button&gt;&lt;/section&gt;${selectionHtml}${section(&#x27;scene&#x27;,&#x27;Сцена&#x27;,&#x27;Фон, дорога и препятствия сезона. Сезонная сцена остаётся навсегда после завершения всей сюжетной линии.&#x27;)}${section(&#x27;treats&#x27;,&#x27;Зефир&#x27;,&#x27;Варианты открываются в тех главах, где сюжет менял зефир.&#x27;)}${section(&#x27;coffee&#x27;,&#x27;Кофе&#x27;,&#x27;Сюжетные варианты кофе остаются в коллекции после открытия главы.&#x27;)}`;
+          setStableMarkup(scroller,html,&#x27;game-style-body&#x27;);
+        }
+        scroller.querySelectorAll(&#x27;[data-ms-game-item]&#x27;).forEach(b=&gt;b.disabled=myStyle.busy);
+        scroller.scrollTop=keepScroll?y:0;if(focusKey)[...scroller.querySelectorAll(&#x27;[data-ms-game-item]&#x27;)].find(button=&gt;button.dataset.msGameItem===focusKey)?.focus({preventScroll:true});
+        const apply=myStyleLayer.querySelector(&#x27;[data-ms-apply]&#x27;),parsed=myGameStyleParse(myStyle.gameSelected),current=parsed.slot===&#x27;all&#x27;?Object.values(choices).every(value=&gt;value===&#x27;auto&#x27;):String(choices?.[parsed.slot]||&#x27;auto&#x27;)===parsed.id;
+        const allowed=selected?.unlocked!==false;
+        apply.disabled=myStyle.busy||myStyle.uncertain||!selected||!allowed||current;
+        apply.textContent=myStyle.busy?&#x27;Сохраняем…&#x27;:!selected?&#x27;Выбери оформление&#x27;:!allowed?&#x27;Эксклюзив закрыт&#x27;:current?&#x27;Используется&#x27;:parsed.slot===&#x27;all&#x27;?&#x27;Вернуть Авто&#x27;:&#x27;Использовать&#x27;;
+        const notice=myStyleLayer.querySelector(&#x27;[data-ms-message]&#x27;);notice.textContent=myStyle.message||(selected?.unlocked===false?&#x27;Этот вариант останется эксклюзивом сюжета. Его нельзя получить в кейсах или магазине.&#x27;:current?&#x27;Это оформление уже используется.&#x27;:&#x27;Выбор сохраняется на сервере. «Авто» всегда продолжает следовать текущему сюжету.&#x27;);notice.classList.toggle(&#x27;is-error&#x27;,myStyle.failed);
+        myStyleLayer.querySelector(&#x27;[data-ms-check]&#x27;).hidden=!myStyle.uncertain&amp;&amp;!(!myStyle.gameState&amp;&amp;!myStyle.gameLoading);myStyleLayer.querySelector(&#x27;[data-ms-check]&#x27;).disabled=myStyle.busy||myStyle.gameLoading;myStyleLayer.setAttribute(&#x27;aria-busy&#x27;,String(myStyle.busy||myStyle.gameLoading));
+      }
+      async function loadMyGameStyleState(force=false){
+        if(myStyle.gameLoading||(!force&amp;&amp;myStyle.gameState?.catalog))return Boolean(myStyle.gameState);
+        if(!telegramProfile?.initData){myStyle.failed=true;myStyle.message=&#x27;Открой игру внутри Telegram, чтобы загрузить сюжетную коллекцию.&#x27;;renderMyStyle(true);return false;}
+        myStyle.gameLoading=true;myStyle.failed=false;if(!myStyle.gameState)myStyle.message=&#x27;Проверяем сюжетные награды…&#x27;;renderMyStyle(true);
+        try{const data=await caseApiRequest(GAME_STYLE_STATE_PATH,{force:Boolean(force)},7000);if(!data?.state||!data?.catalog)throw new Error(&#x27;Сервер не вернул коллекцию оформления игры.&#x27;);myStyle.gameState=data;myStyle.uncertain=false;myStyle.failed=false;myStyle.message=&#x27;&#x27;;const parsed=myGameStyleParse(myStyle.gameSelected);if(parsed.slot!==&#x27;all&#x27;&amp;&amp;!gameStyleClientItem(data.catalog,parsed.slot,parsed.id))myStyle.gameSelected=&#x27;all::auto&#x27;;return true;}
+        catch(error){myStyle.failed=true;myStyle.message=error?.message||&#x27;Не удалось загрузить оформление игры.&#x27;;return false;}
+        finally{myStyle.gameLoading=false;if(myStyleIsOpen()&amp;&amp;myStyle.kind===&#x27;game&#x27;)renderMyStyle(true);}
+      }
+      function gameStyleClientItem(catalog,slot,id){const list=slot===&#x27;scene&#x27;?catalog?.scenes:catalog?.[slot];return (Array.isArray(list)?list:[]).find(item=&gt;String(item?.id||&#x27;&#x27;)===String(id||&#x27;&#x27;))||null;}
+      function applyMyGameStylePayload(data){
+        if(data?.state&amp;&amp;data?.catalog)myStyle.gameState=data;
+        if(data?.effective?.runnerScene){applyRemoteRunnerScene(data.effective.runnerScene);runnerSceneRecoveryPromise=Promise.resolve(true);}
+        if(data?.effective?.miniGameVisuals)void applyMiniGameVisuals(data.effective.miniGameVisuals);
+      }
+      async function applyMyGameStyle(){
+        if(myStyle.busy||myStyle.uncertain||!myStyle.gameState)return;const selected=myGameStyleSelection(),parsed=myGameStyleParse(myStyle.gameSelected),choices=myGameStyleChoices(),current=parsed.slot===&#x27;all&#x27;?Object.values(choices).every(value=&gt;value===&#x27;auto&#x27;):String(choices?.[parsed.slot]||&#x27;auto&#x27;)===parsed.id;
+        if(!selected||selected.unlocked===false||current)return;
+        myStyle.busy=true;myStyle.failed=false;myStyle.message=&#x27;Сохраняем оформление игры…&#x27;;renderMyStyle(true);
+        try{const data=await caseApiRequest(GAME_STYLE_EQUIP_PATH,{slot:parsed.slot,id:parsed.id,expectedRevision:Number(myStyle.gameState?.state?.revision||1)},7000);if(!data?.state||!data?.catalog)throw new Error(&#x27;Сервер не подтвердил оформление игры.&#x27;);applyMyGameStylePayload(data);myStyle.uncertain=false;myStyle.message=&#x27;Оформление игры сохранено.&#x27;;showProfileToast(parsed.slot===&#x27;all&#x27;?&#x27;Оформление снова следует сюжету.&#x27;:`Выбрано: ${selected.title}.`,&#x27;success&#x27;);}
+        catch(error){if(Number(error?.status||0)===409){myStyle.uncertain=true;myStyle.message=&#x27;Оформление изменилось в другой сессии. Проверь состояние перед повторным применением.&#x27;;}else myStyle.message=error?.message||&#x27;Не удалось сохранить оформление игры.&#x27;;myStyle.failed=true;}
+        finally{myStyle.busy=false;renderMyStyleEntry();renderMyStyle(true);}
+      }
+
       function myStylePreview(entry){
         const kind=myStyle.kind,selected=entry?.id||&#x27;&#x27;,avatar=kind===&#x27;avatar&#x27;?selected:myStyleCurrent(&#x27;avatar&#x27;),frame=kind===&#x27;frame&#x27;?selected:myStyleCurrent(&#x27;frame&#x27;);
         let scene=&#x27;&#x27;;
@@ -13669,6 +13745,7 @@ function installProgressInfo(){
       }
       function renderMyStyle(keepScroll=false){
         if(!myStyleIsOpen())return;
+        if(myStyle.kind===&#x27;game&#x27;){renderMyGameStyle(keepScroll);return;}
         const scroller=myStyleLayer.querySelector(&#x27;.zms-scroll&#x27;),y=scroller.scrollTop;
         scroller.setAttribute(&#x27;aria-labelledby&#x27;,&#x27;ms-tab-&#x27;+myStyle.kind);
         const previous=document.activeElement,token=previous?.getAttribute(&#x27;data-ms-item&#x27;);
@@ -13716,7 +13793,7 @@ function installProgressInfo(){
         if(caseLayer&amp;&amp;!caseLayer.hidden)closeCaseLayer();
         if(tutorialLayer&amp;&amp;!tutorialLayer.hidden)closeTutorial(false);
         myStyle.focus=returnFocus;myStyle.fromSettings=fromSettings;myStyle.motion?.reset();
-        if(!myStyle.busy){myStyle.kind=kind;myStyle.selected=myStyleCurrent(kind);myStyle.filter=&#x27;all&#x27;;if(!myStyle.uncertain){myStyle.message=&#x27;&#x27;;myStyle.failed=false;}}
+        if(!myStyle.busy){myStyle.kind=kind;if(kind===&#x27;game&#x27;)myStyle.gameSelected=&#x27;all::auto&#x27;;else myStyle.selected=myStyleCurrent(kind);myStyle.filter=&#x27;all&#x27;;if(!myStyle.uncertain){myStyle.message=&#x27;&#x27;;myStyle.failed=false;}}
         myStyle.sources=null;
         setCaseLayerScrollLocked(true);
         myStyleLayer.hidden=false;myStyleLayer.setAttribute(&#x27;aria-hidden&#x27;,&#x27;false&#x27;);
@@ -13727,6 +13804,7 @@ function installProgressInfo(){
         myStyle.previousBackVisible=Boolean(myStyle.backButton?.isVisible);
         try{myStyle.backButton?.onClick?.(myStyleBack);myStyle.backButton?.show?.();}catch{}
         renderMyStyle();
+        if(kind===&#x27;game&#x27;)void loadMyGameStyleState();
         myStyleLayer.querySelector(&#x27;[data-ms-close]&#x27;).focus({preventScroll:true});
       }
       function closeMyStyle(restoreFocus=true){
@@ -13748,9 +13826,9 @@ function installProgressInfo(){
       }
       function myStyleChangeTab(kind){
         if(myStyle.busy||!MY_STYLE_KINDS[kind])return;
-        stopMyStyleAudio();myStyle.kind=kind;myStyle.selected=myStyleCurrent(kind);myStyle.filter=&#x27;all&#x27;;myStyle.audioStatus=&#x27;&#x27;;
+        stopMyStyleAudio();myStyle.kind=kind;if(kind===&#x27;game&#x27;){myStyle.gameSelected=&#x27;all::auto&#x27;;}else myStyle.selected=myStyleCurrent(kind);myStyle.filter=&#x27;all&#x27;;myStyle.audioStatus=&#x27;&#x27;;
         if(!myStyle.uncertain){myStyle.message=&#x27;&#x27;;myStyle.failed=false;}
-        renderMyStyle();
+        renderMyStyle();if(kind===&#x27;game&#x27;)void loadMyGameStyleState();
         myStyleLayer.querySelector(`[data-ms-tab=&quot;${kind}&quot;]`)?.focus({preventScroll:true});
       }
       function stopMyStyleAudio(resume=true){
@@ -13785,6 +13863,7 @@ function installProgressInfo(){
         try{await audio.play();if(token!==myStyle.audioToken)return;myStyle.audioStatus=&#x27;Прослушивание · до 20 секунд&#x27;;updateMyStyleAudioControls();}catch{fail();}
       }
       async function checkMyStyleState(){
+        if(myStyle.kind===&#x27;game&#x27;){myStyle.uncertain=false;await loadMyGameStyleState(true);return;}
         if(myStyle.busy)return;
         myStyle.busy=true;myStyle.message=&#x27;Проверяем выбранное оформление…&#x27;;renderMyStyle(true);
         try{
@@ -13795,6 +13874,7 @@ function installProgressInfo(){
         finally{myStyle.busy=false;renderMyStyle(true);}
       }
       async function applyMyStyle(){
+        if(myStyle.kind===&#x27;game&#x27;){await applyMyGameStyle();return;}
         const entry=myStyleSelected();
         if(myStyle.busy||myStyle.uncertain||!entry?.allowed||myStyleCurrent(entry.kind)===entry.id)return;
         if(!telegramProfile?.initData){myStyle.failed=true;myStyle.message=&#x27;Открой игру внутри Telegram, чтобы сохранить оформление.&#x27;;renderMyStyle(true);return;}
@@ -13839,8 +13919,9 @@ function installProgressInfo(){
           if(t.closest(&#x27;[data-my-style-entry]&#x27;)){event.preventDefault();openMyStyle();return;}
           if(!myStyleIsOpen())return;
           if(t===myStyleLayer||t.closest(&#x27;[data-ms-close]&#x27;)){event.preventDefault();closeMyStyle();return;}
-          const tab=t.closest(&#x27;[data-ms-tab]&#x27;),item=t.closest(&#x27;[data-ms-item]&#x27;),filter=t.closest(&#x27;[data-ms-filter]&#x27;);
+          const tab=t.closest(&#x27;[data-ms-tab]&#x27;),gameItem=t.closest(&#x27;[data-ms-game-item]&#x27;),item=t.closest(&#x27;[data-ms-item]&#x27;),filter=t.closest(&#x27;[data-ms-filter]&#x27;);
           if(tab&amp;&amp;!myStyle.busy){myStyleChangeTab(tab.dataset.msTab);return;}
+          if(gameItem&amp;&amp;!myStyle.busy&amp;&amp;myStyle.kind===&#x27;game&#x27;){myStyle.gameSelected=gameItem.dataset.msGameItem||&#x27;all::auto&#x27;;if(!myStyle.uncertain){myStyle.message=&#x27;&#x27;;myStyle.failed=false;}renderMyStyle();myStyleLayer.querySelector(&#x27;.zms-game-selection h3&#x27;)?.focus({preventScroll:true});return;}
           if(item&amp;&amp;!myStyle.busy){stopMyStyleAudio();myStyle.selected=item.dataset.msItem;myStyle.audioStatus=&#x27;&#x27;;if(!myStyle.uncertain){myStyle.message=&#x27;&#x27;;myStyle.failed=false;}renderMyStyle();myStyleLayer.querySelector(&#x27;.zms-selection h3&#x27;)?.focus({preventScroll:true});return;}
           if(filter&amp;&amp;!myStyle.busy){myStyle.filter=filter.dataset.msFilter;renderMyStyle(true);myStyleLayer.querySelector(`[data-ms-filter=&quot;${myStyle.filter}&quot;]`)?.focus({preventScroll:true});return;}
           if(t.closest(&#x27;[data-ms-listen]&#x27;)){void previewMyStyleAudio();return;}
@@ -16281,6 +16362,8 @@ function installProgressInfo(){
       const SHOP_CONFIG_PATH = &quot;/api/shop/config&quot;;
       const SKIN_CONFIG_PATH = &quot;/api/skins/config&quot;;
       const RUNNER_SCENE_CONFIG_PATH = &quot;/api/game/runner-scene&quot;;
+      const GAME_STYLE_STATE_PATH = &quot;/api/game/style/state&quot;;
+      const GAME_STYLE_EQUIP_PATH = &quot;/api/game/style/equip&quot;;
       const SKIN_BONUS_CASE_PATH = &quot;/api/skins/bonus-case&quot;;
       const SKIN_PURCHASE_PATH = &quot;/api/skins/purchase&quot;;
       const LIVE_CONTENT_PURCHASE_PATH = &quot;/api/live-content/shop/buy&quot;;
@@ -18259,7 +18342,13 @@ function createTutorialDeck(layer, mount, options, words) {
       }
 
       function reset(preserveButtonVisual = false, preservePauseVisual = false) {
-        if (runnerStartupInputLocked()) return false;
+        // The startup presentation gate is also a gameplay gate. Pointer events on
+        // the loading card bubble to the stage, so never create a run session until
+        // the authoritative scene has been released for play.
+        if (!runnerStartupGateReleased) {
+          syncGameActionControls();
+          return false;
+        }
         cancelGameLoop();
         cancelZeffiPauseCountdown();
         visibilityPauseActive = false;
@@ -18398,7 +18487,10 @@ function createTutorialDeck(layer, mount, options, words) {
       }
 
       function jump() {
-        if (!runnerStartupGateReleased || runnerStartupInputLocked()) return;
+        // Ignore taps/Space/Enter while the initial scene is still synchronizing.
+        // Without this guard a tap on the visible loading gate bubbled to `stage`
+        // and called reset(), starting score/collisions behind the loading UI.
+        if (!runnerStartupGateReleased) return;
         if (overlay?.classList.contains(&quot;is-second-chance-modal&quot;) || overlay?.classList.contains(&quot;is-pause-modal&quot;) || overlay?.classList.contains(&quot;is-run-results-modal&quot;)) return;
         if (state.running &amp;&amp; state.caseRunId &amp;&amp; authoritativeRunSessionReadyId !== String(state.caseRunId)) {
           hapticImpact(&quot;light&quot;, 50);
@@ -18424,6 +18516,7 @@ function createTutorialDeck(layer, mount, options, words) {
       }
 
       function togglePause(preserveButtonVisual = false) {
+        if (!runnerStartupGateReleased) return;
         const blockingOverlayVisible = overlay &amp;&amp; overlay.style.display !== &quot;none&quot; &amp;&amp;
           (overlay.classList.contains(&quot;is-second-chance-modal&quot;) || overlay.classList.contains(&quot;is-run-results-modal&quot;));
         if (blockingOverlayVisible) return;
@@ -20624,7 +20717,9 @@ function createTutorialDeck(layer, mount, options, words) {
       }
 
       function queuePlayerNetworkDiagnostic(path, code, reason, durationMs, timeoutMs, serverMs = 0) {
-        if (TEST_PROJECT_MODE) return;
+        // TEST_PROJECT_MODE belongs to the outer host document and is not defined
+        // inside this srcdoc iframe. Use the sandbox bridge marker available here.
+        if (window.__TEST_PROJECT_SANDBOX__?.active) return;
         const endpoint = playerNetworkEndpoint(path);
         if (!endpoint || endpoint === NETWORK_DIAGNOSTIC_PATH) return;
         const now = Date.now();
@@ -26023,6 +26118,9 @@ function createTutorialDeck(layer, mount, options, words) {
           const skinsLoaded = applyRemoteSkinConfig(publicConfig.skins);
           if (!shopLoaded) void loadRemoteShopPrices(force);
           if (!skinsLoaded) void loadRemoteSkinPrices(force);
+          if (data.gameStyle &amp;&amp; typeof data.gameStyle === &quot;object&quot;) {
+            myStyle.gameState = myStyle.gameState?.catalog ? { ...myStyle.gameState, state:data.gameStyle } : { state:data.gameStyle, catalog:null, effective:null };
+          }
           if (data.miniGameVisuals &amp;&amp; typeof data.miniGameVisuals === &quot;object&quot;) applyMiniGameVisuals(data.miniGameVisuals);
           else if (Object.prototype.hasOwnProperty.call(data, &quot;miniGameVisual&quot;)) applyMiniGameTreatVisual(data.miniGameVisual);
           else if (initData) { miniGameVisualAuthoritativeLoadPromise = loadAuthoritativeMiniGameVisuals(force); void miniGameVisualAuthoritativeLoadPromise; }
@@ -29323,23 +29421,7 @@ function createTutorialDeck(layer, mount, options, words) {
         event.stopPropagation();
         setGameExpanded(!gameExpanded);
       });
-      const blockStageInputDuringStartup = (event) =&gt; {
-        if (!runnerStartupInputLocked()) return;
-        if (event.cancelable) event.preventDefault();
-        event.stopImmediatePropagation();
-      };
-      stage.addEventListener(&quot;pointerdown&quot;, blockStageInputDuringStartup, true);
-      stage.addEventListener(&quot;pointerup&quot;, blockStageInputDuringStartup, true);
-      stage.addEventListener(&quot;click&quot;, blockStageInputDuringStartup, true);
-      stage.addEventListener(&quot;touchstart&quot;, blockStageInputDuringStartup, { capture:true, passive:false });
-      stage.addEventListener(&quot;touchend&quot;, blockStageInputDuringStartup, { capture:true, passive:false });
-      stage.addEventListener(&quot;pointerdown&quot;, (event) =&gt; {
-        if (runnerStartupInputLocked()) {
-          if (event.cancelable) event.preventDefault();
-          return;
-        }
-        jump();
-      });
+      stage.addEventListener(&quot;pointerdown&quot;, jump);
       root.addEventListener(&quot;keydown&quot;, (event) =&gt; {
         const keyTarget = event.target instanceof Element ? event.target : null;
         if (gameplayCoachActive &amp;&amp; (event.code === &quot;Space&quot; || event.code === &quot;Enter&quot;) &amp;&amp; [&quot;jump&quot;, &quot;obstacle&quot;, &quot;retry&quot;].includes(gameplayCoachStep)) {
@@ -30285,11 +30367,11 @@ function createTutorialDeck(layer, mount, options, words) {
 #zefirok-maltipoo-runner .profile-showcase-meta{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:7px 9px;border:1px solid rgba(231,204,212,.78);border-radius:13px;background:rgba(255,255,255,.72);color:#987783;font-size:7px;font-weight:800}#zefirok-maltipoo-runner .profile-showcase-meta strong{min-width:0;color:#714654;font-size:8px;font-weight:950;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 #zefirok-maltipoo-runner .profile-showcase-empty-action{width:100%;min-height:38px;border-radius:13px}
 #zefirok-maltipoo-runner .profile-showcase-empty{display:grid;grid-template-columns:54px minmax(0,1fr);grid-template-areas:&quot;showcase-empty-icon showcase-empty-title&quot; &quot;showcase-empty-icon showcase-empty-copy&quot; &quot;showcase-empty-action showcase-empty-action&quot;;align-items:center;column-gap:11px;row-gap:3px;padding:13px 13px 12px;border:1px solid rgba(231,202,212,.82);border-radius:18px;background:linear-gradient(145deg,rgba(255,253,252,.98),rgba(255,246,249,.96));box-shadow:0 8px 22px rgba(108,65,80,.06);text-align:left}
-#zefirok-maltipoo-runner .profile-showcase-empty>.profile-showcase-empty-icon{grid-area:showcase-empty-icon;width:54px;height:54px;display:grid;place-items:center;align-self:center;border:1px solid rgba(229,178,197,.48);border-radius:17px;background:linear-gradient(145deg,#fff,#fff0f5);box-shadow:inset 0 1px 0 rgba(255,255,255,.92)}
-#zefirok-maltipoo-runner .profile-showcase-empty>.profile-showcase-empty-icon img{width:38px;height:38px;object-fit:contain;display:block}
-#zefirok-maltipoo-runner .profile-showcase-empty>strong{grid-area:showcase-empty-title;align-self:end;color:#68444f;font-size:12px;font-weight:950;line-height:1.2}
-#zefirok-maltipoo-runner .profile-showcase-empty>span:not(.profile-showcase-empty-icon){grid-area:showcase-empty-copy;align-self:start;color:#9a7b84;font-size:8.4px;font-weight:750;line-height:1.42}
-#zefirok-maltipoo-runner .profile-showcase-empty>.profile-action{grid-area:showcase-empty-action;width:100%;min-height:40px;margin-top:7px;border-radius:13px}
+#zefirok-maltipoo-runner .profile-showcase-empty&gt;.profile-showcase-empty-icon{grid-area:showcase-empty-icon;width:54px;height:54px;display:grid;place-items:center;align-self:center;border:1px solid rgba(229,178,197,.48);border-radius:17px;background:linear-gradient(145deg,#fff,#fff0f5);box-shadow:inset 0 1px 0 rgba(255,255,255,.92)}
+#zefirok-maltipoo-runner .profile-showcase-empty&gt;.profile-showcase-empty-icon img{width:38px;height:38px;object-fit:contain;display:block}
+#zefirok-maltipoo-runner .profile-showcase-empty&gt;strong{grid-area:showcase-empty-title;align-self:end;color:#68444f;font-size:12px;font-weight:950;line-height:1.2}
+#zefirok-maltipoo-runner .profile-showcase-empty&gt;span:not(.profile-showcase-empty-icon){grid-area:showcase-empty-copy;align-self:start;color:#9a7b84;font-size:8.4px;font-weight:750;line-height:1.42}
+#zefirok-maltipoo-runner .profile-showcase-empty&gt;.profile-action{grid-area:showcase-empty-action;width:100%;min-height:40px;margin-top:7px;border-radius:13px}
 @media(max-width:360px){#zefirok-maltipoo-runner .profile-showcase-trophy-icon,#zefirok-maltipoo-runner .profile-showcase-trophy-icon img{width:43px;height:43px}#zefirok-maltipoo-runner .profile-showcase-trophy strong{font-size:6.3px}#zefirok-maltipoo-runner .profile-showcase-trophy small{font-size:5px}}
 
 &lt;/style&gt;
@@ -30692,6 +30774,7 @@ html &gt; body.zefirok-game-expanded{height:var(--zefirok-visible-height,100dvh)
 #zefirok-maltipoo-runner .run-focus-pickup img{display:block;width:23px;height:23px;object-fit:contain}
 #zefirok-maltipoo-runner .run-focus-pickup b{font-size:14px;font-weight:750;font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
 #zefirok-maltipoo-runner.is-game-expanded .game-expand-toggle{z-index:35;top:calc(max(0px,var(--zefirok-content-safe-top,0px),env(safe-area-inset-top,0px)) + 12px);right:max(14px,var(--zefirok-content-safe-right,0px));left:auto;width:46px;height:46px;min-width:46px;min-height:46px;max-width:46px;max-height:46px;border-radius:16px;background:rgba(255,248,244,.92);backdrop-filter:none;-webkit-backdrop-filter:none}
+#zefirok-maltipoo-runner.is-game-expanded.is-startup-locked .runner-startup-gate{z-index:34;padding:calc(max(24px,var(--zefirok-content-safe-top,0px),env(safe-area-inset-top,0px)) + 20px) max(24px,var(--zefirok-content-safe-right,0px),env(safe-area-inset-right,0px)) calc(max(24px,var(--zefirok-content-safe-bottom,0px),env(safe-area-inset-bottom,0px)) + 20px) max(24px,var(--zefirok-content-safe-left,0px),env(safe-area-inset-left,0px))}
 #zefirok-maltipoo-runner.is-game-expanded.is-focus-live .game-expand-toggle{display:none!important}
 #zefirok-maltipoo-runner.is-game-expanded .game-expand-icon--expand{display:none}
 #zefirok-maltipoo-runner.is-game-expanded .game-expand-icon--collapse{display:block}
@@ -31105,7 +31188,7 @@ html &gt; body.zefirok-game-expanded{height:var(--zefirok-visible-height,100dvh)
 #zefirok-maltipoo-runner .zms-panel .zs-top h2{font-size:23px;letter-spacing:-.5px;line-height:1.2}
 #zefirok-maltipoo-runner .zms-panel .zs-close{font-size:25px;line-height:1}
 #zefirok-maltipoo-runner .zms-subtitle{font-size:12px!important;line-height:1.5!important;color:#947584;margin-top:5px!important;font-weight:500}
-#zefirok-maltipoo-runner .zms-tabs{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));flex:none;gap:3px;padding:4px;margin:5px 17px 10px;background:#f3e8eb;border-radius:17px}
+#zefirok-maltipoo-runner .zms-tabs{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));flex:none;gap:3px;padding:4px;margin:5px 17px 10px;background:#f3e8eb;border-radius:17px}
 #zefirok-maltipoo-runner .zms-tabs button{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;min-height:59px;min-width:0;padding:7px 2px;border:0;background:transparent;border-radius:13px;color:#907282;font-size:11px;font-weight:750}
 #zefirok-maltipoo-runner .zms-tabs button[aria-selected=true]{background:#fffdfb;color:#b04977;box-shadow:0 3px 7px #80526612}
 #zefirok-maltipoo-runner .zms-scroll{flex:1;min-height:0;overflow:auto;overflow-x:hidden;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;touch-action:pan-y;overflow-anchor:none;scrollbar-width:thin;padding:1px 17px 19px}
@@ -31199,6 +31282,26 @@ html &gt; body.zefirok-game-expanded{height:var(--zefirok-visible-height,100dvh)
 #zefirok-maltipoo-runner .zms-item[data-ms-item=&quot;season3_frame_epic&quot;] .zms-item-image{width:100%;height:100%;max-width:none;object-fit:cover;object-position:center center}
 #zefirok-maltipoo-runner .zms-panel .zms-selection h3:focus{outline:none}
 #zefirok-maltipoo-runner .zms-panel .zs-close{font-weight:400!important}
+#zefirok-maltipoo-runner .zms-game-loading{min-height:280px;display:grid;place-items:center;align-content:center;gap:10px;padding:28px;text-align:center;color:#80556a}
+#zefirok-maltipoo-runner .zms-game-loading .runner-startup-spinner{width:32px;height:32px}
+#zefirok-maltipoo-runner .zms-game-loading small{color:#a17d8d;font-size:11px;line-height:1.45}
+#zefirok-maltipoo-runner .zms-game-mode{display:grid;grid-template-columns:42px minmax(0,1fr) auto;align-items:center;gap:10px;margin:2px 0 12px;padding:12px;border:1px solid #edd0da;border-radius:19px;background:linear-gradient(145deg,#fffaf7,#fff1f6)}
+#zefirok-maltipoo-runner .zms-game-mode.is-auto{border-color:#e7c56d;background:linear-gradient(145deg,#fffaf0,#fff2ce)}
+#zefirok-maltipoo-runner .zms-game-mode-icon{width:42px;height:42px;display:grid;place-items:center;border-radius:14px;background:#fff;color:#b45178;box-shadow:0 5px 14px #70475c16}
+#zefirok-maltipoo-runner .zms-game-mode-icon .zms-icon{width:23px;height:23px}
+#zefirok-maltipoo-runner .zms-game-mode&gt;span:nth-child(2){min-width:0;display:grid;gap:3px}
+#zefirok-maltipoo-runner .zms-game-mode strong{font-size:12px;color:#75465a}.zms-game-mode small{font-size:9.5px;line-height:1.35;color:#9d7888}
+#zefirok-maltipoo-runner .zms-game-mode button{min-height:36px;padding:8px 10px;border:1px solid #e4bdcb;border-radius:12px;background:#fff;color:#a64c70;font:850 9.5px/1 inherit;white-space:nowrap}
+#zefirok-maltipoo-runner .zms-game-selection{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin-bottom:13px;padding:13px 14px;border:1px solid #ead7de;border-radius:18px;background:#fffdfb}
+#zefirok-maltipoo-runner .zms-game-selection&gt;div{min-width:0}.zms-game-kicker{font-size:8px;font-weight:950;letter-spacing:.08em;color:#d15a86}.zms-game-selection h3{margin:4px 0 5px;font-size:16px;color:#6f4054}.zms-game-selection p{margin:0;color:#957582;font-size:10.5px;line-height:1.45}
+#zefirok-maltipoo-runner .zms-game-section{margin-top:14px}.zms-game-section-head{display:flex;align-items:end;justify-content:space-between;gap:10px;margin-bottom:8px}.zms-game-section-head span{display:grid;gap:2px}.zms-game-section-head h3{margin:0;color:#704154;font-size:14px}.zms-game-section-head small{color:#a17f8d;font-size:9.5px;line-height:1.35}.zms-game-section-head b{padding:4px 7px;border-radius:999px;background:#f7e9ef;color:#a35c77;font-size:9px}
+#zefirok-maltipoo-runner .zms-game-grid{display:grid;gap:8px}.zms-game-grid.is-scene{grid-template-columns:repeat(2,minmax(0,1fr))}.zms-game-grid.is-pickup{grid-template-columns:repeat(2,minmax(0,1fr))}
+#zefirok-maltipoo-runner .zms-game-item{min-width:0;padding:0;border:1px solid #ead7de;border-radius:17px;background:#fff;text-align:left;overflow:hidden;color:#745164;box-shadow:0 4px 12px #6d40500d}.zms-game-item.is-previewed{border-color:#dc82a4;box-shadow:0 0 0 2px #f6c8d9}.zms-game-item.is-equipped{border-color:#dfbf68;background:#fffdf5}.zms-game-item.is-locked{opacity:.72}
+#zefirok-maltipoo-runner .zms-game-art{position:relative;height:80px;display:grid;place-items:center;overflow:hidden;background:#fff5f4}.zms-game-grid.is-pickup .zms-game-art{height:72px}.zms-game-scene-art{position:absolute;inset:0;background-size:cover;background-position:center}.zms-game-pickup-art{max-width:56px;max-height:56px;object-fit:contain;filter:drop-shadow(0 5px 8px #875e4a22)}
+#zefirok-maltipoo-runner .zms-game-copy{display:grid;gap:3px;padding:9px}.zms-game-copy strong{min-width:0;font-size:10.5px;line-height:1.2;color:#6c4356;overflow:hidden;text-overflow:ellipsis}.zms-game-copy small{font-size:8.5px;color:#9c7988;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.zms-game-copy em{font-size:8px;font-style:normal;font-weight:850;color:#bc6685}.zms-game-item.is-equipped .zms-game-copy em{color:#a57b22}.zms-game-item.is-locked .zms-game-copy em{color:#8f7f86}
+#zefirok-maltipoo-runner .zms-game-item .zms-lock,#zefirok-maltipoo-runner .zms-game-item .zms-equipped{position:absolute;right:7px;top:7px;width:24px;height:24px;display:grid;place-items:center;border-radius:50%;background:#fff9;backdrop-filter:blur(6px)}
+#zefirok-maltipoo-runner .zms-game-item .zms-lock .zms-icon,#zefirok-maltipoo-runner .zms-game-item .zms-equipped .zms-icon{width:14px;height:14px}.zms-game-item .zms-equipped{color:#b48b2c}.zms-game-item .zms-lock{color:#9b7180}
+@media(max-width:355px){#zefirok-maltipoo-runner .zms-game-mode{grid-template-columns:36px minmax(0,1fr)}#zefirok-maltipoo-runner .zms-game-mode button{grid-column:1/-1;width:100%}#zefirok-maltipoo-runner .zms-game-grid.is-scene,#zefirok-maltipoo-runner .zms-game-grid.is-pickup{gap:6px}#zefirok-maltipoo-runner .zms-game-art{height:70px}}
 &lt;/style&gt;
 
 
@@ -31236,7 +31339,7 @@ html &gt; body.zefirok-game-expanded{height:var(--zefirok-visible-height,100dvh)
   const SEEN_KEY=&#x27;zefirok_context_coach_seen_v1&#x27;;
   const SESSION_KEY=&#x27;zefirok_context_coach_session_v1&#x27;;
   const RUNNER_PROGRESS_KEY=&#x27;zefirok-runner-progress-v2&#x27;;
-  let active=null,layoutFrame=0,retryTimer=0,maybeTimer=0,coachTouchAction='';
+  let active=null,layoutFrame=0,retryTimer=0,maybeTimer=0,coachTouchAction=&#x27;&#x27;;
 
   const style=document.createElement(&#x27;style&#x27;);
   style.id=&#x27;zefirok-context-coach-style-v1&#x27;;
@@ -31307,7 +31410,7 @@ html &gt; body.zefirok-game-expanded{height:var(--zefirok-visible-height,100dvh)
     }
     if(id===&#x27;profile&#x27;)return [
       {kicker:&#x27;Профиль · 1 из 2&#x27;,title:&#x27;Здесь твой уровень и XP&#x27;,copy:&#x27;Зачтённые забеги и подходящие покупки двигают прогресс профиля. Нажать на уровень можно позже, чтобы открыть полную лестницу наград.&#x27;,target:&#x27;.profile-level-card[data-profile-level-guide]&#x27;,button:&#x27;Дальше&#x27;},
-      {kicker:&#x27;Профиль · 2 из 2&#x27;,title:&#x27;Оформление — в «Моём стиле»&#x27;,copy:&#x27;Здесь можно примерить аватарку, рамку, след и музыку. Предпросмотр сам по себе ничего не применяет.&#x27;,target:&#x27;[data-my-style-entry]&#x27;,button:&#x27;Понятно&#x27;}
+      {kicker:&#x27;Профиль · 2 из 2&#x27;,title:&#x27;Оформление — в «Моём стиле»&#x27;,copy:&#x27;Здесь можно примерить аватарку, рамку, след, музыку и оформление забега. Предпросмотр сам по себе ничего не применяет.&#x27;,target:&#x27;[data-my-style-entry]&#x27;,button:&#x27;Понятно&#x27;}
     ];
     return [];
   }

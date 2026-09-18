@@ -94,6 +94,32 @@ const DEFAULT_SKIN_PRICES = Object.freeze({
   alex: Object.freeze({ points: 350000, treats: 500, coffee: 500 })
 });
 
+const LEGACY_SKIN_PRICES = Object.freeze({
+  barista: Object.freeze({ points: 100000, treats: 0, coffee: 400 }),
+  strawberry: Object.freeze({ points: 180000, treats: 400, coffee: 0 }),
+  bee: Object.freeze({ points: 350000, treats: 650, coffee: 0 }),
+  sailor: Object.freeze({ points: 650000, treats: 0, coffee: 650 }),
+  princess: Object.freeze({ points: 1300000, treats: 850, coffee: 850 }),
+  angel: Object.freeze({ points: 2400000, treats: 1000, coffee: 1000 }),
+  alex: Object.freeze({ points: 3000000, treats: 1500, coffee: 1500 })
+});
+
+const LEGACY_CASE_SHOP_PRICES = Object.freeze({
+  "case-small": Object.freeze({ points: 10000, treats: 100, coffee: 100 }),
+  "case-sweet": Object.freeze({ points: 10000, treats: 100, coffee: 100 }),
+  "case-gold": Object.freeze({ points: 10000, treats: 100, coffee: 100 }),
+  "case-mythic": Object.freeze({ points: 300000, treats: 350, coffee: 350 }),
+  "case-legendary": Object.freeze({ points: 600000, treats: 600, coffee: 600 }),
+  "case-alex": Object.freeze({ points: 100000, treats: 75, coffee: 75 })
+});
+
+function matchesPriceTriplet(value, expected) {
+  if (!value || !expected) return false;
+  return safeAdminNumber(value.points) === safeAdminNumber(expected.points)
+    && safeAdminNumber(value.treats) === safeAdminNumber(expected.treats)
+    && safeAdminNumber(value.coffee) === safeAdminNumber(expected.coffee);
+}
+
 const DEFAULT_SHOP_FEATURED_CONFIG = Object.freeze({
   rewards: Object.freeze({ itemId: "case-alex", label: "Рекомендуем · Особый · Алекс" }),
   skins: Object.freeze({ itemId: "alex", label: "Рекомендуем · Легендарный" })
@@ -2373,6 +2399,16 @@ export default {
         const legalGate = await enforceLegalAcceptanceForRequest(request, env);
         if (legalGate) return legalGate;
         return await withPlayerApiPerformance(env, ctx, "game_startup", () => getGameStartupPackage(request, env, ctx));
+      }
+      if (url.pathname === "/api/game/style/state" && request.method === "POST") {
+        const legalGate = await enforceLegalAcceptanceForRequest(request, env);
+        if (legalGate) return legalGate;
+        return await withPlayerApiPerformance(env, ctx, "game_style_state", () => getPlayerGameStyleState(request, env));
+      }
+      if (url.pathname === "/api/game/style/equip" && request.method === "POST") {
+        const legalGate = await enforceLegalAcceptanceForRequest(request, env);
+        if (legalGate) return legalGate;
+        return await withPlayerApiPerformance(env, ctx, "game_style_equip", () => equipPlayerGameStyle(request, env), request);
       }
       if (url.pathname === "/api/achievements" && request.method === "POST") {
         const legalGate = await enforceLegalAcceptanceForRequest(request, env);
@@ -7874,7 +7910,7 @@ async function getGameStartupPackage(request, env, ctx = null) {
       startupBounded('feature-flags', publicFeatureFlags(env, telegramId, { trustedIdentity: true }), 1500),
       startupBounded('news', getGameNewsForPlayer(env, telegramId), 1800),
       startupBounded('mail-snapshot', playerMailV3Snapshot(env, telegramId, { maintenancePromise:startupMailMaintenancePromise, revisionPromise:startupAccountRevisionPromise }), 2200),
-      startupBounded('mini-game-visuals', seasonPassMiniGameVisualsForPlayer(env, telegramId), 1800),
+      startupBounded('game-style', playerGameStyleState(env, telegramId, {includeCatalog:false}), 2000),
       startupBounded('account-revision', startupAccountRevisionPromise, 1800),
       startupBounded('liveops-event', activeRunLiveOpsEvent(env), 1500),
       startupBounded('newcomer-path', newcomerPathState(env, telegramId), 1800),
@@ -7896,17 +7932,18 @@ async function getGameStartupPackage(request, env, ctx = null) {
       startupSideSections
     ]);
     const casesResult = casesSettled[0];
-    const [taskNoticeResult, seasonPassBonusResult, rewardsResult, flagsResult, newsResult, giftsResult, miniGameVisualResult, accountRevisionResult, liveOpsEventResult, newcomerPathResult, achievementShowcaseResult] = sideSettled;
+    const [taskNoticeResult, seasonPassBonusResult, rewardsResult, flagsResult, newsResult, giftsResult, gameStyleResult, accountRevisionResult, liveOpsEventResult, newcomerPathResult, achievementShowcaseResult] = sideSettled;
     const cases = casesResult.status === "fulfilled" ? casesResult.value : null;
     const rewards = rewardsResult.status === "fulfilled" ? rewardsResult.value : null;
     const flags = flagsResult.status === "fulfilled" ? flagsResult.value : null;
     const news = newsResult.status === "fulfilled" ? newsResult.value : null;
     const gifts = giftsResult.status === "fulfilled" ? giftsResult.value : null;
-    // Mini-game story visuals are optional at startup. A timeout must never be
-    // interpreted as an authoritative reset to the default Zeffi collectible.
-    // Only send the fields when the authoritative read actually completed.
-    const miniGameVisuals = miniGameVisualResult.status === "fulfilled" ? miniGameVisualResult.value : null;
+    // Player game-style is optional at startup. A timeout must never reset the
+    // currently rendered scene or collectible visuals.
+    const gameStyle = gameStyleResult.status === "fulfilled" ? gameStyleResult.value : null;
+    const miniGameVisuals = gameStyle?.effective?.miniGameVisuals || null;
     const miniGameVisual = miniGameVisuals?.treats || null;
+    const playerPublicConfig = gameStyle?.effective?.runnerScene ? { ...publicConfig, runnerScene:gameStyle.effective.runnerScene } : publicConfig;
     const accountRevision = accountRevisionResult?.status === "fulfilled" ? Math.max(0, Number(accountRevisionResult.value || 0)) : 0;
     const liveOpsEvent = liveOpsEventResult?.status === "fulfilled" ? liveOpsEventResult.value : {active:false,multipliers:{pointsMultiplier:1,treatsMultiplier:1,coffeeMultiplier:1}};
     const newcomerPath = newcomerPathResult?.status === "fulfilled" ? newcomerPathResult.value : {available:false,dayNumber:0,runs:0,steps:[]};
@@ -7922,7 +7959,7 @@ async function getGameStartupPackage(request, env, ctx = null) {
     if (flagsResult.status === "rejected") errors.flags = startupSectionError(flagsResult.reason);
     if (newsResult.status === "rejected") errors.news = startupSectionError(newsResult.reason);
     if (giftsResult.status === "rejected") errors.gifts = startupSectionError(giftsResult.reason);
-    if (miniGameVisualResult.status === "rejected") errors.miniGameVisual = startupSectionError(miniGameVisualResult.reason);
+    if (gameStyleResult.status === "rejected") errors.gameStyle = startupSectionError(gameStyleResult.reason);
     if (achievementShowcaseResult.status === "rejected") errors.achievementShowcase = startupSectionError(achievementShowcaseResult.reason);
 
     return jsonResponse({
@@ -7930,7 +7967,7 @@ async function getGameStartupPackage(request, env, ctx = null) {
       authenticated: true,
       workerBuild: WORKER_BUILD,
       generatedAt: Date.now(),
-      publicConfig,
+      publicConfig: playerPublicConfig,
       profile,
       cases,
       rewards,
@@ -7940,6 +7977,7 @@ async function getGameStartupPackage(request, env, ctx = null) {
       news,
       gifts,
       ...(miniGameVisuals ? { miniGameVisual, miniGameVisuals } : {}),
+      ...(gameStyle?.state ? { gameStyle:gameStyle.state } : {}),
       accountRevision,
       liveOpsEvent,
       newcomerPath,
@@ -8320,16 +8358,8 @@ async function ensureShopAssortmentSchema(env) {
            product_id, enabled, points, treats, coffee, updated_at, updated_by
          ) VALUES (?, 1, ?, ?, ?, ?, 'system')`
       ).bind(productId, product.points, product.treats, product.coffee, now)));
-      const legacyCasePrices = {
-        "case-small": { points:10000, treats:100, coffee:100 },
-        "case-sweet": { points:10000, treats:100, coffee:100 },
-        "case-gold": { points:10000, treats:100, coffee:100 },
-        "case-mythic": { points:300000, treats:350, coffee:350 },
-        "case-legendary": { points:600000, treats:600, coffee:600 },
-        "case-alex": { points:100000, treats:75, coffee:75 }
-      };
       const caseBalanceUpdates = [];
-      for (const [productId, oldPrice] of Object.entries(legacyCasePrices)) {
+      for (const [productId, oldPrice] of Object.entries(LEGACY_CASE_SHOP_PRICES)) {
         const nextPrice = defaults[productId];
         if (!nextPrice) continue;
         caseBalanceUpdates.push(env.DB.prepare(
@@ -8362,11 +8392,14 @@ async function readShopAssortment(env, force = false) {
     const assortment = cloneDefaultShopAssortment();
     for (const row of result.results || []) {
       if (!assortment[row.product_id]) continue;
+      const defaultEntry = assortment[row.product_id];
+      const legacyPrice = LEGACY_CASE_SHOP_PRICES[row.product_id];
+      const priceSource = legacyPrice && matchesPriceTriplet(row, legacyPrice) ? defaultEntry : row;
       assortment[row.product_id] = {
         enabled: Number(row.enabled || 0) === 1,
-        points: safeAdminNumber(row.points),
-        treats: safeAdminNumber(row.treats),
-        coffee: safeAdminNumber(row.coffee)
+        points: safeAdminNumber(priceSource.points),
+        treats: safeAdminNumber(priceSource.treats),
+        coffee: safeAdminNumber(priceSource.coffee)
       };
     }
     if (generation === shopAssortmentMemory.generation) {
@@ -9973,10 +10006,13 @@ async function readSkinPrices(env) {
   const skins = cloneDefaultSkinPrices();
   for (const row of result.results || []) {
     if (!skins[row.skin_id]) continue;
+    const defaultPrice = skins[row.skin_id];
+    const legacyPrice = LEGACY_SKIN_PRICES[row.skin_id];
+    const priceSource = legacyPrice && matchesPriceTriplet(row, legacyPrice) ? defaultPrice : row;
     skins[row.skin_id] = {
-      points: safeAdminNumber(row.points),
-      treats: safeAdminNumber(row.treats),
-      coffee: safeAdminNumber(row.coffee)
+      points: safeAdminNumber(priceSource.points),
+      treats: safeAdminNumber(priceSource.treats),
+      coffee: safeAdminNumber(priceSource.coffee)
     };
   }
   return skins;
@@ -34547,9 +34583,187 @@ async function getSeasonPassMiniGameVisualState(request,env){
     const body=await readJson(request),initData=String(body.initData||body.init_data||'');
     if(!initData)throw new ApiError(401,'Откройте игру через Telegram.');
     const auth=await validateTelegramInitData(initData,env),telegramId=String(auth.user.id);
-    const miniGameVisuals=await seasonPassMiniGameVisualsForPlayer(env,telegramId);
-    return jsonResponse({ok:true,miniGameVisual:miniGameVisuals.treats,miniGameVisuals});
+    const gameStyle=await playerGameStyleState(env,telegramId,{includeCatalog:false});
+    const miniGameVisuals=gameStyle.effective.miniGameVisuals;
+    return jsonResponse({ok:true,miniGameVisual:miniGameVisuals.treats,miniGameVisuals,gameStyle:gameStyle.state});
   }catch(error){if(error instanceof ApiError)return jsonResponse({ok:false,error:error.message},error.status);console.error('getSeasonPassMiniGameVisualState failed',error);return jsonResponse({ok:false,error:'Не удалось синхронизировать сюжетный визуал забега.'},500);}
+}
+
+
+// Story-exclusive game cosmetics. Ownership is earned only from story progress
+// and is intentionally isolated from cases/shop/live-content reward pools.
+const GAME_STYLE_SLOTS = Object.freeze(['scene','treats','coffee']);
+function gameStyleSafeChoice(value){return String(value||'auto').trim().slice(0,500)||'auto';}
+function gameStyleStoryItemId(seasonId,eventId,target){return `story:${String(target||'treats')}:${encodeURIComponent(String(seasonId||''))}:${encodeURIComponent(String(eventId||''))}`;}
+function gameStyleSceneItemId(seasonId){return `scene:${encodeURIComponent(String(seasonId||''))}`;}
+function gameStyleStateView(row){return {scene:gameStyleSafeChoice(row?.scene_choice),treats:gameStyleSafeChoice(row?.treats_choice),coffee:gameStyleSafeChoice(row?.coffee_choice)};}
+async function ensurePlayerGameStyleRow(env,telegramId){
+  const now=Math.floor(Date.now()/1000),id=String(telegramId||'');
+  await env.DB.prepare(`INSERT OR IGNORE INTO player_game_style_state(telegram_id,scene_choice,treats_choice,coffee_choice,revision,created_at,updated_at) VALUES(?,'auto','auto','auto',1,?,?)`).bind(id,now,now).run();
+  return env.DB.prepare(`SELECT * FROM player_game_style_state WHERE telegram_id=? LIMIT 1`).bind(id).first();
+}
+async function materializePlayerGameStyleUnlocks(env,telegramId){
+  const id=String(telegramId||''),now=Math.floor(Date.now()/1000),statements=[];
+  const visualRows=(await env.DB.prepare(`SELECT e.event_id,e.season_id,e.actions_json,p.seen_at FROM season_pass_story_events e JOIN season_pass_story_progress p ON p.event_id=e.event_id AND p.telegram_id=? WHERE p.seen_at>0 ORDER BY p.seen_at,e.created_at,e.event_id`).bind(id).all()).results||[];
+  for(const row of visualRows){
+    for(const action of seasonPassStoryActionsConfig(row)){
+      if(action.type!=='minigame_visual'||action.trigger!=='opened'||action.operation!=='set'||!['treats','coffee'].includes(action.target)||!action.assetPath)continue;
+      const itemId=gameStyleStoryItemId(row.season_id,row.event_id,action.target);
+      statements.push(env.DB.prepare(`INSERT OR IGNORE INTO player_game_style_unlocks(telegram_id,item_id,kind,season_id,source_event_id,unlocked_at) VALUES(?,?,?,?,?,?)`).bind(id,itemId,String(action.target),String(row.season_id||''),String(row.event_id||''),Math.max(1,Number(row.seen_at||now))));
+    }
+  }
+  const config=await readRunnerBuilderConfig(env);
+  const boundSeasonIds=Object.keys(config?.seasonBindings||{}).map(String).filter(Boolean);
+  if(boundSeasonIds.length){
+    const progressRows=(await env.DB.prepare(`SELECT e.season_id,
+      SUM(CASE WHEN e.enabled=1 THEN 1 ELSE 0 END) AS enabled_total,
+      SUM(CASE WHEN e.enabled=1 AND COALESCE(p.completed_at,0)>0 THEN 1 ELSE 0 END) AS enabled_completed,
+      COUNT(*) AS all_total,
+      SUM(CASE WHEN COALESCE(p.completed_at,0)>0 THEN 1 ELSE 0 END) AS all_completed,
+      MAX(COALESCE(p.completed_at,0)) AS last_completed_at
+      FROM season_pass_story_events e
+      LEFT JOIN season_pass_story_progress p ON p.event_id=e.event_id AND p.telegram_id=?
+      GROUP BY e.season_id`).bind(id).all()).results||[];
+    const progressBySeason=new Map(progressRows.map(row=>[String(row.season_id||''),row]));
+    for(const seasonId of boundSeasonIds){
+      const row=progressBySeason.get(seasonId);if(!row)continue;
+      const enabledTotal=Math.max(0,Number(row.enabled_total||0)),enabledCompleted=Math.max(0,Number(row.enabled_completed||0));
+      const allTotal=Math.max(0,Number(row.all_total||0)),allCompleted=Math.max(0,Number(row.all_completed||0));
+      const completed=enabledTotal>0?(enabledCompleted===enabledTotal):(allTotal>0&&allCompleted===allTotal);
+      if(!completed)continue;
+      statements.push(env.DB.prepare(`INSERT OR IGNORE INTO player_game_style_unlocks(telegram_id,item_id,kind,season_id,source_event_id,unlocked_at) VALUES(?,?,?,?,?,?)`).bind(id,gameStyleSceneItemId(seasonId),'scene',seasonId,'',Math.max(1,Number(row.last_completed_at||now))));
+    }
+  }
+  for(let index=0;index<statements.length;index+=80)await env.DB.batch(statements.slice(index,index+80));
+}
+function gameStyleDefaultCatalogItem(slot,preview={}){
+  const title=slot==='scene'?'Классическое кафе':slot==='coffee'?'Классический кофе':'Классический зефир';
+  return {id:'default',slot,title,unlocked:true,exclusive:false,sourceType:'default',sourceText:'Стандартное оформление доступно всем игрокам.',...preview};
+}
+function gameStyleAutoCatalogItem(slot,preview={}){
+  const title=slot==='scene'?'Авто · текущая сцена':slot==='coffee'?'Авто · кофе сюжета':'Авто · зефир сюжета';
+  return {id:'auto',slot,title,unlocked:true,exclusive:false,sourceType:'auto',sourceText:'Автоматически следует актуальному сюжету и сезону.',...preview};
+}
+async function playerGameStyleCatalog(env,telegramId,{materialize=true}={}){
+  requireDatabase(env);if(materialize)await materializePlayerGameStyleUnlocks(env,telegramId);
+  const id=String(telegramId||''),[unlockResult,seasonResult,eventResult,config,autoScene,autoVisuals]=await Promise.all([
+    env.DB.prepare(`SELECT item_id,kind,season_id,source_event_id,unlocked_at FROM player_game_style_unlocks WHERE telegram_id=? ORDER BY unlocked_at,item_id`).bind(id).all(),
+    env.DB.prepare(`SELECT season_id,title,starts_at,ends_at,manual_status FROM season_pass_seasons ORDER BY starts_at,season_id`).all(),
+    env.DB.prepare(`SELECT e.event_id,e.season_id,e.title,e.actions_json,e.unlock_level,e.sort_order,e.created_at,e.updated_at,COALESCE(p.seen_at,0) AS seen_at FROM season_pass_story_events e LEFT JOIN season_pass_story_progress p ON p.event_id=e.event_id AND p.telegram_id=? ORDER BY e.season_id,e.unlock_level,e.sort_order,e.created_at,e.event_id`).bind(id).all(),
+    readRunnerBuilderConfig(env),readRunnerScenePublicConfig(env),seasonPassMiniGameVisualsForPlayer(env,id)
+  ]);
+  const unlocks=new Map((unlockResult.results||[]).map(row=>[String(row.item_id||''),row]));
+  const seasons=new Map((seasonResult.results||[]).map(row=>[String(row.season_id||''),row]));
+  const nowSeconds=Math.floor(Date.now()/1000);
+  const seasonCanAppear=(seasonId,unlock=null)=>{
+    if(unlock)return true;
+    const season=seasons.get(String(seasonId||''));
+    return Boolean(season&&Math.max(0,Number(season.starts_at||0))>0&&Number(season.starts_at||0)<=nowSeconds);
+  };
+  const defaultScene=runnerBuilderResolvePublicScene(config,'');
+  const scenePreview=scene=>({assetKey:String(scene?.background?.assetKey||''),assetPath:String(scene?.background?.assetPath||''),sceneTitle:String(scene?.title||'')});
+  const scenes=[gameStyleAutoCatalogItem('scene',{...scenePreview(autoScene),seasonId:String(autoScene?.seasonId||'')}),gameStyleDefaultCatalogItem('scene',scenePreview(defaultScene))];
+  for(const [seasonId] of Object.entries(config?.seasonBindings||{})){
+    const season=seasons.get(String(seasonId))||{},scene=runnerBuilderResolvePublicScene(config,String(seasonId)),itemId=gameStyleSceneItemId(seasonId),unlock=unlocks.get(itemId);
+    // Do not leak a future season through the permanent collection before its
+    // public start. Previously earned items remain visible even if content is
+    // later disabled or archived.
+    if(!seasonCanAppear(seasonId,unlock))continue;
+    scenes.push({id:itemId,slot:'scene',title:String(scene?.title||season?.title||'Сезонная сцена'),unlocked:Boolean(unlock),exclusive:true,sourceType:'season_story_complete',seasonId:String(seasonId),seasonTitle:String(season?.title||seasonId),sourceEventId:'',sourceTitle:'',unlockedAt:Number(unlock?.unlocked_at||0),sourceText:`Сезон «${String(season?.title||seasonId)}». Награда за завершение всей сюжетной линии. Эксклюзив сюжета: не продаётся и не выпадает из кейсов.`,...scenePreview(scene)});
+  }
+  const targets={treats:[gameStyleAutoCatalogItem('treats',{assetPath:String(autoVisuals?.treats?.assetPath||'')}),gameStyleDefaultCatalogItem('treats')],coffee:[gameStyleAutoCatalogItem('coffee',{assetPath:String(autoVisuals?.coffee?.assetPath||'')}),gameStyleDefaultCatalogItem('coffee')]};
+  for(const row of eventResult.results||[]){
+    const seasonId=String(row.season_id||''),season=seasons.get(seasonId)||{};
+    // Locked history is visible after a season starts, but future story assets
+    // stay private. An already-owned item is always allowed to remain visible.
+    const hasOwnedVariant=['treats','coffee'].some(target=>unlocks.has(gameStyleStoryItemId(seasonId,row.event_id,target)));
+    if(!seasonCanAppear(seasonId,hasOwnedVariant?{owned:true}:null))continue;
+    for(const action of seasonPassStoryActionsConfig(row)){
+      if(action.type!=='minigame_visual'||action.trigger!=='opened'||action.operation!=='set'||!['treats','coffee'].includes(action.target)||!action.assetPath)continue;
+      const itemId=gameStyleStoryItemId(seasonId,row.event_id,action.target),unlock=unlocks.get(itemId),targetTitle=action.target==='coffee'?'Кофе':'Зефир';
+      targets[action.target].push({id:itemId,slot:action.target,title:`${targetTitle} · ${String(season?.title||row.title||'Сезон')}`,unlocked:Boolean(unlock),exclusive:true,sourceType:'season_story_chapter',seasonId,seasonTitle:String(season?.title||seasonId),sourceEventId:String(row.event_id||''),sourceTitle:String(row.title||''),assetPath:String(action.assetPath||''),unlockedAt:Number(unlock?.unlocked_at||0),sourceText:`Сезон «${String(season?.title||seasonId)}» · глава «${String(row.title||'Сюжет сезона')}». Открывается после просмотра этой главы. Эксклюзив сюжета: не продаётся и не выпадает из кейсов.`});
+    }
+  }
+  for(const key of ['treats','coffee']){
+    const deduped=new Map();
+    for(const item of targets[key]){const dedupe=item.id==='auto'||item.id==='default'?item.id:`${item.seasonId}:${item.assetPath}`,current=deduped.get(dedupe);if(!current||(!current.unlocked&&item.unlocked))deduped.set(dedupe,item);}
+    targets[key]=[...deduped.values()];
+  }
+  return {scenes,treats:targets.treats,coffee:targets.coffee};
+}
+function gameStyleCatalogFind(catalog,slot,id){const list=slot==='scene'?catalog?.scenes:catalog?.[slot];return (Array.isArray(list)?list:[]).find(item=>String(item?.id||'')===String(id||''))||null;}
+async function playerGameStyleState(env,telegramId,{includeCatalog=false}={}){
+  requireDatabase(env);const id=String(telegramId||''),row=await ensurePlayerGameStyleRow(env,id),stored=gameStyleStateView(row),choices={...stored};
+  if(includeCatalog){
+    const catalog=await playerGameStyleCatalog(env,id,{materialize:true});
+    for(const slot of GAME_STYLE_SLOTS){const item=gameStyleCatalogFind(catalog,slot,choices[slot]);if(!item||item.unlocked!==true)choices[slot]='auto';}
+    const [autoScene,autoVisuals,config]=await Promise.all([readRunnerScenePublicConfig(env),seasonPassMiniGameVisualsForPlayer(env,id),readRunnerBuilderConfig(env)]);
+    let runnerScene=autoScene;
+    if(choices.scene==='default')runnerScene=runnerBuilderResolvePublicScene(config,'');
+    else if(choices.scene!=='auto'){const item=gameStyleCatalogFind(catalog,'scene',choices.scene);if(item?.seasonId)runnerScene=runnerBuilderResolvePublicScene(config,item.seasonId);}
+    const miniGameVisuals={...autoVisuals};
+    for(const target of ['treats','coffee']){
+      const choice=choices[target];if(choice==='auto')continue;
+      if(choice==='default')miniGameVisuals[target]={...seasonPassDefaultMiniGameVisual('',target),policy:'player_game_style',reason:'manual_default'};
+      else{const item=gameStyleCatalogFind(catalog,target,choice);if(item?.unlocked)miniGameVisuals[target]={target,assetPath:String(item.assetPath||''),isDefault:false,seasonId:String(item.seasonId||''),sourceEventId:String(item.sourceEventId||''),sourceTitle:String(item.sourceTitle||''),sourceUpdatedAt:0,seenAt:Number(item.unlockedAt||0),noticePending:false,noticeEventId:'',policy:'player_game_style',reason:'manual_story_style'};}
+    }
+    const state={choices,mode:GAME_STYLE_SLOTS.every(slot=>choices[slot]==='auto')?'auto':'custom',revision:Math.max(1,Number(row?.revision||1)),updatedAt:Math.max(0,Number(row?.updated_at||0))*1000};
+    return {state,effective:{runnerScene,miniGameVisual:miniGameVisuals.treats,miniGameVisuals},catalog};
+  }
+
+  // Startup/state-sync fast path: do not enumerate the historical catalog. Stored
+  // manual selections were already validated at equip time; only verify that the
+  // permanent unlock row still exists and resolve its source event when needed.
+  const manualIds=GAME_STYLE_SLOTS.map(slot=>choices[slot]).filter(value=>value!=='auto'&&value!=='default');
+  let unlocks=[];
+  if(manualIds.length){
+    const placeholders=manualIds.map(()=>'?').join(',');
+    unlocks=(await env.DB.prepare(`SELECT item_id,kind,season_id,source_event_id,unlocked_at FROM player_game_style_unlocks WHERE telegram_id=? AND item_id IN (${placeholders})`).bind(id,...manualIds).all()).results||[];
+  }
+  const unlockById=new Map(unlocks.map(item=>[String(item.item_id||''),item]));
+  for(const slot of GAME_STYLE_SLOTS){const choice=choices[slot];if(choice!=='auto'&&choice!=='default'&&!unlockById.has(choice))choices[slot]='auto';}
+  const sourceEventIds=[...new Set(['treats','coffee'].map(target=>unlockById.get(choices[target])?.source_event_id).filter(Boolean).map(String))];
+  let eventRows=[];
+  if(sourceEventIds.length){const placeholders=sourceEventIds.map(()=>'?').join(',');eventRows=(await env.DB.prepare(`SELECT event_id,season_id,title,actions_json,updated_at FROM season_pass_story_events WHERE event_id IN (${placeholders})`).bind(...sourceEventIds).all()).results||[];}
+  const eventById=new Map(eventRows.map(item=>[String(item.event_id||''),item]));
+  const [autoScene,autoVisuals,config]=await Promise.all([readRunnerScenePublicConfig(env),seasonPassMiniGameVisualsForPlayer(env,id),readRunnerBuilderConfig(env)]);
+  let runnerScene=autoScene;
+  if(choices.scene==='default')runnerScene=runnerBuilderResolvePublicScene(config,'');
+  else if(choices.scene!=='auto'){const unlock=unlockById.get(choices.scene);if(unlock?.season_id)runnerScene=runnerBuilderResolvePublicScene(config,String(unlock.season_id));else choices.scene='auto';}
+  const miniGameVisuals={...autoVisuals};
+  for(const target of ['treats','coffee']){
+    const choice=choices[target];if(choice==='auto')continue;
+    if(choice==='default'){miniGameVisuals[target]={...seasonPassDefaultMiniGameVisual('',target),policy:'player_game_style',reason:'manual_default'};continue;}
+    const unlock=unlockById.get(choice),event=eventById.get(String(unlock?.source_event_id||''));
+    const action=seasonPassStoryActionsConfig(event).find(item=>item.type==='minigame_visual'&&item.trigger==='opened'&&item.operation==='set'&&item.target===target&&item.assetPath);
+    if(!unlock||!event||!action){choices[target]='auto';continue;}
+    miniGameVisuals[target]={target,assetPath:String(action.assetPath||''),isDefault:false,seasonId:String(unlock.season_id||event.season_id||''),sourceEventId:String(event.event_id||''),sourceTitle:String(event.title||''),sourceUpdatedAt:Math.max(0,Number(event.updated_at||0)),seenAt:Number(unlock.unlocked_at||0),noticePending:false,noticeEventId:'',policy:'player_game_style',reason:'manual_story_style'};
+  }
+  const state={choices,mode:GAME_STYLE_SLOTS.every(slot=>choices[slot]==='auto')?'auto':'custom',revision:Math.max(1,Number(row?.revision||1)),updatedAt:Math.max(0,Number(row?.updated_at||0))*1000};
+  return {state,effective:{runnerScene,miniGameVisual:miniGameVisuals.treats,miniGameVisuals}};
+}
+async function getPlayerGameStyleState(request,env){
+  try{requireDatabase(env);requireBotToken(env);const body=await readJson(request),auth=await validateTelegramInitData(String(body.initData||body.init_data||''),env),telegramId=String(auth.user.id);return jsonResponse({ok:true,...await playerGameStyleState(env,telegramId,{includeCatalog:true})});}
+  catch(error){if(error instanceof ApiError)return jsonResponse({ok:false,error:error.message,code:error.code||''},error.status);console.error('getPlayerGameStyleState failed',error);return jsonResponse({ok:false,error:'Не удалось загрузить оформление игры.'},500);}
+}
+async function equipPlayerGameStyle(request,env){
+  try{
+    requireDatabase(env);requireBotToken(env);const body=await readJson(request),auth=await validateTelegramInitData(String(body.initData||body.init_data||''),env),telegramId=String(auth.user.id),slot=String(body.slot||'').trim(),choice=gameStyleSafeChoice(body.id||body.choice),current=await ensurePlayerGameStyleRow(env,telegramId),expectedRaw=body.expectedRevision??body.expected_revision;
+    if(slot!=='all'&&!GAME_STYLE_SLOTS.includes(slot))throw new ApiError(400,'Неизвестный раздел оформления игры.');
+    const expected=expectedRaw===undefined||expectedRaw===null||expectedRaw===''?Math.max(1,Number(current?.revision||1)):Math.floor(Number(expectedRaw));
+    if(!Number.isFinite(expected)||expected!==Math.max(1,Number(current?.revision||1)))throw new ApiError(409,'Оформление уже изменилось. Обновите коллекцию и повторите выбор.');
+    const catalog=await playerGameStyleCatalog(env,telegramId);
+    if(slot==='all'){
+      if(choice!=='auto')throw new ApiError(400,'Для всего оформления доступен только режим «Авто».');
+    }else{
+      const item=gameStyleCatalogFind(catalog,slot,choice);if(!item)throw new ApiError(404,'Это оформление больше недоступно.');if(item.unlocked!==true)throw new ApiError(403,'Это оформление ещё не открыто в сюжете.');
+    }
+    const now=Math.floor(Date.now()/1000);let result;
+    if(slot==='all')result=await env.DB.prepare(`UPDATE player_game_style_state SET scene_choice='auto',treats_choice='auto',coffee_choice='auto',revision=revision+1,updated_at=? WHERE telegram_id=? AND revision=?`).bind(now,telegramId,expected).run();
+    else{const column=slot==='scene'?'scene_choice':slot==='coffee'?'coffee_choice':'treats_choice';result=await env.DB.prepare(`UPDATE player_game_style_state SET ${column}=?,revision=revision+1,updated_at=? WHERE telegram_id=? AND revision=?`).bind(choice,now,telegramId,expected).run();}
+    if(Number(result?.meta?.changes||0)!==1)throw new ApiError(409,'Оформление уже изменилось. Обновите коллекцию и повторите выбор.');
+    return jsonResponse({ok:true,...await playerGameStyleState(env,telegramId,{includeCatalog:true})});
+  }catch(error){if(error instanceof ApiError)return jsonResponse({ok:false,error:error.message,code:error.code||''},error.status);console.error('equipPlayerGameStyle failed',error);return jsonResponse({ok:false,error:'Не удалось сохранить оформление игры.'},500);}
 }
 
 function seasonPassStoryRewardConfig(row){
@@ -34621,8 +34835,9 @@ async function openSeasonPassStory(request,env){
     await env.DB.prepare(`INSERT INTO season_pass_story_progress(event_id,season_id,telegram_id,seen_at,completed_at) VALUES(?,?,?,?,0)
       ON CONFLICT(event_id,telegram_id) DO UPDATE SET seen_at=CASE WHEN season_pass_story_progress.seen_at=0 THEN excluded.seen_at ELSE season_pass_story_progress.seen_at END`)
       .bind(eventId,String(ctx.season.id),ctx.telegramId,now).run();
-    const [nextStory,miniGameVisuals]=await Promise.all([seasonPassStoryForPlayer(env,ctx.season,ctx.telegramId,ctx.player),seasonPassMiniGameVisualsForPlayer(env,ctx.telegramId)]);
-    return jsonResponse({ok:true,story:nextStory,minigameVisual:miniGameVisuals.treats,miniGameVisuals});
+    const [nextStory,gameStyle]=await Promise.all([seasonPassStoryForPlayer(env,ctx.season,ctx.telegramId,ctx.player),playerGameStyleState(env,ctx.telegramId,{includeCatalog:false})]);
+    const miniGameVisuals=gameStyle.effective.miniGameVisuals;
+    return jsonResponse({ok:true,story:nextStory,minigameVisual:miniGameVisuals.treats,miniGameVisuals,gameStyle:gameStyle.state});
   }catch(error){if(error instanceof ApiError)return jsonResponse({ok:false,error:error.message},error.status);console.error('openSeasonPassStory failed',error);return jsonResponse({ok:false,error:'Не удалось открыть сюжетное событие.'},500);}
 }
 
@@ -43826,7 +44041,13 @@ function testProjectNormalizeSandboxState(raw = {}) {
     forcedCaseDrop:testProjectNormalizeForcedCaseDrop(source.forcedCaseDrop||{}),
     alexCollectionRewardClaimed:Boolean(source.alexCollectionRewardClaimed),
     faultProfile:testProjectNormalizeFaultProfile(source.faultProfile||{}),
-    apiTrace:testProjectNormalizeApiTrace(source.apiTrace||[])
+    apiTrace:testProjectNormalizeApiTrace(source.apiTrace||[]),
+    gameStyle:{
+      scene:gameStyleSafeChoice(source.gameStyle?.scene),
+      treats:gameStyleSafeChoice(source.gameStyle?.treats),
+      coffee:gameStyleSafeChoice(source.gameStyle?.coffee),
+      revision:Math.max(1,Math.floor(Number(source.gameStyle?.revision)||1))
+    }
   };
 }
 
@@ -44538,6 +44759,18 @@ function testProjectMiniGameVisuals(state,snapshot){
   return seasonPassResolveMiniGameVisuals(Array.isArray(season?.storyEvents)?season.storyEvents:[],seasonId,state?.storySeenEventIds||[]);
 }
 function testProjectMiniGameVisual(state,snapshot){return testProjectMiniGameVisuals(state,snapshot).treats;}
+function testProjectGameStylePayload(state,snapshot){
+  const current=state?.sandbox?.gameStyle||{scene:'auto',treats:'auto',coffee:'auto',revision:1},autoVisuals=testProjectMiniGameVisuals(state,snapshot),autoScene=testProjectClone(snapshot?.publicConfig?.runnerScene||runnerBuilderFallbackPublicScene()),season=snapshot?.season||{},seasonId=String(season?.id||state?.selectedSeasonId||''),storyEvents=Array.isArray(season?.storyEvents)?season.storyEvents:[];
+  const scenes=[gameStyleAutoCatalogItem('scene',{assetKey:String(autoScene?.background?.assetKey||''),assetPath:String(autoScene?.background?.assetPath||''),seasonId}),gameStyleDefaultCatalogItem('scene',{assetKey:'cafeBackground',assetPath:''})];
+  if(seasonId)scenes.push({id:gameStyleSceneItemId(seasonId),slot:'scene',title:String(autoScene?.title||season?.title||'Сезонная сцена'),unlocked:true,exclusive:true,sourceType:'season_story_complete',seasonId,seasonTitle:String(season?.title||seasonId),sourceText:'Test Project: сезонная сцена открыта для проверки.',assetKey:String(autoScene?.background?.assetKey||''),assetPath:String(autoScene?.background?.assetPath||'')});
+  const lists={treats:[gameStyleAutoCatalogItem('treats',{assetPath:String(autoVisuals?.treats?.assetPath||'')}),gameStyleDefaultCatalogItem('treats')],coffee:[gameStyleAutoCatalogItem('coffee',{assetPath:String(autoVisuals?.coffee?.assetPath||'')}),gameStyleDefaultCatalogItem('coffee')]};
+  for(const row of storyEvents)for(const action of normalizeSeasonPassStoryActions(row?.actions||row?.actions_json,seasonId,{strict:false}))if(action.operation==='set'&&['treats','coffee'].includes(action.target))lists[action.target].push({id:gameStyleStoryItemId(seasonId,row.eventId||row.event_id,action.target),slot:action.target,title:`${action.target==='coffee'?'Кофе':'Зефир'} · ${String(season?.title||'Сезон')}`,unlocked:true,exclusive:true,seasonId,seasonTitle:String(season?.title||seasonId),sourceEventId:String(row.eventId||row.event_id||''),sourceTitle:String(row.title||''),assetPath:String(action.assetPath||''),sourceText:'Test Project: сюжетный эксклюзив открыт для проверки.'});
+  const valid=(slot,value)=>Boolean(gameStyleCatalogFind({scenes,treats:lists.treats,coffee:lists.coffee},slot,value));
+  const choices={scene:valid('scene',current.scene)?current.scene:'auto',treats:valid('treats',current.treats)?current.treats:'auto',coffee:valid('coffee',current.coffee)?current.coffee:'auto'};
+  let runnerScene=autoScene;if(choices.scene==='default')runnerScene=runnerBuilderFallbackPublicScene();
+  const miniGameVisuals={...autoVisuals};for(const target of ['treats','coffee']){const choice=choices[target];if(choice==='default')miniGameVisuals[target]={...seasonPassDefaultMiniGameVisual('',target),policy:'player_game_style',reason:'manual_default'};else if(choice!=='auto'){const item=gameStyleCatalogFind({scenes,treats:lists.treats,coffee:lists.coffee},target,choice);if(item)miniGameVisuals[target]={target,assetPath:String(item.assetPath||''),isDefault:false,seasonId:String(item.seasonId||''),sourceEventId:String(item.sourceEventId||''),sourceTitle:String(item.sourceTitle||''),noticePending:false,noticeEventId:'',policy:'player_game_style',reason:'manual_story_style'};}}
+  return {state:{choices,mode:Object.values(choices).every(value=>value==='auto')?'auto':'custom',revision:Math.max(1,Number(current.revision||1)),updatedAt:0},catalog:{scenes,treats:lists.treats,coffee:lists.coffee},effective:{runnerScene,miniGameVisual:miniGameVisuals.treats,miniGameVisuals}};
+}
 
 function testProjectClientPayload(row) {
   const state = testProjectWorkspaceState(row);
@@ -45285,7 +45518,7 @@ async function ownerPanelTestProjectCaseOpen(env, ctx) {
 }
 
 const TEST_PROJECT_SANDBOX_API_PATHS = Object.freeze([
-  "/api/game/startup","/api/game/runner-scene","/api/achievements","/api/achievements/claim","/api/achievements/showcase","/api/features","/api/profile/sync","/api/shop/config","/api/skins/config",
+  "/api/game/startup","/api/game/runner-scene","/api/game/style/state","/api/game/style/equip","/api/achievements","/api/achievements/claim","/api/achievements/showcase","/api/features","/api/profile/sync","/api/shop/config","/api/skins/config",
   "/api/runs/start","/api/runs/checkpoint","/api/leaderboard/state","/api/leaderboard/player-profile","/api/leaderboard/submit","/api/leaderboard/claim",
   "/api/cases/state","/api/cases/open","/api/cases/open-ordinary","/api/cases/open-ordinary/status","/api/cases/open-granted","/api/cases/open-granted/status","/api/cases/purchase","/api/cases/activate","/api/cases/equip","/api/cases/consume-run",
   "/api/skins/purchase","/api/skins/bonus-case","/api/live-content/shop/buy","/api/rewards/create","/api/rewards/mine",
@@ -45734,7 +45967,15 @@ async function testProjectSandboxGameData(env, ctx) {
   if(path==="/api/battle-pass/letter/open")return response({ok:true,letter:null});
   if(path==="/api/battle-pass/story/open"||path==="/api/battle-pass/story/test/open")return response({ok:true,story:null,event:null});
   if(path==="/api/battle-pass/story/complete")return response({ok:true,story:null,reward:null});
-  if(path==="/api/battle-pass/story/visual-state")return response({ok:true,miniGameVisual:testProjectMiniGameVisual(state,snapshot),miniGameVisuals:testProjectMiniGameVisuals(state,snapshot)});
+  if(path==="/api/game/style/state")return response({ok:true,...testProjectGameStylePayload(state,snapshot)});
+  if(path==="/api/game/style/equip"){
+    const slot=String(payload?.slot||''),choice=gameStyleSafeChoice(payload?.id||payload?.choice),before=testProjectClone(state),current=testProjectGameStylePayload(state,snapshot),expectedRaw=payload?.expectedRevision??payload?.expected_revision,expected=expectedRaw===undefined||expectedRaw===null||expectedRaw===''?Number(current.state.revision||1):Math.floor(Number(expectedRaw));
+    if(expected!==Number(current.state.revision||1))throw new ApiError(409,'Оформление уже изменилось. Обновите коллекцию.');
+    if(slot==='all'){if(choice!=='auto')throw new ApiError(400,'Для всего оформления доступен только режим «Авто».');state.sandbox=testProjectNormalizeSandboxState({...state.sandbox,gameStyle:{scene:'auto',treats:'auto',coffee:'auto',revision:expected+1}});}
+    else{if(!GAME_STYLE_SLOTS.includes(slot))throw new ApiError(400,'Неизвестный раздел оформления игры.');const item=gameStyleCatalogFind(current.catalog,slot,choice);if(!item||item.unlocked!==true)throw new ApiError(403,'Это оформление ещё закрыто.');state.sandbox=testProjectNormalizeSandboxState({...state.sandbox,gameStyle:{...state.sandbox?.gameStyle,[slot]:choice,revision:expected+1}});}
+    await testProjectSandboxSave(env,ownerId,state,snapshot,before,'game_style_equip','Игра · оформление забега');await reload();return response({ok:true,...testProjectGameStylePayload(state,snapshot)});
+  }
+  if(path==="/api/battle-pass/story/visual-state"){const gameStyle=testProjectGameStylePayload(state,snapshot);return response({ok:true,miniGameVisual:gameStyle.effective.miniGameVisual,miniGameVisuals:gameStyle.effective.miniGameVisuals,gameStyle:gameStyle.state});}
 
   throw new ApiError(418,`API «${path}» не реализован в Test Project ${TEST_PROJECT_VERSION}.`);
 }
