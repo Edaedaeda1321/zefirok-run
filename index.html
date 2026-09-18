@@ -12861,6 +12861,16 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
         return Math.max(0, RUNNER_STARTUP_GATE_TIMEOUT_MS - (performance.now() - runnerStartupGateStartedAt));
       }
 
+      const blockRunnerStartupInput = (event) =&gt; {
+        if (runnerStartupGateReleased) return;
+        event.preventDefault();
+        event.stopPropagation();
+      };
+      runnerStartupGateEl?.addEventListener(&quot;pointerdown&quot;, blockRunnerStartupInput);
+      runnerStartupGateEl?.addEventListener(&quot;pointerup&quot;, blockRunnerStartupInput);
+      runnerStartupGateEl?.addEventListener(&quot;click&quot;, blockRunnerStartupInput);
+      runnerStartupGateEl?.addEventListener(&quot;touchstart&quot;, blockRunnerStartupInput, { passive: false });
+
       function releaseRunnerStartupGate(reason = &quot;ready&quot;) {
         if (runnerStartupGateReleased) return;
         runnerStartupGateReleased = true;
@@ -18380,6 +18390,7 @@ function createTutorialDeck(layer, mount, options, words) {
       }
 
       function jump() {
+        if (!runnerStartupGateReleased) return;
         if (overlay?.classList.contains(&quot;is-second-chance-modal&quot;) || overlay?.classList.contains(&quot;is-pause-modal&quot;) || overlay?.classList.contains(&quot;is-run-results-modal&quot;)) return;
         if (state.running &amp;&amp; state.caseRunId &amp;&amp; authoritativeRunSessionReadyId !== String(state.caseRunId)) {
           hapticImpact(&quot;light&quot;, 50);
@@ -29304,7 +29315,13 @@ function createTutorialDeck(layer, mount, options, words) {
         event.stopPropagation();
         setGameExpanded(!gameExpanded);
       });
-      stage.addEventListener(&quot;pointerdown&quot;, jump);
+      stage.addEventListener(&quot;pointerdown&quot;, (event) =&gt; {
+        if (!runnerStartupGateReleased) {
+          event.preventDefault();
+          return;
+        }
+        jump();
+      });
       root.addEventListener(&quot;keydown&quot;, (event) =&gt; {
         const keyTarget = event.target instanceof Element ? event.target : null;
         if (gameplayCoachActive &amp;&amp; (event.code === &quot;Space&quot; || event.code === &quot;Enter&quot;) &amp;&amp; [&quot;jump&quot;, &quot;obstacle&quot;, &quot;retry&quot;].includes(gameplayCoachStep)) {
