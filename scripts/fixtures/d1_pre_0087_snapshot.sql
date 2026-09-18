@@ -55,7 +55,57 @@ CREATE TABLE zefirok_schema_contract(
 );
 INSERT INTO zefirok_schema_contract(contract_key,contract_version,migration_name,updated_at,updated_by)
 VALUES('main',1,'0085_schema_contract_v1.sql',1700000000,'snapshot');
-CREATE TABLE shop_assortment(product_id TEXT PRIMARY KEY,enabled INTEGER NOT NULL DEFAULT 1,points INTEGER NOT NULL DEFAULT 0,treats INTEGER NOT NULL DEFAULT 0,coffee INTEGER NOT NULL DEFAULT 0,updated_at INTEGER NOT NULL DEFAULT 0);
+CREATE TABLE skin_prices(
+ skin_id TEXT PRIMARY KEY,
+ points INTEGER NOT NULL DEFAULT 0,
+ treats INTEGER NOT NULL DEFAULT 0,
+ coffee INTEGER NOT NULL DEFAULT 0,
+ version INTEGER NOT NULL DEFAULT 1,
+ updated_at INTEGER NOT NULL DEFAULT 0,
+ updated_by TEXT NOT NULL DEFAULT ''
+);
+INSERT INTO skin_prices(skin_id,points,treats,coffee,version,updated_at,updated_by) VALUES
+ ('barista',100000,0,400,4,1700000000,'snapshot'),
+ ('strawberry',180000,400,0,4,1700000000,'snapshot'),
+ ('bee',350000,650,0,4,1700000000,'snapshot'),
+ ('sailor',650000,0,650,4,1700000000,'snapshot'),
+ ('princess',1300000,850,850,4,1700000000,'snapshot'),
+ ('angel',2400000,1000,1000,4,1700000000,'snapshot'),
+ ('alex',3000000,1500,1500,4,1700000000,'snapshot');
+
+CREATE TABLE shop_assortment(
+ product_id TEXT PRIMARY KEY,
+ enabled INTEGER NOT NULL DEFAULT 1,
+ points INTEGER NOT NULL DEFAULT 0,
+ treats INTEGER NOT NULL DEFAULT 0,
+ coffee INTEGER NOT NULL DEFAULT 0,
+ updated_at INTEGER NOT NULL DEFAULT 0,
+ updated_by TEXT NOT NULL DEFAULT ''
+);
+INSERT INTO shop_assortment(product_id,enabled,points,treats,coffee,updated_at,updated_by) VALUES
+ ('case-small',1,10000,100,100,1700000000,'snapshot'),
+ ('case-sweet',1,10000,100,100,1700000000,'snapshot'),
+ ('case-gold',1,10000,100,100,1700000000,'snapshot'),
+ ('case-mythic',1,300000,350,350,1700000000,'snapshot'),
+ ('case-legendary',1,600000,600,600,1700000000,'snapshot'),
+ ('case-alex',1,100000,75,75,1700000000,'snapshot');
+
+CREATE TABLE liveops_case_configs(
+ case_id TEXT PRIMARY KEY,
+ enabled INTEGER NOT NULL DEFAULT 1,
+ title TEXT NOT NULL DEFAULT '',
+ guarantee_count INTEGER NOT NULL DEFAULT 0,
+ chances_json TEXT NOT NULL DEFAULT '{}',
+ ranges_json TEXT NOT NULL DEFAULT '{}',
+ updated_at INTEGER NOT NULL DEFAULT 0,
+ updated_by TEXT NOT NULL DEFAULT ''
+);
+INSERT INTO liveops_case_configs(case_id,enabled,title,guarantee_count,chances_json,ranges_json,updated_at,updated_by)
+VALUES(
+ 'alex',1,'Кейс Алекса',0,
+ '{"skin":10,"trail":15,"frame":12,"avatar":0.15,"points":20.95,"treats":20.95,"coffee":20.95}',
+ '{}',1700000000,'snapshot'
+);
 CREATE TABLE player_economy_meta(meta_key TEXT PRIMARY KEY,value_int INTEGER NOT NULL DEFAULT 0,updated_at INTEGER NOT NULL DEFAULT 0);
 INSERT INTO player_economy_meta(meta_key,value_int,updated_at) VALUES('server_authority_cutover_at',1700000000,1700000000);
 
