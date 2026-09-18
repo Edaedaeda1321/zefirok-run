@@ -30,9 +30,9 @@ const ALEX_CASE_POINT_BANDS = Object.freeze([
 const ALEX_CASE_SKIN_CHANCE = 10;
 const ALEX_CASE_TRAIL_CHANCE = 15;
 const ALEX_CASE_FRAME_CHANCE = 12;
-// Alex avatars remain an ultra-rare collection reward unless the owner changes
-// the category chance from Control Center.
-const ALEX_CASE_AVATAR_CHANCE = 0.15;
+// The two Alex avatars share this category chance equally (6.5% each by default).
+// The owner can still edit the category chance from Control Center.
+const ALEX_CASE_AVATAR_CHANCE = 13;
 const ALEX_CASE_CURRENCY_CHANCE = (100 - ALEX_CASE_SKIN_CHANCE - ALEX_CASE_TRAIL_CHANCE - ALEX_CASE_FRAME_CHANCE - ALEX_CASE_AVATAR_CHANCE) / 3;
 const ALEX_CASE_DEFINITION = Object.freeze({
   id: "alex",

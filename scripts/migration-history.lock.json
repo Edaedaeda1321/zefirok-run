@@ -95,6 +95,7 @@
     "0092_runner_case_drop_milestones.sql": "a9f425fe159a89abcc07aec851712a20b130c68677f21958608e47fa9c560c1d",
     "0093_season_story_collectibles.sql": "ae6be71081fcb78889320873469eb7063fced6d88f5cc31703de2c911b85d2eb",
     "0094_season_achievement_art_and_belkino_traces.sql": "ffc8a316ee66de0e00b63bb00316cd7bfba4733a2a0890b314623a7681583a75",
-    "0095_achievement_art_override.sql": "193b5f6d951ffe3d91388c5577f061699e63b57a40dc8a5656fa793c5ef6152f"
+    "0095_achievement_art_override.sql": "193b5f6d951ffe3d91388c5577f061699e63b57a40dc8a5656fa793c5ef6152f",
+    "0096_economy_alex_case_rebase.sql": "dab385a023c75de834bf7c2e040e8a2ad852bd724f1a6a8d7cfd4748399ffbcf"
   }
 }

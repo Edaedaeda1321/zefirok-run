@@ -24512,27 +24512,35 @@ function createTutorialDeck(layer, mount, options, words) {
         const id = String(skinId || &quot;&quot;);
         if (!CASE_SKIN_CATALOG?.[id]) return null;
         const ownedIds = caseOwnedCosmeticIds(&quot;skin&quot;);
-        const catalog = caseLiveOpsCatalog(&quot;skin&quot;, CASE_SKIN_CATALOG, false, &quot;legendary&quot;);
-        const item = catalog?.[id];
+        const caseType = id === &quot;alex&quot; ? &quot;alex&quot; : &quot;legendary&quot;;
+        const caseTitle = caseType === &quot;alex&quot; ? &quot;Кейс Алекса&quot; : &quot;Легендарный кейс&quot;;
+        const item = caseLiveOpsCatalog(&quot;skin&quot;, CASE_SKIN_CATALOG, false, caseType)?.[id];
         if (!item || item.enabled === false) return null;
-        if (ownedIds.has(id)) return { owned: true, chance: 0, label: &quot;Получено · больше не выпадает&quot; };
+        if (ownedIds.has(id)) return { owned: true, chance: 0, label: &quot;Получено · больше не выпадает&quot;, caseType, caseTitle };
+        if (caseType === &quot;alex&quot;) {
+          const chance = Math.max(0, Number(caseTypeInfo(&quot;alex&quot;)?.chances?.skin) || 0);
+          return { owned: false, chance, label: caseChanceLabel(chance), caseType, caseTitle };
+        }
+        const catalog = caseLiveOpsCatalog(&quot;skin&quot;, CASE_SKIN_CATALOG, false, &quot;legendary&quot;);
         const weights = CASE_COSMETIC_WEIGHTS.skin || {};
         const entries = Object.entries(catalog).filter(([candidateId, candidate]) =&gt; candidate?.enabled !== false &amp;&amp; !ownedIds.has(candidateId));
         const totalWeight = entries.reduce((sum, [candidateId, candidate]) =&gt; sum + Math.max(0, Number(candidate?.weight ?? weights[candidateId]) || 0), 0);
         const weight = Math.max(0, Number(item?.weight ?? weights[id]) || 0);
         const categoryChance = Math.max(0, Number(caseTypeInfo(&quot;legendary&quot;)?.chances?.skin) || 0);
         const chance = totalWeight &gt; 0 ? categoryChance * weight / totalWeight : 0;
-        return { owned: false, chance, label: caseChanceLabel(chance) };
+        return { owned: false, chance, label: caseChanceLabel(chance), caseType, caseTitle };
       }
 
       function skinCaseLineMarkup(skin, compact = false) {
         const info = skinLegendaryCaseChance(skin?.id);
         if (!info) return &quot;&quot;;
+        const caseType = info.caseType || &quot;legendary&quot;;
+        const caseTitle = info.caseTitle || &quot;Легендарный кейс&quot;;
         if (info.owned) return compact
-          ? `&lt;span class=&quot;skins-v2-case-line&quot;&gt;🎁 &lt;strong&gt;Уже в коллекции&lt;/strong&gt; &lt;button type=&quot;button&quot; data-skin-case-info&gt;О кейсе&lt;/button&gt;&lt;/span&gt;`
-          : `&lt;div class=&quot;skin-detail-case-card&quot;&gt;&lt;strong&gt;Альтернативный способ получения&lt;/strong&gt;&lt;span class=&quot;skin-detail-case-chance&quot;&gt;Уже получен&lt;/span&gt;&lt;span&gt;Этот скин больше не выпадает повторно из Легендарного кейса.&lt;/span&gt;&lt;button type=&quot;button&quot; data-skin-case-info&gt;Состав кейса&lt;/button&gt;&lt;/div&gt;`;
-        if (compact) return `&lt;span class=&quot;skins-v2-case-line&quot;&gt;🎁 &lt;strong&gt;Можно выиграть, не покупая&lt;/strong&gt; &lt;em&gt;${info.label}&lt;/em&gt; &lt;button type=&quot;button&quot; data-skin-case-info&gt;О кейсе&lt;/button&gt;&lt;/span&gt;`;
-        return `&lt;div class=&quot;skin-detail-case-card&quot;&gt;&lt;strong&gt;Альтернативный способ получения&lt;/strong&gt;&lt;span class=&quot;skin-detail-case-chance&quot;&gt;Шанс ${info.label}&lt;/span&gt;&lt;span&gt;Этот скин можно не только купить — он также может выпасть из Легендарного кейса. После получения скин исключается из повторного выпадения.&lt;/span&gt;&lt;button type=&quot;button&quot; data-skin-case-info&gt;Состав и шансы&lt;/button&gt;&lt;/div&gt;`;
+          ? `&lt;span class=&quot;skins-v2-case-line&quot;&gt;🎁 &lt;strong&gt;Уже в коллекции&lt;/strong&gt; &lt;button type=&quot;button&quot; data-skin-case-info=&quot;${caseType}&quot;&gt;О кейсе&lt;/button&gt;&lt;/span&gt;`
+          : `&lt;div class=&quot;skin-detail-case-card&quot;&gt;&lt;strong&gt;Альтернативный способ получения&lt;/strong&gt;&lt;span class=&quot;skin-detail-case-chance&quot;&gt;Уже получен&lt;/span&gt;&lt;span&gt;Этот скин больше не выпадает повторно из «${caseTitle}».&lt;/span&gt;&lt;button type=&quot;button&quot; data-skin-case-info=&quot;${caseType}&quot;&gt;Состав кейса&lt;/button&gt;&lt;/div&gt;`;
+        if (compact) return `&lt;span class=&quot;skins-v2-case-line&quot;&gt;🎁 &lt;strong&gt;Можно выиграть, не покупая&lt;/strong&gt; &lt;em&gt;${info.label}&lt;/em&gt; &lt;button type=&quot;button&quot; data-skin-case-info=&quot;${caseType}&quot;&gt;О кейсе&lt;/button&gt;&lt;/span&gt;`;
+        return `&lt;div class=&quot;skin-detail-case-card&quot;&gt;&lt;strong&gt;Альтернативный способ получения&lt;/strong&gt;&lt;span class=&quot;skin-detail-case-chance&quot;&gt;Шанс ${info.label}&lt;/span&gt;&lt;span&gt;Этот скин можно не только купить — он также может выпасть из «${caseTitle}». После получения скин исключается из повторного выпадения.&lt;/span&gt;&lt;button type=&quot;button&quot; data-skin-case-info=&quot;${caseType}&quot;&gt;Состав и шансы&lt;/button&gt;&lt;/div&gt;`;
       }
 
       function skinCollectionMarkup() {
@@ -24692,7 +24700,7 @@ function createTutorialDeck(layer, mount, options, words) {
               &lt;p class=&quot;skin-v2-rarity is-${rarity.className}&quot;&gt;${escapePurchaseText(rarity.label)}&lt;/p&gt;
               ${skinBonusVisualMarkup(skin)}
               ${statusMarkup}
-              ${skin.id !== &quot;default&quot; ? `&lt;button class=&quot;skin-v2-case-button&quot; type=&quot;button&quot; data-skin-case-info&gt;${skinLegendaryCaseChance(skin.id)?.owned ? &quot;🎁 Уже получен · о кейсе&quot; : `🎁 Можно выиграть в кейсе · ${skinLegendaryCaseChance(skin.id)?.label || &quot;—&quot;}`}&lt;/button&gt;` : &quot;&quot;}
+              ${skin.id !== &quot;default&quot; ? (() =&gt; { const info=skinLegendaryCaseChance(skin.id); return `&lt;button class=&quot;skin-v2-case-button&quot; type=&quot;button&quot; data-skin-case-info=&quot;${info?.caseType || &quot;legendary&quot;}&quot;&gt;${info?.owned ? &quot;🎁 Уже получен · о кейсе&quot; : `🎁 Можно выиграть в кейсе · ${info?.label || &quot;—&quot;}`}&lt;/button&gt;`; })() : &quot;&quot;}
               &lt;div class=&quot;skin-v2-card-actions&quot;&gt;&lt;button class=&quot;skin-v2-details&quot; data-skin-details=&quot;${skin.id}&quot; type=&quot;button&quot;&gt;Подробнее&lt;/button&gt;&lt;button class=&quot;skin-action ${buttonClass}&quot; data-skin-action=&quot;${skin.id}&quot; type=&quot;button&quot; ${equipped ? &quot;disabled&quot; : &quot;&quot;}&gt;${buttonText}&lt;/button&gt;&lt;/div&gt;
             &lt;/div&gt;
           &lt;/article&gt;`;
@@ -29159,9 +29167,10 @@ function createTutorialDeck(layer, mount, options, words) {
             for (const button of tabs?.querySelectorAll(&quot;[data-skin-preview-state]&quot;) || []) button.setAttribute(&quot;aria-selected&quot;, String(button === detailStateButton));
             return;
           }
-          if (target.closest(&quot;[data-skin-case-info]&quot;)) {
+          const skinCaseInfoButton = target.closest(&quot;[data-skin-case-info]&quot;);
+          if (skinCaseInfoButton) {
             closePurchaseLayer();
-            showCaseRewardsInfo(&quot;legendary&quot;);
+            showCaseRewardsInfo(String(skinCaseInfoButton.dataset.skinCaseInfo || &quot;legendary&quot;));
             return;
           }
           const detailAction = target.closest(&quot;[data-skin-detail-action]&quot;);
@@ -29238,7 +29247,7 @@ function createTutorialDeck(layer, mount, options, words) {
         }
         const caseButton = target.closest(&quot;[data-skin-case-info]&quot;);
         if (caseButton) {
-          showCaseRewardsInfo(&quot;legendary&quot;);
+          showCaseRewardsInfo(String(caseButton.dataset.skinCaseInfo || &quot;legendary&quot;));
           return;
         }
         const button = target.closest(&quot;[data-skin-action]&quot;);
@@ -29253,8 +29262,9 @@ function createTutorialDeck(layer, mount, options, words) {
           showSkinDetails(detailButton.dataset.skinDetails);
           return;
         }
-        if (target.closest(&quot;[data-skin-case-info]&quot;)) {
-          showCaseRewardsInfo(&quot;legendary&quot;);
+        const caseInfoButton = target.closest(&quot;[data-skin-case-info]&quot;);
+        if (caseInfoButton) {
+          showCaseRewardsInfo(String(caseInfoButton.dataset.skinCaseInfo || &quot;legendary&quot;));
           return;
         }
         const actionButton = target.closest(&quot;[data-skin-action]&quot;);
