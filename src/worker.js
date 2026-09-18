@@ -2590,18 +2590,26 @@ export default {
       // Verify Telegram independently from the D1-backed scheduler, but only
       // once per five minutes. The Worker cron itself runs every minute.
       const scheduledAtMs = Math.max(0, Number(controller?.scheduledTime || Date.now()));
-      const shouldCheckTelegramWebhook = Math.floor(scheduledAtMs / 60000) % 5 === 0;
+      const scheduledMinute = Math.floor(scheduledAtMs / 60000);
+      const shouldCheckTelegramWebhook = scheduledMinute % 5 === 0;
+      // Emergency D1 load-shed: keep Telegram health on the existing 5-minute cadence,
+      // but move the expensive full rating recovery to once per hour. Normal completed
+      // runs still update leaderboard_entries synchronously in submitLeaderboardRun;
+      // this scheduled pass is only a fallback for restore/crash recovery.
+      const shouldRepairLeaderboard = scheduledMinute % 60 === 0;
       if (shouldCheckTelegramWebhook) {
         try {
           await ensureTelegramWebhookHealth(env);
         } catch (error) {
           console.error("Telegram webhook health check failed", error);
         }
+      }
+
+      if (shouldRepairLeaderboard) {
         // Rating is derived from the authoritative run ledger. A DB restore can
         // leave leaderboard_entries behind while completed runs are intact, so
-        // reconcile rows already accepted by authoritative run history on the same
-        // low-frequency cadence as the webhook health check. This is idempotent and never
-        // deletes scores.
+        // periodically reconcile rows already accepted by authoritative run history.
+        // The repair remains idempotent and never deletes scores.
         try {
           const ratingSeason=await selectLeaderboardSeasonForState(env,Math.floor(scheduledAtMs/1000),true);
           if(String(ratingSeason?.status||'')==='active') {
