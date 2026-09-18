@@ -34660,7 +34660,7 @@ async function playerGameStyleCatalog(env,telegramId,{materialize=true}={}){
     const season=seasons.get(String(seasonId||''));
     return Boolean(season&&Math.max(0,Number(season.starts_at||0))>0&&Number(season.starts_at||0)<=nowSeconds);
   };
-  const defaultScene=runnerBuilderResolvePublicScene(config,'');
+  const defaultScene=runnerBuilderFallbackPublicScene();
   const scenePreview=scene=>({assetKey:String(scene?.background?.assetKey||''),assetPath:String(scene?.background?.assetPath||''),sceneTitle:String(scene?.title||'')});
   const scenes=[gameStyleAutoCatalogItem('scene',{...scenePreview(autoScene),seasonId:String(autoScene?.seasonId||'')}),gameStyleDefaultCatalogItem('scene',scenePreview(defaultScene))];
   for(const [seasonId] of Object.entries(config?.seasonBindings||{})){
@@ -34699,7 +34699,7 @@ async function playerGameStyleState(env,telegramId,{includeCatalog=false}={}){
     for(const slot of GAME_STYLE_SLOTS){const item=gameStyleCatalogFind(catalog,slot,choices[slot]);if(!item||item.unlocked!==true)choices[slot]='auto';}
     const [autoScene,autoVisuals,config]=await Promise.all([readRunnerScenePublicConfig(env),seasonPassMiniGameVisualsForPlayer(env,id),readRunnerBuilderConfig(env)]);
     let runnerScene=autoScene;
-    if(choices.scene==='default')runnerScene=runnerBuilderResolvePublicScene(config,'');
+    if(choices.scene==='default')runnerScene=runnerBuilderFallbackPublicScene();
     else if(choices.scene!=='auto'){const item=gameStyleCatalogFind(catalog,'scene',choices.scene);if(item?.seasonId)runnerScene=runnerBuilderResolvePublicScene(config,item.seasonId);}
     const miniGameVisuals={...autoVisuals};
     for(const target of ['treats','coffee']){
@@ -34728,7 +34728,7 @@ async function playerGameStyleState(env,telegramId,{includeCatalog=false}={}){
   const eventById=new Map(eventRows.map(item=>[String(item.event_id||''),item]));
   const [autoScene,autoVisuals,config]=await Promise.all([readRunnerScenePublicConfig(env),seasonPassMiniGameVisualsForPlayer(env,id),readRunnerBuilderConfig(env)]);
   let runnerScene=autoScene;
-  if(choices.scene==='default')runnerScene=runnerBuilderResolvePublicScene(config,'');
+  if(choices.scene==='default')runnerScene=runnerBuilderFallbackPublicScene();
   else if(choices.scene!=='auto'){const unlock=unlockById.get(choices.scene);if(unlock?.season_id)runnerScene=runnerBuilderResolvePublicScene(config,String(unlock.season_id));else choices.scene='auto';}
   const miniGameVisuals={...autoVisuals};
   for(const target of ['treats','coffee']){
