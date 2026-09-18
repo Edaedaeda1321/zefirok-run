@@ -45,12 +45,12 @@ const ALEX_CASE_DEFINITION = Object.freeze({
 });
 
 const CASE_SHOP_PRODUCTS = Object.freeze({
-  small: Object.freeze({ id: "case-small", title: "Обычный кейс", points: 10000, treats: 100, coffee: 100 }),
-  sweet: Object.freeze({ id: "case-sweet", title: "Серебряный кейс", points: 10000, treats: 100, coffee: 100 }),
-  gold: Object.freeze({ id: "case-gold", title: "Золотой кейс", points: 10000, treats: 100, coffee: 100 }),
-  mythic: Object.freeze({ id: "case-mythic", title: "Мифический кейс", points: 300000, treats: 350, coffee: 350 }),
-  legendary: Object.freeze({ id: "case-legendary", title: "Легендарный кейс", points: 600000, treats: 600, coffee: 600 }),
-  alex: Object.freeze({ id: "case-alex", title: "Кейс Алекса", points: 100000, treats: 75, coffee: 75 })
+  small: Object.freeze({ id: "case-small", title: "Обычный кейс", points: 5000, treats: 20, coffee: 20 }),
+  sweet: Object.freeze({ id: "case-sweet", title: "Серебряный кейс", points: 10000, treats: 35, coffee: 35 }),
+  gold: Object.freeze({ id: "case-gold", title: "Золотой кейс", points: 20000, treats: 60, coffee: 60 }),
+  mythic: Object.freeze({ id: "case-mythic", title: "Мифический кейс", points: 50000, treats: 100, coffee: 100 }),
+  legendary: Object.freeze({ id: "case-legendary", title: "Легендарный кейс", points: 200000, treats: 350, coffee: 350 }),
+  alex: Object.freeze({ id: "case-alex", title: "Кейс Алекса", points: 25000, treats: 50, coffee: 50 })
 });
 
 const SHOP_ASSORTMENT_PRODUCTS = Object.freeze({
@@ -76,17 +76,16 @@ const SKINS = Object.freeze({
   alex: Object.freeze({ id: "alex", title: "Алекс" })
 });
 
-const DEFAULT_SKIN_PRICE_VERSION = 3;
-const ALEX_SKIN_PRICE_VERSION = 4;
+const DEFAULT_SKIN_PRICE_VERSION = 5;
 const DEFAULT_SKIN_PRICES = Object.freeze({
   default: Object.freeze({ points: 0, treats: 0, coffee: 0 }),
-  barista: Object.freeze({ points: 100000, treats: 0, coffee: 400 }),
-  strawberry: Object.freeze({ points: 180000, treats: 400, coffee: 0 }),
-  bee: Object.freeze({ points: 350000, treats: 650, coffee: 0 }),
-  sailor: Object.freeze({ points: 650000, treats: 0, coffee: 650 }),
-  princess: Object.freeze({ points: 1300000, treats: 850, coffee: 850 }),
-  angel: Object.freeze({ points: 2400000, treats: 1000, coffee: 1000 }),
-  alex: Object.freeze({ points: 3000000, treats: 1500, coffee: 1500 })
+  barista: Object.freeze({ points: 50000, treats: 0, coffee: 100 }),
+  strawberry: Object.freeze({ points: 100000, treats: 120, coffee: 0 }),
+  bee: Object.freeze({ points: 150000, treats: 180, coffee: 0 }),
+  sailor: Object.freeze({ points: 200000, treats: 0, coffee: 200 }),
+  princess: Object.freeze({ points: 250000, treats: 250, coffee: 250 }),
+  angel: Object.freeze({ points: 300000, treats: 350, coffee: 350 }),
+  alex: Object.freeze({ points: 350000, treats: 500, coffee: 500 })
 });
 
 const DEFAULT_SHOP_FEATURED_CONFIG = Object.freeze({
@@ -8315,6 +8314,24 @@ async function ensureShopAssortmentSchema(env) {
            product_id, enabled, points, treats, coffee, updated_at, updated_by
          ) VALUES (?, 1, ?, ?, ?, ?, 'system')`
       ).bind(productId, product.points, product.treats, product.coffee, now)));
+      const legacyCasePrices = {
+        "case-small": { points:10000, treats:100, coffee:100 },
+        "case-sweet": { points:10000, treats:100, coffee:100 },
+        "case-gold": { points:10000, treats:100, coffee:100 },
+        "case-mythic": { points:300000, treats:350, coffee:350 },
+        "case-legendary": { points:600000, treats:600, coffee:600 },
+        "case-alex": { points:100000, treats:75, coffee:75 }
+      };
+      const caseBalanceUpdates = [];
+      for (const [productId, oldPrice] of Object.entries(legacyCasePrices)) {
+        const nextPrice = defaults[productId];
+        if (!nextPrice) continue;
+        caseBalanceUpdates.push(env.DB.prepare(
+          `UPDATE shop_assortment SET points=?, treats=?, coffee=?, updated_at=?, updated_by='economy-v3'
+           WHERE product_id=? AND points=? AND treats=? AND coffee=?`
+        ).bind(nextPrice.points,nextPrice.treats,nextPrice.coffee,now,productId,oldPrice.points,oldPrice.treats,oldPrice.coffee));
+      }
+      if (caseBalanceUpdates.length) await env.DB.batch(caseBalanceUpdates);
     })().catch((error) => { shopAssortmentSchemaPromise = null; throw error; });
   }
   await shopAssortmentSchemaPromise;
@@ -8772,13 +8789,13 @@ const AUTHORITATIVE_PROFILE_PURCHASE_XP = 5;
 const AUTHORITATIVE_LEGACY_RUN_CUTOFF_FALLBACK = 1786474200; // Used only if the persistent cutover marker cannot be read.
 const SERVER_SKIN_RUN_BONUSES = Object.freeze({
   default: Object.freeze({ points: 0, treats: 0, coffee: 0 }),
-  barista: Object.freeze({ points: 0, treats: 0, coffee: 5 }),
-  strawberry: Object.freeze({ points: 0, treats: 5, coffee: 0 }),
-  bee: Object.freeze({ points: 0, treats: 8, coffee: 0 }),
-  sailor: Object.freeze({ points: 0, treats: 0, coffee: 8 }),
-  princess: Object.freeze({ points: 120, treats: 10, coffee: 10 }),
-  alex: Object.freeze({ points: 600, treats: 15, coffee: 15 }),
-  angel: Object.freeze({ points: 200, treats: 12, coffee: 12 })
+  barista: Object.freeze({ points: 0, treats: 0, coffee: 10 }),
+  strawberry: Object.freeze({ points: 0, treats: 10, coffee: 0 }),
+  bee: Object.freeze({ points: 0, treats: 16, coffee: 0 }),
+  sailor: Object.freeze({ points: 0, treats: 0, coffee: 16 }),
+  princess: Object.freeze({ points: 240, treats: 20, coffee: 20 }),
+  alex: Object.freeze({ points: 1200, treats: 30, coffee: 30 }),
+  angel: Object.freeze({ points: 400, treats: 24, coffee: 24 })
 });
 
 async function ensureAuthoritativeEconomySchema(env) {
@@ -9941,14 +9958,6 @@ async function ensureSkinPriceSchema(env) {
     ).bind(price.points, price.treats, price.coffee, DEFAULT_SKIN_PRICE_VERSION, now, skinId, DEFAULT_SKIN_PRICE_VERSION));
   }
   await env.DB.batch(statements);
-  // Алекс был впервые выпущен с нулевой ценой на версии 3. Обновляем только
-  // его строку до нового баланса, не затрагивая цены остальных скинов,
-  // которые могли быть изменены вручную через Control Center.
-  await env.DB.prepare(
-    `UPDATE skin_prices SET
-      points=?, treats=?, coffee=?, version=?, updated_at=?, updated_by='alex-balance-v1'
-     WHERE skin_id='alex' AND version < ?`
-  ).bind(3000000,1500,1500,ALEX_SKIN_PRICE_VERSION,now,ALEX_SKIN_PRICE_VERSION).run();
 }
 
 async function readSkinPrices(env) {
@@ -17841,7 +17850,7 @@ function botShopCommandHelp(command = "add") {
 
 <code>/shop_price zefir очки 40000 зефир 350</code>
 <code>/shop_price americano кофе 350</code>
-<code>/shop_price case gold очки 10000 зефир 100 кофе 100</code>
+<code>/shop_price case gold очки 20000 зефир 60 кофе 60</code>
 
 Можно указать одну, две или три валюты. Неуказанные валюты будут равны нулю. Команда меняет только цену и не возвращает скрытый товар в магазин.`;
   }
@@ -17849,7 +17858,7 @@ function botShopCommandHelp(command = "add") {
 
 <code>/shop_show zefir очки 40000 зефир 350</code>
 <code>/shop_show americano кофе 350</code>
-<code>/shop_show case gold очки 10000 зефир 100 кофе 100</code>
+<code>/shop_show case gold очки 20000 зефир 60 кофе 60</code>
 
 Можно указать одну, две или три валюты. Перед изменением создаётся снимок.`;
 }
