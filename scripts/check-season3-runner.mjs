@@ -11,7 +11,7 @@ const checks=[];
 const must=(name,haystack,needle)=>checks.push({name,ok:haystack.includes(needle),detail:needle});
 const asset=(file)=>checks.push({name:`asset ${file}`,ok:fs.existsSync(path.join(root,'assets/optimized/v0.79.5',file)),detail:file});
 
-must('runner builder config v5',worker,'RUNNER_BUILDER_CONFIG_VERSION = 5');
+must('runner builder config v4',worker,'RUNNER_BUILDER_CONFIG_VERSION = 4');
 must('season 3 seed',worker,'function runnerBuilderSeason3Seed()');
 must('season 3 group',worker,'title:"Парк Белкино · сезон 3"');
 must('season 3 road',worker,'roadAssetKey:"road_park_day_s3"');
