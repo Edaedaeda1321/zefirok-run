@@ -90,8 +90,11 @@ must('production save API',owner,"api('/api/owner/runner-builder/save'");
 must('standard cafe road owner preview',owner,"roadStrip:'/assets/optimized/v0.79.5/road_default_cafe.webp?v=1.2.2'");
 must('standard cafe road button',owner,'id="rbRoadClear" type="button">Стандартная</button>');
 must('standard cafe road action',owner,"input.value='/assets/optimized/v0.79.5/road_default_cafe.webp'");
-must('primary scene clears active season override',owner,'if(activeSeasonId)delete cfg.seasonBindings[activeSeasonId];');
-must('already-primary scene can be applied now',owner,'>Применить сейчас</button>');
+must('primary scene keeps season override',owner,"toast('Основная fallback-сцена выбрана · привязки сезонов не изменены. Сохрани в Production.');");
+must('scene can be applied now',owner,'data-rb-scene-apply');
+must('apply scene API client',owner,"api('/api/owner/runner-builder/apply-scene'");
+must('apply scene server endpoint target',worker,'"/api/owner/runner-builder/apply-scene": "live"');
+must('apply scene server route',worker,'ownerPanelRunnerBuilderApplyScene(env, ctx)');
 checks.push({name:'standard cafe road physical asset',ok:fs.existsSync(new URL('../assets/optimized/v0.79.5/road_default_cafe.webp',import.meta.url)),detail:'road_default_cafe.webp'});
 
 must('client legacy scene fallback',index,'const LEGACY_RUNNER_SCENE = Object.freeze');
@@ -138,10 +141,13 @@ must('scene preview uses framed background',owner,"rbBackgroundFrameMarkup(bg,'r
 must('background cards use framed preview',owner,"rbBackgroundFrameMarkup(item,'rb-bg-preview')");
 
 
-must('runner builder config v4',worker,'RUNNER_BUILDER_CONFIG_VERSION = 4');
+must('runner builder config v5',worker,'RUNNER_BUILDER_CONFIG_VERSION = 5');
 must('season 2 seed function',worker,'function runnerBuilderSeason2Seed()');
 must('season 2 one-time upgrade',worker,'function runnerBuilderUpgradeConfig(raw)');
 must('season 2 road builtin allowed',worker,'"road_night_cafe"');
+must('season 2 night background builtin allowed',worker,'"nightCafeBackground"');
+must('season 2 seed uses dedicated night background',worker,'assetKey:"nightCafeBackground"');
+must('season 2 v5 background repair',worker,'function runnerBuilderRepairSceneAssetsV5(source)');
 must('season 2 flower builtin allowed',worker,'"game_barricade_flovers_night_s2"');
 must('season 2 wet floor seed',worker,'id:"wet-floor-sign"');
 must('season 2 client bag seed',worker,'id:"client-bag"');
@@ -155,6 +161,8 @@ must('season 2 matching backgrounds migrate to night road',worker,'if(!key||key=
 must('fresh fallback uses season 2 road',worker,'roadAssetKey:"road_night_cafe"');
 must('normalize upgrades old config first',worker,'const upgraded=runnerBuilderUpgradeConfig(raw)');
 
+must('owner previews day cafe background',owner,"cafeBackground:'/assets/optimized/v0.79.5/cafeBackground.webp?v=0.79.5'");
+must('owner previews night cafe background',owner,"nightCafeBackground:'/assets/optimized/v0.79.5/background_season2.webp?v=1.2.1'");
 must('owner previews season 2 flowers',owner,"game_barricade_flovers_night_s2:'/assets/optimized/v0.79.5/game_barricade_flovers_night_s2.webp?v=0.79.5'");
 must('owner previews wet floor',owner,"game_barricade_tablet:'/assets/optimized/v0.79.5/game_barricade_tablet.webp?v=0.79.5'");
 must('owner previews client bag',owner,"barrier_game_bag:'/assets/optimized/v0.79.5/barrier_game_bag.webp?v=0.79.5'");
@@ -163,6 +171,8 @@ must('owner previews books',owner,"barricade_game_boock_night:'/assets/optimized
 must('owner previews candles',owner,"barricade_game_group_svechi_night:'/assets/optimized/v0.79.5/barricade_game_group_svechi_night.webp?v=0.79.5'");
 must('owner previews waiter cart',owner,"barricade_game_group_telechka:'/assets/optimized/v0.79.5/barricade_game_group_telechka.webp?v=0.79.5'");
 
+must('client registers day cafe background',index,'assetSources.cafeBackground = &quot;/assets/optimized/v0.79.5/cafeBackground.webp?v=0.79.5&quot;');
+must('client registers night cafe background',index,'nightCafeBackground: &quot;/assets/optimized/v0.79.5/background_season2.webp?v=1.2.1&quot;');
 must('client registers season 2 road asset',index,'road_night_cafe: &quot;/assets/optimized/v0.79.5/road_night_cafe.webp?v=0.79.5&quot;');
 must('client lazy loads builtin runner assets',index,'const builtInSrc = String(assetSources[key] || &quot;&quot;).trim();');
 must('season 2 road variant detection',index,'const nightCafeRoad = roadIdentity.includes(&quot;road_night_cafe&quot;);');

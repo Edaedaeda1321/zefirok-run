@@ -2295,6 +2295,9 @@ export default {
       if (url.pathname === "/api/battle-pass/story/visual-notice/read" && request.method === "POST") {
         return await markSeasonPassMiniGameVisualNoticeRead(request, env);
       }
+      if (url.pathname === "/api/battle-pass/story/visual-state" && request.method === "POST") {
+        return await getSeasonPassMiniGameVisualState(request, env);
+      }
       if (url.pathname === "/api/battle-pass/story/test/open" && request.method === "POST") {
         return await openSeasonPassStoryTest(request, env);
       }
@@ -34508,6 +34511,16 @@ async function seasonPassMiniGameVisualsForPlayer(env,telegramId,nowMs=Date.now(
   return seasonPassResolveMiniGameVisuals(result.results||[],seasonId);
 }
 async function seasonPassMiniGameVisualForPlayer(env,telegramId,nowMs=Date.now()){return (await seasonPassMiniGameVisualsForPlayer(env,telegramId,nowMs)).treats;}
+async function getSeasonPassMiniGameVisualState(request,env){
+  try{
+    requireDatabase(env);requireBotToken(env);
+    const body=await readJson(request),initData=String(body.initData||body.init_data||'');
+    if(!initData)throw new ApiError(401,'Откройте игру через Telegram.');
+    const auth=await validateTelegramInitData(initData,env),telegramId=String(auth.user.id);
+    const miniGameVisuals=await seasonPassMiniGameVisualsForPlayer(env,telegramId);
+    return jsonResponse({ok:true,miniGameVisual:miniGameVisuals.treats,miniGameVisuals});
+  }catch(error){if(error instanceof ApiError)return jsonResponse({ok:false,error:error.message},error.status);console.error('getSeasonPassMiniGameVisualState failed',error);return jsonResponse({ok:false,error:'Не удалось синхронизировать сюжетный визуал забега.'},500);}
+}
 
 function seasonPassStoryRewardConfig(row){
   const raw=safeJson(row?.reward_json,{});if(!raw||typeof raw!=='object'||Array.isArray(raw))return null;
@@ -40124,12 +40137,12 @@ function ownerV8AssetPath(value = "") {
 
 // ======================= RUNNER SCENE BUILDER v1 =======================
 const RUNNER_BUILDER_STATE_KEY = "runner:scene-builder:v1";
-const RUNNER_BUILDER_CONFIG_VERSION = 4;
+const RUNNER_BUILDER_CONFIG_VERSION = 5;
 const RUNNER_BUILDER_MAX_OBSTACLES = 80;
 const RUNNER_BUILDER_MAX_GROUPS = 48;
 const RUNNER_BUILDER_MAX_SCENES = 48;
 const RUNNER_BUILDER_MAX_BACKGROUNDS = 48;
-const RUNNER_BUILDER_BUILTIN_ASSET_KEYS = new Set(["pouf","stool","tablePink","pillowObstacle","vaseObstacle","itemShadow","cafeBackground","roadStrip","game_barricade_flovers_night_s2","road_night_cafe","game_barricade_tablet","barrier_game_bag","barricade_game_puff_night","barricade_game_boock_night","barricade_game_group_svechi_night","barricade_game_group_telechka","game_barricade_park_birdhouse_s3","game_barricade_park_scooter_s3","game_barricade_park_stone_s3","game_barricade_park_flowebed_s3","game_barricade_park_birdhouse_bird_s3","game_barricade_park_log_s3","game_barricade_park_picknik_basket_s3","game_barricade_park_bike_s3","barricade_game_park_flowers_s3","road_park_day_s3"]);
+const RUNNER_BUILDER_BUILTIN_ASSET_KEYS = new Set(["pouf","stool","tablePink","pillowObstacle","vaseObstacle","itemShadow","cafeBackground","nightCafeBackground","roadStrip","game_barricade_flovers_night_s2","road_night_cafe","game_barricade_tablet","barrier_game_bag","barricade_game_puff_night","barricade_game_boock_night","barricade_game_group_svechi_night","barricade_game_group_telechka","game_barricade_park_birdhouse_s3","game_barricade_park_scooter_s3","game_barricade_park_stone_s3","game_barricade_park_flowebed_s3","game_barricade_park_birdhouse_bird_s3","game_barricade_park_log_s3","game_barricade_park_picknik_basket_s3","game_barricade_park_bike_s3","barricade_game_park_flowers_s3","road_park_day_s3"]);
 const RUNNER_BUILDER_SEASON2_OBSTACLE_IDS = new Set(["flowers-night-s2","wet-floor-sign","client-bag","pouf-night-s2","books-menu-night","candles-night","waiter-cart"]);
 const RUNNER_BUILDER_SEASON3_OBSTACLE_IDS = new Set(["birdhouse-s3","scooter-s3","stone-s3","flowerbox-s3","birdhouse-bird-s3","log-s3","picnic-basket-s3","bike-s3","flowerbed-s3"]);
 let runnerBuilderConfigMemory = { value: null, expiresAt: 0 };
@@ -40137,7 +40150,7 @@ let runnerBuilderConfigMemory = { value: null, expiresAt: 0 };
 function runnerBuilderSeason2Seed(){
   return {
     backgrounds:[
-      { id:"night-cafe-s2", title:"Ночь в кафе · сезон 2", enabled:true, assetKey:"cafeBackground", assetPath:"", fitMode:"cover", zoom:1, positionX:.5, positionY:.5, roadEnabled:true, roadAssetKey:"road_night_cafe", roadAssetPath:"" }
+      { id:"night-cafe-s2", title:"Ночь в кафе · сезон 2", enabled:true, assetKey:"nightCafeBackground", assetPath:"", fitMode:"cover", zoom:1, positionX:.5, positionY:.5, roadEnabled:true, roadAssetKey:"road_night_cafe", roadAssetPath:"" }
     ],
     obstacles:[
       { id:"flowers-night-s2", title:"Большое кашпо с ночными цветами", enabled:true, assetKey:"game_barricade_flovers_night_s2", assetPath:"", width:74, height:74, shadow:true, defaultWeight:14, hitboxes:[{x:.16,y:.22,w:.68,h:.68}] },
@@ -40192,7 +40205,6 @@ function runnerBuilderSeason2Marker(value){
 function runnerBuilderSceneLooksSeason2(config,scene){
   if(!scene||typeof scene!=="object")return false;
   if(runnerBuilderSeason2Marker(`${scene.id||""} ${scene.title||""}`))return true;
-  if(scene.useAllObstacles===true)return (Array.isArray(config?.obstacles)?config.obstacles:[]).some(item=>RUNNER_BUILDER_SEASON2_OBSTACLE_IDS.has(String(item?.id||""))&&item?.enabled!==false);
   const groups=new Map((Array.isArray(config?.groups)?config.groups:[]).map(group=>[String(group?.id||""),group]));
   for(const groupId of (Array.isArray(scene.groupIds)?scene.groupIds:[])){
     const group=groups.get(String(groupId||""));
@@ -40225,7 +40237,6 @@ function runnerBuilderSeason3Marker(value){
 function runnerBuilderSceneLooksSeason3(config,scene){
   if(!scene||typeof scene!=="object")return false;
   if(runnerBuilderSeason3Marker(`${scene.id||""} ${scene.title||""}`))return true;
-  if(scene.useAllObstacles===true)return (Array.isArray(config?.obstacles)?config.obstacles:[]).some(item=>RUNNER_BUILDER_SEASON3_OBSTACLE_IDS.has(String(item?.id||""))&&item?.enabled!==false);
   const groups=new Map((Array.isArray(config?.groups)?config.groups:[]).map(group=>[String(group?.id||""),group]));
   for(const groupId of (Array.isArray(scene.groupIds)?scene.groupIds:[])){
     const group=groups.get(String(groupId||""));
@@ -40249,6 +40260,34 @@ function runnerBuilderRepairSeason3Road(source){
     if(background?.roadEnabled===false||String(background?.roadAssetPath||"").trim())continue;
     const key=String(background?.roadAssetKey||"").trim();
     if(!key||key==="roadStrip")background.roadAssetKey="road_park_day_s3";
+  }
+  return source;
+}
+function runnerBuilderRepairSceneAssetsV5(source){
+  if(!source||typeof source!=="object")return source;
+  const backgrounds=Array.isArray(source.backgrounds)?source.backgrounds:[];
+  const scenes=Array.isArray(source.scenes)?source.scenes:[];
+  const season2BackgroundIds=new Set();
+  for(const scene of scenes)if(runnerBuilderSceneLooksSeason2(source,scene))season2BackgroundIds.add(String(scene?.backgroundId||""));
+  for(const background of backgrounds){
+    if(runnerBuilderSeason2Marker(`${background?.id||""} ${background?.title||""}`))season2BackgroundIds.add(String(background?.id||""));
+  }
+  for(const background of backgrounds){
+    const id=String(background?.id||"");
+    const assetKey=String(background?.assetKey||"").trim();
+    const roadAssetKey=String(background?.roadAssetKey||"").trim();
+    if(season2BackgroundIds.has(id)){
+      if(!assetKey||assetKey==="cafeBackground")background.assetKey="nightCafeBackground";
+      if(background?.roadEnabled!==false&&(!roadAssetKey||roadAssetKey==="roadStrip"))background.roadAssetKey="road_night_cafe";
+      continue;
+    }
+    // Repair the canonical daytime cafe if an older seasonal migration poisoned
+    // its fallback keys. Explicit custom asset paths remain untouched and keep
+    // taking precedence at runtime.
+    if(id==="cafe"){
+      if(assetKey==="nightCafeBackground")background.assetKey="cafeBackground";
+      if(roadAssetKey==="road_night_cafe")background.roadAssetKey="roadStrip";
+    }
   }
   return source;
 }
@@ -40278,6 +40317,7 @@ function runnerBuilderUpgradeConfig(raw){
     runnerBuilderRepairSeason2Road(source);
     runnerBuilderRepairSeason3Road(source);
   }
+  if(currentVersion<5)runnerBuilderRepairSceneAssetsV5(source);
   source.version=RUNNER_BUILDER_CONFIG_VERSION;
   return source;
 }
@@ -40380,8 +40420,8 @@ function runnerBuilderResolvePublicScene(configInput,seasonId=""){
   const config=normalizeRunnerBuilderConfig(configInput),boundId=seasonId?String(config.seasonBindings?.[String(seasonId)]||""):"",requested=config.scenes.find(x=>x.id===boundId&&x.enabled)||config.scenes.find(x=>x.id===config.defaultSceneId&&x.enabled)||config.scenes.find(x=>x.enabled)||config.scenes[0],fallback=runnerBuilderDefaultConfig();
   let scene=requested,pool=runnerBuilderScenePool(config,scene);if(!scene||!pool.length){const fallbackConfig=normalizeRunnerBuilderConfig(fallback);scene=fallbackConfig.scenes[0];pool=runnerBuilderScenePool(fallbackConfig,scene);config.backgrounds=fallbackConfig.backgrounds;}
   const background=config.backgrounds.find(x=>x.id===scene.backgroundId&&x.enabled)||config.backgrounds.find(x=>x.enabled)||fallback.backgrounds[0];
-  const season2Scene=runnerBuilderSceneLooksSeason2(config,scene)||pool.some(item=>RUNNER_BUILDER_SEASON2_OBSTACLE_IDS.has(String(item?.id||"")));
-  const season3Scene=runnerBuilderSceneLooksSeason3(config,scene)||pool.some(item=>RUNNER_BUILDER_SEASON3_OBSTACLE_IDS.has(String(item?.id||"")));
+  const season2Scene=runnerBuilderSceneLooksSeason2(config,scene);
+  const season3Scene=runnerBuilderSceneLooksSeason3(config,scene);
   const storedRoadKey=String(background.roadAssetKey||"");
   // legacy invariant for existing Runner Builder self-check:
   // const publicRoadKey=season2Scene&&background.roadEnabled!==false&&!String(background.roadAssetPath||"").trim()&&(!storedRoadKey||storedRoadKey==="roadStrip")?"road_night_cafe":storedRoadKey;
@@ -40430,6 +40470,23 @@ async function ownerPanelRunnerBuilder(env,ctx){
 async function ownerPanelRunnerBuilderSave(env,ctx){
   const current=await readRunnerBuilderConfig(env,true),expected=Math.max(0,Math.floor(Number(ctx.body?.expectedRevision)||0));if(expected&&expected!==Number(current.revision||1))throw new ApiError(409,"Конструктор забега уже изменён в другой вкладке. Обновите раздел перед сохранением.");
   const next=normalizeRunnerBuilderConfig(ctx.body?.config);next.revision=Math.max(1,Number(current.revision||1))+1;runnerBuilderValidateConfig(next);await setSystemState(env,RUNNER_BUILDER_STATE_KEY,JSON.stringify(next));invalidateRunnerBuilderConfigCache();await logStaffAction(env,ctx.user,ctx.access,"owner_runner_builder_save",null,"runner_scene",Number(current.revision||1),next.revision,{defaultSceneId:next.defaultSceneId,backgrounds:next.backgrounds.length,obstacles:next.obstacles.length,groups:next.groups.length,scenes:next.scenes.length,seasonBindings:Object.keys(next.seasonBindings||{}).length});return ownerPanelRunnerBuilder(env,ctx);
+}
+async function ownerPanelRunnerBuilderApplyScene(env,ctx){
+  await ensureSeasonPassSchema(env);
+  const current=await readRunnerBuilderConfig(env,true),expected=Math.max(0,Math.floor(Number(ctx.body?.expectedRevision)||0));
+  if(expected&&expected!==Number(current.revision||1))throw new ApiError(409,"Конструктор забега уже изменён в другой вкладке. Обновите раздел перед применением сцены.");
+  const sceneId=runnerBuilderSafeId(ctx.body?.sceneId),scene=current.scenes.find(item=>item.id===sceneId&&item.enabled!==false);
+  if(!scene)throw new ApiError(404,"Сцена не найдена или выключена.");
+  const activeSeasonId=await runnerBuilderActiveSeasonId(env),next=normalizeRunnerBuilderConfig(current);
+  next.seasonBindings={...(next.seasonBindings||{})};
+  if(activeSeasonId)next.seasonBindings[activeSeasonId]=sceneId;
+  else next.defaultSceneId=sceneId;
+  next.revision=Math.max(1,Number(current.revision||1))+1;
+  runnerBuilderValidateConfig(next);
+  await setSystemState(env,RUNNER_BUILDER_STATE_KEY,JSON.stringify(next));
+  invalidateRunnerBuilderConfigCache();
+  await logStaffAction(env,ctx.user,ctx.access,"owner_runner_builder_apply_scene",null,"runner_scene",Number(current.revision||1),next.revision,{sceneId,activeSeasonId,mode:activeSeasonId?"season_binding":"default_fallback"});
+  return ownerPanelRunnerBuilder(env,ctx);
 }
 // ===================== END RUNNER SCENE BUILDER =====================
 
@@ -45215,7 +45272,7 @@ const TEST_PROJECT_SANDBOX_API_PATHS = Object.freeze([
   "/api/battle-pass/access","/api/battle-pass/state","/api/battle-pass/run","/api/battle-pass/profile-bonus","/api/battle-pass/tier-activation/claim","/api/battle-pass/task-notices/pending","/api/battle-pass/task-notices/read",
   "/api/battle-pass/claim","/api/battle-pass/claim-all","/api/battle-pass/purchase-tier","/api/battle-pass/purchase-level",
   "/api/battle-pass/tasks/claim","/api/battle-pass/tasks/claim-all","/api/battle-pass/overflow/claim","/api/battle-pass/seasonal-case/open",
-  "/api/battle-pass/letter/state","/api/battle-pass/letter/open","/api/battle-pass/story/open","/api/battle-pass/story/complete","/api/battle-pass/story/test/open"
+  "/api/battle-pass/letter/state","/api/battle-pass/letter/open","/api/battle-pass/story/open","/api/battle-pass/story/complete","/api/battle-pass/story/visual-state","/api/battle-pass/story/test/open"
 ]);
 const TEST_PROJECT_SANDBOX_API_SET = new Set(TEST_PROJECT_SANDBOX_API_PATHS);
 
@@ -45654,6 +45711,7 @@ async function testProjectSandboxGameData(env, ctx) {
   if(path==="/api/battle-pass/letter/open")return response({ok:true,letter:null});
   if(path==="/api/battle-pass/story/open"||path==="/api/battle-pass/story/test/open")return response({ok:true,story:null,event:null});
   if(path==="/api/battle-pass/story/complete")return response({ok:true,story:null,reward:null});
+  if(path==="/api/battle-pass/story/visual-state")return response({ok:true,miniGameVisual:testProjectMiniGameVisual(state,snapshot),miniGameVisuals:testProjectMiniGameVisuals(state,snapshot)});
 
   throw new ApiError(418,`API «${path}» не реализован в Test Project ${TEST_PROJECT_VERSION}.`);
 }
@@ -47411,6 +47469,7 @@ const OWNER_CC_ENDPOINT_TARGET = Object.freeze({
   "/api/owner/v9/media/delete": "live",
   "/api/owner/runner-builder": "read",
   "/api/owner/runner-builder/save": "live",
+  "/api/owner/runner-builder/apply-scene": "live",
   "/api/owner/referrals": "read",
   "/api/owner/referrals/coop/save": "live",
   "/api/owner/referrals/config/save": "live",
@@ -47645,6 +47704,7 @@ async function handleOwnerPanelApi(request, env, path, executionCtx = null) {
     if (path === "/api/owner/v9/media/delete") return jsonResponse(await ownerPanelV9MediaDelete(env, ctx));
     if (path === "/api/owner/runner-builder") return jsonResponse(await ownerPanelRunnerBuilder(env, ctx));
     if (path === "/api/owner/runner-builder/save") return jsonResponse(await ownerPanelRunnerBuilderSave(env, ctx));
+    if (path === "/api/owner/runner-builder/apply-scene") return jsonResponse(await ownerPanelRunnerBuilderApplyScene(env, ctx));
     if (path === "/api/owner/referrals") return jsonResponse(await ownerPanelReferrals(env, ctx));
     if (path === "/api/owner/referrals/coop/save") return jsonResponse(await ownerPanelReferralCoopSave(env, ctx));
     if (path === "/api/owner/referrals/config/save") return jsonResponse(await ownerPanelReferralConfigSave(env, ctx));

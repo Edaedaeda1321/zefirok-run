@@ -14282,9 +14282,11 @@ function installProgressInfo(){
       let purchaseReturnFocus = null;
       let purchaseLimitTimer = 0;
       const assetSources = JSON.parse(root.querySelector(&quot;[data-zefirok-assets]&quot;).textContent);
-      // 1.2.1 · Предсезонная сцена: сохраняем существующий canvas-пайплайн и cover-масштабирование.
-      assetSources.cafeBackground = &quot;/assets/optimized/v0.79.5/background_season2.webp?v=1.2.1&quot;;
+      // Runner Builder: дневное кафе и ночной сезонный фон имеют разные ключи.
+      // Это не даёт одной сцене подменять фон другой через общий cafeBackground.
+      assetSources.cafeBackground = &quot;/assets/optimized/v0.79.5/cafeBackground.webp?v=0.79.5&quot;;
       Object.assign(assetSources, {
+        nightCafeBackground: &quot;/assets/optimized/v0.79.5/background_season2.webp?v=1.2.1&quot;,
         game_barricade_flovers_night_s2: &quot;/assets/optimized/v0.79.5/game_barricade_flovers_night_s2.webp?v=0.79.5&quot;,
         road_night_cafe: &quot;/assets/optimized/v0.79.5/road_night_cafe.webp?v=0.79.5&quot;,
         game_barricade_tablet: &quot;/assets/optimized/v0.79.5/game_barricade_tablet.webp?v=0.79.5&quot;,
@@ -14755,8 +14757,8 @@ function installProgressInfo(){
         const roadAssetPath = String(backgroundRaw.roadAssetPath || &quot;&quot;).trim();
         let roadAssetKey = String(backgroundRaw.roadAssetKey || &quot;roadStrip&quot;).trim() || &quot;roadStrip&quot;;
         const sceneMarker = `${String(raw.sceneId || &quot;&quot;)} ${String(raw.title || &quot;&quot;)} ${String(backgroundRaw.id || &quot;&quot;)} ${String(backgroundRaw.title || &quot;&quot;)}`;
-        const season2Scene = obstacles.some((item) =&gt; RUNNER_SEASON2_OBSTACLE_IDS.has(item.id)) || /(?:night|ноч|season[\s_-]*2|сезон[\s_-]*2|(?:^|[^a-z0-9])s2(?:[^a-z0-9]|$))/i.test(sceneMarker);
-        const season3Scene = obstacles.some((item) =&gt; RUNNER_SEASON3_OBSTACLE_IDS.has(item.id)) || /(?:park|парк|belkino|белкин|season[\s_-]*3|сезон[\s_-]*3|(?:^|[^a-z0-9])s3(?:[^a-z0-9]|$))/i.test(sceneMarker);
+        const season2Scene = /(?:night|ноч|season[\s_-]*2|сезон[\s_-]*2|(?:^|[^a-z0-9])s2(?:[^a-z0-9]|$))/i.test(sceneMarker);
+        const season3Scene = /(?:park|парк|belkino|белкин|season[\s_-]*3|сезон[\s_-]*3|(?:^|[^a-z0-9])s3(?:[^a-z0-9]|$))/i.test(sceneMarker);
         if (!roadAssetPath &amp;&amp; (!roadAssetKey || roadAssetKey === &quot;roadStrip&quot;)) {
           if (season3Scene) roadAssetKey = &quot;road_park_day_s3&quot;;
           else if (season2Scene) roadAssetKey = &quot;road_night_cafe&quot;;
@@ -16031,6 +16033,7 @@ function installProgressInfo(){
       const SEASON_PASS_TASK_NOTICE_PENDING_PATH = &quot;/api/battle-pass/task-notices/pending&quot;;
       const SEASON_PASS_TASK_NOTICE_READ_PATH = &quot;/api/battle-pass/task-notices/read&quot;;
       const SEASON_PASS_STORY_VISUAL_NOTICE_READ_PATH = &quot;/api/battle-pass/story/visual-notice/read&quot;;
+      const SEASON_PASS_STORY_VISUAL_STATE_PATH = &quot;/api/battle-pass/story/visual-state&quot;;
       const SEASON_PASS_PROFILE_BONUS_PATH = &quot;/api/battle-pass/profile-bonus&quot;;
       const REWARD_SYNC_INTERVAL_MS = 10000;
       let rewardSyncInFlight = false;
@@ -25684,6 +25687,33 @@ function createTutorialDeck(layer, mount, options, words) {
         }
       }
 
+      let miniGameVisualStateRequestId = 0;
+      async function loadAuthoritativeMiniGameVisuals(force = false) {
+        const initData = String(telegramProfile?.initData || &quot;&quot;);
+        if (!initData) return false;
+        const requestId = ++miniGameVisualStateRequestId;
+        const requestKey = `POST:${SEASON_PASS_STORY_VISUAL_STATE_PATH}:${String(telegramProfile?.id || &quot;player&quot;)}`;
+        if (force) sharedApiCache.delete(requestKey);
+        try {
+          const { response, data } = await sharedJsonApiRequest(SEASON_PASS_STORY_VISUAL_STATE_PATH, {
+            method: &quot;POST&quot;,
+            headers: { &quot;Content-Type&quot;: &quot;application/json&quot; },
+            body: JSON.stringify({ initData }),
+            cache: &quot;no-store&quot;,
+            credentials: &quot;same-origin&quot;
+          }, { key: requestKey, timeoutMs: 6500 });
+          if (requestId !== miniGameVisualStateRequestId) return false;
+          if (!response.ok || !data?.ok) return false;
+          if (data.miniGameVisuals &amp;&amp; typeof data.miniGameVisuals === &quot;object&quot;) applyMiniGameVisuals(data.miniGameVisuals);
+          else if (Object.prototype.hasOwnProperty.call(data, &quot;miniGameVisual&quot;)) applyMiniGameTreatVisual(data.miniGameVisual);
+          else return false;
+          return true;
+        } catch (error) {
+          if (requestId === miniGameVisualStateRequestId) console.warn(&quot;Story mini-game visual state load failed&quot;, error);
+          return false;
+        }
+      }
+
       function applyServerProfilePayload(data) {
         const profile = data?.profile || {};
         let changed = false;
@@ -25764,6 +25794,7 @@ function createTutorialDeck(layer, mount, options, words) {
           if (!skinsLoaded) void loadRemoteSkinPrices(force);
           if (data.miniGameVisuals &amp;&amp; typeof data.miniGameVisuals === &quot;object&quot;) applyMiniGameVisuals(data.miniGameVisuals);
           else if (Object.prototype.hasOwnProperty.call(data, &quot;miniGameVisual&quot;)) applyMiniGameTreatVisual(data.miniGameVisual);
+          else if (initData) void loadAuthoritativeMiniGameVisuals(force);
           if (Object.prototype.hasOwnProperty.call(data, &quot;liveOpsEvent&quot;)) applyLiveOpsRunEvent(data.liveOpsEvent);
 
           if (!initData) return true;
@@ -25811,7 +25842,8 @@ function createTutorialDeck(layer, mount, options, words) {
           await Promise.all([
             loadRemoteShopPrices(force),
             loadRemoteSkinPrices(force),
-            loadRemoteRunnerScene(force)
+            loadRemoteRunnerScene(force),
+            initData ? loadAuthoritativeMiniGameVisuals(force) : Promise.resolve(false)
           ]);
           if (initData) {
             await Promise.all([
