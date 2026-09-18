@@ -9539,6 +9539,58 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
       height: 100%;
     }
 
+    #zefirok-maltipoo-runner .runner-startup-gate {
+      position: absolute;
+      inset: 0;
+      z-index: 12;
+      display: grid;
+      place-items: center;
+      padding: 24px;
+      background: linear-gradient(155deg, rgba(255,250,246,.985), rgba(255,232,240,.985));
+      transition: opacity .24s ease, visibility .24s ease;
+      pointer-events: auto;
+    }
+
+    #zefirok-maltipoo-runner .runner-startup-gate.is-ready {
+      opacity: 0;
+      visibility: hidden;
+      pointer-events: none;
+    }
+
+    #zefirok-maltipoo-runner .runner-startup-card {
+      width: min(88%, 330px);
+      display: grid;
+      justify-items: center;
+      gap: 10px;
+      padding: 22px 20px;
+      border: 1px solid rgba(226, 171, 191, .78);
+      border-radius: 24px;
+      background: rgba(255,255,255,.86);
+      box-shadow: 0 18px 48px rgba(121, 73, 91, .14);
+      text-align: center;
+      color: #75475b;
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+    }
+
+    #zefirok-maltipoo-runner .runner-startup-spinner {
+      width: 42px;
+      height: 42px;
+      border: 4px solid rgba(224, 111, 151, .18);
+      border-top-color: #e06f97;
+      border-radius: 50%;
+      animation: runner-startup-spin .82s linear infinite;
+    }
+
+    #zefirok-maltipoo-runner .runner-startup-card strong { font-size: 17px; line-height: 1.15; }
+    #zefirok-maltipoo-runner .runner-startup-card span { font-size: 12px; line-height: 1.4; color: #9b6a7d; }
+    #zefirok-maltipoo-runner [data-start][aria-busy=&quot;true&quot;] { opacity: .62; cursor: wait; }
+    @keyframes runner-startup-spin { to { transform: rotate(360deg); } }
+    @media (prefers-reduced-motion: reduce) {
+      #zefirok-maltipoo-runner .runner-startup-spinner { animation-duration: 1.6s; }
+      #zefirok-maltipoo-runner .runner-startup-gate { transition: none; }
+    }
+
     #zefirok-maltipoo-runner .stage-status {
       position: absolute;
       top: 12px;
@@ -11868,6 +11920,13 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
     &lt;span class=&quot;run-focus-pickup&quot;&gt;&lt;img alt=&quot;Кофе&quot; data-shop-img=&quot;iconCoffee&quot;/&gt;&lt;b data-run-focus-coffee&gt;0&lt;/b&gt;&lt;/span&gt;
   &lt;/div&gt;
 &lt;/div&gt;
+&lt;div class=&quot;runner-startup-gate&quot; data-runner-startup-gate role=&quot;status&quot; aria-live=&quot;polite&quot;&gt;
+  &lt;div class=&quot;runner-startup-card&quot;&gt;
+    &lt;span class=&quot;runner-startup-spinner&quot; aria-hidden=&quot;true&quot;&gt;&lt;/span&gt;
+    &lt;strong data-runner-startup-title&gt;Подготавливаем кафе…&lt;/strong&gt;
+    &lt;span data-runner-startup-copy&gt;Загружаем актуальную сцену и образ Зеффи перед первым кадром.&lt;/span&gt;
+  &lt;/div&gt;
+&lt;/div&gt;
 &lt;canvas aria-label=&quot;Мальтипу бежит по витрине кафе, собирает зефир и кофе, перепрыгивает препятствия&quot;&gt;&lt;/canvas&gt;
 &lt;div aria-hidden=&quot;true&quot; class=&quot;stage-status&quot;&gt;
 &lt;span&gt;тап = прыжок&lt;/span&gt;
@@ -11884,7 +11943,7 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
 &lt;/div&gt;
 &lt;/div&gt;
 &lt;div class=&quot;actions game-actions-v2 is-single&quot; data-game-actions=&quot;&quot;&gt;
-&lt;button aria-label=&quot;Старт&quot; class=&quot;game-action is-primary&quot; data-mode=&quot;start&quot; data-start=&quot;&quot; type=&quot;button&quot;&gt;
+&lt;button aria-label=&quot;Старт&quot; aria-busy=&quot;true&quot; class=&quot;game-action is-primary&quot; data-mode=&quot;start&quot; data-start=&quot;&quot; type=&quot;button&quot; disabled&gt;
 &lt;img alt=&quot;&quot; aria-hidden=&quot;true&quot; class=&quot;game-action__icon&quot; data-game-action-icon=&quot;start&quot; data-icon=&quot;play&quot; src=&quot;/assets/ui/icon_play_start_button.webp&quot;/&gt;
 &lt;span class=&quot;game-action__label&quot; data-game-action-label=&quot;start&quot;&gt;СТАРТ&lt;/span&gt;
 &lt;/button&gt;
@@ -12775,6 +12834,14 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
       const treatsEl = root.querySelector(&quot;[data-treats]&quot;);
       const coffeeEl = root.querySelector(&quot;[data-coffee]&quot;);
       const startBtn = root.querySelector(&quot;[data-start]&quot;);
+      const runnerStartupGateEl = root.querySelector(&quot;[data-runner-startup-gate]&quot;);
+      const runnerStartupGateTitleEl = root.querySelector(&quot;[data-runner-startup-title]&quot;);
+      const runnerStartupGateCopyEl = root.querySelector(&quot;[data-runner-startup-copy]&quot;);
+      const RUNNER_STARTUP_GATE_TIMEOUT_MS = 8000;
+      const runnerStartupGateStartedAt = performance.now();
+      let runnerStartupGateReleased = !runnerStartupGateEl;
+      let runnerStartupGateTimer = 0;
+      let runnerInitialPresentationPromise = null;
       const pauseBtn = root.querySelector(&quot;[data-pause]&quot;);
       const gameActionsEl = root.querySelector(&quot;[data-game-actions]&quot;);
       const startBtnLabel = startBtn.querySelector(&quot;[data-game-action-label=&#x27;start&#x27;]&quot;);
@@ -12784,6 +12851,36 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
       let startVisualTimer = 0;
       let pauseVisualTimer = 0;
       let pauseActivationLockUntil = 0;
+
+      function setRunnerStartupGateStatus(title, copy = &quot;&quot;) {
+        if (runnerStartupGateTitleEl &amp;&amp; title) runnerStartupGateTitleEl.textContent = String(title);
+        if (runnerStartupGateCopyEl &amp;&amp; copy) runnerStartupGateCopyEl.textContent = String(copy);
+      }
+
+      function runnerStartupGateRemainingMs() {
+        return Math.max(0, RUNNER_STARTUP_GATE_TIMEOUT_MS - (performance.now() - runnerStartupGateStartedAt));
+      }
+
+      function releaseRunnerStartupGate(reason = &quot;ready&quot;) {
+        if (runnerStartupGateReleased) return;
+        runnerStartupGateReleased = true;
+        window.clearTimeout(runnerStartupGateTimer);
+        runnerStartupGateTimer = 0;
+        runnerStartupGateEl?.classList.add(&quot;is-ready&quot;);
+        runnerStartupGateEl?.setAttribute(&quot;aria-hidden&quot;, &quot;true&quot;);
+        startBtn.disabled = false;
+        startBtn.setAttribute(&quot;aria-busy&quot;, &quot;false&quot;);
+        if (reason === &quot;timeout&quot;) console.warn(&quot;Runner startup gate fail-open timeout reached; showing best available scene.&quot;);
+        try { invalidateGameRenderCaches(); } catch (error) {}
+        requestAnimationFrame(() =&gt; { try { draw(); } catch (error) {} });
+      }
+
+      function armRunnerStartupGateFailOpen() {
+        if (runnerStartupGateReleased || runnerStartupGateTimer) return;
+        const remaining = runnerStartupGateRemainingMs();
+        if (remaining &lt;= 0) { releaseRunnerStartupGate(&quot;timeout&quot;); return; }
+        runnerStartupGateTimer = window.setTimeout(() =&gt; releaseRunnerStartupGate(&quot;timeout&quot;), remaining);
+      }
 
       function syncGameActionControls() {
         const startMode = String(startBtn.dataset.mode || &quot;start&quot;);
@@ -12806,6 +12903,8 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
         }
 
         startBtn.setAttribute(&quot;aria-label&quot;, startMode === &quot;restart&quot; ? &quot;Заново&quot; : &quot;Старт&quot;);
+        startBtn.disabled = !runnerStartupGateReleased;
+        startBtn.setAttribute(&quot;aria-busy&quot;, runnerStartupGateReleased ? &quot;false&quot; : &quot;true&quot;);
         pauseBtn.setAttribute(&quot;aria-label&quot;, pauseText);
         pauseBtn.hidden = single;
         pauseBtn.style.display = single ? &quot;none&quot; : &quot;&quot;;
@@ -12855,6 +12954,7 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
       }
 
       async function flashStartButtonAndRun() {
+        if (!runnerStartupGateReleased) return;
         if (startBtn.dataset.locked === &quot;true&quot;) return;
         startBtn.dataset.locked = &quot;true&quot;;
         const mode = startBtn.dataset.mode || &quot;start&quot;;
@@ -14993,27 +15093,51 @@ function installProgressInfo(){
         const normalizedTarget = normalizedMiniGameVisualTarget(target);
         pendingMiniGameVisualNotices = pendingMiniGameVisualNotices.filter(item =&gt; normalizedMiniGameVisualTarget(item?.target) !== normalizedTarget);
       }
+      const miniGameVisualPendingLoads = { treats: Promise.resolve(true), coffee: Promise.resolve(true) };
+      const miniGameVisualPendingResolvers = { treats: null, coffee: null };
+      function beginMiniGameVisualPendingLoad(target) {
+        const previous = miniGameVisualPendingResolvers[target];
+        if (typeof previous === &quot;function&quot;) previous(false);
+        let settled = false;
+        let resolver = null;
+        const promise = new Promise((resolve) =&gt; {
+          resolver = (value) =&gt; {
+            if (settled) return;
+            settled = true;
+            if (miniGameVisualPendingResolvers[target] === resolver) {
+              miniGameVisualPendingResolvers[target] = null;
+              miniGameVisualPendingLoads[target] = Promise.resolve(Boolean(value));
+            }
+            resolve(Boolean(value));
+          };
+        });
+        miniGameVisualPendingResolvers[target] = resolver;
+        miniGameVisualPendingLoads[target] = promise;
+        return { promise, settle: resolver };
+      }
       function applyMiniGameVisual(rawValue) {
         const raw = rawValue &amp;&amp; typeof rawValue === &quot;object&quot; ? rawValue : {};
         const target = normalizedMiniGameVisualTarget(raw.target);
-        if (!target) return;
+        if (!target) return Promise.resolve(false);
         const config = MINI_GAME_VISUAL_TARGETS[target];
+        const pendingLoad = beginMiniGameVisualPendingLoad(target);
         const requested = raw.isDefault !== true &amp;&amp; raw.target === target &amp;&amp; validMiniGameVisualAssetPath(raw.assetPath)
           ? String(raw.assetPath).trim()
           : &quot;&quot;;
         const requestId = ++miniGameVisualRequests[target];
         const applyDefault = () =&gt; {
-          if (requestId !== miniGameVisualRequests[target]) return;
+          if (requestId !== miniGameVisualRequests[target]) { pendingLoad.settle(false); return; }
           clearPendingMiniGameVisualNotice(target);
           activeMiniGameVisuals[target] = Object.freeze({ ...raw, target, assetPath: &quot;&quot;, isDefault: true, seasonId: String(raw.seasonId || &quot;&quot;), sourceEventId: String(raw.sourceEventId || &quot;&quot;), noticePending: false });
           if (config.defaultImage) assets[config.assetKey] = config.defaultImage;
           if (gameplayStateReady &amp;&amp; !state.running) draw();
+          pendingLoad.settle(true);
         };
-        if (!requested) { applyDefault(); return; }
+        if (!requested) { applyDefault(); return pendingLoad.promise; }
         const probe = new Image();
         probe.decoding = &quot;async&quot;;
         probe.onload = async () =&gt; {
-          if (requestId !== miniGameVisualRequests[target]) return;
+          if (requestId !== miniGameVisualRequests[target]) { pendingLoad.settle(false); return; }
           try {
             if (typeof probe.decode === &quot;function&quot;) await probe.decode();
             if (!probe.naturalWidth || !probe.naturalHeight) throw new Error(&quot;decoded image has no dimensions&quot;);
@@ -15023,24 +15147,28 @@ function installProgressInfo(){
             applyDefault();
             return;
           }
-          if (requestId !== miniGameVisualRequests[target]) return;
+          if (requestId !== miniGameVisualRequests[target]) { pendingLoad.settle(false); return; }
           activeMiniGameVisuals[target] = Object.freeze({ ...raw, target, assetPath: requested, isDefault: false });
           assets[config.assetKey] = probe;
           queueMiniGameVisualNotice(activeMiniGameVisuals[target]);
           if (gameplayStateReady &amp;&amp; !state.running) draw();
+          pendingLoad.settle(true);
         };
         probe.onerror = () =&gt; {
           console.warn(`Story mini-game ${target} visual failed to load; default restored.`, requested);
           applyDefault();
         };
         probe.src = requested;
+        return pendingLoad.promise;
       }
       function applyMiniGameVisuals(rawValue) {
         const bundle = rawValue &amp;&amp; typeof rawValue === &quot;object&quot; ? rawValue : {};
-        if (Object.prototype.hasOwnProperty.call(bundle, &quot;treats&quot;)) applyMiniGameVisual(bundle.treats);
-        if (Object.prototype.hasOwnProperty.call(bundle, &quot;coffee&quot;)) applyMiniGameVisual(bundle.coffee);
+        const tasks = [];
+        if (Object.prototype.hasOwnProperty.call(bundle, &quot;treats&quot;)) tasks.push(applyMiniGameVisual(bundle.treats));
+        if (Object.prototype.hasOwnProperty.call(bundle, &quot;coffee&quot;)) tasks.push(applyMiniGameVisual(bundle.coffee));
+        return Promise.allSettled(tasks);
       }
-      function applyMiniGameTreatVisual(rawValue) { applyMiniGameVisual(rawValue); }
+      function applyMiniGameTreatVisual(rawValue) { return applyMiniGameVisual(rawValue); }
       const GAMEPLAY_SKIN_SPRITES = Object.freeze({
         default: Object.freeze({ stand: &quot;/assets/skins/gameplay/default/stand.webp&quot;, run1: &quot;/assets/skins/gameplay/default/run1.webp&quot;, run2: &quot;/assets/skins/gameplay/default/run2.webp&quot;, run3: &quot;/assets/skins/gameplay/default/run3.webp&quot;, run4: &quot;/assets/skins/gameplay/default/run4.webp&quot;, jump: &quot;/assets/skins/gameplay/default/jump.webp&quot; }),
         barista: Object.freeze({ stand: &quot;/assets/skins/gameplay/barista/stand.webp&quot;, run1: &quot;/assets/skins/gameplay/barista/run1.webp&quot;, run2: &quot;/assets/skins/gameplay/barista/run2.webp&quot;, run3: &quot;/assets/skins/gameplay/barista/run3.webp&quot;, run4: &quot;/assets/skins/gameplay/barista/run4.webp&quot;, jump: &quot;/assets/skins/gameplay/barista/jump.webp&quot; }),
@@ -15109,6 +15237,72 @@ function installProgressInfo(){
         return null;
       }
       preloadGameplayDogSprites();
+
+      function waitForRunnerImageReady(image, timeoutMs) {
+        if (!image) return Promise.resolve(false);
+        const timeout = Math.max(0, Number(timeoutMs) || 0);
+        if (image.complete) {
+          if (!image.naturalWidth || !image.naturalHeight) return Promise.resolve(false);
+          if (typeof image.decode !== &quot;function&quot;) return Promise.resolve(true);
+          return Promise.race([
+            image.decode().then(() =&gt; Boolean(image.naturalWidth &amp;&amp; image.naturalHeight)).catch(() =&gt; false),
+            new Promise((resolve) =&gt; window.setTimeout(() =&gt; resolve(false), timeout))
+          ]);
+        }
+        return new Promise((resolve) =&gt; {
+          let done = false;
+          const finish = (value) =&gt; {
+            if (done) return;
+            done = true;
+            window.clearTimeout(timer);
+            image.removeEventListener(&quot;load&quot;, onLoad);
+            image.removeEventListener(&quot;error&quot;, onError);
+            resolve(Boolean(value));
+          };
+          const onLoad = async () =&gt; {
+            try { if (typeof image.decode === &quot;function&quot;) await image.decode(); } catch (error) {}
+            finish(Boolean(image.naturalWidth &amp;&amp; image.naturalHeight));
+          };
+          const onError = () =&gt; finish(false);
+          const timer = window.setTimeout(() =&gt; finish(false), timeout);
+          image.addEventListener(&quot;load&quot;, onLoad, { once:true });
+          image.addEventListener(&quot;error&quot;, onError, { once:true });
+        });
+      }
+
+      async function waitForRunnerPresentationAssets() {
+        let remaining = runnerStartupGateRemainingMs();
+        if (remaining &lt;= 0) return false;
+        setRunnerStartupGateStatus(&quot;Получаем актуальную сцену…&quot;, &quot;Проверяем сезонную сцену и сюжетные визуалы перед первым кадром.&quot;);
+        await Promise.race([
+          Promise.allSettled([runnerSceneRecoveryPromise, miniGameVisualAuthoritativeLoadPromise]),
+          new Promise((resolve) =&gt; window.setTimeout(() =&gt; resolve(false), remaining))
+        ]);
+        remaining = runnerStartupGateRemainingMs();
+        if (remaining &lt;= 0) return false;
+        setRunnerStartupGateStatus(&quot;Загружаем сцену…&quot;, &quot;Ждём фон, дорожку, препятствия и актуальный образ Зеффи.&quot;);
+        await Promise.race([
+          Promise.allSettled([miniGameVisualPendingLoads.treats, miniGameVisualPendingLoads.coffee]),
+          new Promise((resolve) =&gt; window.setTimeout(() =&gt; resolve(false), remaining))
+        ]);
+        remaining = runnerStartupGateRemainingMs();
+        if (remaining &lt;= 0) return false;
+        const images = [];
+        const background = remoteRunnerScene?.background || LEGACY_RUNNER_SCENE.background;
+        images.push(runnerSceneImage(background.assetKey || &quot;cafeBackground&quot;, background.assetPath || &quot;&quot;));
+        if (background.roadEnabled !== false) images.push(runnerSceneImage(background.roadAssetKey || &quot;roadStrip&quot;, background.roadAssetPath || &quot;&quot;));
+        for (const obstacle of remoteRunnerScene?.obstacles || []) images.push(runnerSceneImage(obstacle.assetKey || &quot;&quot;, obstacle.assetPath || &quot;&quot;));
+        const skinId = String(currentDogSkin.id || &quot;default&quot;);
+        ensureGameplayDogSprites(skinId);
+        for (const stateName of GAMEPLAY_DOG_REQUIRED_STATES) images.push(gameplayDogAssets?.[skinId]?.[stateName]?.img || null);
+        for (const portrait of root.querySelectorAll(&quot;[data-current-dog-portrait]&quot;)) images.push(portrait);
+        await Promise.race([
+          Promise.allSettled(images.filter(Boolean).map((image) =&gt; waitForRunnerImageReady(image, remaining))),
+          new Promise((resolve) =&gt; window.setTimeout(() =&gt; resolve(false), remaining))
+        ]);
+        return runnerStartupGateRemainingMs() &gt; 0;
+      }
+
       const RUN_FRAME_SEQUENCE = Object.freeze([&quot;run1&quot;, &quot;run2&quot;, &quot;run1&quot;, &quot;run2&quot;]);
       const RUN_CYCLE_FPS_MIN = 9;
       const RUN_CYCLE_FPS_MAX = 13;
@@ -16283,7 +16477,7 @@ function installProgressInfo(){
         gold: Object.freeze({ treats:25,coffee:25,points:26,booster:15,epicCosmetic:0,mythicCosmetic:0,legendaryCosmetic:0,skin:0,avatar:5,frame:3,trail:1,music:0,physical:0 }),
         mythic: Object.freeze({ treats:20,coffee:15,points:45,booster:10,epicCosmetic:7,mythicCosmetic:2.5,legendaryCosmetic:0.5,skin:0,avatar:0,frame:0,trail:0,music:0,physical:0 }),
         legendary: Object.freeze({ treats:25,coffee:25,points:39.665,booster:0,epicCosmetic:0,mythicCosmetic:0,legendaryCosmetic:0,skin:0.35,avatar:2,frame:3,trail:4.5,music:0.45,physical:CASE_PHYSICAL_TOTAL_CHANCE }),
-        alex: Object.freeze({ treats:33.14333333333333,coffee:33.14333333333333,points:33.14333333333333,booster:0,epicCosmetic:0,mythicCosmetic:0,legendaryCosmetic:0,skin:0.12,avatar:0.15,frame:0.15,trail:0.15,music:0,physical:0 })
+        alex: Object.freeze({ treats:20.95,coffee:20.95,points:20.95,booster:0,epicCosmetic:0,mythicCosmetic:0,legendaryCosmetic:0,skin:10,avatar:0.15,frame:12,trail:15,music:0,physical:0 })
       });
       const CASE_REWARD_RANGES = Object.freeze({
         small: Object.freeze({ treats: [10, 20], coffee: [10, 20], points: [500, 1000] }),
@@ -18122,7 +18316,8 @@ function createTutorialDeck(layer, mount, options, words) {
             state.running = false;
             state.paused = false;
             state.over = false;
-            setStartButtonVisual(&quot;start&quot;, false);
+            armRunnerStartupGateFailOpen();
+      setStartButtonVisual(&quot;start&quot;, false);
             setPauseButtonVisual(false);
             statusEl.textContent = &quot;нет связи&quot;;
             showModal(&quot;Не удалось начать забег&quot;, &quot;Защищённая сессия не создана. Проверь интернет и нажми «Старт» ещё раз.&quot;);
@@ -19738,8 +19933,8 @@ function createTutorialDeck(layer, mount, options, words) {
           if (startupSyncNeeded) {
             telegramProfileStartupSyncId = currentTelegramId;
             telegramProfileStartupSyncAt = Date.now();
-            if (profileVisible) window.setTimeout(() =&gt; void syncGameStartupPackage(true), 180);
-            else void syncGameStartupPackage(true);
+            if (profileVisible) window.setTimeout(() =&gt; void prepareInitialRunnerPresentation(true), 180);
+            else void prepareInitialRunnerPresentation(true);
           }
           if (telegramProfileRefreshPending) {
             telegramProfileRefreshPending = false;
@@ -21829,16 +22024,22 @@ function createTutorialDeck(layer, mount, options, words) {
       function caseRoulettePool(caseType = &quot;small&quot;) {
         const type = Object.prototype.hasOwnProperty.call(CASE_REWARD_CHANCES, String(caseType || &quot;&quot;)) ? String(caseType) : &quot;small&quot;;
         if (type === &quot;alex&quot;) {
+          const chances = caseEffectiveRewardChances(&quot;alex&quot;);
+          const hasChance = (key) =&gt; Math.max(0, Number(chances?.[key]) || 0) &gt; 0;
           return [
-            { src: caseResourceImage(&quot;points&quot;), title: &quot;Очки&quot;, badge: &quot;&quot;, kind: &quot;resource&quot; },
-            { src: caseResourceImage(&quot;treats&quot;), title: &quot;Зефир&quot;, badge: &quot;&quot;, kind: &quot;resource&quot; },
-            { src: caseResourceImage(&quot;coffee&quot;), title: &quot;Кофе&quot;, badge: &quot;&quot;, kind: &quot;resource&quot; },
-            { src: CASE_SKIN_CATALOG.alex.src, title: &quot;Алекс&quot;, badge: &quot;Скин&quot;, kind: &quot;skin&quot; },
-            { src: CASE_TRAIL_CATALOG.alex_trail.src, title: &quot;След Алекса&quot;, badge: &quot;След&quot;, kind: &quot;trail&quot; },
-            { src: CASE_FRAME_CATALOG.alex_frame_1.src, title: &quot;Рамка I&quot;, badge: &quot;Рамка&quot;, kind: &quot;frame&quot; },
-            { src: CASE_FRAME_CATALOG.alex_frame_2.src, title: &quot;Рамка II&quot;, badge: &quot;Рамка&quot;, kind: &quot;frame&quot; },
-            { src: CASE_AVATAR_CATALOG.alex_avatar_1.src, title: &quot;Аватар I&quot;, badge: &quot;Аватар&quot;, kind: &quot;avatar&quot; },
-            { src: CASE_AVATAR_CATALOG.alex_avatar_2.src, title: &quot;Аватар II&quot;, badge: &quot;Аватар&quot;, kind: &quot;avatar&quot; }
+            ...(hasChance(&quot;points&quot;) ? [{ src: caseResourceImage(&quot;points&quot;), title: &quot;Очки&quot;, badge: &quot;&quot;, kind: &quot;resource&quot; }] : []),
+            ...(hasChance(&quot;treats&quot;) ? [{ src: caseResourceImage(&quot;treats&quot;), title: &quot;Зефир&quot;, badge: &quot;&quot;, kind: &quot;resource&quot; }] : []),
+            ...(hasChance(&quot;coffee&quot;) ? [{ src: caseResourceImage(&quot;coffee&quot;), title: &quot;Кофе&quot;, badge: &quot;&quot;, kind: &quot;resource&quot; }] : []),
+            ...(hasChance(&quot;skin&quot;) ? [{ src: CASE_SKIN_CATALOG.alex.src, title: &quot;Алекс&quot;, badge: &quot;Скин&quot;, kind: &quot;skin&quot; }] : []),
+            ...(hasChance(&quot;trail&quot;) ? [{ src: CASE_TRAIL_CATALOG.alex_trail.src, title: &quot;След Алекса&quot;, badge: &quot;След&quot;, kind: &quot;trail&quot; }] : []),
+            ...(hasChance(&quot;frame&quot;) ? [
+              { src: CASE_FRAME_CATALOG.alex_frame_1.src, title: &quot;Рамка I&quot;, badge: &quot;Рамка&quot;, kind: &quot;frame&quot; },
+              { src: CASE_FRAME_CATALOG.alex_frame_2.src, title: &quot;Рамка II&quot;, badge: &quot;Рамка&quot;, kind: &quot;frame&quot; }
+            ] : []),
+            ...(hasChance(&quot;avatar&quot;) ? [
+              { src: CASE_AVATAR_CATALOG.alex_avatar_1.src, title: &quot;Аватар I&quot;, badge: &quot;Аватар&quot;, kind: &quot;avatar&quot; },
+              { src: CASE_AVATAR_CATALOG.alex_avatar_2.src, title: &quot;Аватар II&quot;, badge: &quot;Аватар&quot;, kind: &quot;avatar&quot; }
+            ] : [])
           ];
         }
         const isLegendary = type === &quot;legendary&quot;;
@@ -21982,7 +22183,7 @@ function createTutorialDeck(layer, mount, options, words) {
 
       function caseEffectiveRewardChances(caseType) {
         const type = Object.prototype.hasOwnProperty.call(CASE_REWARD_CHANCES, String(caseType || &quot;&quot;)) ? String(caseType) : &quot;small&quot;;
-        if (type === &quot;alex&quot;) return { ...CASE_REWARD_CHANCES.alex };
+        if (type === &quot;alex&quot;) { const configured = CASE_LIVEOPS?.cases?.alex?.chances; return { ...CASE_REWARD_CHANCES.alex, ...(configured &amp;&amp; typeof configured === &quot;object&quot; ? configured : {}) }; }
         const configured = CASE_LIVEOPS?.cases?.[type]?.chances;
         const chances = { ...CASE_REWARD_CHANCES[type], ...(configured &amp;&amp; typeof configured === &quot;object&quot; ? configured : {}) };
         const cosmeticCatalogs = {
@@ -25671,6 +25872,7 @@ function createTutorialDeck(layer, mount, options, words) {
         }
       }
 
+      let runnerSceneRecoveryPromise = Promise.resolve(true);
       async function loadRemoteRunnerScene(force = false) {
         try {
           if (force) sharedApiCache.delete(`GET:${RUNNER_SCENE_CONFIG_PATH}`);
@@ -25688,6 +25890,7 @@ function createTutorialDeck(layer, mount, options, words) {
       }
 
       let miniGameVisualStateRequestId = 0;
+      let miniGameVisualAuthoritativeLoadPromise = Promise.resolve(false);
       async function loadAuthoritativeMiniGameVisuals(force = false) {
         const initData = String(telegramProfile?.initData || &quot;&quot;);
         if (!initData) return false;
@@ -25704,8 +25907,8 @@ function createTutorialDeck(layer, mount, options, words) {
           }, { key: requestKey, timeoutMs: 6500 });
           if (requestId !== miniGameVisualStateRequestId) return false;
           if (!response.ok || !data?.ok) return false;
-          if (data.miniGameVisuals &amp;&amp; typeof data.miniGameVisuals === &quot;object&quot;) applyMiniGameVisuals(data.miniGameVisuals);
-          else if (Object.prototype.hasOwnProperty.call(data, &quot;miniGameVisual&quot;)) applyMiniGameTreatVisual(data.miniGameVisual);
+          if (data.miniGameVisuals &amp;&amp; typeof data.miniGameVisuals === &quot;object&quot;) await applyMiniGameVisuals(data.miniGameVisuals);
+          else if (Object.prototype.hasOwnProperty.call(data, &quot;miniGameVisual&quot;)) await applyMiniGameTreatVisual(data.miniGameVisual);
           else return false;
           return true;
         } catch (error) {
@@ -25784,7 +25987,8 @@ function createTutorialDeck(layer, mount, options, words) {
           const publicConfig = data.publicConfig || {};
           applyRemoteGameplayConfig(publicConfig.gameplay);
           const runnerSceneLoaded = applyRemoteRunnerScene(publicConfig.runnerScene);
-          if (!runnerSceneLoaded) void loadRemoteRunnerScene(force);
+          runnerSceneRecoveryPromise = runnerSceneLoaded ? Promise.resolve(true) : loadRemoteRunnerScene(force);
+          if (!runnerSceneLoaded) void runnerSceneRecoveryPromise;
           const nextFeatureFlags = data.flags || {};
           window.__ZEFIROK_FEATURE_FLAGS__ = nextFeatureFlags;
           try { window.dispatchEvent(new CustomEvent(&quot;zefirok-feature-flags&quot;, { detail: nextFeatureFlags })); } catch (error) {}
@@ -25794,7 +25998,7 @@ function createTutorialDeck(layer, mount, options, words) {
           if (!skinsLoaded) void loadRemoteSkinPrices(force);
           if (data.miniGameVisuals &amp;&amp; typeof data.miniGameVisuals === &quot;object&quot;) applyMiniGameVisuals(data.miniGameVisuals);
           else if (Object.prototype.hasOwnProperty.call(data, &quot;miniGameVisual&quot;)) applyMiniGameTreatVisual(data.miniGameVisual);
-          else if (initData) void loadAuthoritativeMiniGameVisuals(force);
+          else if (initData) { miniGameVisualAuthoritativeLoadPromise = loadAuthoritativeMiniGameVisuals(force); void miniGameVisualAuthoritativeLoadPromise; }
           if (Object.prototype.hasOwnProperty.call(data, &quot;liveOpsEvent&quot;)) applyLiveOpsRunEvent(data.liveOpsEvent);
 
           if (!initData) return true;
@@ -25857,6 +26061,25 @@ function createTutorialDeck(layer, mount, options, words) {
           }
           return false;
         }
+      }
+
+      async function prepareInitialRunnerPresentation(force = false) {
+        if (runnerStartupGateReleased) return syncGameStartupPackage(force);
+        if (runnerInitialPresentationPromise) return runnerInitialPresentationPromise;
+        armRunnerStartupGateFailOpen();
+        runnerInitialPresentationPromise = (async () =&gt; {
+          try {
+            setRunnerStartupGateStatus(&quot;Получаем актуальную сцену…&quot;, &quot;Первый кадр покажем только после синхронизации с сервером.&quot;);
+            await syncGameStartupPackage(force);
+            if (!runnerStartupGateReleased) await waitForRunnerPresentationAssets();
+          } catch (error) {
+            console.warn(&quot;Initial runner presentation preparation failed&quot;, error);
+          } finally {
+            releaseRunnerStartupGate(runnerStartupGateRemainingMs() &gt; 0 ? &quot;ready&quot; : &quot;timeout&quot;);
+          }
+          return true;
+        })();
+        return runnerInitialPresentationPromise;
       }
 
       let serverAccountResumeSyncTimer = 0;

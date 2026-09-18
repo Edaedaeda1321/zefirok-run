@@ -27,7 +27,13 @@ const ALEX_CASE_POINT_BANDS = Object.freeze([
   Object.freeze({ min: 15001, max: 20000, weight: 6 }),
   Object.freeze({ min: 20001, max: 25000, weight: 2 })
 ]);
-const ALEX_CASE_CURRENCY_CHANCE = (100 - 0.12 - 0.15 - 0.15 - 0.15) / 3;
+const ALEX_CASE_SKIN_CHANCE = 10;
+const ALEX_CASE_TRAIL_CHANCE = 15;
+const ALEX_CASE_FRAME_CHANCE = 12;
+// Alex avatars remain an ultra-rare collection reward unless the owner changes
+// the category chance from Control Center.
+const ALEX_CASE_AVATAR_CHANCE = 0.15;
+const ALEX_CASE_CURRENCY_CHANCE = (100 - ALEX_CASE_SKIN_CHANCE - ALEX_CASE_TRAIL_CHANCE - ALEX_CASE_FRAME_CHANCE - ALEX_CASE_AVATAR_CHANCE) / 3;
 const ALEX_CASE_DEFINITION = Object.freeze({
   id: "alex",
   title: "Кейс Алекса",
@@ -35,7 +41,7 @@ const ALEX_CASE_DEFINITION = Object.freeze({
   guaranteeCount: 0,
   duplicatePoints: ALEX_CASE_DUPLICATE_POINTS,
   chances: Object.freeze({
-    skin: 0.12, trail: 0.15, frame: 0.15, avatar: 0.15,
+    skin: ALEX_CASE_SKIN_CHANCE, trail: ALEX_CASE_TRAIL_CHANCE, frame: ALEX_CASE_FRAME_CHANCE, avatar: ALEX_CASE_AVATAR_CHANCE,
     points: ALEX_CASE_CURRENCY_CHANCE, treats: ALEX_CASE_CURRENCY_CHANCE, coffee: ALEX_CASE_CURRENCY_CHANCE,
     booster: 0, epicCosmetic: 0, mythicCosmetic: 0, legendaryCosmetic: 0, music: 0, physical: 0
   }),
@@ -11933,8 +11939,11 @@ function alexCaseCollectionStatus(state) {
   return { count, total:4, complete:count >= 4, slots };
 }
 
-function rollAlexCasePoints(rng = caseSecureFloat) {
+function rollAlexCasePoints(rng = caseSecureFloat, range = ALEX_CASE_DEFINITION.ranges.points) {
   const random = typeof rng === "function" ? rng : caseSecureFloat;
+  const min = Math.max(0, Math.floor(Number(range?.[0]) || 0));
+  const max = Math.max(min, Math.floor(Number(range?.[1]) || min));
+  if (min !== ALEX_CASE_DEFINITION.ranges.points[0] || max !== ALEX_CASE_DEFINITION.ranges.points[1]) return caseRandomInt(min, max, random);
   const roll = Math.max(0, Math.min(0.999999999999, Number(random()) || 0)) * 100;
   let cursor = 0;
   for (const band of ALEX_CASE_POINT_BANDS) {
@@ -11945,7 +11954,7 @@ function rollAlexCasePoints(rng = caseSecureFloat) {
   return caseRandomInt(fallback.min, fallback.max, random);
 }
 
-function rollAlexCase(sourceState, currentOwnedSkins = [], rng = caseSecureFloat) {
+function rollAlexCase(sourceState, currentOwnedSkins = [], rng = caseSecureFloat, liveops = null) {
   const state = JSON.parse(JSON.stringify(sourceState || {}));
   state.ownedSkins = normalizeCurrentOwnedSkins(currentOwnedSkins);
   state.activeSkinId = normalizeCurrentActiveSkin(state.activeSkinId, state.ownedSkins);
@@ -11954,6 +11963,9 @@ function rollAlexCase(sourceState, currentOwnedSkins = [], rng = caseSecureFloat
   state.ownedTrails = caseParseOwned(JSON.stringify(state.ownedTrails), "trail", CASE_TRAILS);
   const rewards = [];
   let points = 0, treats = 0, coffee = 0;
+  const runtimeConfig = liveOpsCaseConfig(liveops, "alex") || ALEX_CASE_DEFINITION;
+  const runtimeChances = { ...ALEX_CASE_DEFINITION.chances, ...(runtimeConfig?.chances || {}) };
+  const runtimeRanges = { ...ALEX_CASE_DEFINITION.ranges, ...(runtimeConfig?.ranges || {}) };
 
   const grantUnique = (kind, id, ownedKey, catalog) => {
     const owned = Array.isArray(state[ownedKey]) ? state[ownedKey] : [];
@@ -11971,39 +11983,40 @@ function rollAlexCase(sourceState, currentOwnedSkins = [], rng = caseSecureFloat
 
   const roll = Math.max(0, Math.min(0.999999999999, Number((typeof rng === "function" ? rng : caseSecureFloat)()) || 0)) * 100;
   let cursor = 0;
-  cursor += ALEX_CASE_DEFINITION.chances.skin;
+  cursor += Math.max(0, Number(runtimeChances.skin) || 0);
   if (roll < cursor) grantUnique("skin", "alex", "ownedSkins", CASE_SKINS);
   else {
-    cursor += ALEX_CASE_DEFINITION.chances.trail;
+    cursor += Math.max(0, Number(runtimeChances.trail) || 0);
     if (roll < cursor) grantUnique("trail", "alex_trail", "ownedTrails", CASE_TRAILS);
     else {
-      cursor += ALEX_CASE_DEFINITION.chances.frame;
+      cursor += Math.max(0, Number(runtimeChances.frame) || 0);
       if (roll < cursor) {
         const id = (typeof rng === "function" ? rng : caseSecureFloat)() < 0.5 ? "alex_frame_1" : "alex_frame_2";
         grantUnique("frame", id, "ownedFrames", CASE_FRAMES);
       } else {
-        cursor += ALEX_CASE_DEFINITION.chances.avatar;
+        cursor += Math.max(0, Number(runtimeChances.avatar) || 0);
         if (roll < cursor) {
           const id = (typeof rng === "function" ? rng : caseSecureFloat)() < 0.5 ? "alex_avatar_1" : "alex_avatar_2";
           grantUnique("avatar", id, "ownedAvatars", CASE_AVATARS);
         } else {
           const currencyRoll = roll - cursor;
-          const band = ALEX_CASE_CURRENCY_CHANCE;
-          if (currencyRoll < band) {
-            points = rollAlexCasePoints(rng);
+          const pointBand = Math.max(0, Number(runtimeChances.points) || 0);
+          const treatBand = Math.max(0, Number(runtimeChances.treats) || 0);
+          if (currencyRoll < pointBand) {
+            points = rollAlexCasePoints(rng, runtimeRanges.points);
             rewards.push({ kind:"points", amount:points, alexCase:true });
-          } else if (currencyRoll < band * 2) {
-            treats = caseRandomInt(ALEX_CASE_DEFINITION.ranges.treats[0], ALEX_CASE_DEFINITION.ranges.treats[1], rng);
+          } else if (currencyRoll < pointBand + treatBand) {
+            treats = caseRandomInt(runtimeRanges.treats?.[0], runtimeRanges.treats?.[1], rng);
             rewards.push({ kind:"treats", amount:treats, alexCase:true });
           } else {
-            coffee = caseRandomInt(ALEX_CASE_DEFINITION.ranges.coffee[0], ALEX_CASE_DEFINITION.ranges.coffee[1], rng);
+            coffee = caseRandomInt(runtimeRanges.coffee?.[0], runtimeRanges.coffee?.[1], rng);
             rewards.push({ kind:"coffee", amount:coffee, alexCase:true });
           }
         }
       }
     }
   }
-  return { rewards, state, points, treats, coffee, caseConfig:ALEX_CASE_DEFINITION, alexCollection:alexCaseCollectionStatus(state) };
+  return { rewards, state, points, treats, coffee, caseConfig:runtimeConfig, alexCollection:alexCaseCollectionStatus(state) };
 }
 
 function rollLevelCase(caseType, sourceState, currentOwnedSkins = [], liveops = null, rng = caseSecureFloat) {
@@ -13095,7 +13108,7 @@ async function openGrantedCase(request, env, ctx = null) {
       const taskEvent = await prepareSeasonPassTaskProgressEvent(env, telegramId, { cases_opened:1 }, now)
         .catch((error) => { console.error("granted case task progress prepare failed", error); return null; });
       const rolled = caseType === "alex"
-        ? rollAlexCase(ensured.state, ensured.state.ownedSkins)
+        ? rollAlexCase(ensured.state, ensured.state.ownedSkins, caseSecureFloat, liveops)
         : await rollLevelCaseForPlayer(env,caseType,ensured.state,ensured.state.ownedSkins,liveops);
       const alexCollection = caseType === "alex" ? alexCaseCollectionStatus(rolled.state) : null;
       const alexCollectionRewardGranted = Boolean(caseType === "alex" && alexCollection?.complete && !priorAlexCollectionGrant?.id);
@@ -25075,6 +25088,9 @@ const LIVEOPS_CAMPAIGN_BATCH_SIZE = 30;
 const LIVEOPS_CAMPAIGN_LEASE_SECONDS = 120;
 const LIVEOPS_RARITIES = Object.freeze(["common", "rare", "superrare", "epic", "mythic", "legendary"]);
 const LIVEOPS_CASE_IDS = Object.freeze(["small", "sweet", "gold", "mythic", "legendary"]);
+// The Alex thematic case is now editable from Control Center, while it remains
+// excluded from generic release destinations and ordinary-case catalogs.
+const LIVEOPS_EDITABLE_CASE_IDS = Object.freeze([...LIVEOPS_CASE_IDS, "alex"]);
 const LIVEOPS_CASE_DEFAULTS = Object.freeze({
   small: Object.freeze({ enabled: true, title: "Обычный кейс", guaranteeCount: 0, chances: { treats: 40.5, coffee: 40.5, points: 16.5, booster: 2.5, epicCosmetic:0, mythicCosmetic:0, legendaryCosmetic:0, skin: 0, avatar: 0, frame: 0, trail: 0, music: 0, physical: 0 }, ranges: { treats: [10, 20], coffee: [10, 20], points: [500, 1000] } }),
   sweet: Object.freeze({ enabled: true, title: "Серебряный кейс", guaranteeCount: 0, chances: { treats: 30, coffee: 30, points: 23.5, booster: 12, epicCosmetic:0, mythicCosmetic:0, legendaryCosmetic:0, skin: 0, avatar: 3, frame: 1, trail: 0.5, music: 0, physical: 0 }, ranges: { treats: [20, 40], coffee: [20, 40], points: [1000, 2500] } }),
@@ -25082,6 +25098,11 @@ const LIVEOPS_CASE_DEFAULTS = Object.freeze({
   mythic: Object.freeze({ enabled: true, title: "Мифический кейс", guaranteeCount: 25, chances: { treats: 20, coffee: 15, points: 45, booster: 10, epicCosmetic:7, mythicCosmetic:2.5, legendaryCosmetic:0.5, skin:0, avatar:0, frame:0, trail:0, music:0, physical:0 }, ranges: { treats: [100, 300], coffee: [100, 300], points: [15000, 60000] } }),
   legendary: Object.freeze({ enabled: true, title: "Легендарный кейс", guaranteeCount: 50, chances: { treats: 25, coffee: 25, points: 39.665, booster: 0, epicCosmetic:0, mythicCosmetic:0, legendaryCosmetic:0, skin: 0.35, avatar: 2, frame: 3, trail: 4.5, music: 0.45, physical: 0.035 }, ranges: { treats: [250, 1200], coffee: [250, 1200], points: [35000, 150000] } })
 });
+
+function liveOpsCaseDefaultDefinition(caseId) {
+  const id = String(caseId || "");
+  return id === "alex" ? ALEX_CASE_DEFINITION : (LIVEOPS_CASE_DEFAULTS[id] || LIVEOPS_CASE_DEFAULTS.small);
+}
 
 const LIVEOPS_CONTENT_IMAGES = Object.freeze({
   avatar: Object.freeze({
@@ -25468,8 +25489,8 @@ async function ensureLiveOpsAdminSchema(env) {
         }
       }
       if (contentStatements.length) await env.DB.batch(contentStatements);
-      const caseStatements = LIVEOPS_CASE_IDS.map((caseId) => {
-        const item = LIVEOPS_CASE_DEFAULTS[caseId];
+      const caseStatements = LIVEOPS_EDITABLE_CASE_IDS.map((caseId) => {
+        const item = liveOpsCaseDefaultDefinition(caseId);
         return env.DB.prepare(
           `INSERT OR IGNORE INTO liveops_case_configs (case_id, enabled, title, guarantee_count, chances_json, ranges_json, updated_at, updated_by)
            VALUES (?, ?, ?, ?, ?, ?, ?, 'system')`
@@ -25487,7 +25508,7 @@ async function ensureLiveOpsAdminSchema(env) {
 
 function liveOpsCaseConfigFromRow(row) {
   const caseId = String(row?.case_id || "");
-  const fallback = LIVEOPS_CASE_DEFAULTS[caseId] || LIVEOPS_CASE_DEFAULTS.small;
+  const fallback = liveOpsCaseDefaultDefinition(caseId);
   const storedChances = parseJsonObject(row?.chances_json, {});
   const chances = { ...fallback.chances, ...storedChances };
   if (caseId === "legendary" && !Object.prototype.hasOwnProperty.call(storedChances, "music")) {
@@ -25521,7 +25542,7 @@ function invalidateCaseRuntimeConfigCache(){
 }
 function caseRuntimeDefaultConfig(caseId){
   const id=String(caseId||"");
-  const fallback=LIVEOPS_CASE_DEFAULTS[id]||LIVEOPS_CASE_DEFAULTS.small;
+  const fallback=liveOpsCaseDefaultDefinition(id);
   return {id,enabled:fallback.enabled!==false,title:String(fallback.title||LEVEL_CASE_CONFIG[id]?.title||id),guaranteeCount:Math.max(0,Math.floor(Number(fallback.guaranteeCount)||0)),chances:{...(fallback.chances||{})},ranges:{...(fallback.ranges||{})},updatedAt:0,updatedBy:"code-default"};
 }
 async function readCaseRuntimeConfig(env,force=false){
@@ -25555,10 +25576,10 @@ async function readCaseRuntimeConfig(env,force=false){
       content[kind][itemId]={title:String(row?.title||itemId),rarity:String(row?.rarity||"common"),weight:Math.max(0,Number(row?.weight||0)),enabled:Number(row?.enabled||0)===1,isNew:Number(row?.is_new||0)===1,legendaryOnly:Number(row?.legendary_only||0)===1,imageUrl:liveOpsCanonicalContentImage(kind,itemId,row?.image_url)};
     }
     for(const row of caseRows){
-      const caseId=String(row?.case_id||"");if(!LIVEOPS_CASE_IDS.includes(caseId))continue;
+      const caseId=String(row?.case_id||"");if(!LIVEOPS_EDITABLE_CASE_IDS.includes(caseId))continue;
       cases[caseId]=liveOpsCaseConfigFromRow(row);
     }
-    for(const caseId of LIVEOPS_CASE_IDS)if(!cases[caseId])cases[caseId]=caseRuntimeDefaultConfig(caseId);
+    for(const caseId of LIVEOPS_EDITABLE_CASE_IDS)if(!cases[caseId])cases[caseId]=caseRuntimeDefaultConfig(caseId);
 
     const releaseRules=new Map();
     for(const row of registryRows){
@@ -25674,7 +25695,7 @@ async function readLiveOpsConfig(env, force = false) {
   }
   const cases = {};
   for (const row of caseResult.results || []) cases[String(row.case_id)] = liveOpsCaseConfigFromRow(row);
-  for (const caseId of LIVEOPS_CASE_IDS) if (!cases[caseId]) cases[caseId] = { id: caseId, ...LIVEOPS_CASE_DEFAULTS[caseId] };
+  for (const caseId of LIVEOPS_EDITABLE_CASE_IDS) if (!cases[caseId]) cases[caseId] = caseRuntimeDefaultConfig(caseId);
   const revision = Math.max(0,
     ...Array.from(contentResult.results || [], row => Number(row.updated_at || 0)),
     ...Array.from(caseResult.results || [], row => Number(row.updated_at || 0)),
@@ -25719,8 +25740,8 @@ function runtimeCaseCatalog(kind, baseCatalog, liveops, caseType = "") {
 }
 
 function liveOpsCaseConfig(liveops, caseType) {
-  if (String(caseType || "") === "alex") return ALEX_CASE_DEFINITION;
-  return liveops?.cases?.[caseType] || { id: caseType, ...LIVEOPS_CASE_DEFAULTS[caseType] };
+  const id = String(caseType || "");
+  return liveops?.cases?.[id] || caseRuntimeDefaultConfig(id);
 }
 
 async function logLiveOpsConfigChange(env, user, entityType, entityId, action, oldValue, newValue, reason = "") {
@@ -42671,7 +42692,7 @@ async function ownerPanelFlashOffers(env, ctx) {
 async function normalizeValidateLiveOpsCasePayload(env,payload={}){
   await ensureLiveOpsAdminSchema(env);
   const caseId=normalizeCaseType(payload?.caseId);
-  if(!caseId||!LIVEOPS_CASE_IDS.includes(caseId))throw new ApiError(400,"Неизвестный кейс.");
+  if(!caseId||!LIVEOPS_EDITABLE_CASE_IDS.includes(caseId))throw new ApiError(400,"Неизвестный кейс.");
   const row=await env.DB.prepare(`SELECT * FROM liveops_case_configs WHERE case_id=? LIMIT 1`).bind(caseId).first();
   if(!row)throw new ApiError(404,"Кейс не найден.");
   const before=liveOpsCaseConfigFromRow(row),allowed=Object.keys(ownerPanelCaseCategoryLabels()),input=payload?.chances||{},chances={};
@@ -43481,9 +43502,8 @@ const TEST_PROJECT_SNAPSHOT_SCHEMA = 8;
 const TEST_PROJECT_MAX_CASE_SIMULATIONS = 2000;
 const TEST_PROJECT_MAX_ACTIVITY_LOG = 80;
 const TEST_PROJECT_MAX_SCENARIOS = 8;
-// LiveOps editing intentionally remains limited to LIVEOPS_CASE_IDS.
-// Test Project can additionally exercise special server-owned cases such as Alex.
-const TEST_PROJECT_CASE_IDS = Object.freeze([...LIVEOPS_CASE_IDS, "alex"]);
+// Control Center and Test Project can edit the ordinary cases plus the Alex thematic case.
+const TEST_PROJECT_CASE_IDS = Object.freeze([...LIVEOPS_EDITABLE_CASE_IDS]);
 const TEST_PROJECT_ALEX_FORCE_REWARDS = Object.freeze(["alex","alex_trail","alex_frame_1","alex_frame_2","alex_avatar_1","alex_avatar_2"]);
 const TEST_PROJECT_CASE_PRICES = Object.freeze(Object.fromEntries(TEST_PROJECT_CASE_IDS.map((caseType) => {
   const product = CASE_SHOP_PRODUCTS[caseType] || {};
@@ -43554,9 +43574,9 @@ function testProjectDraftPrice(value = {}) {
 function testProjectNormalizeDraftLayer(raw = {}) {
   const source = raw && typeof raw === "object" && !Array.isArray(raw) ? raw : {};
   const cases = {};
-  for (const [rawId, value] of Object.entries(source.cases || {}).slice(0, LIVEOPS_CASE_IDS.length)) {
+  for (const [rawId, value] of Object.entries(source.cases || {}).slice(0, LIVEOPS_EDITABLE_CASE_IDS.length)) {
     const id = normalizeCaseType(rawId || value?.id);
-    if (!id || !LIVEOPS_CASE_IDS.includes(id)) continue;
+    if (!id || !LIVEOPS_EDITABLE_CASE_IDS.includes(id)) continue;
     const chances = {};
     const inputChances = value?.chances && typeof value.chances === "object" ? value.chances : {};
     for (const key of Object.keys(ownerPanelCaseCategoryLabels())) chances[key] = Math.max(0, Math.min(100, Number(inputChances[key]) || 0));
@@ -44121,14 +44141,8 @@ async function testProjectReadLiveOpsSnapshot(env) {
   } catch (error) {
     console.error("test project liveops snapshot fallback", error);
   }
-  for (const caseId of LIVEOPS_CASE_IDS) if (!cases[caseId]) cases[caseId] = { id: caseId, ...testProjectClone(LIVEOPS_CASE_DEFAULTS[caseId]) };
-  // Alex is a server-owned thematic case, not an editable LiveOps case. It is
-  // exposed to TP explicitly so QA can buy/grant/open it without widening CC permissions.
-  cases.alex = {
-    id:"alex", title:ALEX_CASE_DEFINITION.title, enabled:true, guaranteeCount:0,
-    chances:testProjectClone(ALEX_CASE_DEFINITION.chances), ranges:testProjectClone(ALEX_CASE_DEFINITION.ranges),
-    duplicatePoints:ALEX_CASE_DUPLICATE_POINTS, specialCase:true, testProjectSpecial:true
-  };
+  for (const caseId of LIVEOPS_EDITABLE_CASE_IDS) if (!cases[caseId]) cases[caseId] = testProjectClone(caseRuntimeDefaultConfig(caseId));
+  cases.alex = { ...cases.alex, duplicatePoints:ALEX_CASE_DUPLICATE_POINTS, specialCase:true, testProjectSpecial:true };
   return { content, cases, version: 4, sandboxHiddenContent:true };
 }
 
@@ -45212,7 +45226,7 @@ async function ownerPanelTestProjectCaseOpen(env, ctx) {
     const rng=testProjectCaseRng(state,`case-sim:${caseType}:${samples}`);
     for (let i=0; i<samples; i+=1) {
       const rolled = caseType === "alex"
-        ? rollAlexCase(virtual, virtual.ownedSkins, rng)
+        ? rollAlexCase(virtual, virtual.ownedSkins, rng, liveops)
         : rollLevelCase(caseType, virtual, virtual.ownedSkins, liveops, rng);
       virtual = testProjectNormalizeCaseState(rolled.state);
       totals.points += Number(rolled.points || 0); totals.treats += Number(rolled.treats || 0); totals.coffee += Number(rolled.coffee || 0);
@@ -45228,7 +45242,7 @@ async function ownerPanelTestProjectCaseOpen(env, ctx) {
   const rng = forced ? testProjectForcedAlexRng(forced.rewardId) : testProjectCaseRng(state,`case-open:${caseType}`);
   const alexCollectionBefore = caseType === "alex" ? alexCaseCollectionStatus(state.caseState) : null;
   const rolled = caseType === "alex"
-    ? rollAlexCase(state.caseState, state.caseState.ownedSkins, rng || testProjectCaseRng(state,`case-open:${caseType}`))
+    ? rollAlexCase(state.caseState, state.caseState.ownedSkins, rng || testProjectCaseRng(state,`case-open:${caseType}`), liveops)
     : rollLevelCase(caseType, state.caseState, state.caseState.ownedSkins, liveops, rng);
   state.caseState = testProjectNormalizeCaseState(rolled.state);
   state.sandbox = testProjectNormalizeSandboxState({...state.sandbox,achievementOpenedCases:Number(state.sandbox?.achievementOpenedCases||0)+1});
@@ -45850,7 +45864,7 @@ async function ownerPanelTestProjectDiff(env,ctx){
   if(base){for(const [label,key] of [["Очки","points"],["Зефир","treats"],["Кофе","coffee"],["XP профиля","profileXp"],["Уровень профиля","profileLevel"],["Рекорд","bestScore"],["Тариф","passTier"],["XP пропуска","passXp"],["Получено overflow","passOverflowClaimed"]])testProjectScalarDiff(rows,label,base[key],state[key]);testProjectObjectDiff(rows,"Кейсы",base.caseInventory,state.caseInventory);testProjectObjectDiff(rows,"Сезонные кейсы",base.seasonalCaseInventory,state.seasonalCaseInventory);testProjectObjectDiff(rows,"Покупки акций",base.offerPurchases,state.offerPurchases);testProjectArrayDiff(rows,"Открытые уровневые кейсы",base.openedLevelCases,state.openedLevelCases);testProjectArrayDiff(rows,"Полученные награды пропуска",base.passClaims,state.passClaims);testProjectArrayDiff(rows,"Полученные задания",base.passTaskClaims,state.passTaskClaims);testProjectObjectDiff(rows,"Прогресс заданий",base.passTaskProgress,state.passTaskProgress);testProjectArrayDiff(rows,"Открытые главы сюжета",base.storySeenEventIds,state.storySeenEventIds);for(const [label,key] of [["Аватары","ownedAvatars"],["Рамки","ownedFrames"],["Следы","ownedTrails"],["Музыка","ownedMusicTracks"],["Скины","ownedSkins"],["Особые предметы","ownedSpecials"]])testProjectArrayDiff(rows,label,base.caseState?.[key],state.caseState?.[key]);for(const [label,key] of [["Активный аватар","activeAvatarId"],["Активная рамка","activeFrameId"],["Активный след","activeTrailId"],["Активная музыка","activeMusicTrackId"],["Активный скин","activeSkinId"],["Mythic pity","mythicPityCounter"],["Legendary pity","legendaryPityCounter"]])testProjectScalarDiff(rows,label,base.caseState?.[key],state.caseState?.[key]);testProjectObjectDiff(rows,"Усилители",base.caseState?.boosters,state.caseState?.boosters);testProjectScalarDiff(rows,"Активный усилитель",testProjectCompactJson(base.caseState?.activeBooster||{},300),testProjectCompactJson(state.caseState?.activeBooster||{},300));}
   else rows.push({section:"Игрок",label:"Production baseline",before:"—",after:"Сначала клонируйте реального игрока"});
   const prodGame=productionSnapshot?.publicConfig?.gameplay||{},tpGame=snapshot?.publicConfig?.gameplay||{};for(const key of [...new Set([...Object.keys(prodGame),...Object.keys(tpGame)])].sort()){if(["source"].includes(key))continue;testProjectScalarDiff(rows,key,prodGame[key],tpGame[key],"Баланс игры");}
-  for(const id of LIVEOPS_CASE_IDS){const a=productionSnapshot?.liveops?.cases?.[id]||{},b=snapshot?.liveops?.cases?.[id]||{};if(testProjectCompactJson(a,2000)!==testProjectCompactJson(b,2000))rows.push({section:"Кейсы",label:id,before:testProjectCompactJson(a,400),after:testProjectCompactJson(b,400)});}
+  for(const id of LIVEOPS_EDITABLE_CASE_IDS){const a=productionSnapshot?.liveops?.cases?.[id]||{},b=snapshot?.liveops?.cases?.[id]||{};if(testProjectCompactJson(a,2000)!==testProjectCompactJson(b,2000))rows.push({section:"Кейсы",label:id,before:testProjectCompactJson(a,400),after:testProjectCompactJson(b,400)});}
   const prodOffers=new Map((productionSnapshot?.offers||[]).map((x)=>[String(x.id),x])),tpOffers=new Map((snapshot?.offers||[]).map((x)=>[String(x.id),x]));for(const id of new Set([...prodOffers.keys(),...tpOffers.keys()])){const a=prodOffers.get(id),b=tpOffers.get(id);if(testProjectCompactJson(a,2000)!==testProjectCompactJson(b,2000))rows.push({section:"Акции",label:b?.title||a?.title||id,before:a?"Production":"нет",after:b?.testDraft?"DRAFT":"изменено"});}
   return {ok:true,hasClone:Boolean(base),cloneSource:state.cloneSource||null,summary:{total:rows.length,player:rows.filter((r)=>r.section==="Игрок").length,config:rows.filter((r)=>r.section!=="Игрок").length},rows:rows.slice(0,180)};
 }
@@ -50196,10 +50210,15 @@ async function ownerPanelUpdateMaintenance(env, ctx) {
 function ownerPanelCaseCategoryLabels() {
   return {points:"Очки",treats:"Зефир",coffee:"Кофе",booster:"Бустер ×2",epicCosmetic:"Эпическая косметика",mythicCosmetic:"Мифическая косметика",legendaryCosmetic:"Легендарная косметика",skin:"Скин",avatar:"Аватарка",frame:"Рамка",trail:"След",music:"Музыка",physical:"Физический приз"};
 }
+function ownerPanelCaseEditableChanceKeys(caseId) {
+  return String(caseId || "") === "alex"
+    ? ["points","treats","coffee","skin","avatar","frame","trail"]
+    : Object.keys(ownerPanelCaseCategoryLabels());
+}
 
 async function ownerPanelCases(env, ctx) {
   const config=await readLiveOpsConfig(env);const labels=ownerPanelCaseCategoryLabels();
-  const cases=LIVEOPS_CASE_IDS.map((id)=>{const item=config.cases[id];const total=Object.values(item.chances||{}).reduce((sum,v)=>sum+Number(v||0),0);return {...item,imageUrl:ownerPanelCaseAsset(id),chanceTotal:Number(total.toFixed(6))};});
+  const cases=LIVEOPS_EDITABLE_CASE_IDS.map((id)=>{const item=config.cases[id];const total=Object.values(item.chances||{}).reduce((sum,v)=>sum+Number(v||0),0);return {...item,imageUrl:ownerPanelCaseAsset(id),chanceTotal:Number(total.toFixed(6)),editableChanceKeys:ownerPanelCaseEditableChanceKeys(id)};});
   const content=[];for(const [kind,items] of Object.entries(config.content||{})){for(const [id,item] of Object.entries(items||{})){content.push({kind,id,...item});}}
   return {ok:true,cases,content,categoryLabels:labels,rarities:LIVEOPS_RARITIES};
 }
@@ -50208,6 +50227,7 @@ async function ownerPanelSaveCase(env, ctx) {
   const normalized=await normalizeValidateLiveOpsCasePayload(env,ctx.body||{}),{caseId,row,before,enabled,guaranteeCount:guarantee,chances,ranges}=normalized,now=Math.floor(Date.now()/1000);
   const next={...before,enabled,guaranteeCount:guarantee,chances,ranges,updatedAt:now,updatedBy:String(ctx.user.id)},beforeHistory={enabled:Number(row.enabled||0),title:String(row.title||before.title),guarantee_count:Number(row.guarantee_count||0),chances_json:String(row.chances_json||"{}"),ranges_json:String(row.ranges_json||"{}")},nextHistory={enabled:enabled?1:0,title:String(row.title||before.title),guarantee_count:guarantee,chances_json:JSON.stringify(chances),ranges_json:JSON.stringify(ranges)};
   await createConfigSnapshot(env,"pre_owner_case_change",`Перед изменением кейса: ${before.title}`,ctx.user).catch(()=>{});await env.DB.prepare(`UPDATE liveops_case_configs SET enabled=?,guarantee_count=?,chances_json=?,ranges_json=?,updated_at=?,updated_by=? WHERE case_id=?`).bind(enabled?1:0,guarantee,JSON.stringify(chances),JSON.stringify(ranges),now,String(ctx.user.id),caseId).run();
+  invalidateLiveOpsConfigCache();
   await logLiveOpsConfigChange(env,ctx.user,"case",caseId,"owner_panel_update",beforeHistory,nextHistory,"Изменение из панели владельца");await logStaffAction(env,ctx.user,ctx.access,"owner_panel_case_update",null,"case",null,null,{caseId,enabled,guarantee,chances,ranges});return {ok:true,case:{...next,imageUrl:ownerPanelCaseAsset(caseId),chanceTotal:100}};
 }
 
