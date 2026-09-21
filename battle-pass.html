@@ -8240,16 +8240,51 @@ img[src$="/xp.webp"]{
     }
   }
 
+  function overflowRewardSummaryItem(item={},fallbackAmount=1){
+    const configured=serverPass?.season?.progression?.overflowReward||serverPass?.overflow?.reward||{};
+    const amount=Math.max(1,Number(item?.amount||fallbackAmount)||1);
+    const baseTitle=String(item?.title||configured?.title||"Награда 50+");
+    return {premium:true,icon:"",image:item?.imageUrl||configured?.imageUrl||"/assets/cases/gold_closed.webp",name:baseTitle,description:"Бонус после 50 уровня",level:"50+",source:"Бесконечная дорожка 50+",rewardType:String(item?.rewardType||configured?.type||"case"),amount,itemId:String(item?.itemId||configured?.itemId||"")};
+  }
+
+  async function claimOverflowRewardsAuthoritatively(){
+    const before=overflowState();
+    if(before.available<=0)return {received:[],claimedCount:0,repeated:true};
+    let data=null,requestError=null,refreshError=null;
+    try{
+      data=await seasonPassApi(CLAIM_OVERFLOW_PATH,{all:true},22000);
+      applyServerPass(data);
+    }catch(error){requestError=error;}
+
+    // Overflow can award a seasonal case. The mutation response intentionally
+    // stays compact and may not contain the refreshed seasonal-case inventory,
+    // so always re-read the authoritative pass after the mutation. This also
+    // resolves the result safely when the write committed but the request timed out.
+    try{
+      const state=await seasonPassApi(STATE_PATH,{},12000);
+      applyServerPass(state);
+    }catch(error){refreshError=error;}
+
+    const after=overflowState();
+    const claimedCount=Math.max(0,Math.min(before.available,before.available-after.available));
+    const rawReceived=Array.isArray(data?.received)?data.received:[];
+    if(!data&&claimedCount<=0)throw requestError||refreshError||new Error("Не удалось подтвердить получение награды 50+.");
+    const received=rawReceived.length
+      ? rawReceived.map(item=>overflowRewardSummaryItem(item,claimedCount||1))
+      : claimedCount>0?[overflowRewardSummaryItem({},claimedCount)]:[];
+    return {received,claimedCount,repeated:received.length===0&&claimedCount<=0,data};
+  }
+
   async function claimOverflowRewards(sourceButton=null){
     const state=overflowState();if(state.available<=0)return showToast("Следующая награда бесконечной линии ещё не открыта");
     const button=sourceButton||document.querySelector("[data-overflow-inline]");
     const old=button?.textContent||"";
-    if(button){button.disabled=true;button.textContent="Получаем кейс…";}
+    if(button){button.disabled=true;button.textContent="Получаем награду…";}
     try{
-      const data=await seasonPassApi(CLAIM_OVERFLOW_PATH,{all:true});
-      applyServerPass(data);render();notifyAccountChanged();passNotifyHaptic("success");
-      const received=Array.isArray(data.received)?data.received.map(item=>({premium:true,icon:"",image:item.imageUrl||serverPass?.season?.progression?.overflowReward?.imageUrl||"/assets/cases/gold_closed.webp",name:item.title||serverPass?.season?.progression?.overflowReward?.title||"Награда",description:"Бонус после 50 уровня",level:"50+",source:"Бесконечная дорожка 50+"})):[];
-      if(received.length)openRewardSummary(received);else showToast("Золотой кейс уже получен");
+      const result=await claimOverflowRewardsAuthoritatively();
+      render();notifyAccountChanged();
+      if(result.received.length){passNotifyHaptic("success");openRewardSummary(result.received);}
+      else{passNotifyHaptic("warning");showToast("Награда 50+ уже получена");}
     }catch(error){passNotifyHaptic("error");showToast(error.message||"Не удалось получить награду бесконечной линии");}
     finally{if(button&&button.isConnected){button.textContent=old;button.disabled=false;}render();}
   }
@@ -8624,42 +8659,54 @@ img[src$="/xp.webp"]{
   async function claimAllRewardsReliable(){
     const button=el("claimAll"),oldText=button.textContent;
     const before=new Set((pass.claimed||[]).map(String));
+    const beforeOverflow=overflowState();
     button.disabled=true;button.textContent="Получаем награды…";
-    let confirmed=false;
     try{
-      // Bulk delivery can legitimately take longer than a tiny UI request when
-      // many case/cosmetic grants are being committed. Give the authoritative
-      // operation time to finish instead of aborting it at 7 seconds.
-      const data=await seasonPassApi(CLAIM_ALL_PATH,{},22000);
-      applyServerPass(data);render();notifyAccountChanged();confirmed=true;
-      const stateAdded=(pass.claimed||[]).map(String).filter(id=>!before.has(id));
-      const received=Array.isArray(data.received)&&data.received.length?data.received.map(rewardSummaryItemFromServer):rewardSummaryItemsFromClaimIds(stateAdded);
-      const failedCount=Array.isArray(data?.failedRewards)?data.failedRewards.length:0;
-      if(received.length){passNotifyHaptic(failedCount?"warning":"success");openRewardSummary(received);if(failedCount)showToast(`Получено ${received.length}. Не удалось получить: ${failedCount}`);}
-      else if(failedCount){passNotifyHaptic("error");showToast(`Не удалось получить ${failedCount} наград. Попробуйте ещё раз.`);}
-      else{passNotifyHaptic("warning");showToast("Нет доступных наград");}
-    }catch(error){
-      const uncertain=Boolean(error?.timeout||error?.code==="REQUEST_TIMEOUT"||error?.code==="REQUEST_ABORTED");
-      if(!uncertain)throw error;
-      // A fetch timeout does not mean the Worker transaction failed. Re-read the
-      // authoritative state before telling the player anything; this fixes the
-      // old false-error case where a relaunch showed that rewards were already claimed.
-      button.textContent="Проверяем получение…";
-      await new Promise(resolve=>setTimeout(resolve,500));
+      let data=null,standardError=null;
       try{
-        const state=await seasonPassApi(STATE_PATH,{},12000);
-        applyServerPass(state);render();notifyAccountChanged();
-        const added=(pass.claimed||[]).map(String).filter(id=>!before.has(id));
-        if(added.length){
-          confirmed=true;passNotifyHaptic("success");
-          const summary=rewardSummaryItemsFromClaimIds(added);if(summary.length)openRewardSummary(summary);
-          showToast(`Получено наград: ${added.length}`);
+        // Bulk delivery can legitimately take longer than a tiny UI request when
+        // many case/cosmetic grants are being committed. Give the authoritative
+        // operation time to finish instead of aborting it at 7 seconds.
+        data=await seasonPassApi(CLAIM_ALL_PATH,{},22000);
+        applyServerPass(data);
+      }catch(error){
+        const uncertain=Boolean(error?.timeout||error?.code==="REQUEST_TIMEOUT"||error?.code==="REQUEST_ABORTED");
+        if(!uncertain)standardError=error;
+        else{
+          // A fetch timeout does not mean the Worker transaction failed. Re-read
+          // authoritative state before deciding whether the operation succeeded.
+          button.textContent="Проверяем получение…";
+          await new Promise(resolve=>setTimeout(resolve,500));
+          try{const state=await seasonPassApi(STATE_PATH,{},12000);applyServerPass(state);}
+          catch{const verifyError=new Error("Не удалось подтвердить итог. Нажми ещё раз — уже выданные награды повторно не начислятся.");verifyError.code="CLAIM_RESULT_UNCERTAIN";standardError=verifyError;}
         }
-      }catch{}
-      if(!confirmed){
-        const verifyError=new Error("Не удалось подтвердить итог. Нажми ещё раз — уже выданные награды повторно не начислятся.");
-        verifyError.code="CLAIM_RESULT_UNCERTAIN";throw verifyError;
       }
+
+      const stateAdded=(pass.claimed||[]).map(String).filter(id=>!before.has(id));
+      const standardReceived=Array.isArray(data?.received)&&data.received.length?data.received.map(rewardSummaryItemFromServer):rewardSummaryItemsFromClaimIds(stateAdded);
+      const failedCount=Array.isArray(data?.failedRewards)?data.failedRewards.length:0;
+
+      // "Получить все" must include the 50+ / infinity lane as well. Previously
+      // the badge counted it as available but this button only called claim-all
+      // for levels 1-50, which produced the misleading "Нет доступных наград".
+      let overflowResult={received:[],claimedCount:0,repeated:true},overflowError=null;
+      if(Math.max(beforeOverflow.available,overflowState().available)>0){
+        button.textContent="Получаем награду 50+…";
+        try{overflowResult=await claimOverflowRewardsAuthoritatively();}
+        catch(error){overflowError=error;}
+      }
+
+      render();notifyAccountChanged();
+      const received=[...standardReceived,...overflowResult.received];
+      const partial=Boolean(failedCount||standardError||overflowError);
+      if(received.length){
+        passNotifyHaptic(partial?"warning":"success");openRewardSummary(received);
+        if(partial)showToast(`Получено ${received.length}. Часть наград не удалось подтвердить — можно повторить получение.`);
+      }else if(failedCount){
+        passNotifyHaptic("error");showToast(`Не удалось получить ${failedCount} наград. Попробуйте ещё раз.`);
+      }else if(overflowError){throw overflowError;}
+      else if(standardError){throw standardError;}
+      else{passNotifyHaptic("warning");showToast("Нет доступных наград");}
     }finally{
       button.textContent=oldText;button.disabled=false;render();
     }
