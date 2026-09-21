@@ -8247,44 +8247,88 @@ img[src$="/xp.webp"]{
     return {premium:true,icon:"",image:item?.imageUrl||configured?.imageUrl||"/assets/cases/gold_closed.webp",name:baseTitle,description:"Бонус после 50 уровня",level:"50+",source:"Бесконечная дорожка 50+",rewardType:String(item?.rewardType||configured?.type||"case"),amount,itemId:String(item?.itemId||configured?.itemId||"")};
   }
 
-  async function claimOverflowRewardsAuthoritatively(){
+  async function claimOverflowRewardsAuthoritatively(options={}){
     const before=overflowState();
-    if(before.available<=0)return {received:[],claimedCount:0,repeated:true};
+    if(before.available<=0)return {received:[],claimedCount:0,repeated:true,partial:false,remaining:0};
+    const sequential=options?.sequential===true&&before.available>1;
+    const onProgress=typeof options?.onProgress==="function"?options.onProgress:null;
     let data=null,requestError=null,refreshError=null;
-    try{
-      data=await seasonPassApi(CLAIM_OVERFLOW_PATH,{all:true},22000);
-      applyServerPass(data);
-    }catch(error){requestError=error;}
+
+    if(sequential){
+      // The 50+ endpoint can award a seasonal case. One award is cheap and stable,
+      // while asking the same request to build several seasonal-case grants can be
+      // noticeably heavier. The inline “Забрать ×N” action therefore commits the
+      // already-earned rewards one by one. Every step is idempotent on the server,
+      // so a timeout can be verified and retried without duplicating a case.
+      for(let index=0;index<before.available;index+=1){
+        let stepConfirmed=false,stepError=null;
+        for(let attempt=0;attempt<2&&!stepConfirmed;attempt+=1){
+          try{
+            data=await seasonPassApi(CLAIM_OVERFLOW_PATH,{all:false},16000);
+            applyServerPass(data);
+            stepConfirmed=true;
+          }catch(error){
+            stepError=error;requestError=error;
+            // A timeout can happen after D1 has already committed the grant.
+            // Re-read the authoritative state before retrying the same step.
+            try{
+              const state=await seasonPassApi(STATE_PATH,{},12000);
+              applyServerPass(state);refreshError=null;
+              const expectedRemaining=Math.max(0,before.available-(index+1));
+              if(overflowState().available<=expectedRemaining)stepConfirmed=true;
+            }catch(verifyError){refreshError=verifyError;}
+            if(!stepConfirmed&&attempt===0)await new Promise(resolve=>setTimeout(resolve,250));
+          }
+        }
+        if(!stepConfirmed){requestError=stepError||requestError;break;}
+        onProgress?.(index+1,before.available);
+      }
+    }else{
+      try{
+        data=await seasonPassApi(CLAIM_OVERFLOW_PATH,{all:true},22000);
+        applyServerPass(data);
+      }catch(error){requestError=error;}
+    }
 
     // Overflow can award a seasonal case. The mutation response intentionally
     // stays compact and may not contain the refreshed seasonal-case inventory,
     // so always re-read the authoritative pass after the mutation. This also
-    // resolves the result safely when the write committed but the request timed out.
+    // resolves the result safely when a write committed but its request timed out.
     try{
       const state=await seasonPassApi(STATE_PATH,{},12000);
-      applyServerPass(state);
+      applyServerPass(state);refreshError=null;
     }catch(error){refreshError=error;}
 
     const after=overflowState();
     const claimedCount=Math.max(0,Math.min(before.available,before.available-after.available));
-    const rawReceived=Array.isArray(data?.received)?data.received:[];
-    if(!data&&claimedCount<=0)throw requestError||refreshError||new Error("Не удалось подтвердить получение награды 50+.");
-    const received=rawReceived.length
-      ? rawReceived.map(item=>overflowRewardSummaryItem(item,claimedCount||1))
-      : claimedCount>0?[overflowRewardSummaryItem({},claimedCount)]:[];
-    return {received,claimedCount,repeated:received.length===0&&claimedCount<=0,data};
+    if(claimedCount<=0&&requestError)throw requestError;
+    if(!data&&claimedCount<=0)throw refreshError||new Error("Не удалось подтвердить получение награды 50+.");
+    const received=claimedCount>0?[overflowRewardSummaryItem({},claimedCount)]:[];
+    return {
+      received,claimedCount,
+      repeated:received.length===0&&claimedCount<=0,
+      partial:claimedCount>0&&claimedCount<before.available,
+      remaining:Math.max(0,Number(after.available)||0),
+      error:requestError||refreshError||null,
+      data
+    };
   }
 
   async function claimOverflowRewards(sourceButton=null){
     const state=overflowState();if(state.available<=0)return showToast("Следующая награда бесконечной линии ещё не открыта");
     const button=sourceButton||document.querySelector("[data-overflow-inline]");
     const old=button?.textContent||"";
-    if(button){button.disabled=true;button.textContent="Получаем награду…";}
+    if(button){button.disabled=true;button.textContent=state.available>1?`Получаем 0/${state.available}…`:"Получаем награду…";}
     try{
-      const result=await claimOverflowRewardsAuthoritatively();
+      const result=await claimOverflowRewardsAuthoritatively({
+        sequential:state.available>1,
+        onProgress:(done,total)=>{if(button&&button.isConnected)button.textContent=`Получаем ${Math.min(done,total)}/${total}…`;}
+      });
       render();notifyAccountChanged();
-      if(result.received.length){passNotifyHaptic("success");openRewardSummary(result.received);}
-      else{passNotifyHaptic("warning");showToast("Награда 50+ уже получена");}
+      if(result.received.length){
+        passNotifyHaptic(result.partial?"warning":"success");openRewardSummary(result.received);
+        if(result.partial)showToast(`Получено ${result.claimedCount} из ${state.available}. Осталось: ${result.remaining}.`);
+      }else{passNotifyHaptic("warning");showToast("Награда 50+ уже получена");}
     }catch(error){passNotifyHaptic("error");showToast(error.message||"Не удалось получить награду бесконечной линии");}
     finally{if(button&&button.isConnected){button.textContent=old;button.disabled=false;}render();}
   }
