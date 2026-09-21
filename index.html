@@ -8298,11 +8298,38 @@ html&gt;body{padding:
 }
 #zefirok-maltipoo-runner .skins-wallet strong {
   min-width: 0;
+  width: 100%;
+  display: flex;
+  align-items: baseline;
+  gap: 3px;
   color: #6f304b;
   font-size: 15px;
   line-height: 1;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.035em;
+  white-space: nowrap;
   overflow: hidden;
-  text-overflow: ellipsis;
+}
+#zefirok-maltipoo-runner .skins-wallet strong > span {
+  min-width: 0;
+  display: inline;
+  color: inherit;
+  font-size: inherit;
+  font-weight: inherit;
+  line-height: inherit;
+  letter-spacing: inherit;
+  white-space: nowrap;
+}
+#zefirok-maltipoo-runner .skins-wallet .skins-wallet-unit {
+  flex: 0 0 auto;
+  display: inline;
+  margin: 0;
+  color: #a58b94;
+  font-size: .58em;
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: 0;
+  white-space: nowrap;
 }
 #zefirok-maltipoo-runner .skins-active-summary {
   display: grid;
@@ -12258,9 +12285,9 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
 &lt;div class=&quot;shop-panel&quot; data-shop-panel=&quot;skins&quot; hidden=&quot;&quot;&gt;
   &lt;div class=&quot;skins-store&quot;&gt;
     &lt;div class=&quot;skins-wallet&quot; aria-label=&quot;Баланс для покупки скинов&quot;&gt;
-      &lt;div&gt;&lt;img alt=&quot;&quot; data-shop-img=&quot;shopStar&quot;/&gt;&lt;span&gt;Очки&lt;/span&gt;&lt;strong data-skins-wallet&gt;0&lt;/strong&gt;&lt;/div&gt;
-      &lt;div&gt;&lt;img alt=&quot;&quot; data-shop-img=&quot;iconTreatPanel&quot;/&gt;&lt;span&gt;Зефир&lt;/span&gt;&lt;strong data-skins-treats&gt;0&lt;/strong&gt;&lt;/div&gt;
-      &lt;div&gt;&lt;img alt=&quot;&quot; data-shop-img=&quot;shopCoffee&quot;/&gt;&lt;span&gt;Кофе&lt;/span&gt;&lt;strong data-skins-coffee&gt;0&lt;/strong&gt;&lt;/div&gt;
+      &lt;div&gt;&lt;img alt=&quot;&quot; data-shop-img=&quot;shopStar&quot;/&gt;&lt;span&gt;Очки&lt;/span&gt;&lt;strong&gt;&lt;span data-skins-wallet&gt;0&lt;/span&gt;&lt;/strong&gt;&lt;/div&gt;
+      &lt;div&gt;&lt;img alt=&quot;&quot; data-shop-img=&quot;iconTreatPanel&quot;/&gt;&lt;span&gt;Зефир&lt;/span&gt;&lt;strong&gt;&lt;span data-skins-treats&gt;0&lt;/span&gt;&lt;small class=&quot;skins-wallet-unit&quot;&gt;шт.&lt;/small&gt;&lt;/strong&gt;&lt;/div&gt;
+      &lt;div&gt;&lt;img alt=&quot;&quot; data-shop-img=&quot;shopCoffee&quot;/&gt;&lt;span&gt;Кофе&lt;/span&gt;&lt;strong&gt;&lt;span data-skins-coffee&gt;0&lt;/span&gt;&lt;small class=&quot;skins-wallet-unit&quot;&gt;шт.&lt;/small&gt;&lt;/strong&gt;&lt;/div&gt;
     &lt;/div&gt;
     &lt;div class=&quot;skins-v2-featured&quot; data-skins-featured aria-live=&quot;polite&quot;&gt;&lt;/div&gt;
     &lt;div class=&quot;skins-v2-collection&quot; data-skins-collection aria-label=&quot;Коллекция скинов&quot;&gt;&lt;/div&gt;
@@ -16140,6 +16167,11 @@ function installProgressInfo(){
           minSize = 10;
           if (digits &gt;= 7) size = Math.min(size, 11.5);
           else if (digits &gt;= 5) size = Math.min(size, 13.5);
+        } else if (element.closest(&quot;.skins-wallet&quot;)) {
+          minSize = 8.5;
+          if (digits &gt;= 8) size = Math.min(size, 9.5);
+          else if (digits &gt;= 7) size = Math.min(size, 10.5);
+          else if (digits &gt;= 5) size = Math.min(size, 12);
         } else if (element.classList.contains(&quot;price-pill&quot;)) {
           minSize = 10.5;
           if (digits &gt;= 7) size = Math.min(size, 11.5);
@@ -16162,6 +16194,7 @@ function installProgressInfo(){
       const numericUiSelector = [
         &quot;.stat strong&quot;,
         &quot;.wallet-chip strong&quot;,
+        &quot;.skins-wallet strong&quot;,
         &quot;.price-pill&quot;,
         &quot;[data-preview-points]&quot;,
         &quot;[data-preview-treats]&quot;,
@@ -16577,7 +16610,7 @@ function installProgressInfo(){
         gold: Object.freeze({ treats:25,coffee:25,points:26,booster:15,epicCosmetic:0,mythicCosmetic:0,legendaryCosmetic:0,skin:0,avatar:5,frame:3,trail:1,music:0,physical:0 }),
         mythic: Object.freeze({ treats:20,coffee:15,points:45,booster:10,epicCosmetic:7,mythicCosmetic:2.5,legendaryCosmetic:0.5,skin:0,avatar:0,frame:0,trail:0,music:0,physical:0 }),
         legendary: Object.freeze({ treats:25,coffee:25,points:39.665,booster:0,epicCosmetic:0,mythicCosmetic:0,legendaryCosmetic:0,skin:0.35,avatar:2,frame:3,trail:4.5,music:0.45,physical:CASE_PHYSICAL_TOTAL_CHANCE }),
-        alex: Object.freeze({ treats:20.95,coffee:20.95,points:20.95,booster:0,epicCosmetic:0,mythicCosmetic:0,legendaryCosmetic:0,skin:10,avatar:0.15,frame:12,trail:15,music:0,physical:0 })
+        alex: Object.freeze({ treats:12,coffee:12,points:12,booster:0,epicCosmetic:0,mythicCosmetic:0,legendaryCosmetic:0,skin:10,avatar:27,frame:12,trail:15,music:0,physical:0 })
       });
       const CASE_REWARD_RANGES = Object.freeze({
         small: Object.freeze({ treats: [10, 20], coffee: [10, 20], points: [500, 1000] }),
