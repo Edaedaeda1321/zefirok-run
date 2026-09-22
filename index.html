@@ -11981,7 +11981,7 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
 &lt;div class=&quot;overlay&quot; data-overlay=&quot;&quot;&gt;
 &lt;div class=&quot;modal&quot;&gt;
 &lt;div class=&quot;badge&quot;&gt;&lt;img alt=&quot;&quot; data-current-dog-portrait=&quot;&quot; src=&quot;/assets/skins/avatars/default.webp&quot; loading=&quot;eager&quot; fetchpriority=&quot;high&quot; decoding=&quot;async&quot;/&gt;&lt;/div&gt;
-&lt;strong&gt;Зефи готов к забегу&lt;/strong&gt;
+&lt;strong data-runner-ready-title&gt;Зефи готова к забегу&lt;/strong&gt;
 &lt;div class=&quot;rule&quot;&gt;&lt;/div&gt;
 &lt;span&gt;Тапни по витрине, чтобы стартовать. Собирай зефир и кофе, перепрыгивай пуфики.&lt;/span&gt;
 &lt;/div&gt;
@@ -14845,11 +14845,17 @@ function installProgressInfo(){
         }
         return `&lt;span class=&quot;leaderboard-reward-line&quot; data-reward-type=&quot;${leaderboardEscape(type)}&quot;${caseAttrs}&gt;${visual}&lt;strong class=&quot;leaderboard-reward-amount leaderboard-reward-amount--fixed&quot;&gt;${leaderboardEscape(amountLabel)}&lt;/strong&gt;&lt;/span&gt;`;
       }
+      function syncRunReadyTitle(scope = root) {
+        const readyTitle = scope.querySelector(&quot;[data-runner-ready-title]&quot;);
+        if (!readyTitle) return;
+        readyTitle.textContent = currentDogSkin.id === &quot;alex&quot; ? &quot;Алекс готов к забегу&quot; : &quot;Зефи готова к забегу&quot;;
+      }
       function syncDogPortraits(scope = root) {
         const src = currentDogRunPortraitSrc() || defaultDogRunPortraitSrc();
         for (const img of scope.querySelectorAll(&quot;[data-current-dog-portrait]&quot;)) {
           applyDogRunPortrait(img, src);
         }
+        syncRunReadyTitle(scope);
       }
       const avatarImg = root.querySelector(&quot;[data-avatar-sprite]&quot;);
       function syncDogAvatar() {
@@ -19440,6 +19446,7 @@ function createTutorialDeck(layer, mount, options, words) {
           updateRunningHud(performance.now(), true);
           return;
         }
+        syncRunReadyTitle();
         scoreEl.textContent = formatter.format(Math.floor(state.score));
         bestEl.textContent = formatter.format(Math.floor(state.best));
         treatsEl.textContent = formatter.format(state.treats + state.runTreats);
