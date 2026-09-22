@@ -49543,7 +49543,8 @@ async function seasonPassReadinessReport(env, seasonIdValue, options={}){
   if(eliteSum<=0||plusSum<=0)add('tariffs','Тарифы','warning','У Элитного или Элитного+ нулевая цена. Проверьте, что это сделано намеренно.');
   else add('tariffs','Тарифы','pass','Оба платных тарифа имеют настроенную цену.');
 
-  for(const reward of rewards.filter(r=>Number(r.enabled||0)===1))addAsset(String(reward.image_url||ownerPanelSeasonPassRewardView(reward).imageUrl||''),`Награда ${Number(reward.level)} · ${String(reward.lane)}`,true);
+  // Readiness must validate the effective reward art shown by the game, not stale historical image_url metadata.
+  for(const reward of rewards.filter(r=>Number(r.enabled||0)===1))addAsset(String(ownerPanelSeasonPassRewardView(reward).imageUrl||reward.image_url||''),`Награда ${Number(reward.level)} · ${String(reward.lane)}`,true);
   const assetManifest=options.skipAssets?{available:false,paths:new Set(),count:0,error:'skipped'}:await seasonPassReadinessImageManifest(env);
   const uniqueAssets=new Map();for(const item of assetRefs){const existing=uniqueAssets.get(item.path);if(!existing)uniqueAssets.set(item.path,{...item,sources:[item.source]});else{existing.blocking=existing.blocking||item.blocking;if(!existing.sources.includes(item.source))existing.sources.push(item.source);}}
   if(assetManifest.available){
