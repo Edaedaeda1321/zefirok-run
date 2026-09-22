@@ -9465,6 +9465,7 @@ async function settleRunStoryCollectibles(env,{runId,telegramId,durationMs,slots
     env.DB.prepare(`UPDATE game_run_story_collectible_drops SET counted=1,updated_at=? WHERE run_id=? AND telegram_id=? AND caught=1 AND counted=0`).bind(now,runId,telegramId)
   ]);
   const state=await readRunStoryCollectibleState(env,runId,telegramId);if(!state)return null;
+  if(newlyCounted>0){try{await persistAlbumStoryUnlocksForProgress(env,telegramId,state.seasonId,state.collectibleId,state.totalCollected,now);}catch(error){console.error("persistAlbumStoryUnlocksForProgress failed",error);}}
   const caughtRow=await env.DB.prepare(`SELECT COUNT(*) AS count FROM game_run_story_collectible_drops WHERE run_id=? AND telegram_id=? AND caught=1`).bind(runId,telegramId).first();
   return {...state,caughtThisRun:Math.max(0,Number(caughtRow?.count||0)),newlyCounted};
 }
@@ -47311,7 +47312,10 @@ async function ensureAlbumSchema(env) {
           (SELECT COUNT(*) FROM album_collections WHERE 0) +
           (SELECT COUNT(*) FROM album_collection_items WHERE 0) +
           (SELECT COUNT(*) FROM album_milestones WHERE 0) +
-          (SELECT COUNT(*) FROM album_milestone_claims WHERE 0) AS ok`).first();
+          (SELECT COUNT(*) FROM album_milestone_claims WHERE 0) +
+          (SELECT COUNT(*) FROM album_story_settings WHERE 0) +
+          (SELECT COUNT(*) FROM album_story_pages WHERE 0) +
+          (SELECT COUNT(*) FROM album_story_unlocks WHERE 0) AS ok`).first();
         albumSchemaReady = true;
         return;
       } catch (error) {
@@ -47326,12 +47330,22 @@ async function ensureAlbumSchema(env) {
           collection_id TEXT NOT NULL,milestone_id TEXT NOT NULL,threshold_percent INTEGER NOT NULL,title TEXT NOT NULL DEFAULT '',rewards_json TEXT NOT NULL DEFAULT '[]',enabled INTEGER NOT NULL DEFAULT 1,sort_order INTEGER NOT NULL DEFAULT 0,created_at INTEGER NOT NULL,updated_at INTEGER NOT NULL,updated_by TEXT NOT NULL DEFAULT '',PRIMARY KEY(collection_id,milestone_id),UNIQUE(collection_id,threshold_percent))`),
         env.DB.prepare(`CREATE TABLE IF NOT EXISTS album_milestone_claims (
           telegram_id TEXT NOT NULL,collection_id TEXT NOT NULL,milestone_id TEXT NOT NULL,threshold_percent INTEGER NOT NULL,rewards_json TEXT NOT NULL DEFAULT '[]',queue_ids_json TEXT NOT NULL DEFAULT '[]',status TEXT NOT NULL DEFAULT 'pending',request_id TEXT NOT NULL DEFAULT '',created_at INTEGER NOT NULL,delivered_at INTEGER NOT NULL DEFAULT 0,updated_at INTEGER NOT NULL,PRIMARY KEY(telegram_id,collection_id,milestone_id))`),
+        env.DB.prepare(`CREATE TABLE IF NOT EXISTS album_story_settings (
+          collection_id TEXT PRIMARY KEY,season_id TEXT NOT NULL,season_title TEXT NOT NULL DEFAULT '',collectible_id TEXT NOT NULL,source_milestones_json TEXT NOT NULL DEFAULT '[]',source_memory_total INTEGER NOT NULL DEFAULT 0,created_at INTEGER NOT NULL,updated_at INTEGER NOT NULL,updated_by TEXT NOT NULL DEFAULT '')`),
+        env.DB.prepare(`CREATE TABLE IF NOT EXISTS album_story_pages (
+          collection_id TEXT NOT NULL,page_id TEXT NOT NULL,required_memories INTEGER NOT NULL,title TEXT NOT NULL,caption TEXT NOT NULL DEFAULT '',story_text TEXT NOT NULL DEFAULT '',art_url TEXT NOT NULL DEFAULT '',enabled INTEGER NOT NULL DEFAULT 1,sort_order INTEGER NOT NULL DEFAULT 0,created_at INTEGER NOT NULL,updated_at INTEGER NOT NULL,updated_by TEXT NOT NULL DEFAULT '',PRIMARY KEY(collection_id,page_id),UNIQUE(collection_id,required_memories))`),
+        env.DB.prepare(`CREATE TABLE IF NOT EXISTS album_story_unlocks (
+          telegram_id TEXT NOT NULL,collection_id TEXT NOT NULL,page_id TEXT NOT NULL,season_id TEXT NOT NULL,required_memories INTEGER NOT NULL,snapshot_json TEXT NOT NULL DEFAULT '{}',unlocked_at INTEGER NOT NULL,PRIMARY KEY(telegram_id,collection_id,page_id))`),
         env.DB.prepare(`CREATE INDEX IF NOT EXISTS idx_album_collections_status_sort ON album_collections(status,sort_order,updated_at DESC)`),
         env.DB.prepare(`CREATE INDEX IF NOT EXISTS idx_album_items_collection_sort ON album_collection_items(collection_id,sort_order,item_kind,item_id)`),
         env.DB.prepare(`CREATE INDEX IF NOT EXISTS idx_album_items_reverse_lookup ON album_collection_items(item_kind,item_id,collection_id)`),
         env.DB.prepare(`CREATE INDEX IF NOT EXISTS idx_album_milestones_collection ON album_milestones(collection_id,enabled,threshold_percent,sort_order)`),
         env.DB.prepare(`CREATE INDEX IF NOT EXISTS idx_album_claims_player ON album_milestone_claims(telegram_id,created_at DESC)`),
-        env.DB.prepare(`CREATE INDEX IF NOT EXISTS idx_album_claims_collection ON album_milestone_claims(collection_id,milestone_id,status,created_at DESC)`)
+        env.DB.prepare(`CREATE INDEX IF NOT EXISTS idx_album_claims_collection ON album_milestone_claims(collection_id,milestone_id,status,created_at DESC)`),
+        env.DB.prepare(`CREATE INDEX IF NOT EXISTS idx_album_story_settings_season ON album_story_settings(season_id,collection_id)`),
+        env.DB.prepare(`CREATE INDEX IF NOT EXISTS idx_album_story_pages_collection ON album_story_pages(collection_id,enabled,sort_order,required_memories,page_id)`),
+        env.DB.prepare(`CREATE INDEX IF NOT EXISTS idx_album_story_unlocks_player ON album_story_unlocks(telegram_id,unlocked_at DESC)`),
+        env.DB.prepare(`CREATE INDEX IF NOT EXISTS idx_album_story_unlocks_collection ON album_story_unlocks(collection_id,page_id,unlocked_at DESC)`)
       ]);
       albumSchemaReady = true;
     })().catch((error) => { albumSchemaPromise = null; albumSchemaReady = false; throw error; });
@@ -47354,6 +47368,65 @@ function albumAssetUrl(value){
   throw new ApiError(400,"Картинка альбома должна быть HTTPS, /assets/... или /media/....");
 }
 function albumAccentColor(value){const raw=String(value||"").trim();return /^#[0-9a-f]{6}$/i.test(raw)?raw.toLowerCase():"#d96f9b";}
+async function albumAssertCosmeticCollection(env,collectionId){const story=await env.DB.prepare(`SELECT 1 AS ok FROM album_story_settings WHERE collection_id=? LIMIT 1`).bind(String(collectionId||'')).first();if(story)throw new ApiError(409,"Для сюжетного Альбома используются страницы воспоминаний, а не предметы и процентные награды.");}
+const ALBUM_TYPES = Object.freeze(["cosmetic","story"]);
+function albumType(value){const raw=String(value||"").trim().toLowerCase();return ALBUM_TYPES.includes(raw)?raw:"cosmetic";}
+function albumStoryPageId(value){const raw=String(value||"").trim().toLowerCase();return /^[a-z0-9][a-z0-9_-]{1,79}$/.test(raw)?raw:"";}
+function albumStoryMilestonesSnapshot(raw){
+  const source=Array.isArray(raw)?raw:safeJson(raw,[]),out=[];
+  for(const item of Array.isArray(source)?source:[]){
+    const target=Math.max(1,Math.min(100000,Math.floor(Number(item?.target)||0))),title=String(item?.title||"").trim().slice(0,100);
+    if(target)out.push({target,title});
+  }
+  out.sort((a,b)=>a.target-b.target);
+  return out.filter((item,index)=>index===0||item.target!==out[index-1].target).slice(0,12);
+}
+function albumStorySeasonStatus(row){
+  if(!row)return "historical";
+  const now=Math.floor(Date.now()/1000),manual=String(row.manual_status||""),startsAt=Math.max(0,Number(row.starts_at)||0),endsAt=Math.max(0,Number(row.ends_at)||0);
+  if(manual==="ended"||(endsAt>0&&endsAt<=now))return "historical";
+  if(startsAt>now)return "upcoming";
+  return "active";
+}
+async function albumStorySourceSnapshot(env,seasonId){
+  await ensureSeasonPassSchema(env);
+  const id=String(seasonId||"").trim();if(!id)throw new ApiError(400,"Выберите сезон для сюжетного альбома.");
+  const row=await env.DB.prepare(`SELECT season_id,title,starts_at,ends_at,manual_status,visuals_json FROM season_pass_seasons WHERE season_id=? LIMIT 1`).bind(id).first();
+  if(!row)throw new ApiError(404,"Выбранный сезон не найден.");
+  const config=seasonVisualsView(row.visuals_json).battlePass.storyCollectible,milestones=albumStoryMilestonesSnapshot(config?.milestones);
+  if(!String(config?.id||"").trim()||!milestones.length)throw new ApiError(409,"В выбранном сезоне ещё не настроены сюжетные воспоминания storyCollectible.milestones.");
+  return {seasonId:String(row.season_id),seasonTitle:String(row.title||row.season_id),collectibleId:String(config.id),sourceMemoryTotal:milestones.length,sourceMilestones:milestones,status:albumStorySeasonStatus(row)};
+}
+function albumStorySettingsView(row){
+  if(!row)return null;
+  const milestones=albumStoryMilestonesSnapshot(row.source_milestones_json);
+  return {seasonId:String(row.season_id||""),seasonTitle:String(row.season_title||row.season_id||""),collectibleId:String(row.collectible_id||""),sourceMemoryTotal:Math.max(0,Math.floor(Number(row.source_memory_total)||milestones.length)),sourceMilestones:milestones};
+}
+function albumStoryRestoredCount(settings,totalCollected){
+  const total=Math.max(0,Math.floor(Number(totalCollected)||0));
+  return albumStoryMilestonesSnapshot(settings?.sourceMilestones||settings?.source_milestones_json).filter(m=>total>=m.target).length;
+}
+function albumStoryUnlockSnapshot(row){
+  const raw=safeJson(row?.snapshot_json,{}),value=raw&&typeof raw==='object'&&!Array.isArray(raw)?raw:{};
+  return {title:String(value.title||'').slice(0,120),caption:String(value.caption||'').slice(0,500),storyText:String(value.storyText||'').slice(0,6000),artUrl:String(value.artUrl||'').slice(0,900),requiredMemories:Math.max(1,Math.floor(Number(value.requiredMemories||row?.required_memories)||1))};
+}
+async function persistAlbumStoryUnlocksForProgress(env,telegramId,seasonId,collectibleId,totalCollected,now=Math.floor(Date.now()/1000)){
+  const playerId=String(telegramId||''),sourceSeasonId=String(seasonId||''),sourceCollectibleId=String(collectibleId||'');if(!playerId||!sourceSeasonId||!sourceCollectibleId)return [];
+  await ensureAlbumSchema(env);
+  const rows=(await env.DB.prepare(`SELECT p.collection_id,p.page_id,p.required_memories,p.title,p.caption,p.story_text,p.art_url,s.source_milestones_json,s.source_memory_total FROM album_story_pages p JOIN album_story_settings s ON s.collection_id=p.collection_id JOIN album_collections c ON c.collection_id=p.collection_id WHERE c.status='published' AND p.enabled=1 AND s.season_id=? AND s.collectible_id=? ORDER BY p.collection_id,p.sort_order,p.required_memories,p.page_id`).bind(sourceSeasonId,sourceCollectibleId).all()).results||[];
+  if(!rows.length)return [];
+  const restoredByCollection=new Map(),eligible=[];
+  for(const row of rows){
+    const collectionId=String(row.collection_id||'');let restored=restoredByCollection.get(collectionId);
+    if(restored==null){restored=albumStoryRestoredCount({sourceMilestones:albumStoryMilestonesSnapshot(row.source_milestones_json)},totalCollected);restoredByCollection.set(collectionId,restored);}
+    const requiredMemories=Math.max(1,Math.floor(Number(row.required_memories)||1));if(restored<requiredMemories)continue;
+    const snapshot={title:String(row.title||'').slice(0,120),caption:String(row.caption||'').slice(0,500),storyText:String(row.story_text||'').slice(0,6000),artUrl:String(row.art_url||'').slice(0,900),requiredMemories};
+    eligible.push({collectionId,pageId:String(row.page_id||''),requiredMemories,snapshot});
+  }
+  if(!eligible.length)return [];
+  await env.DB.batch(eligible.map((entry)=>env.DB.prepare(`INSERT OR IGNORE INTO album_story_unlocks(telegram_id,collection_id,page_id,season_id,required_memories,snapshot_json,unlocked_at) VALUES(?,?,?,?,?,?,?)`).bind(playerId,entry.collectionId,entry.pageId,sourceSeasonId,entry.requiredMemories,JSON.stringify(entry.snapshot),now)));
+  return eligible.map((entry)=>({collectionId:entry.collectionId,pageId:entry.pageId,requiredMemories:entry.requiredMemories}));
+}
 function albumOwnedSet(raw,defaults=[]){
   const list=safeJson(raw,[]),set=new Set(defaults.map((x)=>String(x).toLowerCase()));
   for(const value of Array.isArray(list)?list:[])set.add(String(value||"").trim().toLowerCase());
@@ -47609,11 +47682,16 @@ async function albumPlayerState(env,telegramId){
   requireDatabase(env);await ensureCasePlayerState(env,String(telegramId),{}, { skipProfile:true, allowLegacyRecovery:false });
   const acquisitionPromise=withAlbumAcquisitionTimeout(albumAcquisitionSources(env));
   const catalogPromise=withAlbumCatalogTimeout(albumCatalogSnapshot(env));
-  const [collectionsRes,itemsRes,milestonesRes,claimsRes,caseState,catalog,acquisition]=await Promise.all([
+  const [collectionsRes,itemsRes,milestonesRes,claimsRes,storySettingsRes,storyPagesRes,storyUnlocksRes,storyProgressRes,storySeasonsRes,caseState,catalog,acquisition]=await Promise.all([
     env.DB.prepare(`SELECT * FROM album_collections WHERE status='published' ORDER BY sort_order ASC,published_at ASC,collection_id ASC`).all(),
     env.DB.prepare(`SELECT i.* FROM album_collection_items i JOIN album_collections c ON c.collection_id=i.collection_id WHERE c.status='published' ORDER BY i.collection_id,i.sort_order,i.item_kind,i.item_id`).all(),
     env.DB.prepare(`SELECT m.* FROM album_milestones m JOIN album_collections c ON c.collection_id=m.collection_id WHERE c.status='published' AND m.enabled=1 ORDER BY m.collection_id,m.threshold_percent,m.sort_order,m.milestone_id`).all(),
     env.DB.prepare(`SELECT * FROM album_milestone_claims WHERE telegram_id=?`).bind(String(telegramId)).all(),
+    env.DB.prepare(`SELECT s.* FROM album_story_settings s JOIN album_collections c ON c.collection_id=s.collection_id WHERE c.status='published'`).all(),
+    env.DB.prepare(`SELECT p.* FROM album_story_pages p JOIN album_collections c ON c.collection_id=p.collection_id WHERE c.status='published' ORDER BY p.collection_id,p.sort_order,p.required_memories,p.page_id`).all(),
+    env.DB.prepare(`SELECT * FROM album_story_unlocks WHERE telegram_id=?`).bind(String(telegramId)).all(),
+    env.DB.prepare(`SELECT season_id,collectible_id,total_collected FROM season_story_collectible_progress WHERE telegram_id=?`).bind(String(telegramId)).all(),
+    env.DB.prepare(`SELECT season_id,title,starts_at,ends_at,manual_status FROM season_pass_seasons ORDER BY starts_at DESC`).all(),
     env.DB.prepare(`SELECT owned_avatars_json,owned_frames_json,owned_trails_json,owned_skins_json,owned_music_json FROM case_player_state WHERE telegram_id=? LIMIT 1`).bind(String(telegramId)).first(),
     catalogPromise,acquisitionPromise
   ]);
@@ -47621,14 +47699,40 @@ async function albumPlayerState(env,telegramId){
     avatar:albumOwnedSet(caseState?.owned_avatars_json),frame:albumOwnedSet(caseState?.owned_frames_json),trail:albumOwnedSet(caseState?.owned_trails_json),
     skin:albumOwnedSet(caseState?.owned_skins_json,["default"]),music:albumOwnedSet(caseState?.owned_music_json,["cafe_run"])
   };
-  const itemsByCollection=new Map(),milestonesByCollection=new Map(),claimMap=new Map();
+  const itemsByCollection=new Map(),milestonesByCollection=new Map(),claimMap=new Map(),storySettingsBy=new Map(),storyPagesBy=new Map(),storyUnlockMap=new Map(),storyProgressMap=new Map(),storySeasonMap=new Map();
   for(const row of itemsRes.results||[]){const id=String(row.collection_id);if(!itemsByCollection.has(id))itemsByCollection.set(id,[]);itemsByCollection.get(id).push(row);}
   for(const row of milestonesRes.results||[]){const id=String(row.collection_id);if(!milestonesByCollection.has(id))milestonesByCollection.set(id,[]);milestonesByCollection.get(id).push(row);}
   for(const row of await reconcileAlbumMilestoneClaims(env,String(telegramId),claimsRes.results||[]))claimMap.set(`${String(row.collection_id)}:${String(row.milestone_id)}`,row);
+  for(const row of storySettingsRes.results||[])storySettingsBy.set(String(row.collection_id),row);
+  for(const row of storyPagesRes.results||[]){const id=String(row.collection_id);if(!storyPagesBy.has(id))storyPagesBy.set(id,[]);storyPagesBy.get(id).push(row);}
+  for(const row of storyUnlocksRes.results||[])storyUnlockMap.set(`${String(row.collection_id)}:${String(row.page_id)}`,row);
+  for(const row of storyProgressRes.results||[])storyProgressMap.set(`${String(row.season_id)}:${String(row.collectible_id)}`,Math.max(0,Math.floor(Number(row.total_collected)||0)));
+  for(const row of storySeasonsRes.results||[])storySeasonMap.set(String(row.season_id),row);
   let allRequired=0,allOwnedRequired=0,totalOwnedSlots=0,totalSlots=0,completedCollections=0;
   const collections=[];
   for(const row of collectionsRes.results||[]){
-    const collectionId=String(row.collection_id),sourceItems=itemsByCollection.get(collectionId)||[];let requiredTotal=0,ownedRequired=0,ownedTotal=0;
+    const collectionId=String(row.collection_id),storyRow=storySettingsBy.get(collectionId);
+    if(storyRow){
+      const storySettings=albumStorySettingsView(storyRow),sourcePages=storyPagesBy.get(collectionId)||[],seasonRow=storySeasonMap.get(storySettings.seasonId),seasonStatus=albumStorySeasonStatus(seasonRow),totalCollected=storyProgressMap.get(`${storySettings.seasonId}:${storySettings.collectibleId}`)||0,restoredMemories=albumStoryRestoredCount(storySettings,totalCollected),pages=[];
+      for(const page of sourcePages){
+        const pageId=String(page.page_id),key=`${collectionId}:${pageId}`,existingUnlock=storyUnlockMap.get(key),enabled=Number(page.enabled||0)===1,requiredMemories=Math.max(1,Math.floor(Number(page.required_memories)||1));
+        let unlock=existingUnlock||null;
+        if(!unlock&&enabled&&restoredMemories>=requiredMemories){
+          const now=Math.floor(Date.now()/1000),snapshot={title:String(page.title||'').slice(0,120),caption:String(page.caption||'').slice(0,500),storyText:String(page.story_text||'').slice(0,6000),artUrl:String(page.art_url||'').slice(0,900),requiredMemories};
+          await env.DB.prepare(`INSERT OR IGNORE INTO album_story_unlocks(telegram_id,collection_id,page_id,season_id,required_memories,snapshot_json,unlocked_at) VALUES(?,?,?,?,?,?,?)`).bind(String(telegramId),collectionId,pageId,storySettings.seasonId,requiredMemories,JSON.stringify(snapshot),now).run();
+          unlock={telegram_id:String(telegramId),collection_id:collectionId,page_id:pageId,season_id:storySettings.seasonId,required_memories:requiredMemories,snapshot_json:JSON.stringify(snapshot),unlocked_at:now};storyUnlockMap.set(key,unlock);
+        }
+        if(!enabled&&!unlock)continue;
+        if(unlock){const snapshot=albumStoryUnlockSnapshot(unlock);pages.push({pageId,unlocked:true,requiredMemories:snapshot.requiredMemories,sortOrder:Number(page.sort_order||0),title:snapshot.title,caption:snapshot.caption,storyText:snapshot.storyText,artUrl:snapshot.artUrl,unlockedAt:Number(unlock.unlocked_at||0)});}
+        else pages.push({pageId,unlocked:false,requiredMemories,sortOrder:Number(page.sort_order||0)});
+      }
+      pages.sort((a,b)=>Number(a.sortOrder||0)-Number(b.sortOrder||0)||Number(a.requiredMemories||0)-Number(b.requiredMemories||0)||String(a.pageId).localeCompare(String(b.pageId)));
+      const totalPages=pages.length,unlockedPages=pages.filter(p=>p.unlocked).length,progressPercent=totalPages?Math.min(100,Math.floor((unlockedPages*100)/totalPages)):0,complete=totalPages>0&&unlockedPages>=totalPages;if(complete)completedCollections+=1;
+      allRequired+=totalPages;allOwnedRequired+=unlockedPages;totalSlots+=totalPages;totalOwnedSlots+=unlockedPages;
+      collections.push({collectionId,type:'story',title:String(row.title||collectionId),subtitle:String(row.subtitle||''),coverUrl:String(row.cover_url||''),backgroundUrl:String(row.background_url||''),accentColor:albumAccentColor(row.accent_color),sortOrder:Number(row.sort_order||0),revision:Number(row.revision||1),requiredTotal:totalPages,ownedRequired:unlockedPages,totalItems:totalPages,ownedTotal:unlockedPages,progressPercent,complete,items:[],milestones:[],story:{seasonId:storySettings.seasonId,seasonTitle:String(seasonRow?.title||storySettings.seasonTitle||storySettings.seasonId),seasonStatus,seasonEnded:seasonStatus==='historical',collectibleId:storySettings.collectibleId,totalMemories:storySettings.sourceMemoryTotal,restoredMemories,totalCollected,totalPages,unlockedPages,pages}});
+      continue;
+    }
+    const sourceItems=itemsByCollection.get(collectionId)||[];let requiredTotal=0,ownedRequired=0,ownedTotal=0;
     const items=sourceItems.map((item,index)=>{
       const kind=String(item.item_kind),itemId=String(item.item_id),meta=catalog.get(albumItemKey(kind,itemId))||{kind,itemId,title:itemId,rarity:"common",imageUrl:"",enabled:false,future:false,released:true};
       const isOwned=Boolean(owned[kind]?.has(itemId.toLowerCase()));const required=Number(item.required||0)===1;
@@ -47641,7 +47745,7 @@ async function albumPlayerState(env,telegramId){
     const milestones=(milestonesByCollection.get(collectionId)||[]).map((m)=>{const claim=claimMap.get(`${collectionId}:${String(m.milestone_id)}`);const rewards=(safeJson(claim?.rewards_json??m.rewards_json,[])||[]).map((r)=>albumRewardView(r,catalog));const delivered=String(claim?.status||"")==="delivered";return {milestoneId:String(m.milestone_id),thresholdPercent:Number(m.threshold_percent||0),title:String(m.title||`${m.threshold_percent}% коллекции`),rewards,eligible:progressPercent>=Number(m.threshold_percent||0),status:delivered?"claimed":claim?String(claim.status||"pending"):progressPercent>=Number(m.threshold_percent||0)?"ready":"locked"};});
     const complete=requiredTotal>0&&ownedRequired>=requiredTotal;if(complete)completedCollections+=1;
     allRequired+=requiredTotal;allOwnedRequired+=ownedRequired;totalOwnedSlots+=ownedTotal;totalSlots+=sourceItems.length;
-    collections.push({collectionId,title:String(row.title||collectionId),subtitle:String(row.subtitle||""),coverUrl:String(row.cover_url||""),backgroundUrl:String(row.background_url||""),accentColor:albumAccentColor(row.accent_color),sortOrder:Number(row.sort_order||0),revision:Number(row.revision||1),requiredTotal,ownedRequired,totalItems:sourceItems.length,ownedTotal,progressPercent,complete,items,milestones});
+    collections.push({collectionId,type:'cosmetic',title:String(row.title||collectionId),subtitle:String(row.subtitle||""),coverUrl:String(row.cover_url||""),backgroundUrl:String(row.background_url||""),accentColor:albumAccentColor(row.accent_color),sortOrder:Number(row.sort_order||0),revision:Number(row.revision||1),requiredTotal,ownedRequired,totalItems:sourceItems.length,ownedTotal,progressPercent,complete,items,milestones});
   }
   return {ok:true,generatedAt:Date.now(),summary:{collections:collections.length,completedCollections,requiredTotal:allRequired,ownedRequired:allOwnedRequired,totalItems:totalSlots,ownedItems:totalOwnedSlots,progressPercent:allRequired?Math.min(100,Math.floor((allOwnedRequired*100)/allRequired)):0},collections,accountRevision:await readPlayerAccountRevision(env,String(telegramId))};
 }
@@ -47684,31 +47788,55 @@ async function claimAlbumMilestone(request,env){
 
 async function ownerPanelAlbums(env,ctx){
   await ensureAlbumSchema(env);await ensureSeasonPassSchema(env);const catalog=await albumCatalogSnapshot(env);
-  const [collectionsRes,itemsRes,milestonesRes,claimStatsRes,seasonalRes]=await Promise.all([
+  const [collectionsRes,itemsRes,milestonesRes,claimStatsRes,seasonalRes,storySettingsRes,storyPagesRes,storyUnlockStatsRes,seasonsRes]=await Promise.all([
     env.DB.prepare(`SELECT * FROM album_collections ORDER BY CASE status WHEN 'published' THEN 0 WHEN 'draft' THEN 1 ELSE 2 END,sort_order,updated_at DESC`).all(),
     env.DB.prepare(`SELECT * FROM album_collection_items ORDER BY collection_id,sort_order,item_kind,item_id`).all(),
     env.DB.prepare(`SELECT * FROM album_milestones ORDER BY collection_id,threshold_percent,sort_order,milestone_id`).all(),
     env.DB.prepare(`SELECT collection_id,milestone_id,status,COUNT(*) AS count FROM album_milestone_claims GROUP BY collection_id,milestone_id,status`).all(),
-    env.DB.prepare(`SELECT case_id,title,closed_image_url AS image_url,enabled,release_at FROM season_pass_case_definitions ORDER BY season_id,case_id`).all()
+    env.DB.prepare(`SELECT case_id,title,closed_image_url AS image_url,enabled,release_at FROM season_pass_case_definitions ORDER BY season_id,case_id`).all(),
+    env.DB.prepare(`SELECT * FROM album_story_settings`).all(),
+    env.DB.prepare(`SELECT * FROM album_story_pages ORDER BY collection_id,sort_order,required_memories,page_id`).all(),
+    env.DB.prepare(`SELECT collection_id,page_id,COUNT(*) AS count FROM album_story_unlocks GROUP BY collection_id,page_id`).all(),
+    env.DB.prepare(`SELECT season_id,title,starts_at,ends_at,manual_status,visuals_json FROM season_pass_seasons ORDER BY starts_at DESC,season_id DESC LIMIT 120`).all()
   ]);
-  const itemsBy=new Map(),milestonesBy=new Map(),stats=new Map();for(const row of itemsRes.results||[]){const id=String(row.collection_id);if(!itemsBy.has(id))itemsBy.set(id,[]);const meta=catalog.get(albumItemKey(row.item_kind,row.item_id))||{};itemsBy.get(id).push({kind:String(row.item_kind),itemId:String(row.item_id),required:Number(row.required||0)===1,secret:Number(row.secret||0)===1,sortOrder:Number(row.sort_order||0),title:String(meta.title||row.item_id),rarity:String(meta.rarity||"common"),imageUrl:String(meta.imageUrl||""),enabled:meta.enabled!==false,future:Boolean(meta.future),released:meta.released!==false});}
+  const itemsBy=new Map(),milestonesBy=new Map(),stats=new Map(),storySettingsBy=new Map(),storyPagesBy=new Map(),storyUnlockStats=new Map();
+  for(const row of itemsRes.results||[]){const id=String(row.collection_id);if(!itemsBy.has(id))itemsBy.set(id,[]);const meta=catalog.get(albumItemKey(row.item_kind,row.item_id))||{};itemsBy.get(id).push({kind:String(row.item_kind),itemId:String(row.item_id),required:Number(row.required||0)===1,secret:Number(row.secret||0)===1,sortOrder:Number(row.sort_order||0),title:String(meta.title||row.item_id),rarity:String(meta.rarity||"common"),imageUrl:String(meta.imageUrl||""),enabled:meta.enabled!==false,future:Boolean(meta.future),released:meta.released!==false});}
   for(const row of claimStatsRes.results||[]){const key=`${row.collection_id}:${row.milestone_id}`;if(!stats.has(key))stats.set(key,{pending:0,delivered:0,failed:0});stats.get(key)[String(row.status)||"pending"]=Number(row.count||0);}
   for(const row of milestonesRes.results||[]){const id=String(row.collection_id);if(!milestonesBy.has(id))milestonesBy.set(id,[]);milestonesBy.get(id).push({milestoneId:String(row.milestone_id),thresholdPercent:Number(row.threshold_percent||0),title:String(row.title||""),rewards:safeJson(row.rewards_json,[]),enabled:Number(row.enabled||0)===1,sortOrder:Number(row.sort_order||0),claimStats:stats.get(`${id}:${row.milestone_id}`)||{pending:0,delivered:0,failed:0}});}
-  const collections=(collectionsRes.results||[]).map((row)=>{const items=itemsBy.get(String(row.collection_id))||[],milestones=milestonesBy.get(String(row.collection_id))||[];return {collectionId:String(row.collection_id),title:String(row.title||""),subtitle:String(row.subtitle||""),coverUrl:String(row.cover_url||""),backgroundUrl:String(row.background_url||""),accentColor:albumAccentColor(row.accent_color),status:String(row.status||"draft"),sortOrder:Number(row.sort_order||0),revision:Number(row.revision||1),createdAt:Number(row.created_at||0),updatedAt:Number(row.updated_at||0),publishedAt:Number(row.published_at||0),requiredCount:items.filter((x)=>x.required).length,bonusCount:items.filter((x)=>!x.required).length,items,milestones};});
-  return {ok:true,collections,catalog:Array.from(catalog.values()).sort((a,b)=>ALBUM_ITEM_KINDS.indexOf(a.kind)-ALBUM_ITEM_KINDS.indexOf(b.kind)||String(a.title).localeCompare(String(b.title),"ru")),kindLabels:ALBUM_KIND_LABELS,seasonalCases:(seasonalRes.results||[]).map((r)=>({id:String(r.case_id),title:String(r.title||r.case_id),imageUrl:String(r.image_url||"/assets/season-pass/season.webp?v=07939"),enabled:Number(r.enabled||0)===1,released:Number(r.release_at||0)<=Math.floor(Date.now()/1000)}))};
+  for(const row of storySettingsRes.results||[])storySettingsBy.set(String(row.collection_id),row);
+  for(const row of storyUnlockStatsRes.results||[])storyUnlockStats.set(`${String(row.collection_id)}:${String(row.page_id)}`,Number(row.count||0));
+  for(const row of storyPagesRes.results||[]){const id=String(row.collection_id);if(!storyPagesBy.has(id))storyPagesBy.set(id,[]);storyPagesBy.get(id).push({pageId:String(row.page_id),requiredMemories:Number(row.required_memories||1),title:String(row.title||''),caption:String(row.caption||''),storyText:String(row.story_text||''),artUrl:String(row.art_url||''),enabled:Number(row.enabled||0)===1,sortOrder:Number(row.sort_order||0),unlockedPlayers:storyUnlockStats.get(`${id}:${String(row.page_id)}`)||0});}
+  const storySources=(seasonsRes.results||[]).map(row=>{const cfg=seasonVisualsView(row.visuals_json).battlePass.storyCollectible,milestones=albumStoryMilestonesSnapshot(cfg?.milestones);return {seasonId:String(row.season_id),title:String(row.title||row.season_id),status:albumStorySeasonStatus(row),collectibleId:String(cfg?.id||''),memoryTotal:milestones.length,milestones,available:Boolean(String(cfg?.id||'').trim()&&milestones.length)};});
+  const collections=(collectionsRes.results||[]).map((row)=>{const id=String(row.collection_id),items=itemsBy.get(id)||[],milestones=milestonesBy.get(id)||[],settingRow=storySettingsBy.get(id),storySetting=albumStorySettingsView(settingRow),pages=storyPagesBy.get(id)||[];return {collectionId:id,type:storySetting?'story':'cosmetic',title:String(row.title||""),subtitle:String(row.subtitle||""),coverUrl:String(row.cover_url||""),backgroundUrl:String(row.background_url||""),accentColor:albumAccentColor(row.accent_color),status:String(row.status||"draft"),sortOrder:Number(row.sort_order||0),revision:Number(row.revision||1),createdAt:Number(row.created_at||0),updatedAt:Number(row.updated_at||0),publishedAt:Number(row.published_at||0),requiredCount:items.filter((x)=>x.required).length,bonusCount:items.filter((x)=>!x.required).length,items,milestones,story:storySetting?{...storySetting,pages}:null};});
+  return {ok:true,collections,catalog:Array.from(catalog.values()).sort((a,b)=>ALBUM_ITEM_KINDS.indexOf(a.kind)-ALBUM_ITEM_KINDS.indexOf(b.kind)||String(a.title).localeCompare(String(b.title),"ru")),kindLabels:ALBUM_KIND_LABELS,storySources,seasonalCases:(seasonalRes.results||[]).map((r)=>({id:String(r.case_id),title:String(r.title||r.case_id),imageUrl:String(r.image_url||"/assets/season-pass/season.webp?v=07939"),enabled:Number(r.enabled||0)===1,released:Number(r.release_at||0)<=Math.floor(Date.now()/1000)}))};
 }
 
 async function ownerPanelAlbumSave(env,ctx){
   await ensureAlbumSchema(env);const body=ctx.body||{},now=Math.floor(Date.now()/1000),requested=albumCollectionId(body.collectionId),title=String(body.title||"").trim().slice(0,120);if(!title)throw new ApiError(400,"Введите название альбома.");
-  const collectionId=requested||albumCollectionId(caseGrantId("album").toLowerCase().replace(/[^a-z0-9_-]/g,"_"))||`album_${Date.now().toString(36)}`;
-  const subtitle=String(body.subtitle||"").trim().slice(0,260),coverUrl=albumAssetUrl(body.coverUrl),backgroundUrl=albumAssetUrl(body.backgroundUrl),accentColor=albumAccentColor(body.accentColor),sortOrder=Math.max(-9999,Math.min(9999,Math.floor(Number(body.sortOrder)||0))),existing=await env.DB.prepare(`SELECT * FROM album_collections WHERE collection_id=? LIMIT 1`).bind(collectionId).first();
+  const requestedType=albumType(body.albumType),collectionId=requested||albumCollectionId(caseGrantId("album").toLowerCase().replace(/[^a-z0-9_-]/g,"_"))||`album_${Date.now().toString(36)}`;
+  const subtitle=String(body.subtitle||"").trim().slice(0,260),coverUrl=albumAssetUrl(body.coverUrl),backgroundUrl=albumAssetUrl(body.backgroundUrl),accentColor=albumAccentColor(body.accentColor),sortOrder=Math.max(-9999,Math.min(9999,Math.floor(Number(body.sortOrder)||0))),existing=await env.DB.prepare(`SELECT * FROM album_collections WHERE collection_id=? LIMIT 1`).bind(collectionId).first(),existingStory=await env.DB.prepare(`SELECT * FROM album_story_settings WHERE collection_id=? LIMIT 1`).bind(collectionId).first(),existingType=existingStory?'story':'cosmetic';
+  if(existing&&existingType!==requestedType){
+    if(String(existing.status)!=='draft')throw new ApiError(409,"Тип опубликованного или архивного Альбома менять нельзя.");
+    const [items,milestones,pages,unlocks]=await Promise.all([env.DB.prepare(`SELECT COUNT(*) AS count FROM album_collection_items WHERE collection_id=?`).bind(collectionId).first(),env.DB.prepare(`SELECT COUNT(*) AS count FROM album_milestones WHERE collection_id=?`).bind(collectionId).first(),env.DB.prepare(`SELECT COUNT(*) AS count FROM album_story_pages WHERE collection_id=?`).bind(collectionId).first(),env.DB.prepare(`SELECT COUNT(*) AS count FROM album_story_unlocks WHERE collection_id=?`).bind(collectionId).first()]);
+    if([items,milestones,pages,unlocks].some(x=>Number(x?.count||0)>0))throw new ApiError(409,"Сначала удалите содержимое черновика, затем меняйте тип Альбома.");
+  }
+  let storySource=null;
+  if(requestedType==='story'){
+    const seasonId=String(body.storySeasonId||existingStory?.season_id||'').trim();
+    if(existing&&String(existing.status)!=='draft'&&existingStory&&seasonId!==String(existingStory.season_id))throw new ApiError(409,"Сезон опубликованного сюжетного Альбома менять нельзя.");
+    if(existingStory&&String(existing.status)!=='draft'&&seasonId===String(existingStory.season_id))storySource=albumStorySettingsView(existingStory);
+    else storySource=await albumStorySourceSnapshot(env,seasonId);
+  }
   if(existing){await env.DB.prepare(`UPDATE album_collections SET title=?,subtitle=?,cover_url=?,background_url=?,accent_color=?,sort_order=?,revision=revision+1,updated_at=?,updated_by=? WHERE collection_id=?`).bind(title,subtitle,coverUrl,backgroundUrl,accentColor,sortOrder,now,String(ctx.user.id),collectionId).run();}
   else{await env.DB.prepare(`INSERT INTO album_collections(collection_id,title,subtitle,cover_url,background_url,accent_color,status,sort_order,revision,created_at,updated_at,published_at,created_by,updated_by) VALUES(?,?,?,?,?,?,'draft',?,1,?,?,0,?,?)`).bind(collectionId,title,subtitle,coverUrl,backgroundUrl,accentColor,sortOrder,now,now,String(ctx.user.id),String(ctx.user.id)).run();}
-  await logStaffAction(env,ctx.user,ctx.access,existing?"album_update":"album_create",null,"album",null,null,{collectionId,title,status:String(existing?.status||"draft")});return {ok:true,collectionId};
+  if(requestedType==='story'){
+    await env.DB.prepare(`INSERT INTO album_story_settings(collection_id,season_id,season_title,collectible_id,source_milestones_json,source_memory_total,created_at,updated_at,updated_by) VALUES(?,?,?,?,?,?,?,?,?) ON CONFLICT(collection_id) DO UPDATE SET season_id=excluded.season_id,season_title=excluded.season_title,collectible_id=excluded.collectible_id,source_milestones_json=excluded.source_milestones_json,source_memory_total=excluded.source_memory_total,updated_at=excluded.updated_at,updated_by=excluded.updated_by`).bind(collectionId,storySource.seasonId,storySource.seasonTitle,storySource.collectibleId,JSON.stringify(storySource.sourceMilestones),storySource.sourceMemoryTotal,Number(existingStory?.created_at||now),now,String(ctx.user.id)).run();
+  }else if(existingStory){await env.DB.prepare(`DELETE FROM album_story_settings WHERE collection_id=?`).bind(collectionId).run();}
+  await logStaffAction(env,ctx.user,ctx.access,existing?"album_update":"album_create",null,"album",null,null,{collectionId,title,type:requestedType,storySeasonId:storySource?.seasonId||'',status:String(existing?.status||"draft")});return {ok:true,collectionId};
 }
 
 async function ownerPanelAlbumItemsSave(env,ctx){
-  await ensureAlbumSchema(env);const body=ctx.body||{},collectionId=albumCollectionId(body.collectionId);if(!collectionId)throw new ApiError(400,"Альбом не выбран.");const album=await env.DB.prepare(`SELECT collection_id,title,status FROM album_collections WHERE collection_id=? LIMIT 1`).bind(collectionId).first();if(!album)throw new ApiError(404,"Альбом не найден.");const catalog=await albumCatalogSnapshot(env),source=Array.isArray(body.items)?body.items:[body],items=[];
+  await ensureAlbumSchema(env);const body=ctx.body||{},collectionId=albumCollectionId(body.collectionId);if(!collectionId)throw new ApiError(400,"Альбом не выбран.");const album=await env.DB.prepare(`SELECT collection_id,title,status FROM album_collections WHERE collection_id=? LIMIT 1`).bind(collectionId).first();if(!album)throw new ApiError(404,"Альбом не найден.");await albumAssertCosmeticCollection(env,collectionId);const catalog=await albumCatalogSnapshot(env),source=Array.isArray(body.items)?body.items:[body],items=[];
   for(const raw of source.slice(0,100)){const kind=String(raw?.kind||raw?.itemKind||"").trim(),itemId=String(raw?.itemId||"").trim();if(!ALBUM_ITEM_KINDS.includes(kind)||!itemId)continue;const meta=catalog.get(albumItemKey(kind,itemId));if(!meta)throw new ApiError(400,`Предмет ${kind}:${itemId} отсутствует в каталоге контента.`);items.push({kind,itemId,required:albumBool(raw.required),secret:albumBool(raw.secret),sortOrder:Math.max(-9999,Math.min(9999,Math.floor(Number(raw.sortOrder)||0))),meta});}
   if(!items.length)throw new ApiError(400,"Выберите хотя бы один предмет.");const existingRes=await env.DB.prepare(`SELECT item_kind,item_id,required FROM album_collection_items WHERE collection_id=?`).bind(collectionId).all(),existing=new Map((existingRes.results||[]).map((r)=>[albumItemKey(r.item_kind,r.item_id),r]));let progressRisk=false;
   for(const item of items){const before=existing.get(albumItemKey(item.kind,item.itemId)),beforeRequired=Number(before?.required||0)===1;if(String(album.status)==="published"&&(!before&&item.required||before&&beforeRequired!==item.required))progressRisk=true;if(String(album.status)==="published"&&item.required&&item.meta.future&&!item.meta.released)throw new ApiError(409,`Скрытый предмет «${item.meta.title}» нельзя сделать обязательным в опубликованном альбоме до его релиза.`);}
@@ -47718,24 +47846,48 @@ async function ownerPanelAlbumItemsSave(env,ctx){
 }
 
 async function ownerPanelAlbumItemDelete(env,ctx){
-  await ensureAlbumSchema(env);const collectionId=albumCollectionId(ctx.body?.collectionId),kind=String(ctx.body?.kind||""),itemId=String(ctx.body?.itemId||"");if(!collectionId||!ALBUM_ITEM_KINDS.includes(kind)||!itemId)throw new ApiError(400,"Предмет Альбома не выбран.");const current=await env.DB.prepare(`SELECT i.required,c.status FROM album_collection_items i JOIN album_collections c ON c.collection_id=i.collection_id WHERE i.collection_id=? AND i.item_kind=? AND i.item_id=? LIMIT 1`).bind(collectionId,kind,itemId).first();if(!current)throw new ApiError(404,"Предмет не найден в Альбоме.");if(String(current.status)==="published"&&Number(current.required||0)===1&&!albumBool(ctx.body?.confirmProgressChange))throw new ApiError(409,"Удаление обязательного предмета увеличит прогресс опубликованного Альбома и может открыть награды. Подтвердите изменение прогресса.");const now=Math.floor(Date.now()/1000);const result=await env.DB.prepare(`DELETE FROM album_collection_items WHERE collection_id=? AND item_kind=? AND item_id=?`).bind(collectionId,kind,itemId).run();if(Number(result.meta?.changes||0)<1)throw new ApiError(404,"Предмет не найден в Альбоме.");await env.DB.prepare(`UPDATE album_collections SET revision=revision+1,updated_at=?,updated_by=? WHERE collection_id=?`).bind(now,String(ctx.user.id),collectionId).run();await logStaffAction(env,ctx.user,ctx.access,"album_item_delete",null,"album",null,null,{collectionId,kind,itemId,wasRequired:Number(current.required||0)===1});return {ok:true};
+  await ensureAlbumSchema(env);const collectionId=albumCollectionId(ctx.body?.collectionId),kind=String(ctx.body?.kind||""),itemId=String(ctx.body?.itemId||"");if(!collectionId||!ALBUM_ITEM_KINDS.includes(kind)||!itemId)throw new ApiError(400,"Предмет Альбома не выбран.");const current=await env.DB.prepare(`SELECT i.required,c.status FROM album_collection_items i JOIN album_collections c ON c.collection_id=i.collection_id WHERE i.collection_id=? AND i.item_kind=? AND i.item_id=? LIMIT 1`).bind(collectionId,kind,itemId).first();if(!current)throw new ApiError(404,"Предмет не найден в Альбоме.");await albumAssertCosmeticCollection(env,collectionId);if(String(current.status)==="published"&&Number(current.required||0)===1&&!albumBool(ctx.body?.confirmProgressChange))throw new ApiError(409,"Удаление обязательного предмета увеличит прогресс опубликованного Альбома и может открыть награды. Подтвердите изменение прогресса.");const now=Math.floor(Date.now()/1000);const result=await env.DB.prepare(`DELETE FROM album_collection_items WHERE collection_id=? AND item_kind=? AND item_id=?`).bind(collectionId,kind,itemId).run();if(Number(result.meta?.changes||0)<1)throw new ApiError(404,"Предмет не найден в Альбоме.");await env.DB.prepare(`UPDATE album_collections SET revision=revision+1,updated_at=?,updated_by=? WHERE collection_id=?`).bind(now,String(ctx.user.id),collectionId).run();await logStaffAction(env,ctx.user,ctx.access,"album_item_delete",null,"album",null,null,{collectionId,kind,itemId,wasRequired:Number(current.required||0)===1});return {ok:true};
+}
+
+async function ownerPanelAlbumStoryPageSave(env,ctx){
+  await ensureAlbumSchema(env);const body=ctx.body||{},collectionId=albumCollectionId(body.collectionId);if(!collectionId)throw new ApiError(400,"Сюжетный Альбом не выбран.");
+  const [album,settingRow]=await Promise.all([env.DB.prepare(`SELECT collection_id,title,status FROM album_collections WHERE collection_id=? LIMIT 1`).bind(collectionId).first(),env.DB.prepare(`SELECT * FROM album_story_settings WHERE collection_id=? LIMIT 1`).bind(collectionId).first()]);
+  if(!album)throw new ApiError(404,"Альбом не найден.");if(!settingRow)throw new ApiError(409,"Этот Альбом не является сюжетным.");const setting=albumStorySettingsView(settingRow);
+  let pageId=albumStoryPageId(body.pageId);if(!pageId)pageId=albumStoryPageId(`page_${caseGrantId("story").toLowerCase().replace(/[^a-z0-9_-]/g,"_")}`)||`page_${Date.now().toString(36)}`;
+  const requiredMemories=Math.floor(Number(body.requiredMemories)||0);if(requiredMemories<1||requiredMemories>Math.max(1,setting.sourceMemoryTotal))throw new ApiError(400,`Условие страницы должно быть от 1 до ${Math.max(1,setting.sourceMemoryTotal)} восстановленных воспоминаний.`);
+  const title=String(body.title||'').trim().slice(0,120),caption=String(body.caption||'').trim().slice(0,500),storyText=String(body.storyText||'').trim().slice(0,6000),artUrl=albumAssetUrl(body.artUrl),enabled=body.enabled!==false&&Number(body.enabled)!==0,sortOrder=Math.max(-9999,Math.min(9999,Math.floor(Number(body.sortOrder)||requiredMemories)));if(!title)throw new ApiError(400,"Введите название страницы.");if(!artUrl)throw new ApiError(400,"Выберите сюжетную картинку страницы.");if(!storyText&&!caption)throw new ApiError(400,"Добавьте подпись или текст истории.");
+  const existing=await env.DB.prepare(`SELECT * FROM album_story_pages WHERE collection_id=? AND page_id=? LIMIT 1`).bind(collectionId,pageId).first(),sameThreshold=await env.DB.prepare(`SELECT page_id FROM album_story_pages WHERE collection_id=? AND required_memories=? AND page_id<>? LIMIT 1`).bind(collectionId,requiredMemories,pageId).first();if(sameThreshold)throw new ApiError(409,`Страница после ${requiredMemories} воспоминаний уже существует.`);
+  if(String(album.status)==='published'&&!albumBool(body.confirmProgressChange))throw new ApiError(409,"Изменение страниц опубликованного сюжетного Альбома требует подтверждения.");
+  const now=Math.floor(Date.now()/1000);await env.DB.prepare(`INSERT INTO album_story_pages(collection_id,page_id,required_memories,title,caption,story_text,art_url,enabled,sort_order,created_at,updated_at,updated_by) VALUES(?,?,?,?,?,?,?,?,?,?,?,?) ON CONFLICT(collection_id,page_id) DO UPDATE SET required_memories=excluded.required_memories,title=excluded.title,caption=excluded.caption,story_text=excluded.story_text,art_url=excluded.art_url,enabled=excluded.enabled,sort_order=excluded.sort_order,updated_at=excluded.updated_at,updated_by=excluded.updated_by`).bind(collectionId,pageId,requiredMemories,title,caption,storyText,artUrl,enabled?1:0,sortOrder,Number(existing?.created_at||now),now,String(ctx.user.id)).run();
+  await env.DB.prepare(`UPDATE album_collections SET revision=revision+1,updated_at=?,updated_by=? WHERE collection_id=?`).bind(now,String(ctx.user.id),collectionId).run();await logStaffAction(env,ctx.user,ctx.access,existing?'album_story_page_update':'album_story_page_create',null,'album',null,null,{collectionId,pageId,requiredMemories,title,enabled});return {ok:true,pageId};
+}
+
+async function ownerPanelAlbumStoryPageDelete(env,ctx){
+  await ensureAlbumSchema(env);const collectionId=albumCollectionId(ctx.body?.collectionId),pageId=albumStoryPageId(ctx.body?.pageId);if(!collectionId||!pageId)throw new ApiError(400,"Страница воспоминания не выбрана.");const album=await env.DB.prepare(`SELECT status,title FROM album_collections WHERE collection_id=? LIMIT 1`).bind(collectionId).first();if(!album)throw new ApiError(404,"Альбом не найден.");const current=await env.DB.prepare(`SELECT * FROM album_story_pages WHERE collection_id=? AND page_id=? LIMIT 1`).bind(collectionId,pageId).first();if(!current)throw new ApiError(404,"Страница не найдена.");const unlocks=await env.DB.prepare(`SELECT COUNT(*) AS count FROM album_story_unlocks WHERE collection_id=? AND page_id=?`).bind(collectionId,pageId).first();if(Number(unlocks?.count||0)>0)throw new ApiError(409,"Эту страницу уже открывали игроки. Чтобы сохранить их историю, страницу нельзя удалить — выключите её для новых игроков.");if(String(album.status)==='published'&&!albumBool(ctx.body?.confirmProgressChange))throw new ApiError(409,"Удаление страницы опубликованного сюжетного Альбома требует подтверждения.");const result=await env.DB.prepare(`DELETE FROM album_story_pages WHERE collection_id=? AND page_id=?`).bind(collectionId,pageId).run();if(Number(result.meta?.changes||0)<1)throw new ApiError(404,"Страница не найдена.");const now=Math.floor(Date.now()/1000);await env.DB.prepare(`UPDATE album_collections SET revision=revision+1,updated_at=?,updated_by=? WHERE collection_id=?`).bind(now,String(ctx.user.id),collectionId).run();await logStaffAction(env,ctx.user,ctx.access,'album_story_page_delete',null,'album',null,null,{collectionId,pageId});return {ok:true};
 }
 
 async function ownerPanelAlbumMilestoneSave(env,ctx){
-  await ensureAlbumSchema(env);const body=ctx.body||{},collectionId=albumCollectionId(body.collectionId),threshold=Number(body.thresholdPercent);if(!collectionId||!Number.isInteger(threshold)||threshold<1||threshold>100)throw new ApiError(400,"Укажите процент этапа от 1 до 100.");const album=await env.DB.prepare(`SELECT collection_id,status,title FROM album_collections WHERE collection_id=? LIMIT 1`).bind(collectionId).first();if(!album)throw new ApiError(404,"Альбом не найден.");let milestoneId=String(body.milestoneId||"").trim().slice(0,80);if(!milestoneId)milestoneId=`p${threshold}`;if(!/^[A-Za-z0-9_-]{1,80}$/.test(milestoneId))throw new ApiError(400,"Некорректный ID этапа.");const sourceRewards=Array.isArray(body.rewards)?body.rewards:body.reward?[body.reward]:[],rewards=[];if(sourceRewards.length>3)throw new ApiError(400,"У этапа может быть не больше трёх наград.");for(const raw of sourceRewards)rewards.push(await albumNormalizeReward(env,raw));if(!rewards.length)throw new ApiError(400,"Добавьте награду этапа.");const existing=await env.DB.prepare(`SELECT * FROM album_milestones WHERE collection_id=? AND milestone_id=? LIMIT 1`).bind(collectionId,milestoneId).first(),sameThreshold=await env.DB.prepare(`SELECT milestone_id FROM album_milestones WHERE collection_id=? AND threshold_percent=? AND milestone_id<>? LIMIT 1`).bind(collectionId,threshold,milestoneId).first();if(sameThreshold)throw new ApiError(409,`Для ${threshold}% уже есть другой этап.`);
+  await ensureAlbumSchema(env);const body=ctx.body||{},collectionId=albumCollectionId(body.collectionId),threshold=Number(body.thresholdPercent);if(!collectionId||!Number.isInteger(threshold)||threshold<1||threshold>100)throw new ApiError(400,"Укажите процент этапа от 1 до 100.");const album=await env.DB.prepare(`SELECT collection_id,status,title FROM album_collections WHERE collection_id=? LIMIT 1`).bind(collectionId).first();if(!album)throw new ApiError(404,"Альбом не найден.");await albumAssertCosmeticCollection(env,collectionId);let milestoneId=String(body.milestoneId||"").trim().slice(0,80);if(!milestoneId)milestoneId=`p${threshold}`;if(!/^[A-Za-z0-9_-]{1,80}$/.test(milestoneId))throw new ApiError(400,"Некорректный ID этапа.");const sourceRewards=Array.isArray(body.rewards)?body.rewards:body.reward?[body.reward]:[],rewards=[];if(sourceRewards.length>3)throw new ApiError(400,"У этапа может быть не больше трёх наград.");for(const raw of sourceRewards)rewards.push(await albumNormalizeReward(env,raw));if(!rewards.length)throw new ApiError(400,"Добавьте награду этапа.");const existing=await env.DB.prepare(`SELECT * FROM album_milestones WHERE collection_id=? AND milestone_id=? LIMIT 1`).bind(collectionId,milestoneId).first(),sameThreshold=await env.DB.prepare(`SELECT milestone_id FROM album_milestones WHERE collection_id=? AND threshold_percent=? AND milestone_id<>? LIMIT 1`).bind(collectionId,threshold,milestoneId).first();if(sameThreshold)throw new ApiError(409,`Для ${threshold}% уже есть другой этап.`);
   if(String(album.status)==="published"&&!albumBool(body.confirmProgressChange))throw new ApiError(409,"Изменение награды или порога опубликованного альбома требует подтверждения.");const now=Math.floor(Date.now()/1000),title=String(body.title||`${threshold}% коллекции`).trim().slice(0,140),enabled=body.enabled!==false&&Number(body.enabled)!==0,sortOrder=Math.max(-9999,Math.min(9999,Math.floor(Number(body.sortOrder)||threshold)));
   await env.DB.prepare(`INSERT INTO album_milestones(collection_id,milestone_id,threshold_percent,title,rewards_json,enabled,sort_order,created_at,updated_at,updated_by) VALUES(?,?,?,?,?,?,?,?,?,?) ON CONFLICT(collection_id,milestone_id) DO UPDATE SET threshold_percent=excluded.threshold_percent,title=excluded.title,rewards_json=excluded.rewards_json,enabled=excluded.enabled,sort_order=excluded.sort_order,updated_at=excluded.updated_at,updated_by=excluded.updated_by`).bind(collectionId,milestoneId,threshold,title,JSON.stringify(rewards),enabled?1:0,sortOrder,Number(existing?.created_at||now),now,String(ctx.user.id)).run();await env.DB.prepare(`UPDATE album_collections SET revision=revision+1,updated_at=?,updated_by=? WHERE collection_id=?`).bind(now,String(ctx.user.id),collectionId).run();await logStaffAction(env,ctx.user,ctx.access,existing?"album_milestone_update":"album_milestone_create",null,"album",null,null,{collectionId,milestoneId,threshold,rewards});return {ok:true,milestoneId};
 }
 
 async function ownerPanelAlbumMilestoneDelete(env,ctx){
-  await ensureAlbumSchema(env);const collectionId=albumCollectionId(ctx.body?.collectionId),milestoneId=String(ctx.body?.milestoneId||"").trim();if(!collectionId||!milestoneId)throw new ApiError(400,"Этап Альбома не выбран.");const album=await env.DB.prepare(`SELECT status FROM album_collections WHERE collection_id=? LIMIT 1`).bind(collectionId).first();if(!album)throw new ApiError(404,"Альбом не найден.");if(String(album.status)==="published"&&!albumBool(ctx.body?.confirmProgressChange))throw new ApiError(409,"Удаление этапа опубликованного Альбома требует отдельного подтверждения.");const claims=await env.DB.prepare(`SELECT COUNT(*) AS count FROM album_milestone_claims WHERE collection_id=? AND milestone_id=?`).bind(collectionId,milestoneId).first();if(Number(claims?.count||0)>0)throw new ApiError(409,"Этап уже имеет историю получений. Отключите его вместо удаления.");const result=await env.DB.prepare(`DELETE FROM album_milestones WHERE collection_id=? AND milestone_id=?`).bind(collectionId,milestoneId).run();if(Number(result.meta?.changes||0)<1)throw new ApiError(404,"Этап не найден.");const now=Math.floor(Date.now()/1000);await env.DB.prepare(`UPDATE album_collections SET revision=revision+1,updated_at=?,updated_by=? WHERE collection_id=?`).bind(now,String(ctx.user.id),collectionId).run();await logStaffAction(env,ctx.user,ctx.access,"album_milestone_delete",null,"album",null,null,{collectionId,milestoneId});return {ok:true};
+  await ensureAlbumSchema(env);const collectionId=albumCollectionId(ctx.body?.collectionId),milestoneId=String(ctx.body?.milestoneId||"").trim();if(!collectionId||!milestoneId)throw new ApiError(400,"Этап Альбома не выбран.");const album=await env.DB.prepare(`SELECT status FROM album_collections WHERE collection_id=? LIMIT 1`).bind(collectionId).first();if(!album)throw new ApiError(404,"Альбом не найден.");await albumAssertCosmeticCollection(env,collectionId);if(String(album.status)==="published"&&!albumBool(ctx.body?.confirmProgressChange))throw new ApiError(409,"Удаление этапа опубликованного Альбома требует отдельного подтверждения.");const claims=await env.DB.prepare(`SELECT COUNT(*) AS count FROM album_milestone_claims WHERE collection_id=? AND milestone_id=?`).bind(collectionId,milestoneId).first();if(Number(claims?.count||0)>0)throw new ApiError(409,"Этап уже имеет историю получений. Отключите его вместо удаления.");const result=await env.DB.prepare(`DELETE FROM album_milestones WHERE collection_id=? AND milestone_id=?`).bind(collectionId,milestoneId).run();if(Number(result.meta?.changes||0)<1)throw new ApiError(404,"Этап не найден.");const now=Math.floor(Date.now()/1000);await env.DB.prepare(`UPDATE album_collections SET revision=revision+1,updated_at=?,updated_by=? WHERE collection_id=?`).bind(now,String(ctx.user.id),collectionId).run();await logStaffAction(env,ctx.user,ctx.access,"album_milestone_delete",null,"album",null,null,{collectionId,milestoneId});return {ok:true};
 }
 
 async function albumValidateForPublish(env,collectionId){
-  const catalog=await albumCatalogSnapshot(env),collection=await env.DB.prepare(`SELECT * FROM album_collections WHERE collection_id=? LIMIT 1`).bind(collectionId).first();if(!collection)throw new ApiError(404,"Альбом не найден.");const [itemsRes,milestonesRes]=await Promise.all([env.DB.prepare(`SELECT * FROM album_collection_items WHERE collection_id=?`).bind(collectionId).all(),env.DB.prepare(`SELECT * FROM album_milestones WHERE collection_id=? AND enabled=1`).bind(collectionId).all()]);const items=itemsRes.results||[],problems=[];if(!String(collection.title||"").trim())problems.push("нет названия");if(!items.some((x)=>Number(x.required||0)===1))problems.push("нет обязательных предметов");
+  const collection=await env.DB.prepare(`SELECT * FROM album_collections WHERE collection_id=? LIMIT 1`).bind(collectionId).first();if(!collection)throw new ApiError(404,"Альбом не найден.");const settingRow=await env.DB.prepare(`SELECT * FROM album_story_settings WHERE collection_id=? LIMIT 1`).bind(collectionId).first(),problems=[];if(!String(collection.title||"").trim())problems.push("нет названия");
+  if(settingRow){
+    const setting=albumStorySettingsView(settingRow),pages=(await env.DB.prepare(`SELECT * FROM album_story_pages WHERE collection_id=? AND enabled=1 ORDER BY sort_order,required_memories,page_id`).bind(collectionId).all()).results||[];
+    if(!setting.seasonId||!setting.collectibleId||!setting.sourceMemoryTotal)problems.push("не выбран источник воспоминаний сезона");if(!pages.length)problems.push("нет включённых сюжетных страниц");
+    const seen=new Set();for(const page of pages){const n=Number(page.required_memories||0);if(n<1||n>setting.sourceMemoryTotal)problems.push(`страница «${String(page.title||page.page_id)}»: условие вне диапазона 1–${setting.sourceMemoryTotal}`);if(seen.has(n))problems.push(`несколько страниц открываются после ${n} воспоминаний`);seen.add(n);if(!String(page.title||'').trim())problems.push(`страница ${page.page_id} без названия`);if(!String(page.art_url||'').trim())problems.push(`страница «${String(page.title||page.page_id)}» без картинки`);if(!String(page.caption||'').trim()&&!String(page.story_text||'').trim())problems.push(`страница «${String(page.title||page.page_id)}» без текста`);}
+    if(problems.length)throw new ApiError(409,`Альбом нельзя опубликовать: ${problems.slice(0,8).join("; ")}.`);return {collection,type:'story',story:setting,pages};
+  }
+  const catalog=await albumCatalogSnapshot(env),[itemsRes,milestonesRes]=await Promise.all([env.DB.prepare(`SELECT * FROM album_collection_items WHERE collection_id=?`).bind(collectionId).all(),env.DB.prepare(`SELECT * FROM album_milestones WHERE collection_id=? AND enabled=1`).bind(collectionId).all()]);const items=itemsRes.results||[];if(!items.some((x)=>Number(x.required||0)===1))problems.push("нет обязательных предметов");
   for(const item of items){const meta=catalog.get(albumItemKey(item.item_kind,item.item_id));if(!meta)problems.push(`предмет ${item.item_kind}:${item.item_id} отсутствует в каталоге`);else if(Number(item.required||0)===1&&meta.enabled===false)problems.push(`обязательный предмет «${meta.title}» отключён в каталоге`);else if(Number(item.required||0)===1&&meta.future&&!meta.released)problems.push(`обязательный предмет «${meta.title}» ещё скрыт`);}
   for(const m of milestonesRes.results||[]){const rewards=safeJson(m.rewards_json,[]);if(!Array.isArray(rewards)||!rewards.length){problems.push(`этап ${m.threshold_percent}% без награды`);continue;}for(const reward of rewards){try{const normalized=await albumNormalizeReward(env,reward,catalog);if(ALBUM_ITEM_KINDS.includes(normalized.kind)){const meta=catalog.get(albumItemKey(normalized.kind,normalized.id));if(meta?.enabled===false)problems.push(`награда этапа ${m.threshold_percent}% «${meta.title}» отключена`);else if(meta?.future&&!meta.released)problems.push(`награда этапа ${m.threshold_percent}% «${meta.title}» ещё скрыта`);}}catch(error){problems.push(`этап ${m.threshold_percent}%: ${error.message}`);}}}
-  if(problems.length)throw new ApiError(409,`Альбом нельзя опубликовать: ${problems.slice(0,8).join("; ")}.`);return {collection,items,milestones:milestonesRes.results||[]};
+  if(problems.length)throw new ApiError(409,`Альбом нельзя опубликовать: ${problems.slice(0,8).join("; ")}.`);return {collection,type:'cosmetic',items,milestones:milestonesRes.results||[]};
 }
 
 async function ownerPanelAlbumStatus(env,ctx){
@@ -47743,8 +47895,9 @@ async function ownerPanelAlbumStatus(env,ctx){
 }
 
 async function ownerPanelAlbumDelete(env,ctx){
-  await ensureAlbumSchema(env);const collectionId=albumCollectionId(ctx.body?.collectionId);if(!collectionId)throw new ApiError(400,"Альбом не выбран.");const row=await env.DB.prepare(`SELECT title,status FROM album_collections WHERE collection_id=? LIMIT 1`).bind(collectionId).first();if(!row)throw new ApiError(404,"Альбом не найден.");if(String(row.status)!=="draft")throw new ApiError(409,"Удалять можно только черновик. Опубликованный Альбом сначала архивируйте.");const claims=await env.DB.prepare(`SELECT COUNT(*) AS count FROM album_milestone_claims WHERE collection_id=?`).bind(collectionId).first();if(Number(claims?.count||0)>0)throw new ApiError(409,"У Альбома уже есть история получений; его нельзя удалить.");await env.DB.batch([env.DB.prepare(`DELETE FROM album_collection_items WHERE collection_id=?`).bind(collectionId),env.DB.prepare(`DELETE FROM album_milestones WHERE collection_id=?`).bind(collectionId),env.DB.prepare(`DELETE FROM album_collections WHERE collection_id=?`).bind(collectionId)]);await logStaffAction(env,ctx.user,ctx.access,"album_delete",null,"album",null,null,{collectionId,title:String(row.title||collectionId)});return {ok:true};
+  await ensureAlbumSchema(env);const collectionId=albumCollectionId(ctx.body?.collectionId);if(!collectionId)throw new ApiError(400,"Альбом не выбран.");const row=await env.DB.prepare(`SELECT title,status FROM album_collections WHERE collection_id=? LIMIT 1`).bind(collectionId).first();if(!row)throw new ApiError(404,"Альбом не найден.");if(String(row.status)!=="draft")throw new ApiError(409,"Удалять можно только черновик. Опубликованный Альбом сначала архивируйте.");const [claims,storyUnlocks]=await Promise.all([env.DB.prepare(`SELECT COUNT(*) AS count FROM album_milestone_claims WHERE collection_id=?`).bind(collectionId).first(),env.DB.prepare(`SELECT COUNT(*) AS count FROM album_story_unlocks WHERE collection_id=?`).bind(collectionId).first()]);if(Number(claims?.count||0)>0||Number(storyUnlocks?.count||0)>0)throw new ApiError(409,"У Альбома уже есть история игроков; его нельзя удалить.");await env.DB.batch([env.DB.prepare(`DELETE FROM album_collection_items WHERE collection_id=?`).bind(collectionId),env.DB.prepare(`DELETE FROM album_milestones WHERE collection_id=?`).bind(collectionId),env.DB.prepare(`DELETE FROM album_story_pages WHERE collection_id=?`).bind(collectionId),env.DB.prepare(`DELETE FROM album_story_settings WHERE collection_id=?`).bind(collectionId),env.DB.prepare(`DELETE FROM album_collections WHERE collection_id=?`).bind(collectionId)]);await logStaffAction(env,ctx.user,ctx.access,"album_delete",null,"album",null,null,{collectionId,title:String(row.title||collectionId)});return {ok:true};
 }
+
 // ===================== END ALBUM ZEFFI =====================
 
 
@@ -47882,6 +48035,8 @@ const OWNER_CC_ENDPOINT_TARGET = Object.freeze({
   "/api/owner/albums/save": "live",
   "/api/owner/albums/items/save": "live",
   "/api/owner/albums/item/delete": "live",
+  "/api/owner/albums/story-page/save": "live",
+  "/api/owner/albums/story-page/delete": "live",
   "/api/owner/albums/milestone/save": "live",
   "/api/owner/albums/milestone/delete": "live",
   "/api/owner/albums/status": "live",
@@ -48118,6 +48273,8 @@ async function handleOwnerPanelApi(request, env, path, executionCtx = null) {
     if (path === "/api/owner/albums/save") return jsonResponse(await ownerPanelAlbumSave(env, ctx));
     if (path === "/api/owner/albums/items/save") return jsonResponse(await ownerPanelAlbumItemsSave(env, ctx));
     if (path === "/api/owner/albums/item/delete") return jsonResponse(await ownerPanelAlbumItemDelete(env, ctx));
+    if (path === "/api/owner/albums/story-page/save") return jsonResponse(await ownerPanelAlbumStoryPageSave(env, ctx));
+    if (path === "/api/owner/albums/story-page/delete") return jsonResponse(await ownerPanelAlbumStoryPageDelete(env, ctx));
     if (path === "/api/owner/albums/milestone/save") return jsonResponse(await ownerPanelAlbumMilestoneSave(env, ctx));
     if (path === "/api/owner/albums/milestone/delete") return jsonResponse(await ownerPanelAlbumMilestoneDelete(env, ctx));
     if (path === "/api/owner/albums/status") return jsonResponse(await ownerPanelAlbumStatus(env, ctx));

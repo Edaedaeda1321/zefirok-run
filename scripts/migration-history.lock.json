@@ -99,6 +99,8 @@
     "0096_economy_alex_case_rebase.sql": "dab385a023c75de834bf7c2e040e8a2ad852bd724f1a6a8d7cfd4748399ffbcf",
     "0097_story_game_style_collection.sql": "6136fcb9aeafd9dc44520cc8efe43ccdbab132858b8a1228d9756db6d259f7b3",
     "0098_alex_avatar_chance_and_skins_wallet.sql": "20bc5e5fd097cec3ea49e8b9bbe2b52bd0cf7c7d59cd09b7c5179277760b2800",
-    "0099_alex_case_currency_priority.sql": "8f6c62f3f2e9a268107e681085e698563bb9ca992c10a25fe4fe2337b305a6e4"
+    "0099_alex_case_currency_priority.sql": "8f6c62f3f2e9a268107e681085e698563bb9ca992c10a25fe4fe2337b305a6e4",
+    "0100_album_story_memories.sql": "1f97bc31559da9076503197f02890d64338e3f9a241211f1c09828bc8afc3ece",
+    "0101_album_story_unlock_revision.sql": "3d9ee34d9017a1ccc2e25fbe8b2189266579e30702592d9753822a1cf28a9c42"
   }
 }
