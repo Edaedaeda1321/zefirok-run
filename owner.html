@@ -2214,10 +2214,20 @@ function renderCc22PassOverview(d){const season=d?.selected||null,stats=d?.stats
 $('view-pass').addEventListener('click',e=>{const tab=e.target.closest('[data-cc22-pass-tab]');if(tab){activatePassView(tab.dataset.cc22PassTab);requestAnimationFrame(()=>cc22ScrollTo('passSubnav'));return;}const view=e.target.closest('[data-cc22-pass-view]');if(view)switchView(view.dataset.cc22PassView);});
 
 async function loadPass(seasonId=''){
-  const d=await api('/api/owner/season-pass',seasonId?{seasonId}:{});state.pass=d;state.passReadiness=null;const sel=$('passSeasonSelect');sel.innerHTML=d.seasons.map(s=>`<option value="${esc(s.id)}" ${s.id===d.selected.id?'selected':''}>${esc(s.title)} · ${esc(s.status)}</option>`).join('');
+  try{
+    const d=await api('/api/owner/season-pass',seasonId?{seasonId}:{});state.pass=d;state.passReadiness=null;const sel=$('passSeasonSelect');sel.innerHTML=d.seasons.map(s=>`<option value="${esc(s.id)}" ${s.id===d.selected.id?'selected':''}>${esc(s.title)} · ${esc(s.status)}</option>`).join('');
   $('passSummary').innerHTML=[['Игроков',d.stats.players],['Элитный',d.stats.elite],['Элитный+',d.stats.elitePlus],['Заданий',d.tasks.length]].map(x=>`<div class="mini-stat"><b>${fmt(x[1])}</b><span>${x[0]}</span></div>`).join('');
   renderPassSeasonControls(d.selected);renderPassOverflowSettings();renderPassReadiness(null);
   const by={};d.rewards.forEach(r=>{(by[r.level]??={})[r.lane]=r;});$('passRewards').innerHTML=Array.from({length:50},(_,i)=>{const level=i+1,free=by[level]?.free||{},prem=by[level]?.premium||{};return `<div class="reward-level"><div class="reward-level-head"><span>Уровень ${level}</span><span class="pill ${level===50?'gold':''}">${level===50?'Финал':'Сезон'}</span></div>${laneMarkup(level,'free',free)}${laneMarkup(level,'premium',prem)}</div>`;}).join('');$('passRewards').querySelectorAll('[data-edit-reward]').forEach(b=>b.onclick=()=>openRewardEdit(Number(b.dataset.level),b.dataset.lane));preparePassSeasonDefaults();renderTasks();renderPassTariffs();renderPassVisuals();renderPassStory();renderStorySeasonAssetBinding();renderPassLetter();renderPassSeasonalCase();renderFuturePassContent();renderCc22PassOverview(d);renderPassRunnerSceneBinding();if(!state.runnerBuilder)void loadRunnerBuilder(false).catch(()=>{});
+  }catch(error){
+    state.pass=null;state.passReadiness=null;
+    const message=String(error?.message||'Не удалось загрузить сезонный пропуск.');
+    const sel=$('passSeasonSelect');if(sel)sel.innerHTML='<option value="">Ошибка загрузки</option>';
+    const summary=$('passSummary');if(summary)summary.innerHTML=`<div class="empty" style="grid-column:1/-1"><b>Не удалось загрузить Season Pass</b><br>${esc(message)}<br><span style="font-size:11px">Нажмите «Обновить», чтобы повторить запрос.</span></div>`;
+    const title=$('cc22PassTitle');if(title)title.textContent='Season Pass недоступен';
+    const meta=$('cc22PassMeta');if(meta)meta.textContent=message;
+    throw error;
+  }
 }
 function renderPassOverflowSettings(){
   const progression=state.pass?.progression||state.pass?.selected?.progression||{},reward=progression.overflowReward||{};
