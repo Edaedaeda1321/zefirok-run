@@ -39,10 +39,11 @@ check('old Belkino hard-hide removed',!worker.includes('if (achievementIsBelkino
 must('catalog publication receives availability',worker,'achievementCatalogPublished(base,artReady,availability)');
 
 for(const token of [
-  "{target:5,title:'По следу'}",
-  "{target:25,title:'Всё ближе'}",
-  "{target:50,title:'Белый Кролик был здесь'}"
-]) must(`owner defaults ${token}`,owner,token);
+  'passStoryCollectibleStep1Achievement',
+  'passStoryCollectibleStep2Achievement',
+  'passStoryCollectibleStep3Achievement',
+  'passStoryAchievementOptions'
+]) must(`owner achievement binding ${token}`,owner,token);
 
 must('migration enables collectible',migration,"'$.battlePass.storyCollectible.enabled', 1");
 must('migration series enabled',migration,"'$.battlePass.storyCollectible.achievementSeries.enabled', 1");

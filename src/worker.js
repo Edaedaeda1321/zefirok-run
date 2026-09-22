@@ -7300,7 +7300,7 @@ async function achievementStoryCollectibleDefinitions(env){
       for(let index=0;index<steps.length;index+=1){
         const step=steps[index],target=Math.max(1,Number(step.target||1));
         out.push(Object.freeze({
-          id:storyCollectibleAchievementId(seasonId,seriesKey,target),category:'seasons',icon:'🐾',title:String(step.title||`Сюжетная находка · ${target}`).slice(0,80),
+          id:String(step.achievementId||storyCollectibleAchievementId(seasonId,seriesKey,target)).slice(0,80),category:'seasons',icon:'🐾',title:String(step.title||`Сюжетная находка · ${target}`).slice(0,80),
           description:`Найди ${target} сюжетных находок «${String(cfg.title||'Сюжетная находка')}» в сезоне «${seasonTitle}».`,target,source:'seasonStoryCollectible',seasonId,seasonTitle,collectibleId:String(cfg.id||''),seriesKey,
           availableFrom:Math.max(0,Number(row.starts_at)||0),availableUntil:Math.max(0,Number(row.ends_at)||0),rarity:index>=2?'legendary':index===1?'epic':'rare',achievementPoints:index>=2?50:index===1?25:10,
           reward:Object.freeze({kind:'none'}),dynamicStoryCollectible:true,collectibleArtUrl:String(cfg.iconUrl||''),secret:false
@@ -9413,17 +9413,22 @@ function storyCollectibleAchievementId(seasonId,seriesKey,target){
 }
 function storyCollectibleRunSnapshot(config){
   const value=seasonStoryCollectibleView(config);
-  return {id:value.id,title:value.title,iconUrl:value.iconUrl,pickupText:value.pickupText,reactionText:value.reactionText,perRun:value.perRun,showAfterRun:value.showAfterRun,achievementSeries:value.achievementSeries};
+  return {id:value.id,title:value.title,iconUrl:value.iconUrl,pickupText:value.pickupText,reactionText:value.reactionText,perRun:value.perRun,showAfterRun:value.showAfterRun,unlockLevel:value.unlockLevel,milestones:value.milestones,achievementSeries:value.achievementSeries};
 }
-async function activeSeasonStoryCollectible(env,atMs=Date.now()){
+async function activeSeasonStoryCollectible(env,telegramId,atMs=Date.now()){
   const season=await loadSeasonPassSeason(env,atMs).catch(()=>null);
   if(!season||String(season.status||'')!=='active')return null;
   const config=seasonStoryCollectibleView(season?.visuals?.battlePass?.storyCollectible);
   if(!config.enabled||!config.title||!config.iconUrl)return null;
+  if(config.unlockLevel>1){
+    const player=await ensureSeasonPassPlayer(env,season,String(telegramId||'')).catch(()=>null);
+    const level=seasonPassLevelFromXp(Math.max(0,Number(player?.xp)||0));
+    if(level<config.unlockLevel)return null;
+  }
   return {season,config};
 }
 async function reserveRunStoryCollectibles(env,{runId,telegramId,startedAtMs}){
-  const active=await activeSeasonStoryCollectible(env,startedAtMs);if(!active)return null;
+  const active=await activeSeasonStoryCollectible(env,telegramId,startedAtMs);if(!active)return null;
   const {season,config}=active,now=Math.floor(Date.now()/1000),snapshot=storyCollectibleRunSnapshot(config),seriesKey=config.achievementSeries?.enabled?String(config.achievementSeries.key||''):'';
   const statements=[];
   for(let index=0;index<config.perRun;index+=1){
@@ -9451,6 +9456,8 @@ async function settleRunStoryCollectibles(env,{runId,telegramId,durationMs,slots
   await markRunStoryCollectiblesCaught(env,{runId,telegramId,durationMs,slots,now});
   const first=await env.DB.prepare(`SELECT season_id,collectible_id,series_key,config_json FROM game_run_story_collectible_drops WHERE run_id=? AND telegram_id=? ORDER BY slot LIMIT 1`).bind(runId,telegramId).first();
   if(!first)return null;
+  const pendingRow=await env.DB.prepare(`SELECT COUNT(*) AS count FROM game_run_story_collectible_drops WHERE run_id=? AND telegram_id=? AND caught=1 AND counted=0`).bind(runId,telegramId).first();
+  const newlyCounted=Math.max(0,Number(pendingRow?.count||0));
   await env.DB.batch([
     env.DB.prepare(`INSERT INTO season_story_collectible_progress(telegram_id,season_id,collectible_id,series_key,total_collected,updated_at)
       SELECT ?,?,?,?,COUNT(*),? FROM game_run_story_collectible_drops WHERE run_id=? AND telegram_id=? AND caught=1 AND counted=0
@@ -9459,14 +9466,14 @@ async function settleRunStoryCollectibles(env,{runId,telegramId,durationMs,slots
   ]);
   const state=await readRunStoryCollectibleState(env,runId,telegramId);if(!state)return null;
   const caughtRow=await env.DB.prepare(`SELECT COUNT(*) AS count FROM game_run_story_collectible_drops WHERE run_id=? AND telegram_id=? AND caught=1`).bind(runId,telegramId).first();
-  return {...state,caughtThisRun:Math.max(0,Number(caughtRow?.count||0))};
+  return {...state,caughtThisRun:Math.max(0,Number(caughtRow?.count||0)),newlyCounted};
 }
 async function persistStoryCollectibleAchievementUnlocks(env,telegramId,state,now=Math.floor(Date.now()/1000)){
   const series=state?.achievementSeries;if(!state||!series?.enabled||!Array.isArray(series.steps)||!series.steps.length)return [];
   const total=Math.max(0,Number(state.totalCollected||0)),rows=[];
   for(const step of series.steps){
     const target=Math.max(1,Number(step.target||1));if(total<target)continue;
-    const id=storyCollectibleAchievementId(state.seasonId,series.key,target);
+    const id=String(step.achievementId||storyCollectibleAchievementId(state.seasonId,series.key,target)).slice(0,80);
     rows.push({achievement_id:id,title:String(step.title||'Сюжетная находка'),unlocked_at:now,source_kind:'seasonStoryCollectible',season_id:String(state.seasonId||''),source_snapshot_json:JSON.stringify({source:'seasonStoryCollectible',current:total,target,seasonId:String(state.seasonId||''),collectibleId:String(state.collectibleId||'')})});
   }
   if(!rows.length)return [];
@@ -9475,6 +9482,25 @@ async function persistStoryCollectibleAchievementUnlocks(env,telegramId,state,no
   const fresh=rows.filter((row)=>!existing.has(row.achievement_id));
   if(fresh.length)await env.DB.batch(fresh.map((row)=>env.DB.prepare(`INSERT OR IGNORE INTO achievement_unlocks(telegram_id,achievement_id,unlocked_at,source_kind,season_id,source_snapshot_json) VALUES(?,?,?,?,?,?)`).bind(telegramId,row.achievement_id,row.unlocked_at,row.source_kind,row.season_id,row.source_snapshot_json)));
   return fresh.map((row)=>({id:row.achievement_id,title:row.title,unlockedAt:row.unlocked_at}));
+}
+
+function freshStoryCollectibleMemories(state,now=Math.floor(Date.now()/1000)){
+  const milestones=Array.isArray(state?.milestones)?state.milestones:[];if(!state||!milestones.length)return [];
+  const total=Math.max(0,Number(state.totalCollected||0)),gained=Math.max(0,Number(state.newlyCounted||0));
+  if(gained<=0)return [];
+  const previous=Math.max(0,total-gained);
+  return milestones.filter((item)=>{const target=Math.max(1,Number(item.target||1));return previous<target&&total>=target;}).map((item)=>({target:Math.max(1,Number(item.target||1)),title:String(item.title||'Воспоминание'),artUrl:String(item.artUrl||''),storyText:String(item.storyText||''),unlockedAt:now}));
+}
+
+async function seasonPassStoryCollectibleForPlayer(env,season,telegramId,player=null){
+  const config=seasonStoryCollectibleView(season?.visuals?.battlePass?.storyCollectible);if(!config.enabled||!config.title||!config.iconUrl)return null;
+  const current=player||await ensureSeasonPassPlayer(env,season,String(telegramId));
+  const level=seasonPassLevelFromXp(Math.max(0,Number(current?.xp)||0));
+  const progress=await env.DB.prepare(`SELECT total_collected FROM season_story_collectible_progress WHERE telegram_id=? AND season_id=? AND collectible_id=? LIMIT 1`).bind(String(telegramId),String(season.id),String(config.id)).first().catch(()=>null);
+  const totalCollected=Math.max(0,Number(progress?.total_collected||0));
+  const milestones=config.milestones.map((item)=>{const target=Math.max(1,Number(item.target||1)),unlocked=totalCollected>=target;return {...item,unlocked,unlockedAt:0};});
+  const next=milestones.find((item)=>!item.unlocked)||null;
+  return {enabled:true,available:level>=config.unlockLevel,unlockLevel:config.unlockLevel,level,id:config.id,title:config.title,iconUrl:config.iconUrl,totalCollected,nextTarget:Number(next?.target||0),unlockedCount:milestones.filter((item)=>item.unlocked).length,milestones};
 }
 
 async function checkpointAuthoritativeRunSession(request, env) {
@@ -9640,7 +9666,11 @@ async function startAuthoritativeRunSession(request, env) {
       if (String(session.telegram_id || '') !== telegramId) throw new ApiError(409, 'Этот идентификатор забега уже используется.');
       if (String(session.status || '') !== 'started') throw new ApiError(409, 'Эта сессия забега уже завершена или заменена новым забегом.');
       const repeated = safeAdminNumber(result?.[1]?.meta?.changes) < 1;
-      const storyCollectible=await reserveRunStoryCollectibles(env,{runId,telegramId,startedAtMs:Number(session.started_at_ms||nowMs)}).catch((error)=>{if(isMissingRuntimeDatabaseSchemaError(error))return null;throw error;});
+      const [storyCollectible,gameStyle]=await Promise.all([
+        reserveRunStoryCollectibles(env,{runId,telegramId,startedAtMs:Number(session.started_at_ms||nowMs)}).catch((error)=>{if(isMissingRuntimeDatabaseSchemaError(error))return null;throw error;}),
+        playerGameStyleState(env,telegramId).catch((error)=>{console.error('run-start game style fallback',error);return null;})
+      ]);
+      const runnerScene=gameStyle?.effective?.runnerScene||await readRunnerScenePublicConfigForPlayer(env,telegramId);
       return jsonResponse({
         ok:true,
         runSession:{
@@ -9659,7 +9689,8 @@ async function startAuthoritativeRunSession(request, env) {
           },
           caseDrop:session.case_drop_type?{type:String(session.case_drop_type),spawnAfterMs:Number(session.case_drop_spawn_after_ms||0),minScore:RUN_CASE_DROP_MIN_SCORE,milestoneScore:RUN_CASE_DROP_MILESTONE_SCORE,caught:Number(session.case_drop_caught||0)===1}:null,
           caseDrops:session.case_drop_type?[{type:String(session.case_drop_type),spawnAfterMs:Number(session.case_drop_spawn_after_ms||0),minScore:RUN_CASE_DROP_MIN_SCORE,milestoneScore:RUN_CASE_DROP_MILESTONE_SCORE,caught:Number(session.case_drop_caught||0)===1}]:[],
-          storyCollectible
+          storyCollectible,
+          runnerScene
         },
         repeated
       });
@@ -14315,6 +14346,8 @@ async function buildFastRepeatedRunResponse(env, executionCtx, context) {
     settleRunStoryCollectibles(env,{runId,telegramId,durationMs:Number(ledger?.duration_ms||submittedMetrics.durationMs),slots:submittedStoryCollectibleSlots,now:Math.floor(Date.now()/1000)}).catch(()=>readRunStoryCollectibleState(env,runId,telegramId).catch(()=>null))
   ]);
   const repeatRunCaseDrops=(repeatRunCaseDropsResult?.results||[]).map(runCaseDropMilestoneView).filter(Boolean);
+  const repeatMemories=freshStoryCollectibleMemories(repeatStoryCollectible,Math.floor(Date.now()/1000));
+  const repeatStoryCollectibleView=repeatStoryCollectible&&repeatMemories.length?{...repeatStoryCollectible,newMemories:repeatMemories}:repeatStoryCollectible;
   const repeatCaseState = repeatCaseEnsured.state;
   const acceptedToRating = Number(ledger?.accepted_rating || 0) === 1;
   const qualifies = Number(ledger?.duration_ms || submittedMetrics.durationMs) >= minSeconds * 1000
@@ -14375,7 +14408,7 @@ async function buildFastRepeatedRunResponse(env, executionCtx, context) {
       seasonId: String(ledger?.season_id || season.id || ""),
       caseDrop:repeatRunCaseDrops[0]||null,
       caseDrops:repeatRunCaseDrops,
-      storyCollectible:repeatStoryCollectible
+      storyCollectible:repeatStoryCollectibleView
     }
   };
 }
@@ -14753,8 +14786,10 @@ async function submitLeaderboardRun(request, env, executionCtx = null) {
       throw batchError;
     }
 
-    const storyCollectibleSettlement=await settleRunStoryCollectibles(env,{runId,telegramId,durationMs:metrics.durationMs,slots:submittedStoryCollectibleSlots,now}).catch((error)=>{if(isMissingRuntimeDatabaseSchemaError(error))return null;throw error;});
+    let storyCollectibleSettlement=await settleRunStoryCollectibles(env,{runId,telegramId,durationMs:metrics.durationMs,slots:submittedStoryCollectibleSlots,now}).catch((error)=>{if(isMissingRuntimeDatabaseSchemaError(error))return null;throw error;});
     const storyCollectibleUnlocks=await persistStoryCollectibleAchievementUnlocks(env,telegramId,storyCollectibleSettlement,now).catch((error)=>{console.error('story collectible achievement unlock failed',error);return [];});
+    const storyCollectibleMemories=freshStoryCollectibleMemories(storyCollectibleSettlement,now);
+    if(storyCollectibleSettlement&&storyCollectibleMemories.length)storyCollectibleSettlement={...storyCollectibleSettlement,newMemories:storyCollectibleMemories};
 
     if (acceptedToRating && !ratingHidden && previousSeasonLeader?.telegram_id && String(previousSeasonLeader.telegram_id) !== telegramId) {
       scheduleRunSettlementBackground(executionCtx, queueLeaderboardDethroneNotificationIfNeeded(env, {
@@ -34650,7 +34685,7 @@ async function playerGameStyleCatalog(env,telegramId,{materialize=true}={}){
     env.DB.prepare(`SELECT item_id,kind,season_id,source_event_id,unlocked_at FROM player_game_style_unlocks WHERE telegram_id=? ORDER BY unlocked_at,item_id`).bind(id).all(),
     env.DB.prepare(`SELECT season_id,title,starts_at,ends_at,manual_status FROM season_pass_seasons ORDER BY starts_at,season_id`).all(),
     env.DB.prepare(`SELECT e.event_id,e.season_id,e.title,e.actions_json,e.unlock_level,e.sort_order,e.created_at,e.updated_at,COALESCE(p.seen_at,0) AS seen_at FROM season_pass_story_events e LEFT JOIN season_pass_story_progress p ON p.event_id=e.event_id AND p.telegram_id=? ORDER BY e.season_id,e.unlock_level,e.sort_order,e.created_at,e.event_id`).bind(id).all(),
-    readRunnerBuilderConfig(env),readRunnerScenePublicConfig(env),seasonPassMiniGameVisualsForPlayer(env,id)
+    readRunnerBuilderConfig(env),readRunnerScenePublicConfigForPlayer(env,id),seasonPassMiniGameVisualsForPlayer(env,id)
   ]);
   const unlocks=new Map((unlockResult.results||[]).map(row=>[String(row.item_id||''),row]));
   const seasons=new Map((seasonResult.results||[]).map(row=>[String(row.season_id||''),row]));
@@ -34697,7 +34732,7 @@ async function playerGameStyleState(env,telegramId,{includeCatalog=false}={}){
   if(includeCatalog){
     const catalog=await playerGameStyleCatalog(env,id,{materialize:true});
     for(const slot of GAME_STYLE_SLOTS){const item=gameStyleCatalogFind(catalog,slot,choices[slot]);if(!item||item.unlocked!==true)choices[slot]='auto';}
-    const [autoScene,autoVisuals,config]=await Promise.all([readRunnerScenePublicConfig(env),seasonPassMiniGameVisualsForPlayer(env,id),readRunnerBuilderConfig(env)]);
+    const [autoScene,autoVisuals,config]=await Promise.all([readRunnerScenePublicConfigForPlayer(env,id),seasonPassMiniGameVisualsForPlayer(env,id),readRunnerBuilderConfig(env)]);
     let runnerScene=autoScene;
     if(choices.scene==='default')runnerScene=runnerBuilderFallbackPublicScene();
     else if(choices.scene!=='auto'){const item=gameStyleCatalogFind(catalog,'scene',choices.scene);if(item?.seasonId)runnerScene=runnerBuilderResolvePublicScene(config,item.seasonId);}
@@ -34726,7 +34761,7 @@ async function playerGameStyleState(env,telegramId,{includeCatalog=false}={}){
   let eventRows=[];
   if(sourceEventIds.length){const placeholders=sourceEventIds.map(()=>'?').join(',');eventRows=(await env.DB.prepare(`SELECT event_id,season_id,title,actions_json,updated_at FROM season_pass_story_events WHERE event_id IN (${placeholders})`).bind(...sourceEventIds).all()).results||[];}
   const eventById=new Map(eventRows.map(item=>[String(item.event_id||''),item]));
-  const [autoScene,autoVisuals,config]=await Promise.all([readRunnerScenePublicConfig(env),seasonPassMiniGameVisualsForPlayer(env,id),readRunnerBuilderConfig(env)]);
+  const [autoScene,autoVisuals,config]=await Promise.all([readRunnerScenePublicConfigForPlayer(env,id),seasonPassMiniGameVisualsForPlayer(env,id),readRunnerBuilderConfig(env)]);
   let runnerScene=autoScene;
   if(choices.scene==='default')runnerScene=runnerBuilderFallbackPublicScene();
   else if(choices.scene!=='auto'){const unlock=unlockById.get(choices.scene);if(unlock?.season_id)runnerScene=runnerBuilderResolvePublicScene(config,String(unlock.season_id));else choices.scene='auto';}
@@ -35291,13 +35326,13 @@ async function buildSeasonPassPayload(env,season,telegramId,player=null){
   const deliveredClaims=claimsResult.results||[];
   const overflowClaimed=deliveredClaims.filter(row=>String(row.lane)==='overflow').length;
   const overflow=seasonPassOverflowView(xp,overflowClaimed,season);
-  const [letter,seasonalCases,story,tierActivationNotice,nextSeason]=await Promise.all([seasonPassTeaserForPlayer(env,season,telegramId,current),seasonPassSeasonalCaseInventory(env,telegramId),seasonPassStoryForPlayer(env,season,telegramId,current),pendingSeasonPassTierActivationNotice(env,telegramId,season),seasonPassNextPublicSchedule(env,season).catch(error=>{console.error("next season schedule unavailable",error);return null;})]);
+  const [letter,seasonalCases,story,storyCollectible,tierActivationNotice,nextSeason]=await Promise.all([seasonPassTeaserForPlayer(env,season,telegramId,current),seasonPassSeasonalCaseInventory(env,telegramId),seasonPassStoryForPlayer(env,season,telegramId,current),seasonPassStoryCollectibleForPlayer(env,season,telegramId,current).catch(error=>{if(isMissingRuntimeDatabaseSchemaError(error))return null;throw error;}),pendingSeasonPassTierActivationNotice(env,telegramId,season),seasonPassNextPublicSchedule(env,season).catch(error=>{console.error("next season schedule unavailable",error);return null;})]);
   const catchUp=seasonPassCatchUpView(season,current);
   const finale=await seasonPassFinaleForPlayer(env,season,telegramId,current,summary,story,letter);
   const availablePoints=(profileRow?.wallet_override==null?Number(profileRow?.wallet||0):Number(profileRow?.wallet_override||0))+Number(profileRow?.pending_wallet||0);
   const availableTreats=(profileRow?.treats_override==null?Number(profileRow?.treats||0):Number(profileRow?.treats_override||0))+Number(profileRow?.pending_treats||0);
   const availableCoffee=(profileRow?.coffee_override==null?Number(profileRow?.coffee||0):Number(profileRow?.coffee_override||0))+Number(profileRow?.pending_coffee||0);
-  return {ok:true,serverTime:new Date().toISOString(),nextSeason,season:{...season,progression:seasonPassProgressionView(season),tierSettings:seasonPassPublicTierSettings(season),capabilities:seasonPassCapabilities(season)},player:seasonPassPlayerView(current,season),overflow,catchUp,finale,letter,seasonalCases,story,tierActivationNotice,
+  return {ok:true,serverTime:new Date().toISOString(),nextSeason,season:{...season,progression:seasonPassProgressionView(season),tierSettings:seasonPassPublicTierSettings(season),capabilities:seasonPassCapabilities(season)},player:seasonPassPlayerView(current,season),overflow,catchUp,finale,letter,seasonalCases,story,storyCollectible,tierActivationNotice,
     rewards:(rewardsResult.results||[]).map(seasonPassPlayerRewardView),
     claimed:deliveredClaims.filter(row=>String(row.lane)==='free'||String(row.lane)==='premium').map(row=>`${Number(row.level)}:${String(row.lane)}`),entitlements:(entitlementsResult.results||[]).map(row=>String(row.item_id)).filter(item=>!item.startsWith('__system:')),tasks:tasksPayload.tasks,taskPeriods:tasksPayload.periods,taskClaimableCount:seasonPassCapabilities(season).canClaimTasks?tasksPayload.claimableCount:0,summary,
     balance:{points:availablePoints,treats:availableTreats,coffee:availableCoffee}};
@@ -35355,8 +35390,9 @@ async function buildSeasonPassMutationPayload(env,season,telegramId,options={}){
   if(options.includeClaims){const rows=claimsResult?.results||[];payload.claimed=rows.filter(row=>String(row.lane)==='free'||String(row.lane)==='premium').map(row=>`${Number(row.level)}:${String(row.lane)}`);payload.overflow=seasonPassOverflowView(player?.xp,rows.filter(row=>String(row.lane)==='overflow').length,season);}
   if(options.includeEntitlements)payload.entitlements=(entitlementsResult?.results||[]).map(row=>String(row.item_id)).filter(item=>!item.startsWith('__system:'));
   if(options.includeTasks&&tasksPayload){payload.tasks=tasksPayload.tasks;payload.taskPeriods=tasksPayload.periods;payload.taskClaimableCount=seasonPassCapabilities(season).canClaimTasks?tasksPayload.claimableCount:0;}
-  const [story,tierActivationNotice]=await Promise.all([seasonPassStoryForPlayer(env,season,String(telegramId),player),pendingSeasonPassTierActivationNotice(env,String(telegramId),season)]);
+  const [story,storyCollectible,tierActivationNotice]=await Promise.all([seasonPassStoryForPlayer(env,season,String(telegramId),player),seasonPassStoryCollectibleForPlayer(env,season,String(telegramId),player).catch(error=>{if(isMissingRuntimeDatabaseSchemaError(error))return null;throw error;}),pendingSeasonPassTierActivationNotice(env,String(telegramId),season)]);
   payload.story=story;
+  payload.storyCollectible=storyCollectible;
   payload.tierActivationNotice=tierActivationNotice;
   payload.catchUp=seasonPassCatchUpView(season,player);
   if(Math.max(0,Number(player?.xp)||0)>=SEASON_PASS_LEVEL_50_COMPLETE_XP)payload.finale=await seasonPassFinaleForPlayer(env,season,String(telegramId),player,null,payload.story,null);
@@ -40382,7 +40418,7 @@ function ownerV8AssetPath(value = "") {
 
 // ======================= RUNNER SCENE BUILDER v1 =======================
 const RUNNER_BUILDER_STATE_KEY = "runner:scene-builder:v1";
-const RUNNER_BUILDER_CONFIG_VERSION = 5;
+const RUNNER_BUILDER_CONFIG_VERSION = 6;
 const RUNNER_BUILDER_MAX_OBSTACLES = 80;
 const RUNNER_BUILDER_MAX_GROUPS = 48;
 const RUNNER_BUILDER_MAX_SCENES = 48;
@@ -40563,6 +40599,7 @@ function runnerBuilderUpgradeConfig(raw){
     runnerBuilderRepairSeason3Road(source);
   }
   if(currentVersion<5)runnerBuilderRepairSceneAssetsV5(source);
+  if(currentVersion<6&&(!source.seasonVariants||typeof source.seasonVariants!=='object'))source.seasonVariants={};
   source.version=RUNNER_BUILDER_CONFIG_VERSION;
   return source;
 }
@@ -40598,7 +40635,8 @@ function runnerBuilderDefaultConfig(){
       ...runnerBuilderSeason2Seed().scenes,
       ...runnerBuilderSeason3Seed().scenes
     ],
-    seasonBindings: {}
+    seasonBindings: {},
+    seasonVariants: {}
   };
 }
 
@@ -40646,7 +40684,8 @@ function normalizeRunnerBuilderConfig(raw){
   if(!scenes.length){scenes.push({id:"default",title:"Основная сцена",enabled:true,backgroundId:backgrounds[0].id,useAllObstacles:true,groupIds:[]});sceneIds.add("default");}
   let defaultSceneId=runnerBuilderSafeId(source.defaultSceneId);if(!sceneIds.has(defaultSceneId)||!scenes.find(x=>x.id===defaultSceneId)?.enabled)defaultSceneId=scenes.find(x=>x.enabled)?.id||scenes[0].id;
   const seasonBindings={};if(source.seasonBindings&&typeof source.seasonBindings==="object"){for(const [seasonId,sceneIdValue] of Object.entries(source.seasonBindings).slice(0,120)){const sceneId=runnerBuilderSafeId(sceneIdValue),key=String(seasonId||"").trim().slice(0,120);if(key&&sceneIds.has(sceneId))seasonBindings[key]=sceneId;}}
-  return {version:RUNNER_BUILDER_CONFIG_VERSION,revision:Math.max(1,Math.floor(Number(source.revision)||1)),defaultSceneId,backgrounds,obstacles,groups,scenes,seasonBindings};
+  const seasonVariants={};if(source.seasonVariants&&typeof source.seasonVariants==="object"){for(const [seasonId,rawVariant] of Object.entries(source.seasonVariants).slice(0,120)){const key=String(seasonId||"").trim().slice(0,120),value=rawVariant&&typeof rawVariant==="object"?rawVariant:{},mode=['level','chapter'].includes(String(value.mode||''))?String(value.mode):'';if(!key||!mode)continue;const variants=[],seenThresholds=new Set();for(const row of (Array.isArray(value.variants)?value.variants:[]).slice(0,8)){const threshold=Math.max(1,Math.min(mode==='level'?50:50,Math.floor(Number(row?.threshold)||1))),sceneId=runnerBuilderSafeId(row?.sceneId);if(!sceneIds.has(sceneId)||seenThresholds.has(threshold))continue;seenThresholds.add(threshold);variants.push({threshold,sceneId});}variants.sort((a,b)=>a.threshold-b.threshold);if(variants.length)seasonVariants[key]={mode,variants};}}
+  return {version:RUNNER_BUILDER_CONFIG_VERSION,revision:Math.max(1,Math.floor(Number(source.revision)||1)),defaultSceneId,backgrounds,obstacles,groups,scenes,seasonBindings,seasonVariants};
 }
 function runnerBuilderScenePool(config,scene){
   const obstacleMap=new Map(config.obstacles.filter(x=>x.enabled).map(x=>[x.id,x])),weights=new Map();
@@ -40656,13 +40695,14 @@ function runnerBuilderScenePool(config,scene){
 function runnerBuilderValidateConfig(config){
   for(const background of config.backgrounds.filter(x=>x.enabled)){if(!background.assetKey&&!background.assetPath)throw new ApiError(400,`Фон «${background.title}»: выберите изображение.`);}
   for(const obstacle of config.obstacles.filter(x=>x.enabled)){if(!obstacle.assetKey&&!obstacle.assetPath)throw new ApiError(400,`Препятствие «${obstacle.title}»: выберите изображение.`);if(!Array.isArray(obstacle.hitboxes)||!obstacle.hitboxes.length)throw new ApiError(400,`Препятствие «${obstacle.title}»: добавьте зону столкновения.`);}
-  const backgroundIds=new Set(config.backgrounds.filter(x=>x.enabled).map(x=>x.id));
+  const backgroundIds=new Set(config.backgrounds.filter(x=>x.enabled).map(x=>x.id)),enabledSceneIds=new Set(config.scenes.filter(x=>x.enabled).map(x=>x.id));
   for(const scene of config.scenes.filter(x=>x.enabled)){if(!backgroundIds.has(scene.backgroundId))throw new ApiError(400,`Сцена «${scene.title}»: выбран выключенный или отсутствующий фон.`);if(!runnerBuilderScenePool(config,scene).length)throw new ApiError(400,`Сцена «${scene.title}»: нет ни одного активного препятствия.`);}
+  for(const [seasonId,variant] of Object.entries(config.seasonVariants||{})){for(const row of variant.variants||[])if(!enabledSceneIds.has(String(row.sceneId||'')))throw new ApiError(400,`Сезон ${seasonId}: вариант с порога ${row.threshold} ссылается на выключенную сцену.`);}
   if(!config.scenes.some(x=>x.id===config.defaultSceneId&&x.enabled))throw new ApiError(400,"Основная сцена должна быть включена.");
 }
 function runnerBuilderFallbackPublicScene(){return {...runnerBuilderResolvePublicScene(runnerBuilderDefaultConfig(),""),source:"fallback"};}
-function runnerBuilderResolvePublicScene(configInput,seasonId=""){
-  const config=normalizeRunnerBuilderConfig(configInput),boundId=seasonId?String(config.seasonBindings?.[String(seasonId)]||""):"",requested=config.scenes.find(x=>x.id===boundId&&x.enabled)||config.scenes.find(x=>x.id===config.defaultSceneId&&x.enabled)||config.scenes.find(x=>x.enabled)||config.scenes[0],fallback=runnerBuilderDefaultConfig();
+function runnerBuilderResolvePublicScene(configInput,seasonId="",context={}){
+  const config=normalizeRunnerBuilderConfig(configInput),seasonKey=String(seasonId||''),variant=config.seasonVariants?.[seasonKey]||null,variantValue=variant?.mode==='chapter'?Math.max(1,Math.floor(Number(context?.chapter)||1)):Math.max(1,Math.min(50,Math.floor(Number(context?.level)||1))),matchedVariant=variant&&Array.isArray(variant.variants)?variant.variants.filter(row=>Number(row.threshold)<=variantValue).sort((a,b)=>Number(b.threshold)-Number(a.threshold))[0]:null,boundId=matchedVariant?String(matchedVariant.sceneId||''):(seasonId?String(config.seasonBindings?.[seasonKey]||""):""),requested=config.scenes.find(x=>x.id===boundId&&x.enabled)||config.scenes.find(x=>x.id===config.defaultSceneId&&x.enabled)||config.scenes.find(x=>x.enabled)||config.scenes[0],fallback=runnerBuilderDefaultConfig();
   let scene=requested,pool=runnerBuilderScenePool(config,scene);if(!scene||!pool.length){const fallbackConfig=normalizeRunnerBuilderConfig(fallback);scene=fallbackConfig.scenes[0];pool=runnerBuilderScenePool(fallbackConfig,scene);config.backgrounds=fallbackConfig.backgrounds;}
   const background=config.backgrounds.find(x=>x.id===scene.backgroundId&&x.enabled)||config.backgrounds.find(x=>x.enabled)||fallback.backgrounds[0];
   const season2Scene=runnerBuilderSceneLooksSeason2(config,scene);
@@ -40675,7 +40715,7 @@ function runnerBuilderResolvePublicScene(configInput,seasonId=""){
     if(season3Scene)publicRoadKey="road_park_day_s3";
     else if(season2Scene)publicRoadKey="road_night_cafe";
   }
-  return {version:RUNNER_BUILDER_CONFIG_VERSION,revision:config.revision,sceneId:scene.id,title:scene.title,seasonId:String(seasonId||""),background:{id:background.id,title:background.title,assetKey:background.assetKey||"",assetPath:background.assetPath||"",fitMode:background.fitMode==="contain"?"contain":"cover",zoom:Number(background.zoom||1),positionX:Number.isFinite(Number(background.positionX))?Number(background.positionX):.5,positionY:Number.isFinite(Number(background.positionY))?Number(background.positionY):.5,roadEnabled:background.roadEnabled!==false,roadAssetKey:publicRoadKey,roadAssetPath:background.roadAssetPath||""},obstacles:pool.map(item=>({id:item.id,title:item.title,assetKey:item.assetKey||"",assetPath:item.assetPath||"",width:item.width,height:item.height,shadow:item.shadow!==false,weight:Number(item.weight||item.defaultWeight||1),hitboxes:(item.hitboxes||[]).slice(0,3)})),source:"d1"};
+  return {version:RUNNER_BUILDER_CONFIG_VERSION,revision:config.revision,sceneId:scene.id,title:scene.title,seasonId:String(seasonId||""),variant:variant?{mode:String(variant.mode),value:variantValue,threshold:matchedVariant?Number(matchedVariant.threshold):0}:null,background:{id:background.id,title:background.title,assetKey:background.assetKey||"",assetPath:background.assetPath||"",fitMode:background.fitMode==="contain"?"contain":"cover",zoom:Number(background.zoom||1),positionX:Number.isFinite(Number(background.positionX))?Number(background.positionX):.5,positionY:Number.isFinite(Number(background.positionY))?Number(background.positionY):.5,roadEnabled:background.roadEnabled!==false,roadAssetKey:publicRoadKey,roadAssetPath:background.roadAssetPath||""},obstacles:pool.map(item=>({id:item.id,title:item.title,assetKey:item.assetKey||"",assetPath:item.assetPath||"",width:item.width,height:item.height,shadow:item.shadow!==false,weight:Number(item.weight||item.defaultWeight||1),hitboxes:(item.hitboxes||[]).slice(0,3)})),source:"d1"};
 }
 function invalidateRunnerBuilderConfigCache(){runnerBuilderConfigMemory={value:null,expiresAt:0};invalidateGamePublicConfigCache();}
 async function readRunnerBuilderConfigStrict(env,force=false){
@@ -40708,13 +40748,25 @@ async function readRunnerScenePublicConfig(env){
   try{return await readRunnerScenePublicConfigStrict(env);}
   catch(error){console.error("runner public scene fallback",error);return runnerBuilderFallbackPublicScene();}
 }
+async function runnerBuilderPlayerVariantContext(env,seasonId,telegramId){
+  const sid=String(seasonId||''),pid=String(telegramId||'');if(!sid||!pid)return {level:1,chapter:1};
+  const [player,story]=await Promise.all([
+    env.DB.prepare(`SELECT xp FROM season_pass_players WHERE season_id=? AND telegram_id=? LIMIT 1`).bind(sid,pid).first().catch(()=>null),
+    env.DB.prepare(`SELECT COUNT(*) AS count FROM season_pass_story_progress WHERE season_id=? AND telegram_id=? AND completed_at>0`).bind(sid,pid).first().catch(()=>null)
+  ]);
+  return {level:seasonPassLevelFromXp(Math.max(0,Number(player?.xp)||0)),chapter:Math.max(1,Math.min(50,Number(story?.count||0)+1))};
+}
+async function readRunnerScenePublicConfigForPlayer(env,telegramId){
+  try{const [config,seasonId]=await Promise.all([readRunnerBuilderConfigStrict(env),runnerBuilderActiveSeasonIdStrict(env)]),context=await runnerBuilderPlayerVariantContext(env,seasonId,telegramId);return runnerBuilderResolvePublicScene(config,seasonId,context);}
+  catch(error){console.error('runner player scene fallback',error);return readRunnerScenePublicConfig(env);}
+}
 async function ownerPanelRunnerBuilder(env,ctx){
   await ensureSeasonPassSchema(env);const [config,seasonsResult,activeSeasonId]=await Promise.all([readRunnerBuilderConfig(env,true),env.DB.prepare(`SELECT season_id,title,starts_at,ends_at,manual_status FROM season_pass_seasons ORDER BY starts_at DESC,season_id DESC LIMIT 120`).all(),runnerBuilderActiveSeasonId(env)]);const stateRow=await getSystemState(env,RUNNER_BUILDER_STATE_KEY);
   return {ok:true,config,revision:config.revision,updatedAt:Number(stateRow?.updatedAt||0),activeSeasonId,seasons:(seasonsResult.results||[]).map(row=>({id:String(row.season_id),title:String(row.title||row.season_id),startsAt:Number(row.starts_at||0),endsAt:Number(row.ends_at||0),status:String(row.manual_status||"scheduled")})),activeScene:runnerBuilderResolvePublicScene(config,activeSeasonId)};
 }
 async function ownerPanelRunnerBuilderSave(env,ctx){
   const current=await readRunnerBuilderConfig(env,true),expected=Math.max(0,Math.floor(Number(ctx.body?.expectedRevision)||0));if(expected&&expected!==Number(current.revision||1))throw new ApiError(409,"Конструктор забега уже изменён в другой вкладке. Обновите раздел перед сохранением.");
-  const next=normalizeRunnerBuilderConfig(ctx.body?.config);next.revision=Math.max(1,Number(current.revision||1))+1;runnerBuilderValidateConfig(next);await setSystemState(env,RUNNER_BUILDER_STATE_KEY,JSON.stringify(next));invalidateRunnerBuilderConfigCache();await logStaffAction(env,ctx.user,ctx.access,"owner_runner_builder_save",null,"runner_scene",Number(current.revision||1),next.revision,{defaultSceneId:next.defaultSceneId,backgrounds:next.backgrounds.length,obstacles:next.obstacles.length,groups:next.groups.length,scenes:next.scenes.length,seasonBindings:Object.keys(next.seasonBindings||{}).length});return ownerPanelRunnerBuilder(env,ctx);
+  const next=normalizeRunnerBuilderConfig(ctx.body?.config);next.revision=Math.max(1,Number(current.revision||1))+1;runnerBuilderValidateConfig(next);await setSystemState(env,RUNNER_BUILDER_STATE_KEY,JSON.stringify(next));invalidateRunnerBuilderConfigCache();await logStaffAction(env,ctx.user,ctx.access,"owner_runner_builder_save",null,"runner_scene",Number(current.revision||1),next.revision,{defaultSceneId:next.defaultSceneId,backgrounds:next.backgrounds.length,obstacles:next.obstacles.length,groups:next.groups.length,scenes:next.scenes.length,seasonBindings:Object.keys(next.seasonBindings||{}).length,seasonVariants:Object.keys(next.seasonVariants||{}).length});return ownerPanelRunnerBuilder(env,ctx);
 }
 async function ownerPanelRunnerBuilderApplyScene(env,ctx){
   await ensureSeasonPassSchema(env);
@@ -49252,11 +49304,26 @@ function seasonStoryCollectibleSlug(value,fallback='story-find'){
 }
 function seasonStoryCollectibleSteps(raw){
   const source=Array.isArray(raw)?raw:[];const out=[];
-  for(let index=0;index<Math.min(3,source.length);index+=1){
+  for(let index=0;index<Math.min(6,source.length);index+=1){
     const item=source[index]&&typeof source[index]==='object'?source[index]:{};
     const target=Math.max(1,Math.min(100000,Math.floor(Number(item.target)||0)));
     const title=String(item.title||'').trim().slice(0,80);
-    if(target&&title)out.push({target,title});
+    const achievementId=String(item.achievementId||'').trim().slice(0,80);
+    if(!target||!title)continue;
+    out.push({target,title,...(achievementId?{achievementId}: {})});
+  }
+  out.sort((a,b)=>a.target-b.target);
+  return out.filter((item,index)=>index===0||item.target!==out[index-1].target);
+}
+function seasonStoryCollectibleMilestones(raw){
+  const source=Array.isArray(raw)?raw:[];const out=[];
+  for(let index=0;index<Math.min(6,source.length);index+=1){
+    const item=source[index]&&typeof source[index]==='object'?source[index]:{};
+    const target=Math.max(1,Math.min(100000,Math.floor(Number(item.target)||0)));
+    const title=String(item.title||'').trim().slice(0,100);
+    const storyText=String(item.storyText||'').trim().slice(0,1800);
+    const artUrl=seasonPassReadinessAssetPath(item.artUrl);
+    if(target&&title&&(storyText||artUrl))out.push({target,title,storyText,artUrl});
   }
   out.sort((a,b)=>a.target-b.target);
   return out.filter((item,index)=>index===0||item.target!==out[index-1].target);
@@ -49275,9 +49342,11 @@ function seasonStoryCollectibleView(raw){
     reactionText:String(value.reactionText||'').trim().slice(0,240),
     perRun:Math.max(1,Math.min(10,Math.floor(Number(value.perRun)||1))),
     showAfterRun:value.showAfterRun!==false,
+    unlockLevel:Math.max(1,Math.min(50,Math.floor(Number(value.unlockLevel)||1))),
+    milestones:seasonStoryCollectibleMilestones(value.milestones),
     achievementSeries:{
       enabled:Boolean(series.enabled),
-      key:seasonStoryCollectibleSlug(series.key,'story-find'),
+      key:seasonStoryCollectibleSlug(series.key,id||'story-find'),
       steps:seasonStoryCollectibleSteps(series.steps)
     }
   };
@@ -49467,6 +49536,11 @@ async function seasonPassReadinessReport(env, seasonIdValue, options={}){
     [bpVisuals.tariffs.elitePlusXpBoostIcon,'Тариф «Элитный+» · ×2 XP'],
     [bpVisuals.tariffs.elitePlusLevelsIcon,'Тариф «Элитный+» · бонус уровней']
   ])if(asset)addAsset(asset,label,true);
+  const readinessCollectible=bpVisuals.storyCollectible;
+  if(readinessCollectible?.enabled){
+    addAsset(readinessCollectible.iconUrl,'Сюжетная находка · иконка',true);
+    for(const memory of readinessCollectible.milestones||[])addAsset(memory.artUrl,`Воспоминание: ${String(memory.title||memory.target)}`,true);
+  }
   for(const storyRow of enabledStory){
     const pages=seasonPassStoryPagesFromRow(storyRow);
     if(!String(storyRow.title||'').trim()||!pages.length||pages.every(p=>!String(p.title||'').trim()&&!String(p.bodyText||'').trim()&&!String(p.imageUrl||'').trim()))emptyStory.push(String(storyRow.event_id));
@@ -50025,10 +50099,11 @@ async function ownerPanelSaveSeasonPassVisuals(env,ctx){
     for(let index=0;index<path.length-1;index+=1){const key=path[index];target[key]??={};target=target[key];}
     target[path[path.length-1]]=value;
   }
-  const collectibleProvided=['storyCollectibleEnabled','storyCollectibleId','storyCollectibleTitle','storyCollectibleIconUrl','storyCollectiblePickupText','storyCollectibleReactionText','storyCollectiblePerRun','storyCollectibleShowAfterRun','storyCollectibleSeriesEnabled','storyCollectibleSeriesKey','storyCollectibleAchievementSteps'].some((key)=>Object.prototype.hasOwnProperty.call(body,key));
+  const collectibleProvided=['storyCollectibleEnabled','storyCollectibleId','storyCollectibleTitle','storyCollectibleIconUrl','storyCollectiblePickupText','storyCollectibleReactionText','storyCollectiblePerRun','storyCollectibleShowAfterRun','storyCollectibleUnlockLevel','storyCollectibleMilestones','storyCollectibleSeriesEnabled','storyCollectibleSeriesKey','storyCollectibleAchievementSteps'].some((key)=>Object.prototype.hasOwnProperty.call(body,key));
   if(collectibleProvided){
     const existing=seasonVisualsView(row.visuals_json).battlePass.storyCollectible;
     const rawSteps=Array.isArray(body.storyCollectibleAchievementSteps)?body.storyCollectibleAchievementSteps:existing?.achievementSeries?.steps;
+    const rawMilestones=Array.isArray(body.storyCollectibleMilestones)?body.storyCollectibleMilestones:existing?.milestones;
     const raw={
       enabled:Object.prototype.hasOwnProperty.call(body,'storyCollectibleEnabled')?Boolean(body.storyCollectibleEnabled):existing.enabled,
       id:Object.prototype.hasOwnProperty.call(body,'storyCollectibleId')?body.storyCollectibleId:existing.id,
@@ -50038,6 +50113,8 @@ async function ownerPanelSaveSeasonPassVisuals(env,ctx){
       reactionText:Object.prototype.hasOwnProperty.call(body,'storyCollectibleReactionText')?body.storyCollectibleReactionText:existing.reactionText,
       perRun:Object.prototype.hasOwnProperty.call(body,'storyCollectiblePerRun')?body.storyCollectiblePerRun:existing.perRun,
       showAfterRun:Object.prototype.hasOwnProperty.call(body,'storyCollectibleShowAfterRun')?Boolean(body.storyCollectibleShowAfterRun):existing.showAfterRun,
+      unlockLevel:Object.prototype.hasOwnProperty.call(body,'storyCollectibleUnlockLevel')?body.storyCollectibleUnlockLevel:existing.unlockLevel,
+      milestones:rawMilestones,
       achievementSeries:{
         enabled:Object.prototype.hasOwnProperty.call(body,'storyCollectibleSeriesEnabled')?Boolean(body.storyCollectibleSeriesEnabled):existing?.achievementSeries?.enabled,
         key:Object.prototype.hasOwnProperty.call(body,'storyCollectibleSeriesKey')?body.storyCollectibleSeriesKey:existing?.achievementSeries?.key,
@@ -50051,6 +50128,25 @@ async function ownerPanelSaveSeasonPassVisuals(env,ctx){
       normalized.iconUrl=await validateSeasonVisualHeroImage(env,raw.iconUrl,manifest||await seasonPassReadinessImageManifest(env));
       if(!normalized.pickupText)throw new ApiError(400,'Укажите текст при подборе сюжетной находки.');
     } else if(String(raw.iconUrl||'').trim()) normalized.iconUrl=await validateSeasonVisualHeroImage(env,raw.iconUrl,manifest||await seasonPassReadinessImageManifest(env));
+    const assetManifest=manifest||await seasonPassReadinessImageManifest(env);
+    normalized.milestones=[];
+    for(const item of seasonStoryCollectibleMilestones(rawMilestones)){
+      const rawItem=(Array.isArray(rawMilestones)?rawMilestones:[]).find((candidate)=>Math.max(1,Math.floor(Number(candidate?.target)||1))===Number(item.target))||{};
+      const rawArt=String(rawItem.artUrl||item.artUrl||'').trim();
+      const artUrl=rawArt?await validateSeasonVisualHeroImage(env,rawArt,assetManifest):'';
+      normalized.milestones.push({...item,artUrl});
+    }
+    const selectedAchievementIds=normalized.achievementSeries.steps.map((step)=>String(step.achievementId||'')).filter(Boolean);
+    if(selectedAchievementIds.length){
+      const definitions=await achievementConfiguredDefinitions(env),compatible=new Set(definitions.filter((definition)=>String(definition?.source||'')==='seasonStoryCollectible'&&String(definition?.seasonId||'')===seasonId&&String(definition?.collectibleId||'')===String(normalized.id||'')).map((definition)=>String(definition.id||'')));
+      for(const achievementId of selectedAchievementIds)if(!compatible.has(achievementId))throw new ApiError(400,'Выберите достижение сюжетной находки из списка для этого сезона.');
+    }
+    const effectiveAchievementIds=new Set();
+    for(const step of normalized.achievementSeries.steps){
+      const achievementId=String(step.achievementId||storyCollectibleAchievementId(seasonId,normalized.achievementSeries.key,step.target));
+      if(effectiveAchievementIds.has(achievementId))throw new ApiError(400,'Одно достижение нельзя привязать к двум порогам сюжетной находки.');
+      effectiveAchievementIds.add(achievementId);
+    }
     patch.storyCollectible=normalized;
   }
   const before=seasonVisualsView(row.visuals_json),nextJson=seasonVisualsMerge(row.visuals_json,'battlePass',patch),now=Math.floor(Date.now()/1000);

@@ -18879,6 +18879,27 @@ function createTutorialDeck(layer, mount, options, words) {
         overlay.querySelector(&quot;[data-run-results-again]&quot;)?.addEventListener(&quot;click&quot;, (event) =&gt; { event.stopPropagation(); overlay.onclick = null; reset(); }, { once:true });
         overlay.querySelector(&quot;[data-run-results-cafe]&quot;)?.addEventListener(&quot;click&quot;, (event) =&gt; { event.stopPropagation(); overlay.onclick = null; overlay.classList.remove(&quot;is-run-results-modal&quot;); overlay.style.display = &quot;none&quot;; if (gameExpanded) setGameExpanded(false); }, { once:true });
       }
+      function showStoryCollectibleMemoryUnlocks(payload) {
+        const memories=Array.isArray(payload?.runSettlement?.storyCollectible?.newMemories)?payload.runSettlement.storyCollectible.newMemories:[];
+        if(!memories.length)return;
+        let index=0;
+        const openNext=()=&gt;{
+          if(index&gt;=memories.length)return;
+          const memory=memories[index++],layer=document.createElement(&quot;div&quot;),card=document.createElement(&quot;div&quot;),kicker=document.createElement(&quot;div&quot;),title=document.createElement(&quot;strong&quot;),art=document.createElement(&quot;img&quot;),text=document.createElement(&quot;p&quot;),meta=document.createElement(&quot;span&quot;),button=document.createElement(&quot;button&quot;);
+          Object.assign(layer.style,{position:&quot;fixed&quot;,inset:&quot;0&quot;,zIndex:&quot;10050&quot;,display:&quot;grid&quot;,placeItems:&quot;center&quot;,padding:&quot;18px&quot;,background:&quot;rgba(63,40,53,.64)&quot;,backdropFilter:&quot;blur(8px)&quot;});
+          Object.assign(card.style,{width:&quot;min(420px,100%)&quot;,maxHeight:&quot;86vh&quot;,overflow:&quot;auto&quot;,boxSizing:&quot;border-box&quot;,padding:&quot;18px&quot;,borderRadius:&quot;26px&quot;,background:&quot;linear-gradient(165deg,#fffdf9,#fff0e5)&quot;,boxShadow:&quot;0 26px 80px rgba(58,34,24,.38)&quot;,textAlign:&quot;left&quot;});
+          kicker.textContent=&quot;📸 ВОСПОМИНАНИЕ ВОССТАНОВЛЕНО!&quot;;Object.assign(kicker.style,{color:&quot;#b87742&quot;,fontSize:&quot;11px&quot;,fontWeight:&quot;900&quot;,letterSpacing:&quot;.05em&quot;});
+          title.textContent=String(memory.title||&quot;Воспоминание&quot;);Object.assign(title.style,{display:&quot;block&quot;,marginTop:&quot;7px&quot;,fontSize:&quot;23px&quot;,lineHeight:&quot;1.15&quot;,color:&quot;#6b4637&quot;});
+          const artUrl=String(memory.artUrl||&quot;&quot;);if(artUrl){art.src=artUrl;art.alt=&quot;&quot;;Object.assign(art.style,{display:&quot;block&quot;,width:&quot;100%&quot;,maxHeight:&quot;300px&quot;,objectFit:&quot;cover&quot;,marginTop:&quot;14px&quot;,borderRadius:&quot;18px&quot;,background:&quot;#f3e5dc&quot;});card.append(art);}
+          text.textContent=String(memory.storyText||&quot;Часть истории восстановлена.&quot;);Object.assign(text.style,{margin:&quot;14px 0 0&quot;,whiteSpace:&quot;pre-wrap&quot;,fontSize:&quot;14px&quot;,fontWeight:&quot;650&quot;,lineHeight:&quot;1.6&quot;,color:&quot;#73594d&quot;});
+          meta.textContent=`${Number(memory.target||0)} сюжетных находок`;Object.assign(meta.style,{display:&quot;block&quot;,marginTop:&quot;10px&quot;,fontSize:&quot;10px&quot;,fontWeight:&quot;850&quot;,color:&quot;#a47d68&quot;});
+          button.type=&quot;button&quot;;button.textContent=index&lt;memories.length?&quot;Следующее воспоминание&quot;:&quot;Продолжить&quot;;Object.assign(button.style,{width:&quot;100%&quot;,minHeight:&quot;48px&quot;,marginTop:&quot;16px&quot;,border:&quot;0&quot;,borderRadius:&quot;15px&quot;,background:&quot;linear-gradient(145deg,#e29b68,#c56e43)&quot;,color:&quot;#fff&quot;,fontSize:&quot;14px&quot;,fontWeight:&quot;900&quot;});
+          card.prepend(title);card.prepend(kicker);card.append(text,meta,button);layer.append(card);document.body.append(layer);hapticNotify(&quot;success&quot;);
+          button.onclick=()=&gt;{layer.remove();window.setTimeout(openNext,120);};
+        };
+        window.setTimeout(openNext,360);
+      }
+
       function renderRunResultsSettled(payload, context) {
         const settlement = payload?.runSettlement || {};
         const skinId = normalizeRunSkinId(settlement.skinId || context.skinId);
@@ -18910,6 +18931,7 @@ function createTutorialDeck(layer, mount, options, words) {
         const body = `${runResultsHeader(context, newRecord ? &quot;\u041d\u043e\u0432\u044b\u0439 \u0440\u0435\u043a\u043e\u0440\u0434!&quot; : &quot;\u0417\u0430\u0431\u0435\u0433 \u0437\u0430\u0432\u0435\u0440\u0448\u0451\u043d!&quot;, phrase)}&lt;div class=&quot;run-results-score&quot;&gt;&lt;b&gt;${formatter.format(score)}&lt;/b&gt;&lt;span&gt;\u041e\u0427\u041a\u0410&lt;/span&gt;&lt;/div&gt;${recordLine}&lt;div class=&quot;run-results-metrics&quot;&gt;&lt;span class=&quot;run-result-metric&quot;&gt;&lt;span&gt;${runResultIconMarkup(RUN_RESULT_ICONS.zefir, &quot;is-metric&quot;)}\u0417\u0435\u0444\u0438\u0440&lt;/span&gt;&lt;b&gt;${formatter.format(Math.max(0, Number(settlement?.raw?.treats ?? context.treats)))}&lt;/b&gt;&lt;/span&gt;&lt;span class=&quot;run-result-metric&quot;&gt;&lt;span&gt;${runResultIconMarkup(RUN_RESULT_ICONS.coffee, &quot;is-metric&quot;)}\u041a\u043e\u0444\u0435&lt;/span&gt;&lt;b&gt;${formatter.format(Math.max(0, Number(settlement?.raw?.coffee ?? context.coffee)))}&lt;/b&gt;&lt;/span&gt;&lt;span class=&quot;run-result-metric&quot;&gt;&lt;span&gt;${runResultIconMarkup(RUN_RESULT_ICONS.time, &quot;is-metric&quot;)}\u0412\u0440\u0435\u043c\u044f&lt;/span&gt;&lt;b&gt;${runResultDurationLabel(settlement?.raw?.durationMs ?? context.durationMs)}&lt;/b&gt;&lt;/span&gt;&lt;/div&gt;&lt;div class=&quot;run-credit-line&quot;&gt;&lt;span&gt;+${formatter.format(Math.max(0, Number(credited.points || 0)))} \u043e\u0447\u043a\u043e\u0432&lt;/span&gt;&lt;span&gt;+${formatter.format(Math.max(0, Number(credited.treats || 0)))} \u0437\u0435\u0444\u0438\u0440\u0430&lt;/span&gt;&lt;span&gt;+${formatter.format(Math.max(0, Number(credited.coffee || 0)))} \u043a\u043e\u0444\u0435&lt;/span&gt;${Number(settlement.profileXpAwarded || 0) &gt; 0 ? `&lt;span&gt;+${formatter.format(Number(settlement.profileXpAwarded))} XP&lt;/span&gt;` : &quot;&quot;}&lt;/div&gt;${bonusMarkup}${boosterStatusMarkup}${events.length ? `&lt;div class=&quot;run-results-events&quot;&gt;${events.join(&quot;&quot;)}&lt;/div&gt;` : &quot;&quot;}&lt;div class=&quot;run-results-state&quot;&gt;${runResultIconMarkup(RUN_RESULT_ICONS.saved, &quot;is-state&quot;)}&lt;span&gt;\u0420\u0435\u0437\u0443\u043b\u044c\u0442\u0430\u0442 \u0441\u043e\u0445\u0440\u0430\u043d\u0451\u043d&lt;/span&gt;&lt;/div&gt;&lt;div class=&quot;run-results-actions&quot;&gt;&lt;button type=&quot;button&quot; class=&quot;run-overlay-primary&quot; data-run-results-again&gt;${runResultIconMarkup(RUN_RESULT_ICONS.replay, &quot;is-button&quot;)}&lt;span&gt;\u0415\u0449\u0451 \u0440\u0430\u0437&lt;/span&gt;&lt;/button&gt;&lt;button type=&quot;button&quot; class=&quot;run-overlay-secondary&quot; data-run-results-cafe&gt;${runResultIconMarkup(RUN_RESULT_ICONS.cafe, &quot;is-button&quot;)}&lt;span&gt;\u0412 \u043a\u0430\u0444\u0435&lt;/span&gt;&lt;/button&gt;&lt;/div&gt;`;
         runResultsFrame(context, body);
         bindRunResultsActions(context);
+        showStoryCollectibleMemoryUnlocks(payload);
       }
       function renderRunResultsSyncError(context, error = null) {
         const character = runCharacterProfile(context.skinId);
@@ -26701,6 +26723,7 @@ function createTutorialDeck(layer, mount, options, words) {
             const serverCaseDrop=data?.runSession?.caseDrop&amp;&amp;typeof data.runSession.caseDrop===&quot;object&quot;?normalizeRunCaseDropMilestone(data.runSession.caseDrop):null;
             const serverCaseDrops=Array.isArray(data?.runSession?.caseDrops)?data.runSession.caseDrops:(serverCaseDrop?[serverCaseDrop]:[]);
             const serverStoryCollectible=data?.runSession?.storyCollectible&amp;&amp;typeof data.runSession.storyCollectible===&quot;object&quot;?data.runSession.storyCollectible:null;
+            const serverRunnerScene=data?.runSession?.runnerScene&amp;&amp;typeof data.runSession.runnerScene===&quot;object&quot;?data.runSession.runnerScene:null;
             if (String(state.caseRunId || &quot;&quot;) === id) {
               state.runSkinId=serverRunSkinId;
               ensureGameplayDogSprites(serverRunSkinId);
@@ -26710,6 +26733,7 @@ function createTutorialDeck(layer, mount, options, words) {
               state.runCaseDropCheckpointMilestone=0;
               mergeServerRunCaseDrops(serverCaseDrops);
               mergeServerStoryCollectible(serverStoryCollectible);
+              if(serverRunnerScene){applyRemoteRunnerScene(serverRunnerScene);runnerSceneRecoveryPromise=Promise.resolve(true);}
               antiCheatWithTrustedChange(&quot;run-booster-snapshot&quot;, () =&gt; {
                 state.runCaseBoosters = runBoosters;
                 const active = normalizeActiveCaseBoosters(state.activeCaseBoosters, state.activeCaseBooster);
