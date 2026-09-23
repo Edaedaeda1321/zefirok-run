@@ -14977,7 +14977,8 @@ function installProgressInfo(){
           Object.freeze({ id: &quot;table&quot;, title: &quot;Стол&quot;, assetKey: &quot;tablePink&quot;, assetPath: &quot;&quot;, width: 50, height: 48, shadow: true, weight: 18, hitboxes: Object.freeze([{ x: 0.18, y: 0.66, w: 0.64, h: 0.24 }]) }),
           Object.freeze({ id: &quot;pillow&quot;, title: &quot;Подушка&quot;, assetKey: &quot;pillowObstacle&quot;, assetPath: &quot;&quot;, width: 72, height: 35, shadow: true, weight: 16, hitboxes: Object.freeze([{ x: 0.08, y: 0.55, w: 0.84, h: 0.33 }]) }),
           Object.freeze({ id: &quot;vase&quot;, title: &quot;Ваза&quot;, assetKey: &quot;vaseObstacle&quot;, assetPath: &quot;&quot;, width: 42, height: 64, shadow: true, weight: 14, hitboxes: Object.freeze([{ x: 0.2, y: 0.42, w: 0.6, h: 0.48 }]) })
-        ])
+        ]),
+        npcs: Object.freeze([])
       });
       const runnerDynamicImages = new Map();
       const RUNNER_SEASON2_OBSTACLE_IDS = new Set([&quot;flowers-night-s2&quot;, &quot;wet-floor-sign&quot;, &quot;client-bag&quot;, &quot;pouf-night-s2&quot;, &quot;books-menu-night&quot;, &quot;candles-night&quot;, &quot;waiter-cart&quot;]);
@@ -14995,6 +14996,26 @@ function installProgressInfo(){
         return { x, y, w, h };
       }
 
+      function normalizeRunnerNpcClient(value) {
+        const row = value &amp;&amp; typeof value === &quot;object&quot; ? value : {};
+        const id = String(row.id || &quot;&quot;).trim().toLowerCase().replace(/[^a-z0-9_-]+/g, &quot;-&quot;).slice(0, 64);
+        if (!id) return null;
+        const primary = String(row.skinId || &quot;alex&quot;).trim();
+        const fallbackRaw = String(row.fallbackSkinId || &quot;default&quot;).trim();
+        return {
+          id,
+          title: String(row.title || id).trim().slice(0, 100) || id,
+          skinId: Object.prototype.hasOwnProperty.call(GAMEPLAY_SKIN_SPRITES, primary) ? primary : &quot;alex&quot;,
+          fallbackSkinId: fallbackRaw === &quot;__hide__&quot; ? &quot;__hide__&quot; : (Object.prototype.hasOwnProperty.call(GAMEPLAY_SKIN_SPRITES, fallbackRaw) ? fallbackRaw : &quot;default&quot;),
+          startAfterSec: Math.max(0, Math.min(600, Number(row.startAfterSec) || 0)),
+          durationSec: Math.max(1.5, Math.min(20, Number(row.durationSec) || 5)),
+          chancePct: Math.max(0, Math.min(100, Number(row.chancePct ?? 100))),
+          sizeScale: Math.max(0.6, Math.min(1.4, Number(row.sizeScale) || 1)),
+          jumpObstacles: row.jumpObstacles !== false,
+          jumpLeadPx: Math.max(40, Math.min(220, Number(row.jumpLeadPx) || 105))
+        };
+      }
+
       function normalizeRunnerSceneClient(raw) {
         if (!raw || typeof raw !== &quot;object&quot;) return LEGACY_RUNNER_SCENE;
         const backgroundRaw = raw.background &amp;&amp; typeof raw.background === &quot;object&quot; ? raw.background : {};
@@ -15009,6 +15030,7 @@ function installProgressInfo(){
           weight: Math.max(0.01, Number(item?.weight) || 1),
           hitboxes: (Array.isArray(item?.hitboxes) ? item.hitboxes : []).slice(0, 3).map(normalizeRunnerHitboxClient)
         })).filter((item) =&gt; item.id &amp;&amp; item.hitboxes.length);
+        const npcs = (Array.isArray(raw.npcs) ? raw.npcs : []).slice(0, 12).map(normalizeRunnerNpcClient).filter(Boolean);
         if (!obstacles.length) return LEGACY_RUNNER_SCENE;
         const roadAssetPath = String(backgroundRaw.roadAssetPath || &quot;&quot;).trim();
         let roadAssetKey = String(backgroundRaw.roadAssetKey || &quot;roadStrip&quot;).trim() || &quot;roadStrip&quot;;
@@ -15038,7 +15060,8 @@ function installProgressInfo(){
             roadAssetKey,
             roadAssetPath
           },
-          obstacles
+          obstacles,
+          npcs
         };
       }
 
@@ -15074,6 +15097,10 @@ function installProgressInfo(){
         runnerSceneImage(background.assetKey || &quot;cafeBackground&quot;, background.assetPath || &quot;&quot;);
         if (background.roadEnabled !== false) runnerSceneImage(background.roadAssetKey || &quot;roadStrip&quot;, background.roadAssetPath || &quot;&quot;);
         for (const obstacle of remoteRunnerScene.obstacles || []) runnerSceneImage(obstacle.assetKey || &quot;&quot;, obstacle.assetPath || &quot;&quot;);
+        for (const npc of remoteRunnerScene.npcs || []) {
+          ensureGameplayDogSprites(npc.skinId || &quot;alex&quot;);
+          if (npc.fallbackSkinId &amp;&amp; npc.fallbackSkinId !== &quot;__hide__&quot;) ensureGameplayDogSprites(npc.fallbackSkinId);
+        }
         invalidateGameRenderCaches();
         return String(raw.source || &quot;&quot;) !== &quot;fallback&quot;;
       }
@@ -15502,6 +15529,8 @@ function installProgressInfo(){
         storyCollectible: null,
         storyCollectibleCaughtSlots: [],
         storyCollectibleSpawnedSlots: [],
+        runnerNpcActors: [],
+        runnerNpcStartedIds: [],
         runSkinId: &quot;default&quot;,
         wallet: 0,
         inventory: {},
@@ -17401,6 +17430,8 @@ function createTutorialDeck(layer, mount, options, words) {
         state.storyCollectible = null;
         state.storyCollectibleCaughtSlots = [];
         state.storyCollectibleSpawnedSlots = [];
+        state.runnerNpcActors = [];
+        state.runnerNpcStartedIds = [];
         state.runCaseDropCheckpointMilestone = 0;
         state.wallet = 0;
         state.inventory = {};
@@ -18457,6 +18488,8 @@ function createTutorialDeck(layer, mount, options, words) {
         state.storyCollectible = null;
         state.storyCollectibleCaughtSlots = [];
         state.storyCollectibleSpawnedSlots = [];
+        state.runnerNpcActors = [];
+        state.runnerNpcStartedIds = [];
         state.runCaseDropCheckpointMilestone = 0;
         state.speed = runtimeGameplayConfig.startSpeed;
         state.renderSpeed = state.speed;
@@ -18983,6 +19016,7 @@ function createTutorialDeck(layer, mount, options, words) {
           cancelGameLoop();
           state.over = true;
           state.paused = false;
+          state.runnerNpcActors = [];
           const earned = Math.floor(state.score);
           const earnedTreats = state.runTreats;
           const earnedCoffee = state.runCoffee;
@@ -19183,6 +19217,10 @@ function createTutorialDeck(layer, mount, options, words) {
         state.previousVisualDistance = Number(state.visualDistance || 0);
         state.previousRunAnimationClock = Number(state.runAnimationClock || 0);
         for (const item of state.obstacles) item.previousX = item.x;
+        for (const npc of state.runnerNpcActors || []) {
+          npc.previousX = npc.x;
+          npc.previousY = npc.y;
+        }
         for (const item of state.pickups) {
           item.previousX = item.x;
           item.previousFloat = item.float;
@@ -19199,6 +19237,10 @@ function createTutorialDeck(layer, mount, options, words) {
         state.previousVisualDistance = Number(state.visualDistance || 0);
         state.previousRunAnimationClock = Number(state.runAnimationClock || 0);
         for (const item of state.obstacles) item.previousX = item.x;
+        for (const npc of state.runnerNpcActors || []) {
+          npc.previousX = npc.x;
+          npc.previousY = npc.y;
+        }
         for (const item of state.pickups) {
           item.previousX = item.x;
           item.previousFloat = item.float;
@@ -19330,6 +19372,153 @@ function createTutorialDeck(layer, mount, options, words) {
         state.crumbs.length = writeIndex;
       }
 
+      function runnerNpcRunSeed(eventId = &quot;&quot;) {
+        const input = `${String(state.caseRunId || &quot;run&quot;)}:${String(remoteRunnerScene?.seasonId || &quot;&quot;)}:${String(eventId || &quot;npc&quot;)}`;
+        let hash = 2166136261;
+        for (let index = 0; index &lt; input.length; index += 1) {
+          hash ^= input.charCodeAt(index);
+          hash = Math.imul(hash, 16777619);
+        }
+        return (hash &gt;&gt;&gt; 0) / 4294967295;
+      }
+
+      function runnerNpcSkinForPlayer(config) {
+        const primary = Object.prototype.hasOwnProperty.call(GAMEPLAY_SKIN_SPRITES, String(config?.skinId || &quot;alex&quot;)) ? String(config.skinId || &quot;alex&quot;) : &quot;alex&quot;;
+        const playerSkin = normalizeRunSkinId(state.runSkinId || currentDogSkin.id);
+        if (playerSkin !== primary) return primary;
+        const fallback = String(config?.fallbackSkinId || &quot;default&quot;);
+        if (fallback === &quot;__hide__&quot;) return &quot;&quot;;
+        if (fallback === primary) return &quot;&quot;;
+        return Object.prototype.hasOwnProperty.call(GAMEPLAY_SKIN_SPRITES, fallback) ? fallback : &quot;default&quot;;
+      }
+
+      function runnerNpcShouldAppear(config) {
+        const chance = Math.max(0, Math.min(100, Number(config?.chancePct ?? 100)));
+        if (chance &lt;= 0) return false;
+        if (chance &gt;= 100) return true;
+        return runnerNpcRunSeed(config?.id) * 100 &lt; chance;
+      }
+
+      function spawnRunnerNpc(config) {
+        const skinId = runnerNpcSkinForPlayer(config);
+        if (!skinId || !runnerNpcShouldAppear(config)) return null;
+        ensureGameplayDogSprites(skinId);
+        const scale = Math.max(0.6, Math.min(1.4, Number(config?.sizeScale) || 1));
+        const width = dog.w * scale;
+        const height = dog.h * scale;
+        const viewWidth = Math.max(320, Number(canvasViewWidth || canvas.width / CANVAS_DPR || 430));
+        const startX = -width * 1.05;
+        const finishX = viewWidth + width * 1.15;
+        const duration = Math.max(1.5, Math.min(20, Number(config?.durationSec) || 5));
+        const actor = {
+          id: String(config?.id || `npc-${Date.now().toString(36)}`),
+          title: String(config?.title || &quot;NPC&quot;),
+          skinId,
+          x: startX,
+          previousX: startX,
+          y: ground.y - height,
+          previousY: ground.y - height,
+          w: width,
+          h: height,
+          vy: 0,
+          grounded: true,
+          elapsed: 0,
+          duration,
+          startX,
+          finishX,
+          screenVelocity: Math.max(70, (finishX - startX) / duration),
+          animationClock: 0,
+          jumpObstacles: config?.jumpObstacles !== false,
+          jumpLeadPx: Math.max(40, Math.min(220, Number(config?.jumpLeadPx) || 105)),
+          lastJumpObstacleId: &quot;&quot;
+        };
+        state.runnerNpcActors.push(actor);
+        return actor;
+      }
+
+      function startDueRunnerNpcs() {
+        const configs = Array.isArray(remoteRunnerScene?.npcs) ? remoteRunnerScene.npcs : [];
+        if (!configs.length) return;
+        const started = new Set((state.runnerNpcStartedIds || []).map(String));
+        for (const config of configs) {
+          const id = String(config?.id || &quot;&quot;);
+          if (!id || started.has(id) || state.time + 0.0001 &lt; Math.max(0, Number(config?.startAfterSec) || 0)) continue;
+          started.add(id);
+          state.runnerNpcStartedIds = [...started];
+          spawnRunnerNpc(config);
+        }
+      }
+
+      function runnerNpcObstacleAhead(actor) {
+        if (!actor?.jumpObstacles || !actor.grounded) return null;
+        const actorFront = actor.x + actor.w * 0.58;
+        let nearest = null;
+        let nearestDistance = Infinity;
+        for (const obstacle of state.obstacles || []) {
+          if (!obstacle || obstacle.x + obstacle.w &lt; actorFront) continue;
+          const distance = obstacle.x - actorFront;
+          if (distance &lt; -6 || distance &gt; actor.jumpLeadPx || distance &gt;= nearestDistance) continue;
+          nearest = obstacle;
+          nearestDistance = distance;
+        }
+        return nearest;
+      }
+
+      function updateRunnerNpcs(dt) {
+        startDueRunnerNpcs();
+        const actors = state.runnerNpcActors || [];
+        for (const actor of actors) {
+          actor.elapsed += dt;
+          actor.x += actor.screenVelocity * dt;
+          actor.animationClock += dt * Math.max(9, currentRunCycleFps(state.speed) * 1.18);
+          const obstacle = runnerNpcObstacleAhead(actor);
+          if (obstacle &amp;&amp; String(obstacle.obstacleId || obstacle.id || &quot;&quot;) !== actor.lastJumpObstacleId) {
+            actor.vy = jumpVelocity * 0.94;
+            actor.grounded = false;
+            actor.lastJumpObstacleId = String(obstacle.obstacleId || obstacle.id || &quot;&quot;);
+          }
+          actor.vy += gravity * dt;
+          actor.y += actor.vy * dt;
+          const floorY = ground.y - actor.h;
+          if (actor.y &gt;= floorY) {
+            actor.y = floorY;
+            actor.vy = 0;
+            actor.grounded = true;
+          }
+        }
+        compactArrayInPlace(actors, (actor) =&gt; actor.elapsed &lt;= actor.duration + 0.8 &amp;&amp; actor.x &lt; actor.finishX + actor.w);
+      }
+
+      function drawRunnerNpcs() {
+        for (const actor of state.runnerNpcActors || []) {
+          const x = simulationRenderValue(actor.previousX, actor.x);
+          const y = simulationRenderValue(actor.previousY, actor.y) + DOG_VISUAL_GROUND_OFFSET;
+          const runningOnGround = actor.grounded;
+          const runClock = Math.max(0, Number(actor.animationClock || 0));
+          const frameIndex = Math.floor(runClock) % RUN_FRAME_SEQUENCE.length;
+          const spriteState = runningOnGround ? RUN_FRAME_SEQUENCE[frameIndex] : &quot;jump&quot;;
+          const sprite = resolvedGameplayDogSpriteEntry(actor.skinId, spriteState) || resolvedGameplayDogSpriteEntry(actor.skinId, runningOnGround ? &quot;stand&quot; : &quot;jump&quot;);
+          const stridePhase = runClock * Math.PI * 0.5;
+          const bounce = runningOnGround ? Math.abs(Math.sin(stridePhase)) * 1.05 : 0;
+          ctx.save();
+          ctx.globalAlpha = 0.96;
+          ctx.fillStyle = runningOnGround ? &quot;rgba(82, 60, 45, 0.16)&quot; : &quot;rgba(82, 60, 45, 0.09)&quot;;
+          ctx.beginPath();
+          ctx.ellipse(x + actor.w * 0.52, ground.y + 4, actor.w * 0.34, 7, 0, 0, Math.PI * 2);
+          ctx.fill();
+          if (sprite?.img) {
+            const lean = runningOnGround ? Math.sin(stridePhase) * 0.006 : Math.max(-0.06, Math.min(0.045, actor.vy / 6500));
+            ctx.translate(x + actor.w * 0.5, y + actor.h * 0.43 - bounce);
+            ctx.rotate(lean);
+            drawContain(sprite.img, -actor.w * 0.5, -actor.h * 0.58, actor.w, actor.h, 1, &quot;bottom&quot;);
+          } else {
+            const portrait = ensureSkinPortraitImage(runDogRunPortraitSrc(actor.skinId));
+            if (portrait?.complete &amp;&amp; portrait.naturalWidth) drawContain(portrait, x, y - bounce, actor.w, actor.h, 1, &quot;bottom&quot;);
+          }
+          ctx.restore();
+        }
+      }
+
       function update(dt) {
         state.time += dt;
         const difficulty = getDifficulty();
@@ -19387,6 +19576,7 @@ function createTutorialDeck(layer, mount, options, words) {
           item.x -= state.speed * dt;
           item.float += dt * 6;
         }
+        updateRunnerNpcs(dt);
         for (const crumb of state.crumbs) {
           crumb.x += crumb.vx * dt;
           crumb.y += crumb.vy * dt;
@@ -28459,6 +28649,7 @@ function createTutorialDeck(layer, mount, options, words) {
         for (const pickup of state.pickups) drawMarshmallow(pickup);
         for (const item of state.obstacles) drawObstacle(item);
         for (const crumb of state.crumbs) drawCrumb(crumb);
+        drawRunnerNpcs();
         drawDog();
         drawForeground(w, h);
         if (sampleDetailedDraw) {

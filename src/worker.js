@@ -34744,7 +34744,7 @@ async function playerGameStyleState(env,telegramId,{includeCatalog=false}={}){
     const [autoScene,autoVisuals,config]=await Promise.all([readRunnerScenePublicConfigForPlayer(env,id),seasonPassMiniGameVisualsForPlayer(env,id),readRunnerBuilderConfig(env)]);
     let runnerScene=autoScene;
     if(choices.scene==='default')runnerScene=runnerBuilderFallbackPublicScene();
-    else if(choices.scene!=='auto'){const item=gameStyleCatalogFind(catalog,'scene',choices.scene);if(item?.seasonId)runnerScene=runnerBuilderResolvePublicScene(config,item.seasonId);}
+    else if(choices.scene!=='auto'){const item=gameStyleCatalogFind(catalog,'scene',choices.scene);if(item?.seasonId)runnerScene={...runnerBuilderResolvePublicScene(config,item.seasonId),npcs:Array.isArray(autoScene?.npcs)?autoScene.npcs:[]};}
     const miniGameVisuals={...autoVisuals};
     for(const target of ['treats','coffee']){
       const choice=choices[target];if(choice==='auto')continue;
@@ -34772,8 +34772,8 @@ async function playerGameStyleState(env,telegramId,{includeCatalog=false}={}){
   const eventById=new Map(eventRows.map(item=>[String(item.event_id||''),item]));
   const [autoScene,autoVisuals,config]=await Promise.all([readRunnerScenePublicConfigForPlayer(env,id),seasonPassMiniGameVisualsForPlayer(env,id),readRunnerBuilderConfig(env)]);
   let runnerScene=autoScene;
-  if(choices.scene==='default')runnerScene=runnerBuilderFallbackPublicScene();
-  else if(choices.scene!=='auto'){const unlock=unlockById.get(choices.scene);if(unlock?.season_id)runnerScene=runnerBuilderResolvePublicScene(config,String(unlock.season_id));else choices.scene='auto';}
+  if(choices.scene==='default')runnerScene={...runnerBuilderFallbackPublicScene(),npcs:Array.isArray(autoScene?.npcs)?autoScene.npcs:[]};
+  else if(choices.scene!=='auto'){const unlock=unlockById.get(choices.scene);if(unlock?.season_id)runnerScene={...runnerBuilderResolvePublicScene(config,String(unlock.season_id)),npcs:Array.isArray(autoScene?.npcs)?autoScene.npcs:[]};else choices.scene='auto';}
   const miniGameVisuals={...autoVisuals};
   for(const target of ['treats','coffee']){
     const choice=choices[target];if(choice==='auto')continue;
@@ -40427,11 +40427,12 @@ function ownerV8AssetPath(value = "") {
 
 // ======================= RUNNER SCENE BUILDER v1 =======================
 const RUNNER_BUILDER_STATE_KEY = "runner:scene-builder:v1";
-const RUNNER_BUILDER_CONFIG_VERSION = 6;
+const RUNNER_BUILDER_CONFIG_VERSION = 7;
 const RUNNER_BUILDER_MAX_OBSTACLES = 80;
 const RUNNER_BUILDER_MAX_GROUPS = 48;
 const RUNNER_BUILDER_MAX_SCENES = 48;
 const RUNNER_BUILDER_MAX_BACKGROUNDS = 48;
+const RUNNER_BUILDER_MAX_NPCS_PER_SEASON = 12;
 const RUNNER_BUILDER_BUILTIN_ASSET_KEYS = new Set(["pouf","stool","tablePink","pillowObstacle","vaseObstacle","itemShadow","cafeBackground","nightCafeBackground","roadStrip","game_barricade_flovers_night_s2","road_night_cafe","game_barricade_tablet","barrier_game_bag","barricade_game_puff_night","barricade_game_boock_night","barricade_game_group_svechi_night","barricade_game_group_telechka","game_barricade_park_birdhouse_s3","game_barricade_park_scooter_s3","game_barricade_park_stone_s3","game_barricade_park_flowebed_s3","game_barricade_park_birdhouse_bird_s3","game_barricade_park_log_s3","game_barricade_park_picknik_basket_s3","game_barricade_park_bike_s3","barricade_game_park_flowers_s3","road_park_day_s3"]);
 const RUNNER_BUILDER_SEASON2_OBSTACLE_IDS = new Set(["flowers-night-s2","wet-floor-sign","client-bag","pouf-night-s2","books-menu-night","candles-night","waiter-cart"]);
 const RUNNER_BUILDER_SEASON3_OBSTACLE_IDS = new Set(["birdhouse-s3","scooter-s3","stone-s3","flowerbox-s3","birdhouse-bird-s3","log-s3","picnic-basket-s3","bike-s3","flowerbed-s3"]);
@@ -40609,6 +40610,7 @@ function runnerBuilderUpgradeConfig(raw){
   }
   if(currentVersion<5)runnerBuilderRepairSceneAssetsV5(source);
   if(currentVersion<6&&(!source.seasonVariants||typeof source.seasonVariants!=='object'))source.seasonVariants={};
+  if(currentVersion<7&&(!source.seasonNpcs||typeof source.seasonNpcs!=='object'))source.seasonNpcs={};
   source.version=RUNNER_BUILDER_CONFIG_VERSION;
   return source;
 }
@@ -40645,7 +40647,8 @@ function runnerBuilderDefaultConfig(){
       ...runnerBuilderSeason3Seed().scenes
     ],
     seasonBindings: {},
-    seasonVariants: {}
+    seasonVariants: {},
+    seasonNpcs: {}
   };
 }
 
@@ -40694,7 +40697,33 @@ function normalizeRunnerBuilderConfig(raw){
   let defaultSceneId=runnerBuilderSafeId(source.defaultSceneId);if(!sceneIds.has(defaultSceneId)||!scenes.find(x=>x.id===defaultSceneId)?.enabled)defaultSceneId=scenes.find(x=>x.enabled)?.id||scenes[0].id;
   const seasonBindings={};if(source.seasonBindings&&typeof source.seasonBindings==="object"){for(const [seasonId,sceneIdValue] of Object.entries(source.seasonBindings).slice(0,120)){const sceneId=runnerBuilderSafeId(sceneIdValue),key=String(seasonId||"").trim().slice(0,120);if(key&&sceneIds.has(sceneId))seasonBindings[key]=sceneId;}}
   const seasonVariants={};if(source.seasonVariants&&typeof source.seasonVariants==="object"){for(const [seasonId,rawVariant] of Object.entries(source.seasonVariants).slice(0,120)){const key=String(seasonId||"").trim().slice(0,120),value=rawVariant&&typeof rawVariant==="object"?rawVariant:{},mode=['level','chapter'].includes(String(value.mode||''))?String(value.mode):'';if(!key||!mode)continue;const variants=[],seenThresholds=new Set();for(const row of (Array.isArray(value.variants)?value.variants:[]).slice(0,8)){const threshold=Math.max(1,Math.min(mode==='level'?50:50,Math.floor(Number(row?.threshold)||1))),sceneId=runnerBuilderSafeId(row?.sceneId);if(!sceneIds.has(sceneId)||seenThresholds.has(threshold))continue;seenThresholds.add(threshold);variants.push({threshold,sceneId});}variants.sort((a,b)=>a.threshold-b.threshold);if(variants.length)seasonVariants[key]={mode,variants};}}
-  return {version:RUNNER_BUILDER_CONFIG_VERSION,revision:Math.max(1,Math.floor(Number(source.revision)||1)),defaultSceneId,backgrounds,obstacles,groups,scenes,seasonBindings,seasonVariants};
+  const seasonNpcs={};
+  if(source.seasonNpcs&&typeof source.seasonNpcs==="object"){
+    for(const [seasonId,rawRows] of Object.entries(source.seasonNpcs).slice(0,120)){
+      const key=String(seasonId||"").trim().slice(0,120);if(!key)continue;
+      const rows=[],seenIds=new Set();
+      for(const rawRow of (Array.isArray(rawRows)?rawRows:[]).slice(0,RUNNER_BUILDER_MAX_NPCS_PER_SEASON)){
+        const id=runnerBuilderSafeId(rawRow?.id);if(!id||seenIds.has(id))continue;seenIds.add(id);
+        const skinId=runnerBuilderSafeId(rawRow?.skinId)||"alex",fallbackRaw=String(rawRow?.fallbackSkinId||"default").trim(),fallbackSkinId=fallbackRaw==="__hide__"?"__hide__":(runnerBuilderSafeId(fallbackRaw)||"default");
+        rows.push({
+          id,
+          title:runnerBuilderText(rawRow?.title,id,100),
+          enabled:runnerBuilderBool(rawRow?.enabled,true),
+          skinId,
+          fallbackSkinId,
+          startAfterSec:Number(runnerBuilderNum(rawRow?.startAfterSec,0,600,8).toFixed(2)),
+          durationSec:Number(runnerBuilderNum(rawRow?.durationSec,1.5,20,5).toFixed(2)),
+          chancePct:Math.round(runnerBuilderNum(rawRow?.chancePct,0,100,100)),
+          sizeScale:Number(runnerBuilderNum(rawRow?.sizeScale,.6,1.4,1).toFixed(2)),
+          jumpObstacles:runnerBuilderBool(rawRow?.jumpObstacles,true),
+          jumpLeadPx:Math.round(runnerBuilderNum(rawRow?.jumpLeadPx,40,220,105))
+        });
+      }
+      rows.sort((a,b)=>a.startAfterSec-b.startAfterSec);
+      if(rows.length)seasonNpcs[key]=rows;
+    }
+  }
+  return {version:RUNNER_BUILDER_CONFIG_VERSION,revision:Math.max(1,Math.floor(Number(source.revision)||1)),defaultSceneId,backgrounds,obstacles,groups,scenes,seasonBindings,seasonVariants,seasonNpcs};
 }
 function runnerBuilderScenePool(config,scene){
   const obstacleMap=new Map(config.obstacles.filter(x=>x.enabled).map(x=>[x.id,x])),weights=new Map();
@@ -40707,11 +40736,13 @@ function runnerBuilderValidateConfig(config){
   const backgroundIds=new Set(config.backgrounds.filter(x=>x.enabled).map(x=>x.id)),enabledSceneIds=new Set(config.scenes.filter(x=>x.enabled).map(x=>x.id));
   for(const scene of config.scenes.filter(x=>x.enabled)){if(!backgroundIds.has(scene.backgroundId))throw new ApiError(400,`Сцена «${scene.title}»: выбран выключенный или отсутствующий фон.`);if(!runnerBuilderScenePool(config,scene).length)throw new ApiError(400,`Сцена «${scene.title}»: нет ни одного активного препятствия.`);}
   for(const [seasonId,variant] of Object.entries(config.seasonVariants||{})){for(const row of variant.variants||[])if(!enabledSceneIds.has(String(row.sceneId||'')))throw new ApiError(400,`Сезон ${seasonId}: вариант с порога ${row.threshold} ссылается на выключенную сцену.`);}
+  for(const [seasonId,rows] of Object.entries(config.seasonNpcs||{})){if(!String(seasonId||"").trim())throw new ApiError(400,"NPC: не указан сезон.");if(!Array.isArray(rows)||rows.length>RUNNER_BUILDER_MAX_NPCS_PER_SEASON)throw new ApiError(400,`Сезон ${seasonId}: слишком много NPC-событий.`);}
   if(!config.scenes.some(x=>x.id===config.defaultSceneId&&x.enabled))throw new ApiError(400,"Основная сцена должна быть включена.");
 }
 function runnerBuilderFallbackPublicScene(){return {...runnerBuilderResolvePublicScene(runnerBuilderDefaultConfig(),""),source:"fallback"};}
 function runnerBuilderResolvePublicScene(configInput,seasonId="",context={}){
   const config=normalizeRunnerBuilderConfig(configInput),seasonKey=String(seasonId||''),variant=config.seasonVariants?.[seasonKey]||null,variantValue=variant?.mode==='chapter'?Math.max(1,Math.floor(Number(context?.chapter)||1)):Math.max(1,Math.min(50,Math.floor(Number(context?.level)||1))),matchedVariant=variant&&Array.isArray(variant.variants)?variant.variants.filter(row=>Number(row.threshold)<=variantValue).sort((a,b)=>Number(b.threshold)-Number(a.threshold))[0]:null,boundId=matchedVariant?String(matchedVariant.sceneId||''):(seasonId?String(config.seasonBindings?.[seasonKey]||""):""),requested=config.scenes.find(x=>x.id===boundId&&x.enabled)||config.scenes.find(x=>x.id===config.defaultSceneId&&x.enabled)||config.scenes.find(x=>x.enabled)||config.scenes[0],fallback=runnerBuilderDefaultConfig();
+  const npcs=(Array.isArray(config.seasonNpcs?.[seasonKey])?config.seasonNpcs[seasonKey]:[]).filter(item=>item?.enabled!==false).map(item=>({id:item.id,title:item.title,skinId:item.skinId,fallbackSkinId:item.fallbackSkinId,startAfterSec:Number(item.startAfterSec||0),durationSec:Number(item.durationSec||5),chancePct:Number(item.chancePct??100),sizeScale:Number(item.sizeScale||1),jumpObstacles:item.jumpObstacles!==false,jumpLeadPx:Number(item.jumpLeadPx||105)}));
   let scene=requested,pool=runnerBuilderScenePool(config,scene);if(!scene||!pool.length){const fallbackConfig=normalizeRunnerBuilderConfig(fallback);scene=fallbackConfig.scenes[0];pool=runnerBuilderScenePool(fallbackConfig,scene);config.backgrounds=fallbackConfig.backgrounds;}
   const background=config.backgrounds.find(x=>x.id===scene.backgroundId&&x.enabled)||config.backgrounds.find(x=>x.enabled)||fallback.backgrounds[0];
   const season2Scene=runnerBuilderSceneLooksSeason2(config,scene);
@@ -40724,7 +40755,7 @@ function runnerBuilderResolvePublicScene(configInput,seasonId="",context={}){
     if(season3Scene)publicRoadKey="road_park_day_s3";
     else if(season2Scene)publicRoadKey="road_night_cafe";
   }
-  return {version:RUNNER_BUILDER_CONFIG_VERSION,revision:config.revision,sceneId:scene.id,title:scene.title,seasonId:String(seasonId||""),variant:variant?{mode:String(variant.mode),value:variantValue,threshold:matchedVariant?Number(matchedVariant.threshold):0}:null,background:{id:background.id,title:background.title,assetKey:background.assetKey||"",assetPath:background.assetPath||"",fitMode:background.fitMode==="contain"?"contain":"cover",zoom:Number(background.zoom||1),positionX:Number.isFinite(Number(background.positionX))?Number(background.positionX):.5,positionY:Number.isFinite(Number(background.positionY))?Number(background.positionY):.5,roadEnabled:background.roadEnabled!==false,roadAssetKey:publicRoadKey,roadAssetPath:background.roadAssetPath||""},obstacles:pool.map(item=>({id:item.id,title:item.title,assetKey:item.assetKey||"",assetPath:item.assetPath||"",width:item.width,height:item.height,shadow:item.shadow!==false,weight:Number(item.weight||item.defaultWeight||1),hitboxes:(item.hitboxes||[]).slice(0,3)})),source:"d1"};
+  return {version:RUNNER_BUILDER_CONFIG_VERSION,revision:config.revision,sceneId:scene.id,title:scene.title,seasonId:String(seasonId||""),variant:variant?{mode:String(variant.mode),value:variantValue,threshold:matchedVariant?Number(matchedVariant.threshold):0}:null,background:{id:background.id,title:background.title,assetKey:background.assetKey||"",assetPath:background.assetPath||"",fitMode:background.fitMode==="contain"?"contain":"cover",zoom:Number(background.zoom||1),positionX:Number.isFinite(Number(background.positionX))?Number(background.positionX):.5,positionY:Number.isFinite(Number(background.positionY))?Number(background.positionY):.5,roadEnabled:background.roadEnabled!==false,roadAssetKey:publicRoadKey,roadAssetPath:background.roadAssetPath||""},obstacles:pool.map(item=>({id:item.id,title:item.title,assetKey:item.assetKey||"",assetPath:item.assetPath||"",width:item.width,height:item.height,shadow:item.shadow!==false,weight:Number(item.weight||item.defaultWeight||1),hitboxes:(item.hitboxes||[]).slice(0,3)})),npcs,source:"d1"};
 }
 function invalidateRunnerBuilderConfigCache(){runnerBuilderConfigMemory={value:null,expiresAt:0};invalidateGamePublicConfigCache();}
 async function readRunnerBuilderConfigStrict(env,force=false){
@@ -40775,7 +40806,7 @@ async function ownerPanelRunnerBuilder(env,ctx){
 }
 async function ownerPanelRunnerBuilderSave(env,ctx){
   const current=await readRunnerBuilderConfig(env,true),expected=Math.max(0,Math.floor(Number(ctx.body?.expectedRevision)||0));if(expected&&expected!==Number(current.revision||1))throw new ApiError(409,"Конструктор забега уже изменён в другой вкладке. Обновите раздел перед сохранением.");
-  const next=normalizeRunnerBuilderConfig(ctx.body?.config);next.revision=Math.max(1,Number(current.revision||1))+1;runnerBuilderValidateConfig(next);await setSystemState(env,RUNNER_BUILDER_STATE_KEY,JSON.stringify(next));invalidateRunnerBuilderConfigCache();await logStaffAction(env,ctx.user,ctx.access,"owner_runner_builder_save",null,"runner_scene",Number(current.revision||1),next.revision,{defaultSceneId:next.defaultSceneId,backgrounds:next.backgrounds.length,obstacles:next.obstacles.length,groups:next.groups.length,scenes:next.scenes.length,seasonBindings:Object.keys(next.seasonBindings||{}).length,seasonVariants:Object.keys(next.seasonVariants||{}).length});return ownerPanelRunnerBuilder(env,ctx);
+  const next=normalizeRunnerBuilderConfig(ctx.body?.config);next.revision=Math.max(1,Number(current.revision||1))+1;runnerBuilderValidateConfig(next);await setSystemState(env,RUNNER_BUILDER_STATE_KEY,JSON.stringify(next));invalidateRunnerBuilderConfigCache();await logStaffAction(env,ctx.user,ctx.access,"owner_runner_builder_save",null,"runner_scene",Number(current.revision||1),next.revision,{defaultSceneId:next.defaultSceneId,backgrounds:next.backgrounds.length,obstacles:next.obstacles.length,groups:next.groups.length,scenes:next.scenes.length,seasonBindings:Object.keys(next.seasonBindings||{}).length,seasonVariants:Object.keys(next.seasonVariants||{}).length,seasonNpcs:Object.values(next.seasonNpcs||{}).reduce((sum,rows)=>sum+(Array.isArray(rows)?rows.length:0),0)});return ownerPanelRunnerBuilder(env,ctx);
 }
 async function ownerPanelRunnerBuilderApplyScene(env,ctx){
   await ensureSeasonPassSchema(env);
