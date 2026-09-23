@@ -15002,11 +15002,15 @@ function installProgressInfo(){
         if (!id) return null;
         const primary = String(row.skinId || &quot;alex&quot;).trim();
         const fallbackRaw = String(row.fallbackSkinId || &quot;default&quot;).trim();
+        const behaviorRaw = String(row.behaviorType || &quot;overtake&quot;).trim();
         return {
           id,
           title: String(row.title || id).trim().slice(0, 100) || id,
           skinId: Object.prototype.hasOwnProperty.call(GAMEPLAY_SKIN_SPRITES, primary) ? primary : &quot;alex&quot;,
           fallbackSkinId: fallbackRaw === &quot;__hide__&quot; ? &quot;__hide__&quot; : (Object.prototype.hasOwnProperty.call(GAMEPLAY_SKIN_SPRITES, fallbackRaw) ? fallbackRaw : &quot;default&quot;),
+          behaviorType: [&quot;overtake&quot;, &quot;beside&quot;, &quot;ahead_escape&quot;].includes(behaviorRaw) ? behaviorRaw : &quot;overtake&quot;,
+          startDistancePx: Math.max(80, Math.min(320, Number(row.startDistancePx) || 160)),
+          besideDistancePx: Math.max(100, Math.min(260, Number(row.besideDistancePx) || 130)),
           passLevelFrom: Math.max(1, Math.min(50, Math.floor(Number(row.passLevelFrom) || 1))),
           passLevelTo: Math.max(0, Math.min(50, Math.floor(Number(row.passLevelTo) || 0))),
           storyChapterFrom: Math.max(1, Math.min(50, Math.floor(Number(row.storyChapterFrom) || 1))),
@@ -19412,13 +19416,20 @@ function createTutorialDeck(layer, mount, options, words) {
         const width = dog.w * scale;
         const height = dog.h * scale;
         const viewWidth = Math.max(320, Number(canvasViewWidth || canvas.width / CANVAS_DPR || 430));
-        const startX = -width * 1.05;
+        const behaviorType = [&quot;overtake&quot;, &quot;beside&quot;, &quot;ahead_escape&quot;].includes(String(config?.behaviorType || &quot;&quot;)) ? String(config.behaviorType) : &quot;overtake&quot;;
+        const startDistancePx = Math.max(80, Math.min(320, Number(config?.startDistancePx) || 160));
+        const besideDistancePx = Math.max(100, Math.min(260, Number(config?.besideDistancePx) || 130));
+        const behindStartX = dog.x - startDistancePx;
+        const aheadStartX = Math.min(viewWidth - width * 0.85, dog.x + startDistancePx);
+        const startX = behaviorType === &quot;ahead_escape&quot; ? aheadStartX : behindStartX;
         const finishX = viewWidth + width * 1.15;
+        const besideX = Math.min(viewWidth - width * 0.85, dog.x + besideDistancePx);
         const duration = Math.max(1.5, Math.min(20, Number(config?.durationSec) || 5));
         const actor = {
           id: String(config?.id || `npc-${Date.now().toString(36)}`),
           title: String(config?.title || &quot;NPC&quot;),
           skinId,
+          behaviorType,
           x: startX,
           previousX: startX,
           y: ground.y - height,
@@ -19431,7 +19442,7 @@ function createTutorialDeck(layer, mount, options, words) {
           duration,
           startX,
           finishX,
-          screenVelocity: Math.max(70, (finishX - startX) / duration),
+          besideX,
           animationClock: 0,
           jumpObstacles: config?.jumpObstacles !== false,
           jumpLeadPx: Math.max(40, Math.min(220, Number(config?.jumpLeadPx) || 105)),
@@ -19471,12 +19482,34 @@ function createTutorialDeck(layer, mount, options, words) {
         return nearest;
       }
 
+      function runnerNpcPositionX(actor) {
+        const progress = Math.max(0, Math.min(1, actor.elapsed / Math.max(0.001, actor.duration)));
+        if (actor.behaviorType === &quot;beside&quot;) {
+          const approachEnd = 0.28;
+          const exitStart = 0.8;
+          if (progress &lt; approachEnd) {
+            const t = Math.max(0, Math.min(1, progress / approachEnd));
+            const eased = 1 - Math.pow(1 - t, 3);
+            return actor.startX + (actor.besideX - actor.startX) * eased;
+          }
+          if (progress &lt; exitStart) return actor.besideX;
+          const t = Math.max(0, Math.min(1, (progress - exitStart) / Math.max(0.001, 1 - exitStart)));
+          const eased = t * t;
+          return actor.besideX + (actor.finishX - actor.besideX) * eased;
+        }
+        if (actor.behaviorType === &quot;ahead_escape&quot;) {
+          const eased = progress * progress;
+          return actor.startX + (actor.finishX - actor.startX) * eased;
+        }
+        return actor.startX + (actor.finishX - actor.startX) * progress;
+      }
+
       function updateRunnerNpcs(dt) {
         startDueRunnerNpcs();
         const actors = state.runnerNpcActors || [];
         for (const actor of actors) {
           actor.elapsed += dt;
-          actor.x += actor.screenVelocity * dt;
+          actor.x = runnerNpcPositionX(actor);
           actor.animationClock += dt * Math.max(9, currentRunCycleFps(state.speed) * 1.18);
           const obstacle = runnerNpcObstacleAhead(actor);
           if (obstacle &amp;&amp; String(obstacle.obstacleId || obstacle.id || &quot;&quot;) !== actor.lastJumpObstacleId) {
@@ -19493,7 +19526,7 @@ function createTutorialDeck(layer, mount, options, words) {
             actor.grounded = true;
           }
         }
-        compactArrayInPlace(actors, (actor) =&gt; actor.elapsed &lt;= actor.duration + 0.8 &amp;&amp; actor.x &lt; actor.finishX + actor.w);
+        compactArrayInPlace(actors, (actor) =&gt; actor.elapsed &lt;= actor.duration + 0.15 &amp;&amp; actor.x &lt; actor.finishX + actor.w);
       }
 
       function drawRunnerNpcs() {

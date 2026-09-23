@@ -40711,6 +40711,9 @@ function normalizeRunnerBuilderConfig(raw){
           enabled:runnerBuilderBool(rawRow?.enabled,true),
           skinId,
           fallbackSkinId,
+          behaviorType:['overtake','beside','ahead_escape'].includes(String(rawRow?.behaviorType||''))?String(rawRow.behaviorType):'overtake',
+          startDistancePx:Math.round(runnerBuilderNum(rawRow?.startDistancePx,80,320,160)),
+          besideDistancePx:Math.round(runnerBuilderNum(rawRow?.besideDistancePx,100,260,130)),
           passLevelFrom:Math.round(runnerBuilderNum(rawRow?.passLevelFrom,1,50,1)),
           passLevelTo:Math.round(runnerBuilderNum(rawRow?.passLevelTo,0,50,0)),
           storyChapterFrom:Math.round(runnerBuilderNum(rawRow?.storyChapterFrom,1,50,1)),
@@ -40759,7 +40762,7 @@ function runnerBuilderResolvePublicScene(configInput,seasonId="",context={}){
     if(includeAllNpcs)return true;
     const passFrom=Math.max(1,Number(item?.passLevelFrom)||1),passTo=Math.max(0,Number(item?.passLevelTo)||0),chapterFrom=Math.max(1,Number(item?.storyChapterFrom)||1),chapterTo=Math.max(0,Number(item?.storyChapterTo)||0);
     return contextLevel>=passFrom&&(passTo===0||contextLevel<=passTo)&&contextChapter>=chapterFrom&&(chapterTo===0||contextChapter<=chapterTo);
-  }).map(item=>({id:item.id,title:item.title,skinId:item.skinId,fallbackSkinId:item.fallbackSkinId,passLevelFrom:Number(item.passLevelFrom||1),passLevelTo:Number(item.passLevelTo||0),storyChapterFrom:Number(item.storyChapterFrom||1),storyChapterTo:Number(item.storyChapterTo||0),startAfterSec:Number(item.startAfterSec||0),startAfterScore:Number(item.startAfterScore||0),durationSec:Number(item.durationSec||5),chancePct:Number(item.chancePct??100),sizeScale:Number(item.sizeScale||1),jumpObstacles:item.jumpObstacles!==false,jumpLeadPx:Number(item.jumpLeadPx||105)}));
+  }).map(item=>({id:item.id,title:item.title,skinId:item.skinId,fallbackSkinId:item.fallbackSkinId,behaviorType:['overtake','beside','ahead_escape'].includes(String(item.behaviorType||''))?String(item.behaviorType):'overtake',startDistancePx:Number(item.startDistancePx||160),besideDistancePx:Number(item.besideDistancePx||130),passLevelFrom:Number(item.passLevelFrom||1),passLevelTo:Number(item.passLevelTo||0),storyChapterFrom:Number(item.storyChapterFrom||1),storyChapterTo:Number(item.storyChapterTo||0),startAfterSec:Number(item.startAfterSec||0),startAfterScore:Number(item.startAfterScore||0),durationSec:Number(item.durationSec||5),chancePct:Number(item.chancePct??100),sizeScale:Number(item.sizeScale||1),jumpObstacles:item.jumpObstacles!==false,jumpLeadPx:Number(item.jumpLeadPx||105)}));
   let scene=requested,pool=runnerBuilderScenePool(config,scene);if(!scene||!pool.length){const fallbackConfig=normalizeRunnerBuilderConfig(fallback);scene=fallbackConfig.scenes[0];pool=runnerBuilderScenePool(fallbackConfig,scene);config.backgrounds=fallbackConfig.backgrounds;}
   const background=config.backgrounds.find(x=>x.id===scene.backgroundId&&x.enabled)||config.backgrounds.find(x=>x.enabled)||fallback.backgrounds[0];
   const season2Scene=runnerBuilderSceneLooksSeason2(config,scene);
