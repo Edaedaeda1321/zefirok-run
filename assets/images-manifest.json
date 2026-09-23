@@ -1,8 +1,8 @@
 {
   "version": 2,
   "hashAlgorithm": "sha256",
-  "catalogHash": "33d759a55d2f9bd0",
-  "count": 543,
+  "catalogHash": "1591efa35af7b068",
+  "count": 545,
   "images": [
     {
       "fileName": "achievements/background_achivment_panel.webp",
@@ -4067,6 +4067,22 @@
       "path": "/assets/ui/icon_goal.webp",
       "hash": "423358ac3282",
       "size": 161530
+    },
+    {
+      "fileName": "ui/icon_itog_reiting_season.webp",
+      "label": "Icon itog reiting season",
+      "folder": "ui",
+      "path": "/assets/ui/icon_itog_reiting_season.webp",
+      "hash": "f9f7540dae15",
+      "size": 212290
+    },
+    {
+      "fileName": "ui/icon_itog_season_pass.webp",
+      "label": "Icon itog season pass",
+      "folder": "ui",
+      "path": "/assets/ui/icon_itog_season_pass.webp",
+      "hash": "8530a7ebcfda",
+      "size": 202438
     },
     {
       "fileName": "ui/icon_maintenance_tools.webp",
