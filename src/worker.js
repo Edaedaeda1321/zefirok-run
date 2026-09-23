@@ -40427,7 +40427,7 @@ function ownerV8AssetPath(value = "") {
 
 // ======================= RUNNER SCENE BUILDER v1 =======================
 const RUNNER_BUILDER_STATE_KEY = "runner:scene-builder:v1";
-const RUNNER_BUILDER_CONFIG_VERSION = 7;
+const RUNNER_BUILDER_CONFIG_VERSION = 8;
 const RUNNER_BUILDER_MAX_OBSTACLES = 80;
 const RUNNER_BUILDER_MAX_GROUPS = 48;
 const RUNNER_BUILDER_MAX_SCENES = 48;
@@ -40705,6 +40705,10 @@ function normalizeRunnerBuilderConfig(raw){
       for(const rawRow of (Array.isArray(rawRows)?rawRows:[]).slice(0,RUNNER_BUILDER_MAX_NPCS_PER_SEASON)){
         const id=runnerBuilderSafeId(rawRow?.id);if(!id||seenIds.has(id))continue;seenIds.add(id);
         const skinId=runnerBuilderSafeId(rawRow?.skinId)||"alex",fallbackRaw=String(rawRow?.fallbackSkinId||"default").trim(),fallbackSkinId=fallbackRaw==="__hide__"?"__hide__":(runnerBuilderSafeId(fallbackRaw)||"default");
+        const reactionRaw=String(rawRow?.spawnReaction||'none'),spawnReaction=['none','alert','heart','surprise','sparkle','ellipsis'].includes(reactionRaw)?reactionRaw:'none';
+        const encounterRaw=rawRow?.encounterEvent&&typeof rawRow.encounterEvent==='object'?rawRow.encounterEvent:{},encounterText=runnerBuilderText(encounterRaw?.text,'',120),encounterTypeRaw=String(encounterRaw?.type||'none'),encounterType=['speech','banner'].includes(encounterTypeRaw)&&encounterText?encounterTypeRaw:'none';
+        const chainRaw=rawRow?.behaviorChain&&typeof rawRow.behaviorChain==='object'?rawRow.behaviorChain:{},behaviorChain={enabled:runnerBuilderBool(chainRaw?.enabled,false),approachSec:Number(runnerBuilderNum(chainRaw?.approachSec,.5,10,1.5).toFixed(2)),besideSec:Number(runnerBuilderNum(chainRaw?.besideSec,.5,12,3).toFixed(2)),escapeSec:Number(runnerBuilderNum(chainRaw?.escapeSec,.5,10,1.5).toFixed(2))};
+        const durationFallback=behaviorChain.enabled?behaviorChain.approachSec+behaviorChain.besideSec+behaviorChain.escapeSec:5;
         rows.push({
           id,
           title:runnerBuilderText(rawRow?.title,id,100),
@@ -40712,6 +40716,9 @@ function normalizeRunnerBuilderConfig(raw){
           skinId,
           fallbackSkinId,
           behaviorType:['overtake','beside','ahead_escape'].includes(String(rawRow?.behaviorType||''))?String(rawRow.behaviorType):'overtake',
+          behaviorChain,
+          spawnReaction,
+          encounterEvent:{type:encounterType,text:encounterType==='none'?'':encounterText},
           startDistancePx:Math.round(runnerBuilderNum(rawRow?.startDistancePx,80,320,160)),
           besideDistancePx:Math.round(runnerBuilderNum(rawRow?.besideDistancePx,100,260,130)),
           passLevelFrom:Math.round(runnerBuilderNum(rawRow?.passLevelFrom,1,50,1)),
@@ -40720,7 +40727,7 @@ function normalizeRunnerBuilderConfig(raw){
           storyChapterTo:Math.round(runnerBuilderNum(rawRow?.storyChapterTo,0,50,0)),
           startAfterSec:Number(runnerBuilderNum(rawRow?.startAfterSec,0,600,8).toFixed(2)),
           startAfterScore:Math.round(runnerBuilderNum(rawRow?.startAfterScore,0,10000000,0)),
-          durationSec:Number(runnerBuilderNum(rawRow?.durationSec,1.5,20,5).toFixed(2)),
+          durationSec:behaviorChain.enabled?Number(durationFallback.toFixed(2)):Number(runnerBuilderNum(rawRow?.durationSec,1.5,20,5).toFixed(2)),
           chancePct:Math.round(runnerBuilderNum(rawRow?.chancePct,0,100,100)),
           sizeScale:Number(runnerBuilderNum(rawRow?.sizeScale,.6,1.4,1).toFixed(2)),
           jumpObstacles:runnerBuilderBool(rawRow?.jumpObstacles,true),
@@ -40762,7 +40769,7 @@ function runnerBuilderResolvePublicScene(configInput,seasonId="",context={}){
     if(includeAllNpcs)return true;
     const passFrom=Math.max(1,Number(item?.passLevelFrom)||1),passTo=Math.max(0,Number(item?.passLevelTo)||0),chapterFrom=Math.max(1,Number(item?.storyChapterFrom)||1),chapterTo=Math.max(0,Number(item?.storyChapterTo)||0);
     return contextLevel>=passFrom&&(passTo===0||contextLevel<=passTo)&&contextChapter>=chapterFrom&&(chapterTo===0||contextChapter<=chapterTo);
-  }).map(item=>({id:item.id,title:item.title,skinId:item.skinId,fallbackSkinId:item.fallbackSkinId,behaviorType:['overtake','beside','ahead_escape'].includes(String(item.behaviorType||''))?String(item.behaviorType):'overtake',startDistancePx:Number(item.startDistancePx||160),besideDistancePx:Number(item.besideDistancePx||130),passLevelFrom:Number(item.passLevelFrom||1),passLevelTo:Number(item.passLevelTo||0),storyChapterFrom:Number(item.storyChapterFrom||1),storyChapterTo:Number(item.storyChapterTo||0),startAfterSec:Number(item.startAfterSec||0),startAfterScore:Number(item.startAfterScore||0),durationSec:Number(item.durationSec||5),chancePct:Number(item.chancePct??100),sizeScale:Number(item.sizeScale||1),jumpObstacles:item.jumpObstacles!==false,jumpLeadPx:Number(item.jumpLeadPx||105)}));
+  }).map(item=>({id:item.id,title:item.title,skinId:item.skinId,fallbackSkinId:item.fallbackSkinId,behaviorType:['overtake','beside','ahead_escape'].includes(String(item.behaviorType||''))?String(item.behaviorType):'overtake',behaviorChain:{enabled:item?.behaviorChain?.enabled===true,approachSec:Number(item?.behaviorChain?.approachSec||1.5),besideSec:Number(item?.behaviorChain?.besideSec||3),escapeSec:Number(item?.behaviorChain?.escapeSec||1.5)},spawnReaction:['none','alert','heart','surprise','sparkle','ellipsis'].includes(String(item.spawnReaction||''))?String(item.spawnReaction):'none',encounterEvent:{type:['speech','banner'].includes(String(item?.encounterEvent?.type||''))?String(item.encounterEvent.type):'none',text:String(item?.encounterEvent?.text||'').slice(0,120)},startDistancePx:Number(item.startDistancePx||160),besideDistancePx:Number(item.besideDistancePx||130),passLevelFrom:Number(item.passLevelFrom||1),passLevelTo:Number(item.passLevelTo||0),storyChapterFrom:Number(item.storyChapterFrom||1),storyChapterTo:Number(item.storyChapterTo||0),startAfterSec:Number(item.startAfterSec||0),startAfterScore:Number(item.startAfterScore||0),durationSec:Number(item.durationSec||5),chancePct:Number(item.chancePct??100),sizeScale:Number(item.sizeScale||1),jumpObstacles:item.jumpObstacles!==false,jumpLeadPx:Number(item.jumpLeadPx||105)}));
   let scene=requested,pool=runnerBuilderScenePool(config,scene);if(!scene||!pool.length){const fallbackConfig=normalizeRunnerBuilderConfig(fallback);scene=fallbackConfig.scenes[0];pool=runnerBuilderScenePool(fallbackConfig,scene);config.backgrounds=fallbackConfig.backgrounds;}
   const background=config.backgrounds.find(x=>x.id===scene.backgroundId&&x.enabled)||config.backgrounds.find(x=>x.enabled)||fallback.backgrounds[0];
   const season2Scene=runnerBuilderSceneLooksSeason2(config,scene);

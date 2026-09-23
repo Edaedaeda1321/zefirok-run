@@ -15003,12 +15003,28 @@ function installProgressInfo(){
         const primary = String(row.skinId || &quot;alex&quot;).trim();
         const fallbackRaw = String(row.fallbackSkinId || &quot;default&quot;).trim();
         const behaviorRaw = String(row.behaviorType || &quot;overtake&quot;).trim();
+        const reactionRaw = String(row.spawnReaction || &quot;none&quot;).trim();
+        const chainRaw = row.behaviorChain &amp;&amp; typeof row.behaviorChain === &quot;object&quot; ? row.behaviorChain : {};
+        const encounterRaw = row.encounterEvent &amp;&amp; typeof row.encounterEvent === &quot;object&quot; ? row.encounterEvent : {};
+        const encounterText = String(encounterRaw.text || &quot;&quot;).trim().slice(0, 120);
+        const encounterTypeRaw = String(encounterRaw.type || &quot;none&quot;).trim();
         return {
           id,
           title: String(row.title || id).trim().slice(0, 100) || id,
           skinId: Object.prototype.hasOwnProperty.call(GAMEPLAY_SKIN_SPRITES, primary) ? primary : &quot;alex&quot;,
           fallbackSkinId: fallbackRaw === &quot;__hide__&quot; ? &quot;__hide__&quot; : (Object.prototype.hasOwnProperty.call(GAMEPLAY_SKIN_SPRITES, fallbackRaw) ? fallbackRaw : &quot;default&quot;),
           behaviorType: [&quot;overtake&quot;, &quot;beside&quot;, &quot;ahead_escape&quot;].includes(behaviorRaw) ? behaviorRaw : &quot;overtake&quot;,
+          behaviorChain: {
+            enabled: chainRaw.enabled === true,
+            approachSec: Math.max(0.5, Math.min(10, Number(chainRaw.approachSec) || 1.5)),
+            besideSec: Math.max(0.5, Math.min(12, Number(chainRaw.besideSec) || 3)),
+            escapeSec: Math.max(0.5, Math.min(10, Number(chainRaw.escapeSec) || 1.5))
+          },
+          spawnReaction: [&quot;none&quot;, &quot;alert&quot;, &quot;heart&quot;, &quot;surprise&quot;, &quot;sparkle&quot;, &quot;ellipsis&quot;].includes(reactionRaw) ? reactionRaw : &quot;none&quot;,
+          encounterEvent: {
+            type: [&quot;speech&quot;, &quot;banner&quot;].includes(encounterTypeRaw) &amp;&amp; encounterText ? encounterTypeRaw : &quot;none&quot;,
+            text: encounterText
+          },
           startDistancePx: Math.max(80, Math.min(320, Number(row.startDistancePx) || 160)),
           besideDistancePx: Math.max(100, Math.min(260, Number(row.besideDistancePx) || 130)),
           passLevelFrom: Math.max(1, Math.min(50, Math.floor(Number(row.passLevelFrom) || 1))),
@@ -15017,7 +15033,7 @@ function installProgressInfo(){
           storyChapterTo: Math.max(0, Math.min(50, Math.floor(Number(row.storyChapterTo) || 0))),
           startAfterSec: Math.max(0, Math.min(600, Number(row.startAfterSec) || 0)),
           startAfterScore: Math.max(0, Math.min(10000000, Math.floor(Number(row.startAfterScore) || 0))),
-          durationSec: Math.max(1.5, Math.min(20, Number(row.durationSec) || 5)),
+          durationSec: Math.max(1.5, Math.min(30, Number(row.durationSec) || 5)),
           chancePct: Math.max(0, Math.min(100, Number(row.chancePct ?? 100))),
           sizeScale: Math.max(0.6, Math.min(1.4, Number(row.sizeScale) || 1)),
           jumpObstacles: row.jumpObstacles !== false,
@@ -19417,19 +19433,39 @@ function createTutorialDeck(layer, mount, options, words) {
         const height = dog.h * scale;
         const viewWidth = Math.max(320, Number(canvasViewWidth || canvas.width / CANVAS_DPR || 430));
         const behaviorType = [&quot;overtake&quot;, &quot;beside&quot;, &quot;ahead_escape&quot;].includes(String(config?.behaviorType || &quot;&quot;)) ? String(config.behaviorType) : &quot;overtake&quot;;
+        const chainRaw = config?.behaviorChain &amp;&amp; typeof config.behaviorChain === &quot;object&quot; ? config.behaviorChain : {};
+        const behaviorChain = {
+          enabled: chainRaw.enabled === true,
+          approachSec: Math.max(0.5, Math.min(10, Number(chainRaw.approachSec) || 1.5)),
+          besideSec: Math.max(0.5, Math.min(12, Number(chainRaw.besideSec) || 3)),
+          escapeSec: Math.max(0.5, Math.min(10, Number(chainRaw.escapeSec) || 1.5))
+        };
         const startDistancePx = Math.max(80, Math.min(320, Number(config?.startDistancePx) || 160));
         const besideDistancePx = Math.max(100, Math.min(260, Number(config?.besideDistancePx) || 130));
         const behindStartX = dog.x - startDistancePx;
         const aheadStartX = Math.min(viewWidth - width * 0.85, dog.x + startDistancePx);
-        const startX = behaviorType === &quot;ahead_escape&quot; ? aheadStartX : behindStartX;
+        const startX = behaviorChain.enabled ? behindStartX : (behaviorType === &quot;ahead_escape&quot; ? aheadStartX : behindStartX);
         const finishX = viewWidth + width * 1.15;
         const besideX = Math.min(viewWidth - width * 0.85, dog.x + besideDistancePx);
-        const duration = Math.max(1.5, Math.min(20, Number(config?.durationSec) || 5));
+        const chainDuration = behaviorChain.approachSec + behaviorChain.besideSec + behaviorChain.escapeSec;
+        const duration = behaviorChain.enabled ? chainDuration : Math.max(1.5, Math.min(30, Number(config?.durationSec) || 5));
+        const reactionRaw = String(config?.spawnReaction || &quot;none&quot;);
+        const spawnReaction = [&quot;none&quot;, &quot;alert&quot;, &quot;heart&quot;, &quot;surprise&quot;, &quot;sparkle&quot;, &quot;ellipsis&quot;].includes(reactionRaw) ? reactionRaw : &quot;none&quot;;
+        const encounterRaw = config?.encounterEvent &amp;&amp; typeof config.encounterEvent === &quot;object&quot; ? config.encounterEvent : {};
+        const encounterText = String(encounterRaw.text || &quot;&quot;).trim().slice(0, 120);
+        const encounterTypeRaw = String(encounterRaw.type || &quot;none&quot;);
+        const encounterEventType = [&quot;speech&quot;, &quot;banner&quot;].includes(encounterTypeRaw) &amp;&amp; encounterText ? encounterTypeRaw : &quot;none&quot;;
         const actor = {
           id: String(config?.id || `npc-${Date.now().toString(36)}`),
           title: String(config?.title || &quot;NPC&quot;),
           skinId,
           behaviorType,
+          behaviorChain,
+          spawnReaction,
+          encounterEventType,
+          encounterEventText: encounterText,
+          encounterTriggered: false,
+          encounterStartedAt: -1,
           x: startX,
           previousX: startX,
           y: ground.y - height,
@@ -19443,6 +19479,7 @@ function createTutorialDeck(layer, mount, options, words) {
           startX,
           finishX,
           besideX,
+          besideDistancePx,
           animationClock: 0,
           jumpObstacles: config?.jumpObstacles !== false,
           jumpLeadPx: Math.max(40, Math.min(220, Number(config?.jumpLeadPx) || 105)),
@@ -19483,6 +19520,20 @@ function createTutorialDeck(layer, mount, options, words) {
       }
 
       function runnerNpcPositionX(actor) {
+        if (actor.behaviorChain?.enabled) {
+          const approachSec = Math.max(0.5, Number(actor.behaviorChain.approachSec) || 1.5);
+          const besideSec = Math.max(0.5, Number(actor.behaviorChain.besideSec) || 3);
+          const escapeSec = Math.max(0.5, Number(actor.behaviorChain.escapeSec) || 1.5);
+          if (actor.elapsed &lt; approachSec) {
+            const t = Math.max(0, Math.min(1, actor.elapsed / approachSec));
+            const eased = 1 - Math.pow(1 - t, 3);
+            return actor.startX + (actor.besideX - actor.startX) * eased;
+          }
+          if (actor.elapsed &lt; approachSec + besideSec) return actor.besideX;
+          const t = Math.max(0, Math.min(1, (actor.elapsed - approachSec - besideSec) / escapeSec));
+          const eased = t * t;
+          return actor.besideX + (actor.finishX - actor.besideX) * eased;
+        }
         const progress = Math.max(0, Math.min(1, actor.elapsed / Math.max(0.001, actor.duration)));
         if (actor.behaviorType === &quot;beside&quot;) {
           const approachEnd = 0.28;
@@ -19498,10 +19549,25 @@ function createTutorialDeck(layer, mount, options, words) {
           return actor.besideX + (actor.finishX - actor.besideX) * eased;
         }
         if (actor.behaviorType === &quot;ahead_escape&quot;) {
-          const eased = progress * progress;
+          const eased = 1 - Math.pow(1 - progress, 2);
           return actor.startX + (actor.finishX - actor.startX) * eased;
         }
         return actor.startX + (actor.finishX - actor.startX) * progress;
+      }
+
+      function runnerNpcMaybeTriggerEncounter(actor) {
+        if (!actor || actor.encounterTriggered || actor.encounterEventType === &quot;none&quot; || !actor.encounterEventText) return;
+        const npcCenter = actor.x + actor.w * 0.5;
+        const dogCenter = dog.x + dog.w * 0.5;
+        const immediateAhead = !actor.behaviorChain?.enabled &amp;&amp; actor.behaviorType === &quot;ahead_escape&quot; &amp;&amp; actor.elapsed &gt;= 0.08;
+        const reachedBeside = (actor.behaviorChain?.enabled || actor.behaviorType === &quot;beside&quot;) &amp;&amp; actor.x &gt;= actor.besideX - 8;
+        const caughtPlayer = actor.behaviorType === &quot;overtake&quot; &amp;&amp; npcCenter &gt;= dogCenter;
+        if (!immediateAhead &amp;&amp; !reachedBeside &amp;&amp; !caughtPlayer) return;
+        actor.encounterTriggered = true;
+        actor.encounterStartedAt = actor.elapsed;
+        try {
+          window.dispatchEvent(new CustomEvent(&quot;sweet-run:npc-encounter&quot;, { detail: { id:actor.id, title:actor.title, skinId:actor.skinId, type:actor.encounterEventType, text:actor.encounterEventText } }));
+        } catch {}
       }
 
       function updateRunnerNpcs(dt) {
@@ -19510,6 +19576,7 @@ function createTutorialDeck(layer, mount, options, words) {
         for (const actor of actors) {
           actor.elapsed += dt;
           actor.x = runnerNpcPositionX(actor);
+          runnerNpcMaybeTriggerEncounter(actor);
           actor.animationClock += dt * Math.max(9, currentRunCycleFps(state.speed) * 1.18);
           const obstacle = runnerNpcObstacleAhead(actor);
           if (obstacle &amp;&amp; String(obstacle.obstacleId || obstacle.id || &quot;&quot;) !== actor.lastJumpObstacleId) {
@@ -19527,6 +19594,112 @@ function createTutorialDeck(layer, mount, options, words) {
           }
         }
         compactArrayInPlace(actors, (actor) =&gt; actor.elapsed &lt;= actor.duration + 0.15 &amp;&amp; actor.x &lt; actor.finishX + actor.w);
+      }
+
+      function runnerNpcReactionSymbol(type) {
+        if (type === &quot;alert&quot;) return &quot;❗&quot;;
+        if (type === &quot;heart&quot;) return &quot;❤️&quot;;
+        if (type === &quot;surprise&quot;) return &quot;😮&quot;;
+        if (type === &quot;sparkle&quot;) return &quot;✨&quot;;
+        if (type === &quot;ellipsis&quot;) return &quot;…&quot;;
+        return &quot;&quot;;
+      }
+
+      function runnerNpcCanvasLines(text, maxWidth, maxLines = 3) {
+        const words = String(text || &quot;&quot;).trim().split(/\s+/).filter(Boolean);
+        if (!words.length) return [];
+        const lines = [];
+        let line = &quot;&quot;;
+        for (const word of words) {
+          const candidate = line ? `${line} ${word}` : word;
+          if (!line || ctx.measureText(candidate).width &lt;= maxWidth) {
+            line = candidate;
+            continue;
+          }
+          lines.push(line);
+          line = word;
+          if (lines.length &gt;= maxLines - 1) break;
+        }
+        if (line &amp;&amp; lines.length &lt; maxLines) {
+          const consumed = lines.join(&quot; &quot;).split(/\s+/).filter(Boolean).length;
+          const rest = words.slice(consumed).join(&quot; &quot;);
+          let finalLine = rest || line;
+          while (finalLine.length &gt; 1 &amp;&amp; ctx.measureText(finalLine).width &gt; maxWidth) finalLine = `${finalLine.slice(0, -2).trim()}…`;
+          lines.push(finalLine);
+        }
+        return lines.slice(0, maxLines);
+      }
+
+      function drawRunnerNpcReaction(actor, x, y) {
+        const symbol = runnerNpcReactionSymbol(actor.spawnReaction);
+        if (!symbol || actor.elapsed &gt; 1.65) return;
+        const fade = actor.elapsed &gt; 1.25 ? Math.max(0, (1.65 - actor.elapsed) / 0.4) : 1;
+        const centerX = Math.max(22, Math.min(canvasViewWidth - 22, x + actor.w * 0.82));
+        const centerY = Math.max(24, y - 9 - Math.sin(Math.min(1, actor.elapsed / 0.28) * Math.PI) * 5);
+        ctx.save();
+        ctx.globalAlpha = 0.96 * fade;
+        ctx.lineWidth = 1.4;
+        roundRect(centerX - 17, centerY - 17, 34, 34, 13, true, true, &quot;rgba(255,252,253,.97)&quot;, &quot;rgba(222,142,174,.9)&quot;);
+        ctx.font = '700 18px -apple-system,BlinkMacSystemFont,&quot;Segoe UI&quot;,sans-serif';
+        ctx.textAlign = &quot;center&quot;;
+        ctx.textBaseline = &quot;middle&quot;;
+        ctx.fillStyle = &quot;#8d3f61&quot;;
+        ctx.fillText(symbol, centerX, centerY + 1);
+        ctx.restore();
+      }
+
+      function drawRunnerNpcEncounter(actor, x, y) {
+        if (!actor.encounterTriggered || actor.encounterStartedAt &lt; 0 || actor.encounterEventType === &quot;none&quot; || !actor.encounterEventText) return;
+        const age = actor.elapsed - actor.encounterStartedAt;
+        const visibleFor = 3.15;
+        if (age &lt; 0 || age &gt; visibleFor) return;
+        const fade = age &gt; visibleFor - 0.45 ? Math.max(0, (visibleFor - age) / 0.45) : Math.min(1, age / 0.16);
+        ctx.save();
+        ctx.globalAlpha = 0.98 * fade;
+        ctx.textBaseline = &quot;middle&quot;;
+        if (actor.encounterEventType === &quot;banner&quot;) {
+          const maxWidth = Math.min(300, Math.max(210, canvasViewWidth - 36));
+          ctx.font = '700 12px -apple-system,BlinkMacSystemFont,&quot;Segoe UI&quot;,sans-serif';
+          const lines = runnerNpcCanvasLines(actor.encounterEventText, maxWidth - 28, 2);
+          const boxHeight = 36 + Math.max(1, lines.length) * 16;
+          const boxX = (canvasViewWidth - maxWidth) * 0.5;
+          const boxY = 52;
+          ctx.lineWidth = 1.3;
+          roundRect(boxX, boxY, maxWidth, boxHeight, 15, true, true, &quot;rgba(255,249,252,.97)&quot;, &quot;rgba(220,135,170,.78)&quot;);
+          ctx.font = '800 8px -apple-system,BlinkMacSystemFont,&quot;Segoe UI&quot;,sans-serif';
+          ctx.textAlign = &quot;left&quot;;
+          ctx.fillStyle = &quot;#bc5a82&quot;;
+          ctx.fillText(&quot;СЮЖЕТ&quot;, boxX + 14, boxY + 13);
+          ctx.font = '700 12px -apple-system,BlinkMacSystemFont,&quot;Segoe UI&quot;,sans-serif';
+          ctx.fillStyle = &quot;#5e3a49&quot;;
+          lines.forEach((line, index) =&gt; ctx.fillText(line, boxX + 14, boxY + 31 + index * 16));
+          ctx.restore();
+          return;
+        }
+        const maxWidth = Math.min(190, Math.max(140, canvasViewWidth * 0.46));
+        ctx.font = '700 11.5px -apple-system,BlinkMacSystemFont,&quot;Segoe UI&quot;,sans-serif';
+        const lines = runnerNpcCanvasLines(actor.encounterEventText, maxWidth - 22, 3);
+        const measured = Math.max(...lines.map(line =&gt; ctx.measureText(line).width), 82);
+        const boxWidth = Math.min(maxWidth, measured + 22);
+        const boxHeight = 18 + Math.max(1, lines.length) * 15;
+        const anchorX = x + actor.w * 0.55;
+        const boxX = Math.max(8, Math.min(canvasViewWidth - boxWidth - 8, anchorX - boxWidth * 0.5));
+        const boxY = Math.max(12, y - boxHeight - 24);
+        ctx.lineWidth = 1.2;
+        roundRect(boxX, boxY, boxWidth, boxHeight, 13, true, true, &quot;rgba(255,252,253,.98)&quot;, &quot;rgba(226,154,182,.88)&quot;);
+        ctx.fillStyle = &quot;rgba(255,252,253,.98)&quot;;
+        ctx.beginPath();
+        const tailX = Math.max(boxX + 18, Math.min(boxX + boxWidth - 18, anchorX));
+        ctx.moveTo(tailX - 6, boxY + boxHeight - 1);
+        ctx.lineTo(tailX + 5, boxY + boxHeight - 1);
+        ctx.lineTo(tailX, boxY + boxHeight + 8);
+        ctx.closePath();
+        ctx.fill();
+        ctx.font = '700 11.5px -apple-system,BlinkMacSystemFont,&quot;Segoe UI&quot;,sans-serif';
+        ctx.textAlign = &quot;left&quot;;
+        ctx.fillStyle = &quot;#5b3a48&quot;;
+        lines.forEach((line, index) =&gt; ctx.fillText(line, boxX + 11, boxY + 13 + index * 15));
+        ctx.restore();
       }
 
       function drawRunnerNpcs() {
@@ -19556,6 +19729,8 @@ function createTutorialDeck(layer, mount, options, words) {
             if (portrait?.complete &amp;&amp; portrait.naturalWidth) drawContain(portrait, x, y - bounce, actor.w, actor.h, 1, &quot;bottom&quot;);
           }
           ctx.restore();
+          drawRunnerNpcReaction(actor, x, y - bounce);
+          drawRunnerNpcEncounter(actor, x, y - bounce);
         }
       }
 
