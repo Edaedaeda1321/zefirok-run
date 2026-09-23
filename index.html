@@ -13288,6 +13288,22 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
       const supportCloseButton = root.querySelector(&quot;[data-support-close]&quot;);
       let supportLayerScrollLock = null;
       let playerSupportState = { tickets: [], knownIssues: [], openCount: 0, unreadCount: 0 };
+      let leaderboardMainFinaleLayer = null;
+      let leaderboardMainFinaleTitleEl = null;
+      let leaderboardMainFinaleSubtitleEl = null;
+      let leaderboardMainFinalePlaceEl = null;
+      let leaderboardMainFinaleScoreEl = null;
+      let leaderboardMainFinaleRunsEl = null;
+      let leaderboardMainFinaleAchievementEl = null;
+      let leaderboardMainFinaleRewardEl = null;
+      let leaderboardMainFinaleRewardCopyEl = null;
+      let leaderboardMainFinaleRewardVisualEl = null;
+      let leaderboardMainFinaleNextEl = null;
+      let leaderboardMainFinaleNextTitleEl = null;
+      let leaderboardMainFinaleNextCopyEl = null;
+      let leaderboardMainFinaleNextDateEl = null;
+      let leaderboardMainFinaleArtEl = null;
+      let leaderboardMainFinaleAutoTimer = 0;
       let playerSupportStateLoading = false;
       let playerSupportStateLoadedAt = 0;
       let playerSupportSelectedTicketId = 0;
@@ -26432,6 +26448,270 @@ function createTutorialDeck(layer, mount, options, words) {
         return true;
       }
 
+      function leaderboardSeasonStorageId(seasonLike) {
+        if (!seasonLike || typeof seasonLike !== &quot;object&quot;) return &quot;season&quot;;
+        return String(
+          seasonLike.id
+          || seasonLike.seasonId
+          || seasonLike.slug
+          || seasonLike.number
+          || seasonLike.seasonNumber
+          || seasonLike.title
+          || seasonLike.name
+          || &quot;season&quot;
+        );
+      }
+
+      function leaderboardRatingFinaleSeenKey(seasonLike) {
+        return `zefirok-rating-finale-seen:${leaderboardSeasonStorageId(seasonLike)}`;
+      }
+
+      function leaderboardHistorySeasonEntry(history, season) {
+        const items = Array.isArray(history) ? history : [];
+        if (!items.length) return null;
+        const seasonId = leaderboardSeasonStorageId(season);
+        return items.find((item) =&gt; {
+          const candidates = [item, item?.season, { id: item?.seasonId }, { number: item?.seasonNumber }, { title: item?.seasonTitle }, { name: item?.title }];
+          return candidates.some((candidate) =&gt; leaderboardSeasonStorageId(candidate) === seasonId);
+        }) || items[0] || null;
+      }
+
+      function leaderboardMainFinaleData(data) {
+        const season = data?.season || null;
+        if (!season || String(season.status || &quot;&quot;) !== &quot;ended&quot;) return null;
+        const historyEntry = leaderboardHistorySeasonEntry(data?.history, season);
+        const me = data?.me &amp;&amp; typeof data.me === &quot;object&quot; ? data.me : null;
+        const source = historyEntry || me || {};
+        const place = Math.max(0, Number(source?.place || me?.place || 0));
+        const score = Math.max(0, Number(source?.score || me?.score || 0));
+        const completedRuns = Math.max(0, Number(source?.completedRuns || me?.completedRuns || state.completedRuns || 0));
+        const achievementPoints = Math.max(0, Number(source?.achievementPoints || me?.achievementPoints || 0));
+        const reward = season?.reward || data?.reward || source?.reward || null;
+        const nextSeason = data?.nextSeason || season?.nextSeason || null;
+        const seasonTitle = String(season.title || season.name || &quot;Сезон рейтинга&quot;).trim() || &quot;Сезон рейтинга&quot;;
+        const subtitleBits = [];
+        if (place &gt; 0) subtitleBits.push(`место #${formatter.format(place)}`);
+        if (score &gt; 0) subtitleBits.push(`лучший результат ${formatter.format(score)}`);
+        if (completedRuns &gt; 0) subtitleBits.push(`${formatter.format(completedRuns)} забегов`);
+        if (achievementPoints &gt; 0) subtitleBits.push(`${formatter.format(achievementPoints)} очков достижений`);
+        const subtitle = subtitleBits.length
+          ? `Твой итог зафиксирован: ${subtitleBits.join(&quot; · &quot;)}.`
+          : &quot;Сезон завершён — итог уже сохранён в архиве рейтинга.&quot;;
+        return {
+          season,
+          seasonTitle,
+          title: `${seasonTitle} · итоги рейтинга`,
+          subtitle,
+          place,
+          score,
+          completedRuns,
+          achievementPoints,
+          reward,
+          nextSeason,
+          hasHistory: Array.isArray(data?.history) &amp;&amp; data.history.length &gt; 0
+        };
+      }
+
+      function ensureLeaderboardMainFinaleUi() {
+        if (leaderboardMainFinaleLayer?.isConnected) return leaderboardMainFinaleLayer;
+        if (!document.getElementById(&quot;leaderboard-main-finale-style&quot;)) {
+          const style = document.createElement(&quot;style&quot;);
+          style.id = &quot;leaderboard-main-finale-style&quot;;
+          style.textContent = `
+#zefirok-maltipoo-runner .leaderboard-main-finale-layer{position:fixed;inset:0;z-index:2200;display:grid;place-items:center;padding:clamp(16px,4vw,26px);box-sizing:border-box}
+#zefirok-maltipoo-runner .leaderboard-main-finale-layer[hidden]{display:none!important}
+#zefirok-maltipoo-runner .leaderboard-main-finale-backdrop{position:absolute;inset:0;background:rgba(59,26,38,.58);backdrop-filter:blur(10px)}
+#zefirok-maltipoo-runner .leaderboard-main-finale-card{position:relative;width:min(470px,100%);max-height:min(92vh,820px);overflow:auto;border-radius:30px;padding:20px 18px 18px;border:1px solid rgba(244,210,158,.92);background:linear-gradient(180deg,#fffdf6 0%,#fff6fb 52%,#fff9f0 100%);box-shadow:0 26px 68px rgba(97,49,66,.28)}
+#zefirok-maltipoo-runner .leaderboard-main-finale-close{position:absolute;top:12px;right:12px;width:38px;height:38px;border:0;border-radius:999px;background:#fff;color:#9c5972;font-size:22px;font-weight:900;box-shadow:0 10px 22px rgba(156,89,114,.18);cursor:pointer}
+#zefirok-maltipoo-runner .leaderboard-main-finale-hero{display:grid;grid-template-columns:116px minmax(0,1fr);gap:16px;align-items:center;padding:8px 6px 6px}
+#zefirok-maltipoo-runner .leaderboard-main-finale-art{width:116px;height:116px;border-radius:28px;display:grid;place-items:center;background:radial-gradient(circle at 50% 30%,#fff9d5 0%,#ffeeb8 42%,#ffe4b7 100%);box-shadow:inset 0 0 0 1px rgba(241,196,122,.66),0 16px 30px rgba(241,152,174,.18)}
+#zefirok-maltipoo-runner .leaderboard-main-finale-art img{display:block;width:96px;height:96px;object-fit:contain}
+#zefirok-maltipoo-runner .leaderboard-main-finale-kicker{display:inline-flex;align-items:center;justify-content:center;padding:7px 12px;border-radius:999px;background:#fff0f6;color:#b4537a;font-size:11px;font-weight:900;letter-spacing:.08em;text-transform:uppercase}
+#zefirok-maltipoo-runner .leaderboard-main-finale-copy{display:grid;gap:8px}
+#zefirok-maltipoo-runner .leaderboard-main-finale-copy h2{margin:0;color:#6f3f52;font-size:24px;line-height:1.08}
+#zefirok-maltipoo-runner .leaderboard-main-finale-copy p{margin:0;color:#8b6d79;font-size:14px;line-height:1.5;font-weight:600}
+#zefirok-maltipoo-runner .leaderboard-main-finale-stats{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-top:12px}
+#zefirok-maltipoo-runner .leaderboard-main-finale-stat{display:grid;grid-template-columns:42px minmax(0,1fr);gap:10px;align-items:center;padding:13px 12px;border-radius:20px;background:#fff;box-shadow:inset 0 0 0 1px rgba(236,214,222,.92)}
+#zefirok-maltipoo-runner .leaderboard-main-finale-stat-icon{width:42px;height:42px;border-radius:14px;display:grid;place-items:center;background:linear-gradient(180deg,#fff4d1,#ffe2ba);font-size:20px}
+#zefirok-maltipoo-runner .leaderboard-main-finale-stat small{display:block;color:#ab8b97;font-size:11px;font-weight:800;letter-spacing:.02em;text-transform:uppercase}
+#zefirok-maltipoo-runner .leaderboard-main-finale-stat strong{display:block;color:#6f3f52;font-size:21px;line-height:1.08;margin-top:4px}
+#zefirok-maltipoo-runner .leaderboard-main-finale-reward,#zefirok-maltipoo-runner .leaderboard-main-finale-next{margin-top:12px;padding:14px;border-radius:22px;background:#fff;box-shadow:inset 0 0 0 1px rgba(236,214,222,.92)}
+#zefirok-maltipoo-runner .leaderboard-main-finale-reward-head,#zefirok-maltipoo-runner .leaderboard-main-finale-next-head{display:grid;gap:4px;margin-bottom:10px}
+#zefirok-maltipoo-runner .leaderboard-main-finale-reward-head small,#zefirok-maltipoo-runner .leaderboard-main-finale-next-head small{color:#b4537a;font-size:11px;font-weight:900;letter-spacing:.08em;text-transform:uppercase}
+#zefirok-maltipoo-runner .leaderboard-main-finale-reward-head strong,#zefirok-maltipoo-runner .leaderboard-main-finale-next-head strong{color:#6f3f52;font-size:17px;line-height:1.18}
+#zefirok-maltipoo-runner .leaderboard-main-finale-reward-head span,#zefirok-maltipoo-runner .leaderboard-main-finale-next-head span{color:#8b6d79;font-size:13px;line-height:1.45;font-weight:600}
+#zefirok-maltipoo-runner .leaderboard-main-finale-next-date{display:inline-flex;align-items:center;gap:6px;margin-top:8px;padding:8px 11px;border-radius:999px;background:#fff4f8;color:#9b5c75;font-size:12px;font-weight:800}
+#zefirok-maltipoo-runner .leaderboard-main-finale-actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-top:14px}
+#zefirok-maltipoo-runner .leaderboard-main-finale-action{min-height:48px;border-radius:17px;border:0;font:800 15px/1.15 inherit;cursor:pointer}
+#zefirok-maltipoo-runner .leaderboard-main-finale-action.is-secondary{background:#fff;color:#9b5d75;box-shadow:inset 0 0 0 1px rgba(228,198,210,.98)}
+#zefirok-maltipoo-runner .leaderboard-main-finale-action.is-primary{background:linear-gradient(180deg,#ff8fb8,#eb6e98);color:#fff;box-shadow:0 14px 24px rgba(221,112,154,.28)}
+@media (max-width:540px){#zefirok-maltipoo-runner .leaderboard-main-finale-card{padding:18px 15px 16px;border-radius:26px}#zefirok-maltipoo-runner .leaderboard-main-finale-hero{grid-template-columns:1fr;justify-items:center;text-align:center;padding-top:16px}#zefirok-maltipoo-runner .leaderboard-main-finale-actions{grid-template-columns:1fr}#zefirok-maltipoo-runner .leaderboard-main-finale-copy h2{font-size:22px}}
+`;
+          document.head.appendChild(style);
+        }
+        const layer = document.createElement(&quot;div&quot;);
+        layer.className = &quot;leaderboard-main-finale-layer&quot;;
+        layer.hidden = true;
+        layer.setAttribute(&quot;data-leaderboard-main-finale-layer&quot;, &quot;&quot;);
+        layer.innerHTML = `
+          &lt;div class=&quot;leaderboard-main-finale-backdrop&quot; data-leaderboard-main-finale-close&gt;&lt;/div&gt;
+          &lt;section class=&quot;leaderboard-main-finale-card&quot; role=&quot;dialog&quot; aria-modal=&quot;true&quot; aria-labelledby=&quot;leaderboard-main-finale-title&quot;&gt;
+            &lt;button class=&quot;leaderboard-main-finale-close&quot; data-leaderboard-main-finale-close type=&quot;button&quot; aria-label=&quot;Закрыть&quot;&gt;×&lt;/button&gt;
+            &lt;div class=&quot;leaderboard-main-finale-hero&quot;&gt;
+              &lt;div class=&quot;leaderboard-main-finale-art&quot;&gt;&lt;img data-leaderboard-main-finale-art src=&quot;/assets/ui/icon_itog_reiting_season.webp&quot; alt=&quot;&quot; decoding=&quot;async&quot;&gt;&lt;/div&gt;
+              &lt;div class=&quot;leaderboard-main-finale-copy&quot;&gt;
+                &lt;span class=&quot;leaderboard-main-finale-kicker&quot;&gt;Итоги рейтинга&lt;/span&gt;
+                &lt;h2 id=&quot;leaderboard-main-finale-title&quot; data-leaderboard-main-finale-title&gt;Итоги сезона&lt;/h2&gt;
+                &lt;p data-leaderboard-main-finale-subtitle&gt;Твой сезон уже завершён — итог сохранён в архиве рейтинга.&lt;/p&gt;
+              &lt;/div&gt;
+            &lt;/div&gt;
+            &lt;div class=&quot;leaderboard-main-finale-stats&quot;&gt;
+              &lt;div class=&quot;leaderboard-main-finale-stat&quot;&gt;&lt;span class=&quot;leaderboard-main-finale-stat-icon&quot; aria-hidden=&quot;true&quot;&gt;🏆&lt;/span&gt;&lt;span&gt;&lt;small&gt;Место&lt;/small&gt;&lt;strong data-leaderboard-main-finale-place&gt;—&lt;/strong&gt;&lt;/span&gt;&lt;/div&gt;
+              &lt;div class=&quot;leaderboard-main-finale-stat&quot;&gt;&lt;span class=&quot;leaderboard-main-finale-stat-icon&quot; aria-hidden=&quot;true&quot;&gt;★&lt;/span&gt;&lt;span&gt;&lt;small&gt;Лучший результат&lt;/small&gt;&lt;strong data-leaderboard-main-finale-score&gt;0&lt;/strong&gt;&lt;/span&gt;&lt;/div&gt;
+              &lt;div class=&quot;leaderboard-main-finale-stat&quot;&gt;&lt;span class=&quot;leaderboard-main-finale-stat-icon&quot; aria-hidden=&quot;true&quot;&gt;🐾&lt;/span&gt;&lt;span&gt;&lt;small&gt;Забеги&lt;/small&gt;&lt;strong data-leaderboard-main-finale-runs&gt;0&lt;/strong&gt;&lt;/span&gt;&lt;/div&gt;
+              &lt;div class=&quot;leaderboard-main-finale-stat&quot;&gt;&lt;span class=&quot;leaderboard-main-finale-stat-icon&quot; aria-hidden=&quot;true&quot;&gt;✦&lt;/span&gt;&lt;span&gt;&lt;small&gt;Достижения&lt;/small&gt;&lt;strong data-leaderboard-main-finale-achievement&gt;0&lt;/strong&gt;&lt;/span&gt;&lt;/div&gt;
+            &lt;/div&gt;
+            &lt;div class=&quot;leaderboard-main-finale-reward&quot; data-leaderboard-main-finale-reward hidden&gt;
+              &lt;div class=&quot;leaderboard-main-finale-reward-head&quot;&gt;
+                &lt;small&gt;Награда сезона&lt;/small&gt;
+                &lt;strong&gt;Что закреплено за тобой&lt;/strong&gt;
+                &lt;span data-leaderboard-main-finale-reward-copy&gt;Сезонная награда закреплена по итогам рейтинга.&lt;/span&gt;
+              &lt;/div&gt;
+              &lt;div data-leaderboard-main-finale-reward-visual&gt;&lt;/div&gt;
+            &lt;/div&gt;
+            &lt;div class=&quot;leaderboard-main-finale-next&quot; data-leaderboard-main-finale-next hidden&gt;
+              &lt;div class=&quot;leaderboard-main-finale-next-head&quot;&gt;
+                &lt;small&gt;Следующий сезон&lt;/small&gt;
+                &lt;strong data-leaderboard-main-finale-next-title&gt;Что дальше?&lt;/strong&gt;
+                &lt;span data-leaderboard-main-finale-next-copy&gt;Новый сезон уже готовится.&lt;/span&gt;
+              &lt;/div&gt;
+              &lt;span class=&quot;leaderboard-main-finale-next-date&quot; data-leaderboard-main-finale-next-date hidden&gt;&lt;/span&gt;
+            &lt;/div&gt;
+            &lt;div class=&quot;leaderboard-main-finale-actions&quot;&gt;
+              &lt;button class=&quot;leaderboard-main-finale-action is-secondary&quot; data-leaderboard-main-finale-close type=&quot;button&quot;&gt;Позже&lt;/button&gt;
+              &lt;button class=&quot;leaderboard-main-finale-action is-primary&quot; data-leaderboard-main-finale-open type=&quot;button&quot;&gt;Открыть рейтинг&lt;/button&gt;
+            &lt;/div&gt;
+          &lt;/section&gt;
+        `;
+        root.appendChild(layer);
+        leaderboardMainFinaleLayer = layer;
+        leaderboardMainFinaleTitleEl = layer.querySelector(&quot;[data-leaderboard-main-finale-title]&quot;);
+        leaderboardMainFinaleSubtitleEl = layer.querySelector(&quot;[data-leaderboard-main-finale-subtitle]&quot;);
+        leaderboardMainFinalePlaceEl = layer.querySelector(&quot;[data-leaderboard-main-finale-place]&quot;);
+        leaderboardMainFinaleScoreEl = layer.querySelector(&quot;[data-leaderboard-main-finale-score]&quot;);
+        leaderboardMainFinaleRunsEl = layer.querySelector(&quot;[data-leaderboard-main-finale-runs]&quot;);
+        leaderboardMainFinaleAchievementEl = layer.querySelector(&quot;[data-leaderboard-main-finale-achievement]&quot;);
+        leaderboardMainFinaleRewardEl = layer.querySelector(&quot;[data-leaderboard-main-finale-reward]&quot;);
+        leaderboardMainFinaleRewardCopyEl = layer.querySelector(&quot;[data-leaderboard-main-finale-reward-copy]&quot;);
+        leaderboardMainFinaleRewardVisualEl = layer.querySelector(&quot;[data-leaderboard-main-finale-reward-visual]&quot;);
+        leaderboardMainFinaleNextEl = layer.querySelector(&quot;[data-leaderboard-main-finale-next]&quot;);
+        leaderboardMainFinaleNextTitleEl = layer.querySelector(&quot;[data-leaderboard-main-finale-next-title]&quot;);
+        leaderboardMainFinaleNextCopyEl = layer.querySelector(&quot;[data-leaderboard-main-finale-next-copy]&quot;);
+        leaderboardMainFinaleNextDateEl = layer.querySelector(&quot;[data-leaderboard-main-finale-next-date]&quot;);
+        leaderboardMainFinaleArtEl = layer.querySelector(&quot;[data-leaderboard-main-finale-art]&quot;);
+        layer.querySelectorAll(&quot;[data-leaderboard-main-finale-close]&quot;).forEach((button) =&gt; {
+          button.addEventListener(&quot;click&quot;, () =&gt; closeLeaderboardMainFinale());
+        });
+        layer.querySelector(&quot;[data-leaderboard-main-finale-open]&quot;)?.addEventListener(&quot;click&quot;, () =&gt; {
+          closeLeaderboardMainFinale();
+          openLeaderboard();
+        });
+        return layer;
+      }
+
+      function openLeaderboardMainFinale(sourceData = leaderboardSeasonSummaryData()) {
+        const layer = ensureLeaderboardMainFinaleUi();
+        const info = leaderboardMainFinaleData(sourceData);
+        if (!layer || !info) return false;
+        if (leaderboardMainFinaleArtEl) {
+          leaderboardMainFinaleArtEl.src = &quot;/assets/ui/icon_itog_reiting_season.webp&quot;;
+          leaderboardMainFinaleArtEl.alt = &quot;&quot;;
+        }
+        if (leaderboardMainFinaleTitleEl) leaderboardMainFinaleTitleEl.textContent = info.title;
+        if (leaderboardMainFinaleSubtitleEl) leaderboardMainFinaleSubtitleEl.textContent = info.subtitle;
+        if (leaderboardMainFinalePlaceEl) leaderboardMainFinalePlaceEl.textContent = info.place &gt; 0 ? `#${formatter.format(info.place)}` : &quot;—&quot;;
+        if (leaderboardMainFinaleScoreEl) leaderboardMainFinaleScoreEl.textContent = formatter.format(info.score || 0);
+        if (leaderboardMainFinaleRunsEl) leaderboardMainFinaleRunsEl.textContent = formatter.format(info.completedRuns || 0);
+        if (leaderboardMainFinaleAchievementEl) leaderboardMainFinaleAchievementEl.textContent = formatter.format(info.achievementPoints || 0);
+        if (leaderboardMainFinaleRewardEl) {
+          const hasReward = !!info.reward;
+          leaderboardMainFinaleRewardEl.hidden = !hasReward;
+          if (hasReward) {
+            if (leaderboardMainFinaleRewardCopyEl) {
+              const rewardPlace = Math.max(0, Number(info.reward?.place || info.place || 0));
+              leaderboardMainFinaleRewardCopyEl.textContent = rewardPlace &gt; 0
+                ? `Награда закреплена за итоговое место #${rewardPlace}.`
+                : &quot;Сезонная награда закреплена по итогам рейтинга.&quot;;
+            }
+            if (leaderboardMainFinaleRewardVisualEl) leaderboardMainFinaleRewardVisualEl.innerHTML = leaderboardRewardMarkup(info.reward);
+          } else if (leaderboardMainFinaleRewardVisualEl) {
+            leaderboardMainFinaleRewardVisualEl.innerHTML = &quot;&quot;;
+          }
+        }
+        if (leaderboardMainFinaleNextEl) {
+          const nextTitle = String(info.nextSeason?.title || info.nextSeason?.name || &quot;&quot;).trim();
+          const nextCopy = String(info.nextSeason?.previewText || info.nextSeason?.description || &quot;&quot;).trim();
+          const nextStartsAt = Number(info.nextSeason?.startsAt || 0);
+          const hasNext = Boolean(nextTitle || nextCopy || nextStartsAt);
+          leaderboardMainFinaleNextEl.hidden = !hasNext;
+          if (hasNext) {
+            if (leaderboardMainFinaleNextTitleEl) leaderboardMainFinaleNextTitleEl.textContent = nextTitle ? `Дальше: ${nextTitle}` : &quot;Что дальше?&quot;;
+            if (leaderboardMainFinaleNextCopyEl) leaderboardMainFinaleNextCopyEl.textContent = nextCopy || &quot;Следующий сезон уже готовится.&quot;;
+            if (leaderboardMainFinaleNextDateEl) {
+              leaderboardMainFinaleNextDateEl.hidden = !nextStartsAt;
+              leaderboardMainFinaleNextDateEl.textContent = nextStartsAt ? `Старт: ${leaderboardDate(nextStartsAt)}` : &quot;&quot;;
+            }
+          } else if (leaderboardMainFinaleNextDateEl) {
+            leaderboardMainFinaleNextDateEl.hidden = true;
+            leaderboardMainFinaleNextDateEl.textContent = &quot;&quot;;
+          }
+        }
+        leaderboardMainFinaleLayer.hidden = false;
+        leaderboardMainFinaleLayer.setAttribute(&quot;aria-hidden&quot;, &quot;false&quot;);
+        document.body.style.overflow = &quot;hidden&quot;;
+        return true;
+      }
+
+      function closeLeaderboardMainFinale() {
+        if (!leaderboardMainFinaleLayer) return;
+        leaderboardMainFinaleLayer.hidden = true;
+        leaderboardMainFinaleLayer.setAttribute(&quot;aria-hidden&quot;, &quot;true&quot;);
+        document.body.style.overflow = &quot;&quot;;
+      }
+
+      function leaderboardMainFinaleBlocked() {
+        return Boolean(
+          (releaseLayer &amp;&amp; !releaseLayer.hidden)
+          || (purchaseLayer &amp;&amp; !purchaseLayer.hidden)
+          || (caseLayer &amp;&amp; !caseLayer.hidden)
+          || (tutorialLayer &amp;&amp; !tutorialLayer.hidden)
+          || (playerMailLayerEl &amp;&amp; !playerMailLayerEl.hidden)
+          || (supportLayer &amp;&amp; !supportLayer.hidden)
+          || (state.running &amp;&amp; !state.over)
+        );
+      }
+
+      function maybeAutoShowLeaderboardMainFinale(sourceData = leaderboardSeasonSummaryData()) {
+        const info = leaderboardMainFinaleData(sourceData);
+        if (!info) return;
+        ensureLeaderboardMainFinaleUi();
+        if (!leaderboardMainFinaleLayer || !leaderboardMainFinaleLayer.hidden) return;
+        const key = leaderboardRatingFinaleSeenKey(info.season);
+        try {
+          if (localStorage.getItem(key) === &quot;1&quot;) return;
+        } catch (error) {}
+        if (leaderboardMainFinaleBlocked()) {
+          window.clearTimeout(leaderboardMainFinaleAutoTimer);
+          leaderboardMainFinaleAutoTimer = window.setTimeout(() =&gt; maybeAutoShowLeaderboardMainFinale(sourceData), 900);
+          return;
+        }
+        try { localStorage.setItem(key, &quot;1&quot;); } catch (error) {}
+        window.clearTimeout(leaderboardMainFinaleAutoTimer);
+        leaderboardMainFinaleAutoTimer = window.setTimeout(() =&gt; {
+          if (leaderboardMainFinaleLayer?.hidden) openLeaderboardMainFinale(sourceData);
+        }, 260);
+      }
+
       async function refreshLeaderboard(force = false, mode = leaderboardMode, activate = true) {
         const requestedMode = mode === &quot;all_time&quot; ? &quot;all_time&quot; : &quot;season&quot;;
         const initData = String(telegramProfile?.initData || &quot;&quot;);
@@ -26444,7 +26724,10 @@ function createTutorialDeck(layer, mount, options, words) {
         const cached = leaderboardCache[requestedMode];
         if (cached) {
           if (cached._uiStale) setProfileStaleUpdating(`leaderboard-${requestedMode}`, true);
-          if (requestedMode === &quot;season&quot;) renderLeaderboardSummary();
+          if (requestedMode === &quot;season&quot;) {
+            renderLeaderboardSummary();
+            window.setTimeout(() =&gt; maybeAutoShowLeaderboardMainFinale(cached), 120);
+          }
           if (requestedMode === leaderboardMode) leaderboardData = cached;
         }
         if (!initData) {
@@ -26469,7 +26752,10 @@ function createTutorialDeck(layer, mount, options, words) {
             setProfileStaleUpdating(`leaderboard-${requestedMode}`, false);
             leaderboardLastRefreshAt = Date.now();
             applyLeaderboardResetPlan(loaded?.season?.resetPlan, loaded?.serverTime);
-            if (requestedMode === &quot;season&quot;) renderLeaderboardSummary();
+            if (requestedMode === &quot;season&quot;) {
+              renderLeaderboardSummary();
+              window.setTimeout(() =&gt; maybeAutoShowLeaderboardMainFinale(loaded), 120);
+            }
             if (requestedMode === leaderboardMode) leaderboardData = loaded;
             return loaded;
           } catch (error) {
