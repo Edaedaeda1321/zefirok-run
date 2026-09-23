@@ -15007,7 +15007,12 @@ function installProgressInfo(){
           title: String(row.title || id).trim().slice(0, 100) || id,
           skinId: Object.prototype.hasOwnProperty.call(GAMEPLAY_SKIN_SPRITES, primary) ? primary : &quot;alex&quot;,
           fallbackSkinId: fallbackRaw === &quot;__hide__&quot; ? &quot;__hide__&quot; : (Object.prototype.hasOwnProperty.call(GAMEPLAY_SKIN_SPRITES, fallbackRaw) ? fallbackRaw : &quot;default&quot;),
+          passLevelFrom: Math.max(1, Math.min(50, Math.floor(Number(row.passLevelFrom) || 1))),
+          passLevelTo: Math.max(0, Math.min(50, Math.floor(Number(row.passLevelTo) || 0))),
+          storyChapterFrom: Math.max(1, Math.min(50, Math.floor(Number(row.storyChapterFrom) || 1))),
+          storyChapterTo: Math.max(0, Math.min(50, Math.floor(Number(row.storyChapterTo) || 0))),
           startAfterSec: Math.max(0, Math.min(600, Number(row.startAfterSec) || 0)),
+          startAfterScore: Math.max(0, Math.min(10000000, Math.floor(Number(row.startAfterScore) || 0))),
           durationSec: Math.max(1.5, Math.min(20, Number(row.durationSec) || 5)),
           chancePct: Math.max(0, Math.min(100, Number(row.chancePct ?? 100))),
           sizeScale: Math.max(0.6, Math.min(1.4, Number(row.sizeScale) || 1)),
@@ -19442,7 +19447,9 @@ function createTutorialDeck(layer, mount, options, words) {
         const started = new Set((state.runnerNpcStartedIds || []).map(String));
         for (const config of configs) {
           const id = String(config?.id || &quot;&quot;);
-          if (!id || started.has(id) || state.time + 0.0001 &lt; Math.max(0, Number(config?.startAfterSec) || 0)) continue;
+          const startAfterSec = Math.max(0, Number(config?.startAfterSec) || 0);
+          const startAfterScore = Math.max(0, Math.floor(Number(config?.startAfterScore) || 0));
+          if (!id || started.has(id) || state.time + 0.0001 &lt; startAfterSec || (startAfterScore &gt; 0 &amp;&amp; Math.max(0, Number(state.score) || 0) &lt; startAfterScore)) continue;
           started.add(id);
           state.runnerNpcStartedIds = [...started];
           spawnRunnerNpc(config);

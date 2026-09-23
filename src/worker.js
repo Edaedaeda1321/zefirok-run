@@ -40711,7 +40711,12 @@ function normalizeRunnerBuilderConfig(raw){
           enabled:runnerBuilderBool(rawRow?.enabled,true),
           skinId,
           fallbackSkinId,
+          passLevelFrom:Math.round(runnerBuilderNum(rawRow?.passLevelFrom,1,50,1)),
+          passLevelTo:Math.round(runnerBuilderNum(rawRow?.passLevelTo,0,50,0)),
+          storyChapterFrom:Math.round(runnerBuilderNum(rawRow?.storyChapterFrom,1,50,1)),
+          storyChapterTo:Math.round(runnerBuilderNum(rawRow?.storyChapterTo,0,50,0)),
           startAfterSec:Number(runnerBuilderNum(rawRow?.startAfterSec,0,600,8).toFixed(2)),
+          startAfterScore:Math.round(runnerBuilderNum(rawRow?.startAfterScore,0,10000000,0)),
           durationSec:Number(runnerBuilderNum(rawRow?.durationSec,1.5,20,5).toFixed(2)),
           chancePct:Math.round(runnerBuilderNum(rawRow?.chancePct,0,100,100)),
           sizeScale:Number(runnerBuilderNum(rawRow?.sizeScale,.6,1.4,1).toFixed(2)),
@@ -40736,13 +40741,25 @@ function runnerBuilderValidateConfig(config){
   const backgroundIds=new Set(config.backgrounds.filter(x=>x.enabled).map(x=>x.id)),enabledSceneIds=new Set(config.scenes.filter(x=>x.enabled).map(x=>x.id));
   for(const scene of config.scenes.filter(x=>x.enabled)){if(!backgroundIds.has(scene.backgroundId))throw new ApiError(400,`Сцена «${scene.title}»: выбран выключенный или отсутствующий фон.`);if(!runnerBuilderScenePool(config,scene).length)throw new ApiError(400,`Сцена «${scene.title}»: нет ни одного активного препятствия.`);}
   for(const [seasonId,variant] of Object.entries(config.seasonVariants||{})){for(const row of variant.variants||[])if(!enabledSceneIds.has(String(row.sceneId||'')))throw new ApiError(400,`Сезон ${seasonId}: вариант с порога ${row.threshold} ссылается на выключенную сцену.`);}
-  for(const [seasonId,rows] of Object.entries(config.seasonNpcs||{})){if(!String(seasonId||"").trim())throw new ApiError(400,"NPC: не указан сезон.");if(!Array.isArray(rows)||rows.length>RUNNER_BUILDER_MAX_NPCS_PER_SEASON)throw new ApiError(400,`Сезон ${seasonId}: слишком много NPC-событий.`);}
+  for(const [seasonId,rows] of Object.entries(config.seasonNpcs||{})){
+    if(!String(seasonId||"").trim())throw new ApiError(400,"NPC: не указан сезон.");
+    if(!Array.isArray(rows)||rows.length>RUNNER_BUILDER_MAX_NPCS_PER_SEASON)throw new ApiError(400,`Сезон ${seasonId}: слишком много NPC-событий.`);
+    for(const npc of rows){
+      if(Number(npc.passLevelTo||0)>0&&Number(npc.passLevelTo)<Number(npc.passLevelFrom||1))throw new ApiError(400,`NPC «${npc.title||npc.id}»: конечный уровень пропуска не может быть ниже начального.`);
+      if(Number(npc.storyChapterTo||0)>0&&Number(npc.storyChapterTo)<Number(npc.storyChapterFrom||1))throw new ApiError(400,`NPC «${npc.title||npc.id}»: конечная сюжетная глава не может быть ниже начальной.`);
+    }
+  }
   if(!config.scenes.some(x=>x.id===config.defaultSceneId&&x.enabled))throw new ApiError(400,"Основная сцена должна быть включена.");
 }
 function runnerBuilderFallbackPublicScene(){return {...runnerBuilderResolvePublicScene(runnerBuilderDefaultConfig(),""),source:"fallback"};}
 function runnerBuilderResolvePublicScene(configInput,seasonId="",context={}){
-  const config=normalizeRunnerBuilderConfig(configInput),seasonKey=String(seasonId||''),variant=config.seasonVariants?.[seasonKey]||null,variantValue=variant?.mode==='chapter'?Math.max(1,Math.floor(Number(context?.chapter)||1)):Math.max(1,Math.min(50,Math.floor(Number(context?.level)||1))),matchedVariant=variant&&Array.isArray(variant.variants)?variant.variants.filter(row=>Number(row.threshold)<=variantValue).sort((a,b)=>Number(b.threshold)-Number(a.threshold))[0]:null,boundId=matchedVariant?String(matchedVariant.sceneId||''):(seasonId?String(config.seasonBindings?.[seasonKey]||""):""),requested=config.scenes.find(x=>x.id===boundId&&x.enabled)||config.scenes.find(x=>x.id===config.defaultSceneId&&x.enabled)||config.scenes.find(x=>x.enabled)||config.scenes[0],fallback=runnerBuilderDefaultConfig();
-  const npcs=(Array.isArray(config.seasonNpcs?.[seasonKey])?config.seasonNpcs[seasonKey]:[]).filter(item=>item?.enabled!==false).map(item=>({id:item.id,title:item.title,skinId:item.skinId,fallbackSkinId:item.fallbackSkinId,startAfterSec:Number(item.startAfterSec||0),durationSec:Number(item.durationSec||5),chancePct:Number(item.chancePct??100),sizeScale:Number(item.sizeScale||1),jumpObstacles:item.jumpObstacles!==false,jumpLeadPx:Number(item.jumpLeadPx||105)}));
+  const config=normalizeRunnerBuilderConfig(configInput),seasonKey=String(seasonId||''),contextLevel=Math.max(1,Math.min(50,Math.floor(Number(context?.level)||1))),contextChapter=Math.max(1,Math.min(50,Math.floor(Number(context?.chapter)||1))),includeAllNpcs=context?.includeAllNpcs===true,variant=config.seasonVariants?.[seasonKey]||null,variantValue=variant?.mode==='chapter'?contextChapter:contextLevel,matchedVariant=variant&&Array.isArray(variant.variants)?variant.variants.filter(row=>Number(row.threshold)<=variantValue).sort((a,b)=>Number(b.threshold)-Number(a.threshold))[0]:null,boundId=matchedVariant?String(matchedVariant.sceneId||''):(seasonId?String(config.seasonBindings?.[seasonKey]||""):""),requested=config.scenes.find(x=>x.id===boundId&&x.enabled)||config.scenes.find(x=>x.id===config.defaultSceneId&&x.enabled)||config.scenes.find(x=>x.enabled)||config.scenes[0],fallback=runnerBuilderDefaultConfig();
+  const npcs=(Array.isArray(config.seasonNpcs?.[seasonKey])?config.seasonNpcs[seasonKey]:[]).filter(item=>{
+    if(item?.enabled===false)return false;
+    if(includeAllNpcs)return true;
+    const passFrom=Math.max(1,Number(item?.passLevelFrom)||1),passTo=Math.max(0,Number(item?.passLevelTo)||0),chapterFrom=Math.max(1,Number(item?.storyChapterFrom)||1),chapterTo=Math.max(0,Number(item?.storyChapterTo)||0);
+    return contextLevel>=passFrom&&(passTo===0||contextLevel<=passTo)&&contextChapter>=chapterFrom&&(chapterTo===0||contextChapter<=chapterTo);
+  }).map(item=>({id:item.id,title:item.title,skinId:item.skinId,fallbackSkinId:item.fallbackSkinId,passLevelFrom:Number(item.passLevelFrom||1),passLevelTo:Number(item.passLevelTo||0),storyChapterFrom:Number(item.storyChapterFrom||1),storyChapterTo:Number(item.storyChapterTo||0),startAfterSec:Number(item.startAfterSec||0),startAfterScore:Number(item.startAfterScore||0),durationSec:Number(item.durationSec||5),chancePct:Number(item.chancePct??100),sizeScale:Number(item.sizeScale||1),jumpObstacles:item.jumpObstacles!==false,jumpLeadPx:Number(item.jumpLeadPx||105)}));
   let scene=requested,pool=runnerBuilderScenePool(config,scene);if(!scene||!pool.length){const fallbackConfig=normalizeRunnerBuilderConfig(fallback);scene=fallbackConfig.scenes[0];pool=runnerBuilderScenePool(fallbackConfig,scene);config.backgrounds=fallbackConfig.backgrounds;}
   const background=config.backgrounds.find(x=>x.id===scene.backgroundId&&x.enabled)||config.backgrounds.find(x=>x.enabled)||fallback.backgrounds[0];
   const season2Scene=runnerBuilderSceneLooksSeason2(config,scene);
@@ -40802,7 +40819,7 @@ async function readRunnerScenePublicConfigForPlayer(env,telegramId){
 }
 async function ownerPanelRunnerBuilder(env,ctx){
   await ensureSeasonPassSchema(env);const [config,seasonsResult,activeSeasonId]=await Promise.all([readRunnerBuilderConfig(env,true),env.DB.prepare(`SELECT season_id,title,starts_at,ends_at,manual_status FROM season_pass_seasons ORDER BY starts_at DESC,season_id DESC LIMIT 120`).all(),runnerBuilderActiveSeasonId(env)]);const stateRow=await getSystemState(env,RUNNER_BUILDER_STATE_KEY);
-  return {ok:true,config,revision:config.revision,updatedAt:Number(stateRow?.updatedAt||0),activeSeasonId,seasons:(seasonsResult.results||[]).map(row=>({id:String(row.season_id),title:String(row.title||row.season_id),startsAt:Number(row.starts_at||0),endsAt:Number(row.ends_at||0),status:String(row.manual_status||"scheduled")})),activeScene:runnerBuilderResolvePublicScene(config,activeSeasonId)};
+  return {ok:true,config,revision:config.revision,updatedAt:Number(stateRow?.updatedAt||0),activeSeasonId,seasons:(seasonsResult.results||[]).map(row=>({id:String(row.season_id),title:String(row.title||row.season_id),startsAt:Number(row.starts_at||0),endsAt:Number(row.ends_at||0),status:String(row.manual_status||"scheduled")})),activeScene:runnerBuilderResolvePublicScene(config,activeSeasonId,{includeAllNpcs:true})};
 }
 async function ownerPanelRunnerBuilderSave(env,ctx){
   const current=await readRunnerBuilderConfig(env,true),expected=Math.max(0,Math.floor(Number(ctx.body?.expectedRevision)||0));if(expected&&expected!==Number(current.revision||1))throw new ApiError(409,"Конструктор забега уже изменён в другой вкладке. Обновите раздел перед сохранением.");
@@ -44585,7 +44602,7 @@ async function testProjectCaptureProductionSnapshot(env, requestedSeasonId = "")
   ]);
   const testPublicConfig=testProjectClone(publicConfig);
   if(String(requestedSeasonId||"").trim()){
-    try{testPublicConfig.runnerScene=runnerBuilderResolvePublicScene(await readRunnerBuilderConfig(env),String(requestedSeasonId||"").trim());}
+    try{testPublicConfig.runnerScene=runnerBuilderResolvePublicScene(await readRunnerBuilderConfig(env),String(requestedSeasonId||"").trim(),{includeAllNpcs:true});}
     catch(error){console.error("test project runner scene override fallback",error);}
   }
   const segmentMap = new Map([["all", "Все игроки"], ...Object.entries(PLAYER_SEGMENTS)]);
