@@ -15008,6 +15008,12 @@ function installProgressInfo(){
         const encounterRaw = row.encounterEvent &amp;&amp; typeof row.encounterEvent === &quot;object&quot; ? row.encounterEvent : {};
         const encounterText = String(encounterRaw.text || &quot;&quot;).trim().slice(0, 120);
         const encounterTypeRaw = String(encounterRaw.type || &quot;none&quot;).trim();
+        const encounterDialogue = (Array.isArray(encounterRaw.dialogue) ? encounterRaw.dialogue : []).slice(0, 6).map((line) =&gt; ({
+          speaker: String(line?.speaker || &quot;npc&quot;) === &quot;player&quot; ? &quot;player&quot; : &quot;npc&quot;,
+          text: String(line?.text || &quot;&quot;).trim().slice(0, 120),
+          durationSec: Math.max(1.2, Math.min(4, Number(line?.durationSec) || 2.4))
+        })).filter((line) =&gt; line.text);
+        if (encounterTypeRaw === &quot;speech&quot; &amp;&amp; !encounterDialogue.length &amp;&amp; encounterText) encounterDialogue.push({ speaker: &quot;npc&quot;, text: encounterText, durationSec: 3.15 });
         return {
           id,
           title: String(row.title || id).trim().slice(0, 100) || id,
@@ -15022,8 +15028,9 @@ function installProgressInfo(){
           },
           spawnReaction: [&quot;none&quot;, &quot;alert&quot;, &quot;heart&quot;, &quot;surprise&quot;, &quot;sparkle&quot;, &quot;ellipsis&quot;].includes(reactionRaw) ? reactionRaw : &quot;none&quot;,
           encounterEvent: {
-            type: [&quot;speech&quot;, &quot;banner&quot;].includes(encounterTypeRaw) &amp;&amp; encounterText ? encounterTypeRaw : &quot;none&quot;,
-            text: encounterText
+            type: encounterTypeRaw === &quot;banner&quot; &amp;&amp; encounterText ? &quot;banner&quot; : encounterTypeRaw === &quot;speech&quot; &amp;&amp; encounterDialogue.length ? &quot;speech&quot; : &quot;none&quot;,
+            text: encounterTypeRaw === &quot;speech&quot; ? String(encounterDialogue[0]?.text || encounterText) : encounterText,
+            dialogue: encounterTypeRaw === &quot;speech&quot; ? encounterDialogue : []
           },
           startDistancePx: Math.max(80, Math.min(320, Number(row.startDistancePx) || 160)),
           besideDistancePx: Math.max(100, Math.min(260, Number(row.besideDistancePx) || 130)),
@@ -19453,8 +19460,14 @@ function createTutorialDeck(layer, mount, options, words) {
         const spawnReaction = [&quot;none&quot;, &quot;alert&quot;, &quot;heart&quot;, &quot;surprise&quot;, &quot;sparkle&quot;, &quot;ellipsis&quot;].includes(reactionRaw) ? reactionRaw : &quot;none&quot;;
         const encounterRaw = config?.encounterEvent &amp;&amp; typeof config.encounterEvent === &quot;object&quot; ? config.encounterEvent : {};
         const encounterText = String(encounterRaw.text || &quot;&quot;).trim().slice(0, 120);
+        const encounterDialogue = (Array.isArray(encounterRaw.dialogue) ? encounterRaw.dialogue : []).slice(0, 6).map((line) =&gt; ({
+          speaker: String(line?.speaker || &quot;npc&quot;) === &quot;player&quot; ? &quot;player&quot; : &quot;npc&quot;,
+          text: String(line?.text || &quot;&quot;).trim().slice(0, 120),
+          durationSec: Math.max(1.2, Math.min(4, Number(line?.durationSec) || 2.4))
+        })).filter((line) =&gt; line.text);
+        if (!encounterDialogue.length &amp;&amp; encounterText) encounterDialogue.push({ speaker: &quot;npc&quot;, text: encounterText, durationSec: 3.15 });
         const encounterTypeRaw = String(encounterRaw.type || &quot;none&quot;);
-        const encounterEventType = [&quot;speech&quot;, &quot;banner&quot;].includes(encounterTypeRaw) &amp;&amp; encounterText ? encounterTypeRaw : &quot;none&quot;;
+        const encounterEventType = encounterTypeRaw === &quot;banner&quot; &amp;&amp; encounterText ? &quot;banner&quot; : encounterTypeRaw === &quot;speech&quot; &amp;&amp; encounterDialogue.length ? &quot;speech&quot; : &quot;none&quot;;
         const actor = {
           id: String(config?.id || `npc-${Date.now().toString(36)}`),
           title: String(config?.title || &quot;NPC&quot;),
@@ -19463,9 +19476,11 @@ function createTutorialDeck(layer, mount, options, words) {
           behaviorChain,
           spawnReaction,
           encounterEventType,
-          encounterEventText: encounterText,
+          encounterEventText: encounterEventType === &quot;speech&quot; ? String(encounterDialogue[0]?.text || encounterText) : encounterText,
+          encounterDialogue: encounterEventType === &quot;speech&quot; ? encounterDialogue : [],
           encounterTriggered: false,
           encounterStartedAt: -1,
+          movementElapsed: 0,
           x: startX,
           previousX: startX,
           y: ground.y - height,
@@ -19520,21 +19535,22 @@ function createTutorialDeck(layer, mount, options, words) {
       }
 
       function runnerNpcPositionX(actor) {
+        const movementElapsed = Number.isFinite(Number(actor?.movementElapsed)) ? Number(actor.movementElapsed) : Number(actor?.elapsed || 0);
         if (actor.behaviorChain?.enabled) {
           const approachSec = Math.max(0.5, Number(actor.behaviorChain.approachSec) || 1.5);
           const besideSec = Math.max(0.5, Number(actor.behaviorChain.besideSec) || 3);
           const escapeSec = Math.max(0.5, Number(actor.behaviorChain.escapeSec) || 1.5);
-          if (actor.elapsed &lt; approachSec) {
-            const t = Math.max(0, Math.min(1, actor.elapsed / approachSec));
+          if (movementElapsed &lt; approachSec) {
+            const t = Math.max(0, Math.min(1, movementElapsed / approachSec));
             const eased = 1 - Math.pow(1 - t, 3);
             return actor.startX + (actor.besideX - actor.startX) * eased;
           }
-          if (actor.elapsed &lt; approachSec + besideSec) return actor.besideX;
-          const t = Math.max(0, Math.min(1, (actor.elapsed - approachSec - besideSec) / escapeSec));
+          if (movementElapsed &lt; approachSec + besideSec) return actor.besideX;
+          const t = Math.max(0, Math.min(1, (movementElapsed - approachSec - besideSec) / escapeSec));
           const eased = t * t;
           return actor.besideX + (actor.finishX - actor.besideX) * eased;
         }
-        const progress = Math.max(0, Math.min(1, actor.elapsed / Math.max(0.001, actor.duration)));
+        const progress = Math.max(0, Math.min(1, movementElapsed / Math.max(0.001, actor.duration)));
         if (actor.behaviorType === &quot;beside&quot;) {
           const approachEnd = 0.28;
           const exitStart = 0.8;
@@ -19555,18 +19571,44 @@ function createTutorialDeck(layer, mount, options, words) {
         return actor.startX + (actor.finishX - actor.startX) * progress;
       }
 
+      function runnerNpcDialogueDuration(actor) {
+        if (actor?.encounterEventType !== &quot;speech&quot;) return 3.15;
+        const rows = Array.isArray(actor?.encounterDialogue) ? actor.encounterDialogue : [];
+        if (!rows.length) return 3.15;
+        return rows.reduce((sum, line) =&gt; sum + Math.max(1.2, Math.min(4, Number(line?.durationSec) || 2.4)), 0);
+      }
+
+      function runnerNpcCurrentDialogueLine(actor, age) {
+        const rows = Array.isArray(actor?.encounterDialogue) ? actor.encounterDialogue : [];
+        if (!rows.length) return null;
+        let cursor = 0;
+        for (let index = 0; index &lt; rows.length; index += 1) {
+          const durationSec = Math.max(1.2, Math.min(4, Number(rows[index]?.durationSec) || 2.4));
+          if (age &lt; cursor + durationSec || index === rows.length - 1) return { ...rows[index], index, lineAge: Math.max(0, age - cursor), durationSec };
+          cursor += durationSec;
+        }
+        return null;
+      }
+
+      function runnerNpcDialogueHoldsMovement(actor) {
+        if (!actor?.encounterTriggered || actor.encounterEventType !== &quot;speech&quot; || !Array.isArray(actor.encounterDialogue) || actor.encounterDialogue.length &lt; 2) return false;
+        const age = Number(actor.elapsed || 0) - Number(actor.encounterStartedAt || 0);
+        return age &gt;= 0 &amp;&amp; age &lt; runnerNpcDialogueDuration(actor);
+      }
+
       function runnerNpcMaybeTriggerEncounter(actor) {
         if (!actor || actor.encounterTriggered || actor.encounterEventType === &quot;none&quot; || !actor.encounterEventText) return;
         const npcCenter = actor.x + actor.w * 0.5;
         const dogCenter = dog.x + dog.w * 0.5;
         const immediateAhead = !actor.behaviorChain?.enabled &amp;&amp; actor.behaviorType === &quot;ahead_escape&quot; &amp;&amp; actor.elapsed &gt;= 0.08;
         const reachedBeside = (actor.behaviorChain?.enabled || actor.behaviorType === &quot;beside&quot;) &amp;&amp; actor.x &gt;= actor.besideX - 8;
-        const caughtPlayer = actor.behaviorType === &quot;overtake&quot; &amp;&amp; npcCenter &gt;= dogCenter;
+        const multiDialogue = actor.encounterEventType === &quot;speech&quot; &amp;&amp; Array.isArray(actor.encounterDialogue) &amp;&amp; actor.encounterDialogue.length &gt; 1;
+        const caughtPlayer = actor.behaviorType === &quot;overtake&quot; &amp;&amp; (multiDialogue ? actor.x &gt;= actor.besideX - 8 : npcCenter &gt;= dogCenter);
         if (!immediateAhead &amp;&amp; !reachedBeside &amp;&amp; !caughtPlayer) return;
         actor.encounterTriggered = true;
         actor.encounterStartedAt = actor.elapsed;
         try {
-          window.dispatchEvent(new CustomEvent(&quot;sweet-run:npc-encounter&quot;, { detail: { id:actor.id, title:actor.title, skinId:actor.skinId, type:actor.encounterEventType, text:actor.encounterEventText } }));
+          window.dispatchEvent(new CustomEvent(&quot;sweet-run:npc-encounter&quot;, { detail: { id:actor.id, title:actor.title, skinId:actor.skinId, type:actor.encounterEventType, text:actor.encounterEventText, dialogue:Array.isArray(actor.encounterDialogue)?actor.encounterDialogue:[] } }));
         } catch {}
       }
 
@@ -19575,6 +19617,7 @@ function createTutorialDeck(layer, mount, options, words) {
         const actors = state.runnerNpcActors || [];
         for (const actor of actors) {
           actor.elapsed += dt;
+          if (!runnerNpcDialogueHoldsMovement(actor)) actor.movementElapsed = Math.max(0, Number(actor.movementElapsed || 0)) + dt;
           actor.x = runnerNpcPositionX(actor);
           runnerNpcMaybeTriggerEncounter(actor);
           actor.animationClock += dt * Math.max(9, currentRunCycleFps(state.speed) * 1.18);
@@ -19593,7 +19636,7 @@ function createTutorialDeck(layer, mount, options, words) {
             actor.grounded = true;
           }
         }
-        compactArrayInPlace(actors, (actor) =&gt; actor.elapsed &lt;= actor.duration + 0.15 &amp;&amp; actor.x &lt; actor.finishX + actor.w);
+        compactArrayInPlace(actors, (actor) =&gt; Number(actor.movementElapsed || 0) &lt;= actor.duration + 0.15 &amp;&amp; actor.x &lt; actor.finishX + actor.w);
       }
 
       function runnerNpcReactionSymbol(type) {
@@ -19651,13 +19694,13 @@ function createTutorialDeck(layer, mount, options, words) {
       function drawRunnerNpcEncounter(actor, x, y) {
         if (!actor.encounterTriggered || actor.encounterStartedAt &lt; 0 || actor.encounterEventType === &quot;none&quot; || !actor.encounterEventText) return;
         const age = actor.elapsed - actor.encounterStartedAt;
-        const visibleFor = 3.15;
+        const visibleFor = actor.encounterEventType === &quot;speech&quot; ? runnerNpcDialogueDuration(actor) : 3.15;
         if (age &lt; 0 || age &gt; visibleFor) return;
-        const fade = age &gt; visibleFor - 0.45 ? Math.max(0, (visibleFor - age) / 0.45) : Math.min(1, age / 0.16);
         ctx.save();
-        ctx.globalAlpha = 0.98 * fade;
         ctx.textBaseline = &quot;middle&quot;;
         if (actor.encounterEventType === &quot;banner&quot;) {
+          const fade = age &gt; visibleFor - 0.45 ? Math.max(0, (visibleFor - age) / 0.45) : Math.min(1, age / 0.16);
+          ctx.globalAlpha = 0.98 * fade;
           const maxWidth = Math.min(300, Math.max(210, canvasViewWidth - 36));
           ctx.font = '700 12px -apple-system,BlinkMacSystemFont,&quot;Segoe UI&quot;,sans-serif';
           const lines = runnerNpcCanvasLines(actor.encounterEventText, maxWidth - 28, 2);
@@ -19676,18 +19719,26 @@ function createTutorialDeck(layer, mount, options, words) {
           ctx.restore();
           return;
         }
+        const activeLine = runnerNpcCurrentDialogueLine(actor, age) || { speaker:&quot;npc&quot;, text:actor.encounterEventText, lineAge:age, durationSec:visibleFor };
+        const lineFade = activeLine.lineAge &gt; activeLine.durationSec - 0.32 ? Math.max(0, (activeLine.durationSec - activeLine.lineAge) / 0.32) : Math.min(1, activeLine.lineAge / 0.12);
+        ctx.globalAlpha = 0.98 * lineFade;
         const maxWidth = Math.min(190, Math.max(140, canvasViewWidth * 0.46));
         ctx.font = '700 11.5px -apple-system,BlinkMacSystemFont,&quot;Segoe UI&quot;,sans-serif';
-        const lines = runnerNpcCanvasLines(actor.encounterEventText, maxWidth - 22, 3);
+        const lines = runnerNpcCanvasLines(activeLine.text, maxWidth - 22, 3);
         const measured = Math.max(...lines.map(line =&gt; ctx.measureText(line).width), 82);
         const boxWidth = Math.min(maxWidth, measured + 22);
         const boxHeight = 18 + Math.max(1, lines.length) * 15;
-        const anchorX = x + actor.w * 0.55;
+        const playerSpeaker = activeLine.speaker === &quot;player&quot;;
+        const playerY = simulationRenderValue(dog.previousY, dog.y) + DOG_VISUAL_GROUND_OFFSET;
+        const anchorX = playerSpeaker ? dog.x + dog.w * 0.52 : x + actor.w * 0.55;
+        const anchorY = playerSpeaker ? playerY : y;
         const boxX = Math.max(8, Math.min(canvasViewWidth - boxWidth - 8, anchorX - boxWidth * 0.5));
-        const boxY = Math.max(12, y - boxHeight - 24);
+        const boxY = Math.max(12, anchorY - boxHeight - 24);
         ctx.lineWidth = 1.2;
-        roundRect(boxX, boxY, boxWidth, boxHeight, 13, true, true, &quot;rgba(255,252,253,.98)&quot;, &quot;rgba(226,154,182,.88)&quot;);
-        ctx.fillStyle = &quot;rgba(255,252,253,.98)&quot;;
+        const bubbleFill = playerSpeaker ? &quot;rgba(255,250,239,.98)&quot; : &quot;rgba(255,252,253,.98)&quot;;
+        const bubbleStroke = playerSpeaker ? &quot;rgba(220,176,91,.90)&quot; : &quot;rgba(226,154,182,.88)&quot;;
+        roundRect(boxX, boxY, boxWidth, boxHeight, 13, true, true, bubbleFill, bubbleStroke);
+        ctx.fillStyle = bubbleFill;
         ctx.beginPath();
         const tailX = Math.max(boxX + 18, Math.min(boxX + boxWidth - 18, anchorX));
         ctx.moveTo(tailX - 6, boxY + boxHeight - 1);
