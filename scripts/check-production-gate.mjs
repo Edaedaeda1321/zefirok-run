@@ -63,6 +63,7 @@ const steps = [
   ['worker syntax', 'node', ['--check', 'src/worker.js']],
   ['worker strict module syntax', 'node', ['--no-warnings', '--experimental-vm-modules', 'scripts/check-worker-module-syntax.mjs']],
   ['index srcdoc integrity', 'node', ['scripts/check-index-srcdoc.mjs']],
+  ['progress info stability', 'node', ['scripts/check-progress-info-stability.mjs']],
   // Protect the exact regression that previously made rating/profile reads hang:
   // public leaderboard reads must remain read-only and first paint must stay lazy.
   ['rating fast reads', 'node', ['scripts/check-rating-fast-read.mjs']],
