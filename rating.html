@@ -9827,6 +9827,69 @@ body { min-height: var(--zefirok-app-height, 100dvh); }
 @media(max-width:520px){#zefirok-maltipoo-runner .rating-v6-season-finale-inline{align-items:flex-start;flex-direction:column}#zefirok-maltipoo-runner .rating-v6-season-finale-inline button{width:100%}#zefirok-maltipoo-runner .rating-season-finale-actions{grid-template-columns:1fr}#zefirok-maltipoo-runner .rating-season-finale-stats{grid-template-columns:1fr 1fr}}
 
 </style>
+
+<style id="rating-level-rework-20260924">
+#zefirok-maltipoo-runner .leaderboard-level-badge,
+#zefirok-maltipoo-runner .rating-level-chip{position:relative;overflow:hidden;isolation:isolate}
+#zefirok-maltipoo-runner .leaderboard-level-badge{right:-7px;bottom:-6px;min-width:25px;padding-inline:7px;border:2px solid rgba(255,255,255,.97);border-radius:999px;background:linear-gradient(145deg,#fdf8f5,#ddd4d2);color:#6f625c;box-shadow:0 5px 12px rgba(83,63,57,.18),inset 0 1px 0 rgba(255,255,255,.85);font:950 9px/1 var(--font-sans);letter-spacing:.01em}
+#zefirok-maltipoo-runner .leaderboard-avatar-frame.is-compact .leaderboard-level-badge{right:-6px;bottom:-6px;min-width:22px;height:22px;padding-inline:6px;font-size:7.5px}
+#zefirok-maltipoo-runner .leaderboard-level-badge::before,
+#zefirok-maltipoo-runner .leaderboard-level-badge::after,
+#zefirok-maltipoo-runner .rating-level-chip::before,
+#zefirok-maltipoo-runner .rating-level-chip::after{content:"";position:absolute;pointer-events:none}
+#zefirok-maltipoo-runner .leaderboard-level-badge::before,
+#zefirok-maltipoo-runner .rating-level-chip::before{inset:-32% auto -32% -58%;width:58%;background:linear-gradient(90deg,rgba(255,255,255,0),rgba(255,255,255,.72),rgba(255,255,255,0));transform:rotate(18deg) translateX(-160%);opacity:0}
+#zefirok-maltipoo-runner .leaderboard-level-badge::after,
+#zefirok-maltipoo-runner .rating-level-chip::after{top:-5px;right:4px;width:14px;height:14px;background:radial-gradient(circle,rgba(255,255,255,.86) 0 17%,rgba(255,255,255,0) 18% 100%);opacity:0;transform:scale(.75)}
+#zefirok-maltipoo-runner .leaderboard-level-badge[data-level-band="1"],
+#zefirok-maltipoo-runner .rating-level-chip[data-level-band="1"]{background:linear-gradient(145deg,#fff7fb,#eddce7);color:#8b6677;box-shadow:0 4px 10px rgba(149,109,128,.14),inset 0 1px 0 rgba(255,255,255,.86)}
+#zefirok-maltipoo-runner .leaderboard-level-badge[data-level-band="10"],
+#zefirok-maltipoo-runner .rating-level-chip[data-level-band="10"]{background:linear-gradient(145deg,#fff7eb,#ffcf90);color:#9d5b09;box-shadow:0 4px 12px rgba(191,132,39,.22),inset 0 1px 0 rgba(255,255,255,.86)}
+#zefirok-maltipoo-runner .leaderboard-level-badge[data-level-band="20"],
+#zefirok-maltipoo-runner .rating-level-chip[data-level-band="20"]{background:linear-gradient(145deg,#e7fff6,#97deca);color:#2b735d;box-shadow:0 4px 12px rgba(73,145,121,.18),inset 0 1px 0 rgba(255,255,255,.84)}
+#zefirok-maltipoo-runner .leaderboard-level-badge[data-level-band="30"],
+#zefirok-maltipoo-runner .rating-level-chip[data-level-band="30"]{background:linear-gradient(145deg,#fff0f7,#f4abc9);color:#9e3f67;box-shadow:0 4px 12px rgba(193,96,137,.18),inset 0 1px 0 rgba(255,255,255,.84)}
+#zefirok-maltipoo-runner .leaderboard-level-badge[data-level-band="40"],
+#zefirok-maltipoo-runner .rating-level-chip[data-level-band="40"]{background:linear-gradient(145deg,#f7edff,#ccb0f1);color:#634189;box-shadow:0 5px 14px rgba(112,83,173,.22),inset 0 1px 0 rgba(255,255,255,.84)}
+#zefirok-maltipoo-runner .leaderboard-level-badge[data-level-band="50"],
+#zefirok-maltipoo-runner .rating-level-chip[data-level-band="50"]{background:linear-gradient(145deg,#fff9d8,#f4bd3b 62%,#d89418);color:#7a4f05;border-color:#fff9ea;box-shadow:0 0 0 1px rgba(219,163,41,.76),0 8px 18px rgba(193,136,24,.30),inset 0 1px 0 rgba(255,255,255,.9)}
+#zefirok-maltipoo-runner .leaderboard-level-badge[data-level-band="10"]::before,
+#zefirok-maltipoo-runner .rating-level-chip[data-level-band="10"]::before,
+#zefirok-maltipoo-runner .leaderboard-level-badge[data-level-band="20"]::before,
+#zefirok-maltipoo-runner .rating-level-chip[data-level-band="20"]::before,
+#zefirok-maltipoo-runner .leaderboard-level-badge[data-level-band="30"]::before,
+#zefirok-maltipoo-runner .rating-level-chip[data-level-band="30"]::before,
+#zefirok-maltipoo-runner .leaderboard-level-badge[data-level-band="40"]::before,
+#zefirok-maltipoo-runner .rating-level-chip[data-level-band="40"]::before,
+#zefirok-maltipoo-runner .leaderboard-level-badge[data-level-band="50"]::before,
+#zefirok-maltipoo-runner .rating-level-chip[data-level-band="50"]::before{opacity:.88;animation:rating-level-shimmer 3.3s linear infinite}
+#zefirok-maltipoo-runner .leaderboard-level-badge[data-level-band="20"],
+#zefirok-maltipoo-runner .rating-level-chip[data-level-band="20"]{animation:rating-level-pulse-soft 2.8s ease-in-out infinite}
+#zefirok-maltipoo-runner .leaderboard-level-badge[data-level-band="30"],
+#zefirok-maltipoo-runner .rating-level-chip[data-level-band="30"]{animation:rating-level-pulse-soft 2.55s ease-in-out infinite}
+#zefirok-maltipoo-runner .leaderboard-level-badge[data-level-band="40"],
+#zefirok-maltipoo-runner .rating-level-chip[data-level-band="40"]{animation:rating-level-float 2.35s ease-in-out infinite}
+#zefirok-maltipoo-runner .leaderboard-level-badge[data-level-band="40"]::after,
+#zefirok-maltipoo-runner .rating-level-chip[data-level-band="40"]::after{opacity:.72;animation:rating-level-spark 2.3s ease-in-out infinite}
+#zefirok-maltipoo-runner .leaderboard-level-badge[data-level-band="50"],
+#zefirok-maltipoo-runner .rating-level-chip[data-level-band="50"]{animation:rating-level-burst 1.95s ease-in-out infinite}
+#zefirok-maltipoo-runner .leaderboard-level-badge[data-level-band="50"]::after,
+#zefirok-maltipoo-runner .rating-level-chip[data-level-band="50"]::after{opacity:.95;animation:rating-level-spark 1.45s ease-in-out infinite}
+.rating-player-profile-avatar .leaderboard-level-badge{right:-8px!important;bottom:-8px!important;min-width:52px!important;height:27px!important;padding:0 9px!important;border-radius:999px!important;font:950 9px/1 var(--font-sans)!important;letter-spacing:.01em!important;white-space:nowrap!important}
+.rating-player-profile-avatar .leaderboard-level-badge::before{content:"Ур. ";position:static!important;display:inline-block;margin-right:2px;width:auto!important;height:auto!important;background:none!important;transform:none!important;opacity:.78!important;animation:none!important;font-size:7px;font-weight:900}
+#zefirok-maltipoo-runner .rating-level-chip{display:inline-flex;align-items:center;justify-content:center;min-height:20px;padding:4px 8px;border:1px solid rgba(255,255,255,.72);border-radius:999px;box-sizing:border-box;font-size:7px;font-weight:950;letter-spacing:.02em;white-space:nowrap}
+#zefirok-maltipoo-runner .rating-v6-podium-level{display:inline-flex;align-items:center;min-height:auto;padding:0;border-radius:0;background:none;color:inherit;font-size:inherit;font-weight:inherit}
+#zefirok-maltipoo-runner .rating-v6-row-identity>small{display:inline-flex;align-items:center;min-height:auto;padding:0;border-radius:0;background:none;color:inherit;font-size:inherit;font-weight:inherit}
+#zefirok-maltipoo-runner .rating-v6-podium-level .rating-level-chip{min-height:21px;padding:4px 9px;font-size:7.25px}
+#zefirok-maltipoo-runner .rating-v6-row-identity>small .rating-level-chip{min-height:18px;padding:3px 7px;font-size:6.5px}
+@keyframes rating-level-shimmer{0%{transform:rotate(18deg) translateX(-180%)}52%,100%{transform:rotate(18deg) translateX(290%)}}
+@keyframes rating-level-pulse-soft{0%,100%{transform:translateY(0) scale(1)}50%{transform:translateY(-1px) scale(1.04)}}
+@keyframes rating-level-float{0%,100%{transform:translateY(0) scale(1)}50%{transform:translateY(-1.5px) scale(1.05)}}
+@keyframes rating-level-burst{0%,100%{transform:translateY(0) scale(1);box-shadow:0 0 0 1px rgba(219,163,41,.76),0 8px 18px rgba(193,136,24,.30),inset 0 1px 0 rgba(255,255,255,.9)}50%{transform:translateY(-2px) scale(1.08);box-shadow:0 0 0 1px rgba(233,183,65,.88),0 12px 22px rgba(203,140,14,.38),0 0 14px rgba(255,215,91,.34),inset 0 1px 0 rgba(255,255,255,.92)}}
+@keyframes rating-level-spark{0%,100%{opacity:.2;transform:translate3d(0,0,0) scale(.7)}50%{opacity:.95;transform:translate3d(-1px,-1px,0) scale(1.1)}}
+@media(prefers-reduced-motion:reduce){#zefirok-maltipoo-runner .leaderboard-level-badge,#zefirok-maltipoo-runner .rating-level-chip{animation:none!important}#zefirok-maltipoo-runner .leaderboard-level-badge::before,#zefirok-maltipoo-runner .leaderboard-level-badge::after,#zefirok-maltipoo-runner .rating-level-chip::before,#zefirok-maltipoo-runner .rating-level-chip::after{animation:none!important;opacity:0!important}}
+</style>
+
 </head>
 <body>
 <div id="zefirok-maltipoo-runner">
@@ -10296,13 +10359,28 @@ body { min-height: var(--zefirok-app-height, 100dvh); }
 
   function playerLevelBand(value) {
     const level = Math.max(1, Math.floor(Number(value || 1)));
-    return level >= 50 ? "50" : level >= 40 ? "40" : level >= 30 ? "30" : level >= 20 ? "20" : "1";
+    return level >= 50 ? "50" : level >= 40 ? "40" : level >= 30 ? "30" : level >= 20 ? "20" : level >= 10 ? "10" : "1";
+  }
+
+  function playerLevelMeta(value) {
+    const level = Math.max(1, Math.floor(Number(value || 1)));
+    if (level >= 50) return { level, band: "50", title: "Легенда сезона", hint: "Максимальный уровень — полный фейерверк." };
+    if (level >= 40) return { level, band: "40", title: "Сахарная элита", hint: "Почти вершина — фиолетовое сияние уже включено." };
+    if (level >= 30) return { level, band: "30", title: "Зефирный мастер", hint: "Розовое свечение подчёркивает высокий ранг." };
+    if (level >= 20) return { level, band: "20", title: "Опытный сладкоежка", hint: "Появляется мягкая анимация и более редкая плашка." };
+    if (level >= 10) return { level, band: "10", title: "На разогреве", hint: "Первая анимированная плашка — игрок уже не новичок." };
+    return { level, band: "1", title: "Новичок", hint: "Базовая спокойная плашка стартового диапазона." };
   }
 
   function playerLevelBadgeMarkup(entry) {
     if (String(entry?.telegramId || "").startsWith("empty-")) return "";
-    const level = Math.max(1, Math.floor(Number(entry?.level || 1)));
-    return `<span class="leaderboard-level-badge" data-player-level-badge="${level}" data-level-band="${playerLevelBand(level)}" role="button" tabindex="0" aria-label="Уровень игрока: ${level}" title="Уровень игрока: ${level}">${level}</span>`;
+    const meta = playerLevelMeta(entry?.level || 1);
+    return `<span class="leaderboard-level-badge" data-player-level-badge="${meta.level}" data-level-band="${meta.band}" role="button" tabindex="0" aria-label="Уровень игрока: ${meta.level}. ${meta.title}" title="${meta.title}. Уровень игрока: ${meta.level}">${meta.level}</span>`;
+  }
+
+  function playerInlineLevelChip(levelValue) {
+    const meta = playerLevelMeta(levelValue || 1);
+    return `<span class="rating-level-chip" data-level-band="${meta.band}" aria-label="${meta.title}. Уровень ${meta.level}" title="${meta.title}. Уровень ${meta.level}">Ур. ${meta.level}</span>`;
   }
 
   function avatarMarkup(entry, compact = false, eager = false) {
@@ -10786,7 +10864,7 @@ body { min-height: var(--zefirok-app-height, 100dvh); }
       ${isMe ? '<span class="rating-v6-you">Ты</span>' : ""}
       <div class="rating-v6-podium-avatar">${avatarMarkup(entry, false, true)}</div>
       <strong class="rating-v6-podium-name">${playerNameMarkup(entry)}</strong>
-      <span class="rating-v6-podium-level">Ур. ${level}</span>
+      <span class="rating-v6-podium-level">${playerInlineLevelChip(level)}</span>
       ${compactShowcaseMarkup(entry, 3)}
       <span class="rating-v6-podium-score">${formatter.format(entry.score || 0)}<small>очков</small></span>
     </div>`;
@@ -10803,7 +10881,7 @@ body { min-height: var(--zefirok-app-height, 100dvh); }
       return `<div class="rating-v6-row${isMe ? " is-me" : ""}${trophyMarkup ? " has-trophy" : ""}" data-player-profile-id="${playerId}" role="button" tabindex="0" aria-label="${playerLabel}">
         <span class="rating-v6-row-place">${Number(entry.place || 0)}</span>
         <span class="rating-v6-row-avatar">${avatarMarkup(entry, true, false)}</span>
-        <span class="rating-v6-row-identity"><strong>${playerNameMarkup(entry)}${isMe ? '<em>Ты</em>' : ""}</strong><small>Ур. ${level}</small></span>
+        <span class="rating-v6-row-identity"><strong>${playerNameMarkup(entry)}${isMe ? '<em>Ты</em>' : ""}</strong><small>${playerInlineLevelChip(level)}</small></span>
         ${trophyMarkup}
         <span class="rating-v6-row-score">${formatter.format(entry.score || 0)}</span>
         <span class="rating-v6-row-chevron" aria-hidden="true">›</span>
@@ -11310,7 +11388,8 @@ body { min-height: var(--zefirok-app-height, 100dvh); }
     if (levelBadge) {
       event.preventDefault();
       const level = Math.max(1, Number(levelBadge.dataset.playerLevelBadge || 1));
-      showToast(`Уровень игрока: ${level}`, "success", 2200);
+      const meta = playerLevelMeta(level);
+      showToast(`${meta.title} · уровень ${meta.level}`, "success", 2400);
       return;
     }
     const passBadge = target.closest("[data-pass-tier-badge]");
@@ -11334,8 +11413,9 @@ body { min-height: var(--zefirok-app-height, 100dvh); }
       event.preventDefault();
       event.stopPropagation();
       const level = Math.max(1, Number(levelBadge.dataset.playerLevelBadge || 1));
-      ratingImpactHaptic("light");
-      showToast(`Уровень игрока: ${level}`, "success", 2200);
+      const meta = playerLevelMeta(level);
+      ratingImpactHaptic(meta.band === "50" ? "medium" : "light");
+      showToast(`${meta.title} · уровень ${meta.level}`, "success", 2400);
       return;
     }
     const passBadge = target.closest("[data-pass-tier-badge]");
