@@ -39,6 +39,8 @@ must('legendary milestones at 40, 45 and 50',[40,45,50].every(level=>workerMap[l
 must('double reward milestones encoded on server',worker.includes('const LEVEL_CASE_REWARD_COUNTS = Object.freeze({30:2,47:2,49:2,50:2});'));
 must('double reward milestones encoded on client',index.includes('const LEVEL_CASE_COUNT_BY_LEVEL = Object.freeze({30:2,47:2,49:2,50:2});'));
 must('server rolls every case in a bundle',worker.includes('rollLevelCaseRewardBundleForPlayer(env,caseType,caseCount'));
+must('level opening keeps direct fail-soft first roll',worker.includes('const firstRolled = await rollLevelCaseForPlayer(env,caseType,ensured.state,ensured.state.ownedSkins,liveops);'));
+must('bundle reuses the validated first roll',worker.includes('caseRoll===1&&firstRolled'));
 must('bundle rolls are tagged for receipt clarity',worker.includes('{...reward,caseRoll}'));
 must('season task progress counts bundled cases',worker.includes('{cases_opened:caseCount}'));
 must('client inventory count includes bundled cases',index.includes('availableLevelCases().reduce((sum,entry) =&gt; sum + Math.max(1,Math.floor(Number(entry?.count)||1)),0)'));

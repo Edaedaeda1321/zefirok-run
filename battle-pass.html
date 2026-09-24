@@ -8485,7 +8485,7 @@ img[src$="/xp.webp"]{
   el("levelSlider").addEventListener("blur",finishSliderInteraction);
 
   const rewardScroll=el("rewardScroll");
-  const rewardTouchPan={active:false,id:null,startX:0,startY:0,startRailX:0,axis:"",lastClientX:0,lastAt:0,velocity:0,minX:0,maxX:0,pendingX:0,raf:0};
+  const rewardTouchPan={active:false,id:null,startX:0,startY:0,startRailX:0,axis:"",lastClientX:0,lastAt:0,velocity:0,minX:0,maxX:0,pendingX:0,raf:0,suppressClickUntil:0};
   const rewardTouchClamp=value=>Math.max(rewardTouchPan.minX,Math.min(rewardTouchPan.maxX,Number(value)||0));
   const rewardTouchResistedX=value=>{
     const raw=Number(value)||0,min=rewardTouchPan.minX,max=rewardTouchPan.maxX;
@@ -8507,13 +8507,19 @@ img[src$="/xp.webp"]{
     rewardTouchPan.startX=Number(touch.clientX)||0;rewardTouchPan.startY=Number(touch.clientY)||0;
     rewardTouchPan.startRailX=Math.max(bounds.min,Math.min(bounds.max,rewardRailX));rewardTouchPan.pendingX=rewardTouchPan.startRailX;rewardTouchPan.axis="";
     rewardTouchPan.lastClientX=rewardTouchPan.startX;rewardTouchPan.lastAt=now;rewardTouchPan.velocity=0;
-    rewardScroll.classList.add("is-touching");
+    // Keep reward actions clickable on a normal tap. We only enter drag mode
+    // after a real horizontal gesture has crossed the movement threshold.
+    rewardScroll.classList.remove("is-touching");
   },{passive:true});
   rewardScroll.addEventListener("touchmove",event=>{
     if(!rewardTouchPan.active)return;
     const touch=Array.from(event.touches||[]).find(item=>item.identifier===rewardTouchPan.id);if(!touch)return;
     const clientX=Number(touch.clientX)||0,clientY=Number(touch.clientY)||0,dx=clientX-rewardTouchPan.startX,dy=clientY-rewardTouchPan.startY;
-    if(!rewardTouchPan.axis){if(Math.max(Math.abs(dx),Math.abs(dy))<5)return;rewardTouchPan.axis=Math.abs(dx)>Math.abs(dy)*1.06?"x":"y";}
+    if(!rewardTouchPan.axis){
+      if(Math.max(Math.abs(dx),Math.abs(dy))<5)return;
+      rewardTouchPan.axis=Math.abs(dx)>Math.abs(dy)*1.06?"x":"y";
+      if(rewardTouchPan.axis==="x")rewardScroll.classList.add("is-touching");
+    }
     if(rewardTouchPan.axis!=="x")return;
     event.preventDefault();
     const now=performance.now(),dt=Math.max(8,now-rewardTouchPan.lastAt),fingerVelocity=(clientX-rewardTouchPan.lastClientX)/dt;
@@ -8526,6 +8532,9 @@ img[src$="/xp.webp"]{
     const horizontal=rewardTouchPan.axis==="x",velocity=rewardTouchPan.velocity,minX=rewardTouchPan.minX,maxX=rewardTouchPan.maxX;
     rewardTouchPan.active=false;rewardTouchPan.id=null;rewardTouchPan.axis="";rewardScroll.classList.remove("is-touching");
     if(!horizontal){syncRewardRailBounds();return;}
+    // A horizontal swipe that started on top of a reward button must not turn
+    // into a synthetic click when the finger is released.
+    rewardTouchPan.suppressClickUntil=performance.now()+420;
     rewardRailX=Math.max(minX,Math.min(maxX,rewardRailX));
     const projected=Math.max(minX,Math.min(maxX,rewardRailX+velocity*185));
     const edgeSnap=Math.max(14,Math.min(34,rewardScroll.clientWidth*.05));
@@ -8536,6 +8545,11 @@ img[src$="/xp.webp"]{
   rewardScroll.addEventListener("touchcancel",()=>{
     cancelAnimationFrame(rewardTouchPan.raf);rewardTouchPan.raf=0;rewardTouchPan.active=false;rewardTouchPan.id=null;rewardTouchPan.axis="";rewardScroll.classList.remove("is-touching");syncRewardRailBounds();
   },{passive:true});
+  rewardScroll.addEventListener("click",event=>{
+    if(performance.now()>=rewardTouchPan.suppressClickUntil)return;
+    event.preventDefault();
+    event.stopPropagation();
+  },true);
 
 
   el("buyLevel").addEventListener("click",()=>openLevelPurchaseConfirm());
