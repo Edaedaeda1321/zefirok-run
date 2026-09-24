@@ -9079,7 +9079,8 @@ body { min-height: var(--zefirok-app-height, 100dvh); }
 @media(max-width:390px){.rating-player-recent-item{grid-template-columns:36px minmax(0,1fr) auto}.rating-player-recent-art{width:36px;height:36px}.rating-player-recent-art img{width:34px;height:34px}.rating-player-rare{max-width:none}.rating-player-trophy-art{width:60px;height:60px}.rating-player-trophy-art img{width:57px;height:57px}.rating-player-stat{grid-template-columns:23px minmax(0,1fr);padding:8px 5px}.rating-player-stat-icon{width:23px;height:23px}.rating-player-stat-icon img{width:22px;height:22px}.rating-player-stat strong{font-size:12px}}
 /* Player mini-profile V2: clearer level, place and public identity. */
 .rating-player-profile-head{grid-template-columns:98px minmax(0,1fr);gap:14px;align-items:center;padding:11px 12px;border:1px solid rgba(229,198,206,.72);border-radius:21px;background:radial-gradient(circle at 5% 0,rgba(255,232,241,.56),transparent 42%),linear-gradient(145deg,rgba(255,255,255,.76),rgba(255,249,247,.68));box-shadow:0 8px 24px rgba(102,62,77,.055)}
-.rating-player-profile-avatar{align-self:center;padding:4px 0 6px}
+.rating-player-profile-avatar{align-self:center;padding:4px 0 6px;gap:7px}
+.rating-player-profile-level{display:grid;place-items:center;min-height:31px;overflow:visible}
 .rating-player-profile-copy{display:grid;gap:7px;min-width:0}
 .rating-player-profile-name-row{display:flex;align-items:center;gap:8px;min-width:0;flex-wrap:wrap}
 .rating-player-profile-name-row h2{flex:0 1 auto;min-width:0;margin:0;color:#693748;font-size:22px;font-weight:950;line-height:1.05;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
@@ -11473,7 +11474,7 @@ body { min-height: var(--zefirok-app-height, 100dvh); }
     playerProfileContent.classList.remove("is-loaded");
     playerProfileContent.innerHTML=`
       <div class="rating-player-profile-head">
-        <div class="rating-player-profile-avatar">${avatarMarkup(entry,false,true)}</div>
+        <div class="rating-player-profile-avatar"><div class="rating-player-profile-avatar-main">${avatarMarkup(entry,false,true,false)}</div><div class="rating-player-profile-level">${playerLevelPlateMarkup(entry?.level || player?.level || 1, "avatar", false, entry?.telegramId || targetId || "")}</div></div>
         <div class="rating-player-profile-copy">
           <div class="rating-player-profile-name-row"><h2 id="rating-player-profile-title">${escapeHtml(player?.name||"Игрок")}</h2><span class="rating-player-profile-public-title" data-title-tier="${escapeHtml(publicTitleTier)}" title="Публичный титул: ${escapeHtml(publicTitle)}"><small>Титул</small><strong>${escapeHtml(publicTitle)}</strong></span></div>
           <div class="rating-player-profile-meta"><span class="rating-player-profile-place" data-place-tier="${escapeHtml(placeTier)}">${escapeHtml(placeLabel)}</span><span class="rating-player-profile-rank"><span class="rating-player-inline-icon" aria-hidden="true">${playerProfileMetricIconMarkup(ACHIEVEMENT_POINTS_ICON)}</span><span>Очки достижений</span><b>${formatter.format(points)}</b></span></div>
