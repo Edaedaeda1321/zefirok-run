@@ -9310,11 +9310,8 @@ body { min-height: var(--zefirok-app-height, 100dvh); }
 .rating-player-profile-avatar .leaderboard-avatar-frame{position:relative!important;display:grid!important;place-items:center!important;width:88px!important;height:88px!important;flex:0 0 88px!important;overflow:visible!important;border:3px solid #fff!important;border-radius:24px!important;background:linear-gradient(145deg,#ffe4ee,#f5d9e6)!important;box-shadow:0 6px 14px rgba(116,57,80,.14),0 0 0 1px rgba(216,171,189,.58)!important}
 .rating-player-profile-avatar .leaderboard-avatar{display:block!important;width:100%!important;height:100%!important;border:0!important;border-radius:inherit!important;object-fit:cover!important;background:#f5dae5!important}
 .rating-player-profile-avatar .leaderboard-live-frame{position:absolute!important;inset:-12%!important;z-index:5!important;width:124%!important;height:124%!important;max-width:none!important;object-fit:contain!important;object-position:center!important;pointer-events:none!important;filter:drop-shadow(0 3px 5px rgba(85,50,38,.16))!important}
-.rating-player-profile-avatar .leaderboard-level-badge{position:absolute!important;right:-3px!important;bottom:-3px!important;z-index:9!important;display:grid!important;place-items:center!important;width:27px!important;height:27px!important;padding:0!important;border:2px solid rgba(255,255,255,.96)!important;border-radius:50%!important;box-sizing:border-box!important;color:#665d58!important;background:linear-gradient(145deg,#f5f1ed,#d8d3d0)!important;box-shadow:0 3px 8px rgba(83,63,57,.18)!important;font:950 11px/1 var(--font-sans)!important;font-variant-numeric:tabular-nums!important;cursor:pointer!important;-webkit-tap-highlight-color:transparent!important}
-.rating-player-profile-avatar .leaderboard-level-badge[data-level-band="20"]{color:#2d7564!important;background:linear-gradient(145deg,#e6fff8,#90d8c4)!important}
-.rating-player-profile-avatar .leaderboard-level-badge[data-level-band="30"]{color:#9d4068!important;background:linear-gradient(145deg,#fff0f6,#eea0be)!important}
-.rating-player-profile-avatar .leaderboard-level-badge[data-level-band="40"]{color:#674489!important;background:linear-gradient(145deg,#f7edff,#c7a2e6)!important}
-.rating-player-profile-avatar .leaderboard-level-badge[data-level-band="50"]{color:#81530c!important;background:linear-gradient(145deg,#fff7c8,#e5b43c)!important;border-color:#fff8db!important;box-shadow:0 0 0 1px #d9a52e,0 3px 9px rgba(174,121,17,.28)!important}
+/* Mini-profile badge uses the same prestige badge system as leaderboard rows. */
+.rating-player-profile-avatar .leaderboard-level-badge{right:var(--level-right)!important;bottom:var(--level-bottom)!important;z-index:12!important}
 .rating-player-profile-copy{display:grid;gap:5px;min-width:0}.rating-player-profile-copy h2{margin:0;color:#693748;font-size:23px;font-weight:950;line-height:1.05;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.rating-player-profile-place{color:#cb4f7c;font-size:12px;font-weight:950}.rating-player-profile-rank{display:inline-flex;align-items:center;gap:5px;width:max-content;max-width:100%;padding:6px 10px;border:1px solid rgba(221,178,115,.58);border-radius:999px;background:#fff8e9;color:#80531c;font-size:11px;font-weight:900}.rating-player-inline-icon{display:inline-flex;align-items:center;justify-content:center;width:14px;height:14px;flex:0 0 14px}.rating-player-inline-icon img{display:block;width:100%;height:100%;object-fit:contain}.rating-player-profile-since{color:#967581;font-size:10px;font-weight:750}
 .rating-player-showcase{position:relative;overflow:hidden;display:grid;gap:8px;padding:11px;border:1px solid rgba(225,189,153,.72);border-radius:20px;background:linear-gradient(155deg,#fffdf7,#fff6ef)}
 .rating-player-showcase[data-style="gold"]{border-color:rgba(213,155,42,.72);background:radial-gradient(circle at 85% -10%,rgba(255,234,141,.6),transparent 40%),linear-gradient(155deg,#fffce9,#fff0bc)}
@@ -9349,8 +9346,8 @@ body { min-height: var(--zefirok-app-height, 100dvh); }
 /* Player mini-profile V2: clearer level, place and public identity. */
 .rating-player-profile-head{grid-template-columns:98px minmax(0,1fr);gap:14px;align-items:center;padding:11px 12px;border:1px solid rgba(229,198,206,.72);border-radius:21px;background:radial-gradient(circle at 5% 0,rgba(255,232,241,.56),transparent 42%),linear-gradient(145deg,rgba(255,255,255,.76),rgba(255,249,247,.68));box-shadow:0 8px 24px rgba(102,62,77,.055)}
 .rating-player-profile-avatar{align-self:center;padding:4px 0 6px}
-.rating-player-profile-avatar .leaderboard-level-badge{right:-8px!important;bottom:-8px!important;width:auto!important;min-width:47px!important;height:25px!important;padding:0 8px!important;border-radius:999px!important;font:950 9px/1 var(--font-sans)!important;letter-spacing:.01em!important;white-space:nowrap!important;box-shadow:0 4px 10px rgba(83,63,57,.18)!important}
-.rating-player-profile-avatar .leaderboard-level-badge::before{content:"Ур. ";margin-right:2px;font-size:7px;font-weight:900;opacity:.76}
+/* Keep prestige badge geometry in the mini-profile; no legacy pill/label overrides. */
+.rating-player-profile-avatar .leaderboard-level-badge::before{content:none!important;display:none!important}
 .rating-player-profile-copy{display:grid;gap:7px;min-width:0}
 .rating-player-profile-name-row{display:flex;align-items:center;gap:8px;min-width:0;flex-wrap:wrap}
 .rating-player-profile-name-row h2{flex:0 1 auto;min-width:0;margin:0;color:#693748;font-size:22px;font-weight:950;line-height:1.05;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
@@ -12196,3 +12193,18 @@ new MutationObserver(()=>{if(frame)cancelAnimationFrame(frame);frame=requestAnim
 </script>
 </body>
 </html>
+
+
+<style id="mini-profile-level-badge-hotfix">
+.rating-player-profile-avatar .leaderboard-level-badge,
+.rating-player-profile-avatar .leaderboard-level-badge[data-level-band],
+.rating-player-profile-avatar .leaderboard-level-badge[data-level-band="20"],
+.rating-player-profile-avatar .leaderboard-level-badge[data-level-band="30"],
+.rating-player-profile-avatar .leaderboard-level-badge[data-level-band="40"],
+.rating-player-profile-avatar .leaderboard-level-badge[data-level-band="50"]{
+  background:transparent!important;
+  border:0!important;
+  box-shadow:none!important;
+  border-radius:0!important;
+}
+</style>
