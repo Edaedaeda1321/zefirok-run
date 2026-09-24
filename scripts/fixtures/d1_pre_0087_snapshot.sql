@@ -9,6 +9,20 @@ CREATE TABLE reward_delivery_queue(
 CREATE TABLE player_account_revision(telegram_id TEXT PRIMARY KEY,revision INTEGER NOT NULL DEFAULT 1,updated_at INTEGER NOT NULL DEFAULT 0);
 CREATE TABLE admin_profile_state(telegram_id TEXT PRIMARY KEY,wallet INTEGER NOT NULL DEFAULT 0,treats INTEGER NOT NULL DEFAULT 0,coffee INTEGER NOT NULL DEFAULT 0,profile_xp INTEGER NOT NULL DEFAULT 0,best_score INTEGER NOT NULL DEFAULT 0,revision INTEGER NOT NULL DEFAULT 1,created_at INTEGER NOT NULL DEFAULT 0,updated_at INTEGER NOT NULL DEFAULT 0,updated_by TEXT NOT NULL DEFAULT '');
 CREATE TABLE case_player_state(telegram_id TEXT PRIMARY KEY,revision INTEGER NOT NULL DEFAULT 1,owned_avatars_json TEXT NOT NULL DEFAULT '[]',updated_at INTEGER NOT NULL DEFAULT 0,created_at INTEGER NOT NULL DEFAULT 0);
+
+-- Level-case receipts have existed since migration 0010. The pre-0087 integration
+-- snapshot must include their legacy shape so later rebuild migrations (0102+)
+-- are tested against the same table that is present in production.
+CREATE TABLE level_case_openings(
+ telegram_id TEXT NOT NULL,
+ level INTEGER NOT NULL,
+ case_type TEXT NOT NULL CHECK(case_type IN ('small','sweet','gold')),
+ rewards_json TEXT NOT NULL DEFAULT '[]',
+ opened_at INTEGER NOT NULL,
+ PRIMARY KEY(telegram_id,level)
+);
+CREATE INDEX idx_level_case_openings_player ON level_case_openings(telegram_id,opened_at DESC);
+CREATE INDEX idx_level_case_openings_overview ON level_case_openings(opened_at);
 CREATE TABLE granted_cases(id TEXT PRIMARY KEY,telegram_id TEXT NOT NULL,case_type TEXT NOT NULL,status TEXT NOT NULL DEFAULT 'pending',granted_by TEXT NOT NULL DEFAULT '',reason TEXT NOT NULL DEFAULT '',rewards_json TEXT NOT NULL DEFAULT '[]',created_at INTEGER NOT NULL,opened_at INTEGER NOT NULL DEFAULT 0,opening_started_at INTEGER NOT NULL DEFAULT 0,opening_token TEXT NOT NULL DEFAULT '');
 CREATE TABLE season_pass_players(season_id TEXT NOT NULL,telegram_id TEXT NOT NULL,xp INTEGER NOT NULL DEFAULT 0,premium_tier TEXT NOT NULL DEFAULT 'none',elite_plus_bonus_granted INTEGER NOT NULL DEFAULT 0,revision INTEGER NOT NULL DEFAULT 1,created_at INTEGER NOT NULL,updated_at INTEGER NOT NULL,PRIMARY KEY(season_id,telegram_id));
 
