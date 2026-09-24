@@ -9827,164 +9827,6 @@ body { min-height: var(--zefirok-app-height, 100dvh); }
 @media(max-width:520px){#zefirok-maltipoo-runner .rating-v6-season-finale-inline{align-items:flex-start;flex-direction:column}#zefirok-maltipoo-runner .rating-v6-season-finale-inline button{width:100%}#zefirok-maltipoo-runner .rating-season-finale-actions{grid-template-columns:1fr}#zefirok-maltipoo-runner .rating-season-finale-stats{grid-template-columns:1fr 1fr}}
 
 </style>
-
-<style id="rating-level-rework-20260924-v2">
-/* Player level prestige V2: clean pills, no pseudo-element flash rectangles. */
-#zefirok-maltipoo-runner .leaderboard-level-badge,
-#zefirok-maltipoo-runner .rating-level-chip{
-  box-sizing:border-box;
-  border-radius:999px;
-  font-variant-numeric:tabular-nums;
-  white-space:nowrap;
-  background-size:220% 100%;
-  background-position:0% 50%;
-}
-#zefirok-maltipoo-runner .leaderboard-level-badge{
-  position:absolute;
-  right:-6px;
-  bottom:-5px;
-  z-index:9;
-  display:inline-flex;
-  align-items:center;
-  justify-content:center;
-  gap:3px;
-  min-width:42px;
-  height:23px;
-  padding:0 7px;
-  border:2px solid rgba(255,255,255,.96);
-  color:#786873;
-  background:linear-gradient(135deg,#fff9fc 0%,#f2e5ed 100%);
-  box-shadow:0 4px 10px rgba(90,61,73,.15),inset 0 1px 0 rgba(255,255,255,.92);
-  font:950 8px/1 var(--font-sans);
-  cursor:pointer;
-  -webkit-tap-highlight-color:transparent;
-  transform:none;
-}
-#zefirok-maltipoo-runner .leaderboard-level-badge-prefix{font-size:6.7px;font-weight:900;opacity:.72}
-#zefirok-maltipoo-runner .leaderboard-level-badge-value{font-size:9px;font-weight:1000;line-height:1}
-#zefirok-maltipoo-runner .leaderboard-level-badge-mark{display:block;flex:0 0 auto;width:5px;height:5px;border-radius:50%;background:currentColor;opacity:.62;box-shadow:0 0 0 2px rgba(255,255,255,.34)}
-#zefirok-maltipoo-runner .leaderboard-avatar-frame.is-compact .leaderboard-level-badge{right:-6px;bottom:-5px;min-width:34px;height:20px;padding:0 5px;gap:2px;border-width:2px}
-#zefirok-maltipoo-runner .leaderboard-avatar-frame.is-compact .leaderboard-level-badge-prefix{font-size:5.8px}
-#zefirok-maltipoo-runner .leaderboard-avatar-frame.is-compact .leaderboard-level-badge-value{font-size:7.6px}
-#zefirok-maltipoo-runner .leaderboard-avatar-frame.is-compact .leaderboard-level-badge-mark{width:4px;height:4px}
-
-#zefirok-maltipoo-runner .rating-level-chip{
-  display:inline-flex;
-  align-items:center;
-  justify-content:center;
-  gap:3px;
-  min-height:20px;
-  padding:4px 8px;
-  border:1px solid rgba(255,255,255,.72);
-  color:#786873;
-  background:linear-gradient(135deg,#fff9fc 0%,#f2e5ed 100%);
-  box-shadow:0 3px 8px rgba(101,67,82,.10),inset 0 1px 0 rgba(255,255,255,.92);
-  font-size:7px;
-  font-weight:950;
-  letter-spacing:.01em;
-}
-#zefirok-maltipoo-runner .rating-level-chip-prefix{font-size:.86em;font-weight:900;opacity:.72}
-#zefirok-maltipoo-runner .rating-level-chip-value{font-size:1.04em;font-weight:1000}
-#zefirok-maltipoo-runner .rating-level-chip-mark{display:block;width:4px;height:4px;border-radius:50%;background:currentColor;opacity:.55}
-
-/* 1-9: calm pearl starter. */
-#zefirok-maltipoo-runner [data-level-band="1"].leaderboard-level-badge,
-#zefirok-maltipoo-runner [data-level-band="1"].rating-level-chip{
-  color:#856c79;
-  background:linear-gradient(135deg,#fffafd 0%,#f0e1ea 100%);
-  box-shadow:0 4px 10px rgba(140,102,120,.12),inset 0 1px 0 rgba(255,255,255,.94);
-}
-
-/* 10-19: first prestige, warm champagne sweep. */
-#zefirok-maltipoo-runner [data-level-band="10"].leaderboard-level-badge,
-#zefirok-maltipoo-runner [data-level-band="10"].rating-level-chip{
-  color:#936018;
-  border-color:#fff7df;
-  background-image:linear-gradient(115deg,#fff8e9 0%,#f4d796 35%,#fffbed 50%,#edc56c 66%,#fff8e9 100%);
-  box-shadow:0 5px 12px rgba(185,131,38,.18),0 0 0 1px rgba(224,177,85,.20),inset 0 1px 0 rgba(255,255,255,.95);
-  animation:ratingLevelSweep 5.2s ease-in-out infinite;
-}
-
-/* 20-29: mint pearl. */
-#zefirok-maltipoo-runner [data-level-band="20"].leaderboard-level-badge,
-#zefirok-maltipoo-runner [data-level-band="20"].rating-level-chip{
-  color:#2f7463;
-  border-color:#f3fffb;
-  background-image:linear-gradient(115deg,#effff9 0%,#a8e8d6 36%,#f9fffd 50%,#8ed3c0 68%,#effff9 100%);
-  box-shadow:0 5px 13px rgba(68,146,124,.19),0 0 0 1px rgba(118,201,178,.18),inset 0 1px 0 rgba(255,255,255,.94);
-  animation:ratingLevelSweep 4.7s ease-in-out infinite;
-}
-
-/* 30-39: pink prestige. */
-#zefirok-maltipoo-runner [data-level-band="30"].leaderboard-level-badge,
-#zefirok-maltipoo-runner [data-level-band="30"].rating-level-chip{
-  color:#9b3f67;
-  border-color:#fff6fa;
-  background-image:linear-gradient(115deg,#fff2f8 0%,#f2a9c7 35%,#fff7fb 50%,#e986b0 68%,#fff2f8 100%);
-  box-shadow:0 5px 14px rgba(191,83,130,.22),0 0 0 1px rgba(224,130,168,.20),inset 0 1px 0 rgba(255,255,255,.95);
-  animation:ratingLevelSweep 4.2s ease-in-out infinite,ratingLevelGlowPink 2.9s ease-in-out infinite;
-}
-
-/* 40-49: royal lilac. */
-#zefirok-maltipoo-runner [data-level-band="40"].leaderboard-level-badge,
-#zefirok-maltipoo-runner [data-level-band="40"].rating-level-chip{
-  color:#62408d;
-  border-color:#fcf8ff;
-  background-image:linear-gradient(115deg,#faf2ff 0%,#cfb0ef 34%,#fffaff 50%,#b98be2 68%,#faf2ff 100%);
-  box-shadow:0 6px 15px rgba(105,73,165,.24),0 0 0 1px rgba(169,129,218,.23),0 0 11px rgba(183,144,229,.13),inset 0 1px 0 rgba(255,255,255,.95);
-  animation:ratingLevelSweep 3.8s ease-in-out infinite,ratingLevelGlowPurple 2.45s ease-in-out infinite;
-}
-
-/* 50: royal gold + pink accent, the maximum visible status. */
-#zefirok-maltipoo-runner [data-level-band="50"].leaderboard-level-badge,
-#zefirok-maltipoo-runner [data-level-band="50"].rating-level-chip{
-  color:#7b4d07;
-  border-color:#fff9df;
-  background-image:linear-gradient(112deg,#fff7cf 0%,#f5bf3e 24%,#fff8dc 43%,#f09ab8 58%,#f2b52b 76%,#fff7cf 100%);
-  box-shadow:0 0 0 1px rgba(214,156,31,.58),0 7px 17px rgba(183,119,18,.28),0 0 15px rgba(244,188,52,.19),inset 0 1px 0 rgba(255,255,255,.96);
-  animation:ratingLevelSweep 3.2s ease-in-out infinite,ratingLevelLegend 1.85s ease-in-out infinite;
-}
-#zefirok-maltipoo-runner [data-level-band="50"] .leaderboard-level-badge-mark,
-#zefirok-maltipoo-runner [data-level-band="50"] .rating-level-chip-mark{width:6px;height:6px;border-radius:1px;transform:rotate(45deg);opacity:.86;box-shadow:0 0 7px rgba(255,211,73,.58)}
-
-/* Mini-profile: the whole identity card now reflects player level. */
-#zefirok-maltipoo-runner .rating-player-profile-head[data-level-band]{transition:border-color .2s ease,background .2s ease,box-shadow .2s ease}
-#zefirok-maltipoo-runner .rating-player-profile-head[data-level-band="1"]{border-color:rgba(229,198,206,.72);background:radial-gradient(circle at 5% 0,rgba(255,232,241,.56),transparent 42%),linear-gradient(145deg,rgba(255,255,255,.78),rgba(255,249,247,.70));box-shadow:0 8px 24px rgba(102,62,77,.055)}
-#zefirok-maltipoo-runner .rating-player-profile-head[data-level-band="10"]{border-color:rgba(224,181,93,.52);background:radial-gradient(circle at 5% 0,rgba(255,232,168,.42),transparent 43%),linear-gradient(145deg,#fffdf8,#fff5df);box-shadow:0 10px 26px rgba(170,120,37,.10)}
-#zefirok-maltipoo-runner .rating-player-profile-head[data-level-band="20"]{border-color:rgba(102,193,166,.53);background:radial-gradient(circle at 7% 0,rgba(161,238,216,.48),transparent 44%),linear-gradient(145deg,#fbfffd,#effbf7);box-shadow:0 10px 28px rgba(66,145,122,.12)}
-#zefirok-maltipoo-runner .rating-player-profile-head[data-level-band="30"]{border-color:rgba(225,130,169,.55);background:radial-gradient(circle at 6% 0,rgba(255,185,213,.52),transparent 45%),linear-gradient(145deg,#fffafd,#fff0f6);box-shadow:0 11px 29px rgba(183,79,124,.13)}
-#zefirok-maltipoo-runner .rating-player-profile-head[data-level-band="40"]{border-color:rgba(160,122,218,.58);background:radial-gradient(circle at 7% 0,rgba(213,185,250,.55),transparent 46%),linear-gradient(145deg,#fffaff,#f4edff);box-shadow:0 12px 31px rgba(104,73,160,.15),0 0 16px rgba(190,155,238,.08)}
-#zefirok-maltipoo-runner .rating-player-profile-head[data-level-band="50"]{border-color:rgba(223,166,44,.74);background:radial-gradient(circle at 7% 0,rgba(255,219,93,.62),transparent 43%),radial-gradient(circle at 96% 0,rgba(244,153,188,.26),transparent 38%),linear-gradient(145deg,#fffdf3,#fff0c9);box-shadow:0 14px 34px rgba(172,115,20,.19),0 0 18px rgba(245,190,62,.12);animation:ratingProfileLegend 2.1s ease-in-out infinite}
-#zefirok-maltipoo-runner .rating-player-profile-head[data-level-band="10"] .leaderboard-avatar-frame{box-shadow:0 7px 17px rgba(171,120,35,.17),0 0 0 1px rgba(224,180,83,.52)!important}
-#zefirok-maltipoo-runner .rating-player-profile-head[data-level-band="20"] .leaderboard-avatar-frame{box-shadow:0 7px 17px rgba(59,140,117,.17),0 0 0 1px rgba(99,191,164,.55)!important}
-#zefirok-maltipoo-runner .rating-player-profile-head[data-level-band="30"] .leaderboard-avatar-frame{box-shadow:0 8px 18px rgba(182,77,121,.19),0 0 0 1px rgba(224,124,165,.58)!important}
-#zefirok-maltipoo-runner .rating-player-profile-head[data-level-band="40"] .leaderboard-avatar-frame{box-shadow:0 8px 19px rgba(103,74,158,.20),0 0 0 1px rgba(157,116,213,.61),0 0 13px rgba(181,143,230,.12)!important}
-#zefirok-maltipoo-runner .rating-player-profile-head[data-level-band="50"] .leaderboard-avatar-frame{box-shadow:0 9px 22px rgba(167,108,14,.24),0 0 0 2px rgba(226,169,49,.72),0 0 18px rgba(242,188,53,.20)!important;animation:ratingAvatarLegend 1.95s ease-in-out infinite}
-
-/* Keep the original mini-profile capsule proportions. */
-.rating-player-profile-avatar .leaderboard-level-badge{position:absolute!important;right:-8px!important;bottom:-8px!important;min-width:47px!important;height:25px!important;padding:0 8px!important;border-radius:999px!important;font:950 8.8px/1 var(--font-sans)!important;letter-spacing:.01em!important;white-space:nowrap!important;overflow:hidden!important}
-.rating-player-profile-avatar .leaderboard-level-badge::before,
-.rating-player-profile-avatar .leaderboard-level-badge::after{content:none!important;display:none!important}
-
-#zefirok-maltipoo-runner .rating-v6-podium-level{display:inline-flex;align-items:center;min-height:auto;padding:0;border-radius:0;background:none;color:inherit;font-size:inherit;font-weight:inherit}
-#zefirok-maltipoo-runner .rating-v6-row-identity>small{display:inline-flex;align-items:center;min-height:auto;padding:0;border-radius:0;background:none;color:inherit;font-size:inherit;font-weight:inherit}
-#zefirok-maltipoo-runner .rating-v6-podium-level .rating-level-chip{min-height:21px;padding:4px 9px;font-size:7.25px}
-#zefirok-maltipoo-runner .rating-v6-row-identity>small .rating-level-chip{min-height:18px;padding:3px 7px;font-size:6.5px}
-
-@keyframes ratingLevelSweep{0%,18%{background-position:0% 50%}55%,100%{background-position:100% 50%}}
-@keyframes ratingLevelGlowPink{0%,100%{filter:saturate(1);transform:translateY(0)}50%{filter:saturate(1.08);transform:translateY(-.6px)}}
-@keyframes ratingLevelGlowPurple{0%,100%{filter:saturate(1);transform:translateY(0)}50%{filter:saturate(1.10);transform:translateY(-.8px)}}
-@keyframes ratingLevelLegend{0%,100%{transform:translateY(0) scale(1)}50%{transform:translateY(-1px) scale(1.035)}}
-@keyframes ratingProfileLegend{0%,100%{box-shadow:0 14px 34px rgba(172,115,20,.19),0 0 18px rgba(245,190,62,.12)}50%{box-shadow:0 16px 38px rgba(172,115,20,.23),0 0 25px rgba(245,190,62,.20)}}
-@keyframes ratingAvatarLegend{0%,100%{transform:translateY(0)}50%{transform:translateY(-1px)}}
-@media(prefers-reduced-motion:reduce){
-  #zefirok-maltipoo-runner .leaderboard-level-badge,
-  #zefirok-maltipoo-runner .rating-level-chip,
-  #zefirok-maltipoo-runner .rating-player-profile-head,
-  #zefirok-maltipoo-runner .rating-player-profile-head .leaderboard-avatar-frame{animation:none!important;transform:none!important}
-}
-</style>
-
 </head>
 <body>
 <div id="zefirok-maltipoo-runner">
@@ -10454,28 +10296,13 @@ body { min-height: var(--zefirok-app-height, 100dvh); }
 
   function playerLevelBand(value) {
     const level = Math.max(1, Math.floor(Number(value || 1)));
-    return level >= 50 ? "50" : level >= 40 ? "40" : level >= 30 ? "30" : level >= 20 ? "20" : level >= 10 ? "10" : "1";
-  }
-
-  function playerLevelMeta(value) {
-    const level = Math.max(1, Math.floor(Number(value || 1)));
-    if (level >= 50) return { level, band: "50", title: "Легенда сезона", hint: "Максимальный уровень — полный фейерверк." };
-    if (level >= 40) return { level, band: "40", title: "Сахарная элита", hint: "Почти вершина — фиолетовое сияние уже включено." };
-    if (level >= 30) return { level, band: "30", title: "Зефирный мастер", hint: "Розовое свечение подчёркивает высокий ранг." };
-    if (level >= 20) return { level, band: "20", title: "Опытный сладкоежка", hint: "Появляется мягкая анимация и более редкая плашка." };
-    if (level >= 10) return { level, band: "10", title: "На разогреве", hint: "Первая анимированная плашка — игрок уже не новичок." };
-    return { level, band: "1", title: "Новичок", hint: "Базовая спокойная плашка стартового диапазона." };
+    return level >= 50 ? "50" : level >= 40 ? "40" : level >= 30 ? "30" : level >= 20 ? "20" : "1";
   }
 
   function playerLevelBadgeMarkup(entry) {
     if (String(entry?.telegramId || "").startsWith("empty-")) return "";
-    const meta = playerLevelMeta(entry?.level || 1);
-    return `<span class="leaderboard-level-badge" data-player-level-badge="${meta.level}" data-level-band="${meta.band}" role="button" tabindex="0" aria-label="Уровень игрока: ${meta.level}. ${meta.title}" title="${meta.title}. Уровень игрока: ${meta.level}"><span class="leaderboard-level-badge-prefix">Ур.</span><strong class="leaderboard-level-badge-value">${meta.level}</strong><i class="leaderboard-level-badge-mark" aria-hidden="true"></i></span>`;
-  }
-
-  function playerInlineLevelChip(levelValue) {
-    const meta = playerLevelMeta(levelValue || 1);
-    return `<span class="rating-level-chip" data-level-band="${meta.band}" aria-label="${meta.title}. Уровень ${meta.level}" title="${meta.title}. Уровень ${meta.level}"><span class="rating-level-chip-prefix">Ур.</span><strong class="rating-level-chip-value">${meta.level}</strong><i class="rating-level-chip-mark" aria-hidden="true"></i></span>`;
+    const level = Math.max(1, Math.floor(Number(entry?.level || 1)));
+    return `<span class="leaderboard-level-badge" data-player-level-badge="${level}" data-level-band="${playerLevelBand(level)}" role="button" tabindex="0" aria-label="Уровень игрока: ${level}" title="Уровень игрока: ${level}">${level}</span>`;
   }
 
   function avatarMarkup(entry, compact = false, eager = false) {
@@ -10959,7 +10786,7 @@ body { min-height: var(--zefirok-app-height, 100dvh); }
       ${isMe ? '<span class="rating-v6-you">Ты</span>' : ""}
       <div class="rating-v6-podium-avatar">${avatarMarkup(entry, false, true)}</div>
       <strong class="rating-v6-podium-name">${playerNameMarkup(entry)}</strong>
-      <span class="rating-v6-podium-level">${playerInlineLevelChip(level)}</span>
+      <span class="rating-v6-podium-level">Ур. ${level}</span>
       ${compactShowcaseMarkup(entry, 3)}
       <span class="rating-v6-podium-score">${formatter.format(entry.score || 0)}<small>очков</small></span>
     </div>`;
@@ -10976,7 +10803,7 @@ body { min-height: var(--zefirok-app-height, 100dvh); }
       return `<div class="rating-v6-row${isMe ? " is-me" : ""}${trophyMarkup ? " has-trophy" : ""}" data-player-profile-id="${playerId}" role="button" tabindex="0" aria-label="${playerLabel}">
         <span class="rating-v6-row-place">${Number(entry.place || 0)}</span>
         <span class="rating-v6-row-avatar">${avatarMarkup(entry, true, false)}</span>
-        <span class="rating-v6-row-identity"><strong>${playerNameMarkup(entry)}${isMe ? '<em>Ты</em>' : ""}</strong><small>${playerInlineLevelChip(level)}</small></span>
+        <span class="rating-v6-row-identity"><strong>${playerNameMarkup(entry)}${isMe ? '<em>Ты</em>' : ""}</strong><small>Ур. ${level}</small></span>
         ${trophyMarkup}
         <span class="rating-v6-row-score">${formatter.format(entry.score || 0)}</span>
         <span class="rating-v6-row-chevron" aria-hidden="true">›</span>
@@ -11262,7 +11089,6 @@ body { min-height: var(--zefirok-app-height, 100dvh); }
     const place=Math.max(0,Math.floor(Number(player?.place||0))),placeContext=data?.mode==="all_time"?"Всё время":"Сезон",placeLabel=place>0?`${place} место · ${placeContext}`:`Без места · ${placeContext}`,placeTier=place===1?"gold":place===2?"silver":place===3?"bronze":"regular";
     const earned=Math.max(0,Number(achievements?.catalogEarned||0)),total=Math.max(0,Number(achievements?.catalogTotal||0)),completion=Math.max(0,Math.min(100,Number(achievements?.completionPercent||0))),points=Math.max(0,Number(achievements?.points||rank?.points||0));
     const publicTitle=String(player?.publicTitle||rank?.title||"Новичок").trim()||"Новичок",publicTitleTier=points>=600?"legend":points>=300?"veteran":points>=150?"collector":points>=50?"explorer":"novice";
-    const levelMeta=playerLevelMeta(player?.level||1);
     const rare=achievements?.rareTrophy||null,rarePercent=rare?playerProfilePercent(rare.playerPercent):"",rareVisual=rare?achievementThumbMarkup(rare):"";
     const recent=Array.isArray(achievements?.recent)?achievements.recent.slice(0,3):[],recentMarkup=recent.length?`<section class="rating-player-recent"><div class="rating-player-section-head"><strong>Недавно получено</strong><small>Последние трофеи</small></div><div class="rating-player-recent-list">${recent.map(playerProfileRecentMarkup).join("")}</div></section>`:"";
     const comparison=data?.comparison||{},viewer=comparison?.viewer||{},deltas=comparison?.deltas||{},comparisonMarkup=comparison?.isSelf===true
@@ -11270,7 +11096,7 @@ body { min-height: var(--zefirok-app-height, 100dvh); }
       : comparison?.available===true?`<section class="rating-player-compare-wrap"><button class="rating-player-compare-toggle" data-rating-player-compare-toggle type="button" aria-expanded="false"><span class="rating-player-compare-toggle-copy"><span class="rating-player-compare-toggle-icon" aria-hidden="true">${playerProfileMetricIconMarkup(COMPARE_PANEL_ICON)}</span><span><strong>Сравнить со мной</strong><span>Показать разницу по ключевым метрикам</span></span></span><b aria-hidden="true">⌄</b></button><div class="rating-player-compare" data-rating-player-compare hidden>${playerProfileCompareRow("Очки достижений",ACHIEVEMENT_POINTS_ICON,points,viewer?.achievementPoints,deltas?.achievementPoints,"очк. достиж.")}${playerProfileCompareRow("Лучший рекорд",BEST_SCORE_ICON,player?.bestScore,viewer?.bestScore,deltas?.bestScore,"очк.")}${playerProfileCompareRow("Получено достижений",ACHIEVEMENTS_COUNT_ICON,earned,viewer?.catalogEarned,deltas?.catalogEarned,"шт.")}</div></section>`:"";
     playerProfileContent.classList.remove("is-loaded");
     playerProfileContent.innerHTML=`
-      <div class="rating-player-profile-head" data-level-band="${escapeHtml(levelMeta.band)}" data-level-title="${escapeHtml(levelMeta.title)}">
+      <div class="rating-player-profile-head">
         <div class="rating-player-profile-avatar">${avatarMarkup(entry,false,true)}</div>
         <div class="rating-player-profile-copy">
           <div class="rating-player-profile-name-row"><h2 id="rating-player-profile-title">${escapeHtml(player?.name||"Игрок")}</h2><span class="rating-player-profile-public-title" data-title-tier="${escapeHtml(publicTitleTier)}" title="Публичный титул: ${escapeHtml(publicTitle)}"><small>Титул</small><strong>${escapeHtml(publicTitle)}</strong></span></div>
@@ -11484,8 +11310,7 @@ body { min-height: var(--zefirok-app-height, 100dvh); }
     if (levelBadge) {
       event.preventDefault();
       const level = Math.max(1, Number(levelBadge.dataset.playerLevelBadge || 1));
-      const meta = playerLevelMeta(level);
-      showToast(`${meta.title} · уровень ${meta.level}`, "success", 2400);
+      showToast(`Уровень игрока: ${level}`, "success", 2200);
       return;
     }
     const passBadge = target.closest("[data-pass-tier-badge]");
@@ -11509,9 +11334,8 @@ body { min-height: var(--zefirok-app-height, 100dvh); }
       event.preventDefault();
       event.stopPropagation();
       const level = Math.max(1, Number(levelBadge.dataset.playerLevelBadge || 1));
-      const meta = playerLevelMeta(level);
-      ratingImpactHaptic(meta.band === "50" ? "medium" : "light");
-      showToast(`${meta.title} · уровень ${meta.level}`, "success", 2400);
+      ratingImpactHaptic("light");
+      showToast(`Уровень игрока: ${level}`, "success", 2200);
       return;
     }
     const passBadge = target.closest("[data-pass-tier-badge]");
