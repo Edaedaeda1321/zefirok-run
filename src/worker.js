@@ -1433,12 +1433,19 @@ function seasonPassApplyCosmeticToState(state, cosmetic) {
   return false;
 }
 
-async function seasonPassHasXpX2(env, seasonId, telegramId, player = null) {
+async function seasonPassHasXpX2(env, seasonRef, telegramId, player = null) {
+  // ×2 XP is a paid Elite+ entitlement for the whole active season, including
+  // the 50+ overflow track. Prefer the already-loaded season snapshot so a
+  // transient extra D1 read can never make a valid paid benefit disappear.
+  if (String(player?.premium_tier || "none") !== "elite_plus") return false;
+  const season = seasonRef && typeof seasonRef === "object" ? seasonRef : null;
+  if (season) {
+    const config = season?.tierSettings?.elitePlus || seasonPassElitePlusBenefitsView(defaultSeasonPassElitePlusBenefits());
+    return config?.xpBoost !== false;
+  }
   try {
-    // ×2 XP is not an inventory consumable. It is an Elite+ benefit that is
-    // valid only while the player has Elite+ in the active season.
-    if (String(player?.premium_tier || "none") !== "elite_plus") return false;
-    const seasonRow=await env.DB.prepare(`SELECT elite_plus_benefits_json FROM season_pass_seasons WHERE season_id=? LIMIT 1`).bind(String(seasonId)).first();
+    const seasonId=String(seasonRef||"");
+    const seasonRow=await env.DB.prepare(`SELECT elite_plus_benefits_json FROM season_pass_seasons WHERE season_id=? LIMIT 1`).bind(seasonId).first();
     const config=seasonPassElitePlusBenefitsConfig(seasonRow?.elite_plus_benefits_json);
     return Boolean(config.xpBoost);
   } catch (error) {
@@ -7959,9 +7966,12 @@ async function getGameStartupPackage(request, env, ctx = null) {
     const newcomerPath = newcomerPathResult?.status === "fulfilled" ? newcomerPathResult.value : {available:false,dayNumber:0,runs:0,steps:[]};
     const achievementShowcase = achievementShowcaseResult?.status === "fulfilled" ? achievementShowcaseResult.value : null;
     const seasonPassTaskNotice = taskNoticeResult.status === "fulfilled" ? taskNoticeResult.value : null;
+    // Do not turn a bounded/temporary bonus lookup failure into an explicit
+    // revocation. The client will fall back to the dedicated profile-bonus API
+    // and keep the last authoritative Elite+ state until that read completes.
     const seasonPassBonus = seasonPassBonusResult.status === "fulfilled"
       ? seasonPassBonusResult.value
-      : { active:false, multiplier:1, claimableCount:0 };
+      : null;
     if (casesResult.status === "rejected") errors.cases = startupSectionError(casesResult.reason);
     if (taskNoticeResult.status === "rejected") errors.seasonPassTaskNotice = startupSectionError(taskNoticeResult.reason);
     if (seasonPassBonusResult.status === "rejected") errors.seasonPassBonus = startupSectionError(seasonPassBonusResult.reason);
@@ -12610,7 +12620,8 @@ async function openLevelCase(request, env, ctx = null) {
       if (playerLevel < requestedLevel) throw new ApiError(403, `Кейс откроется на ${requestedLevel} уровне.`);
       const taskEvent = await prepareSeasonPassTaskProgressEvent(env, telegramId, {cases_opened:caseCount}, now)
         .catch(error => {console.error("level case task progress prepare failed",error);return null;});
-      const rolled = await rollLevelCaseRewardBundleForPlayer(env,caseType,caseCount,ensured.state,ensured.state.ownedSkins,liveops);
+      const firstRolled = await rollLevelCaseForPlayer(env,caseType,ensured.state,ensured.state.ownedSkins,liveops);
+      const rolled = await rollLevelCaseRewardBundleForPlayer(env,caseType,caseCount,ensured.state,ensured.state.ownedSkins,liveops,caseSecureFloat,firstRolled);
       const physicalRewards = await prepareCasePhysicalRewards(env, {
         rolled,
         telegramId,
@@ -14327,7 +14338,7 @@ async function prepareFastSeasonPassRunContext(env, telegramId, input, runCreate
   if ((Number.isFinite(startAt) && runAt < startAt) || (Number.isFinite(endAt) && runAt >= endAt)) return null;
   const player = await ensureSeasonPassPlayer(env, season, id);
   const [hasXpX2, taskEvent] = await Promise.all([
-    seasonPassHasXpX2(env, season.id, id, player),
+    seasonPassHasXpX2(env, season, id, player),
     prepareSeasonPassTaskProgressEvent(env, id, {
       runs:1,
       score:Math.max(0,Number(input?.score||0)),
@@ -17324,7 +17335,7 @@ ${statusText}
     let xpMultiplier = 1;
     if (player) {
       try {
-        xpMultiplier = await seasonPassHasXpX2(env, season.id, telegramId, player) ? 2 : seasonPassTaskXpMultiplierForPlayer(season, player);
+        xpMultiplier = await seasonPassHasXpX2(env, season, telegramId, player) ? 2 : seasonPassTaskXpMultiplierForPlayer(season, player);
       } catch { xpMultiplier = seasonPassTaskXpMultiplierForPlayer(season, player); }
     }
     const priority = (task) => task.complete && !task.claimed && !task.locked ? 0 : !task.claimed && !task.locked ? 1 : task.locked ? 2 : 3;
@@ -25735,11 +25746,13 @@ async function rollLevelCaseForPlayer(env,caseType,sourceState,currentOwnedSkins
   return rollLevelCase(caseType,sourceState,currentOwnedSkins,caseRuntimeConfigWithoutFutureContent(safeLiveops),rng);
 }
 
-async function rollLevelCaseRewardBundleForPlayer(env,caseType,count,sourceState,currentOwnedSkins=[],liveops=null,rng=caseSecureFloat){
+async function rollLevelCaseRewardBundleForPlayer(env,caseType,count,sourceState,currentOwnedSkins=[],liveops=null,rng=caseSecureFloat,firstRolled=null){
   const safeCount=Math.max(1,Math.min(2,Math.floor(Number(count)||1)));
   let state=sourceState,ownedSkins=currentOwnedSkins,rewards=[],points=0,treats=0,coffee=0,caseConfig=null;
   for(let caseRoll=1;caseRoll<=safeCount;caseRoll+=1){
-    const rolled=await rollLevelCaseForPlayer(env,caseType,state,ownedSkins,liveops,rng);
+    const rolled=caseRoll===1&&firstRolled
+      ? firstRolled
+      : await rollLevelCaseForPlayer(env,caseType,state,ownedSkins,liveops,rng);
     state=rolled.state;ownedSkins=rolled.state?.ownedSkins||ownedSkins;caseConfig=rolled.caseConfig||caseConfig;
     points+=safeAdminNumber(rolled.points);treats+=safeAdminNumber(rolled.treats);coffee+=safeAdminNumber(rolled.coffee);
     rewards.push(...(Array.isArray(rolled.rewards)?rolled.rewards.map((reward)=>safeCount>1?{...reward,caseRoll}:reward):[]));
@@ -35491,7 +35504,7 @@ async function getSeasonPassProfileBonusForUser(env,telegramId){
   }
   const player=await ensureSeasonPassPlayer(env,season,String(telegramId));
   const [active,attention,tierActivationNotice]=await Promise.all([
-    season.status==='active'?seasonPassHasXpX2(env,season.id,String(telegramId),player):Promise.resolve(false),
+    season.status==='active'?seasonPassHasXpX2(env,season,String(telegramId),player):Promise.resolve(false),
     seasonPassAttentionForPlayer(env,season,String(telegramId),player),
     pendingSeasonPassTierActivationNotice(env,String(telegramId),season)
   ]);
@@ -35750,7 +35763,7 @@ async function claimSeasonPassTaskGiftReward(env, telegramId, reward, executionC
 
 async function grantSeasonPassTaskXp(env,ctx,task,executionCtx=null){
   const now=Math.floor(Date.now()/1000);const key=[ctx.season.id,ctx.telegramId,String(task.id),String(task.periodKey)];
-  const premiumMultiplier=await seasonPassHasXpX2(env,ctx.season.id,ctx.telegramId,ctx.player)?2:seasonPassTaskXpMultiplierForPlayer(ctx.season,ctx.player);
+  const premiumMultiplier=await seasonPassHasXpX2(env,ctx.season,ctx.telegramId,ctx.player)?2:seasonPassTaskXpMultiplierForPlayer(ctx.season,ctx.player);
   const earnedMultiplier=seasonPassEarnedXpMultiplierView(ctx.season,ctx.player,premiumMultiplier,now*1000);
   const multiplier=earnedMultiplier.multiplier;
   const taskXp=Math.max(1,Number(task.xp)||1)*multiplier;
@@ -35819,7 +35832,7 @@ async function claimAllSeasonPassTasks(request,env,executionCtx=null){
   try{
     const ctx=await seasonPassRequestContext(request,env);assertSeasonPassTaskClaimsOpen(ctx.season);
     const tasksPayload=await buildSeasonPassTasksPayload(env,ctx.season,ctx.telegramId,ctx.player.premium_tier);const ready=tasksPayload.tasks.filter(task=>task.complete&&!task.claimed&&!task.locked);const now=Math.floor(Date.now()/1000);
-    const taskPremiumMultiplier=await seasonPassHasXpX2(env,ctx.season.id,ctx.telegramId,ctx.player)?2:seasonPassTaskXpMultiplierForPlayer(ctx.season,ctx.player);
+    const taskPremiumMultiplier=await seasonPassHasXpX2(env,ctx.season,ctx.telegramId,ctx.player)?2:seasonPassTaskXpMultiplierForPlayer(ctx.season,ctx.player);
     const taskXpMultiplier=seasonPassEarnedXpMultiplierView(ctx.season,ctx.player,taskPremiumMultiplier,now*1000).multiplier;
     if(!ready.length){await cancelQueuedSeasonPassTaskNotifications(env,ctx.telegramId,'season-task-already-claimed');const fastState=await seasonPassTaskFastMutationState(env,ctx.season,ctx.telegramId);return jsonResponse({ok:true,season:{id:ctx.season.id,status:ctx.season.status,claimWindowOpen:ctx.season.claimWindowOpen,progression:seasonPassProgressionView(ctx.season),capabilities:seasonPassCapabilities(ctx.season)},player:fastState.player,overflow:fastState.overflow,catchUp:fastState.catchUp,...(fastState.finale?{finale:fastState.finale}:{}),receivedTasks:[],taskUpdates:[],taskClaimableDelta:0,totalXp:0,stale:true});}
     const predicates=ready.map(()=>`(task_id=? AND period_key=?)`).join(' OR ');const pairBinds=ready.flatMap(task=>[String(task.id),String(task.periodKey)]);
@@ -36293,7 +36306,7 @@ async function submitSeasonPassRun(request,env){
 }
 
 async function awardSeasonPassRunXp(env,telegramId,runId,createdAt){
-  try{await assertSeasonPassNotForceClosed(env);const runAt=Math.max(0,Number(createdAt||Math.floor(Date.now()/1000)))*1000;const forcedClosure=await getSeasonPassForcedClosure(env,runAt);if(forcedClosure)return null;const season=await loadSeasonPassSeason(env,runAt);if(season.status!=='active')return null;const startsAt=Date.parse(String(season.startsAt||''));const endsAt=Date.parse(String(season.endsAt||''));if((Number.isFinite(startsAt)&&runAt<startsAt)||(Number.isFinite(endsAt)&&runAt>=endsAt))return null;const player=await ensureSeasonPassPlayer(env,season,String(telegramId));const premiumMultiplier=await seasonPassHasXpX2(env,season.id,String(telegramId),player)?2:1;const earnedMultiplier=seasonPassEarnedXpMultiplierView(season,player,premiumMultiplier,runAt);const multiplier=earnedMultiplier.multiplier;const base=Math.max(1,Number(season.baseRunXp)||100);const awarded=base*multiplier;const now=Math.floor(Date.now()/1000);const id=String(telegramId),rid=String(runId),sid=String(season.id);
+  try{await assertSeasonPassNotForceClosed(env);const runAt=Math.max(0,Number(createdAt||Math.floor(Date.now()/1000)))*1000;const forcedClosure=await getSeasonPassForcedClosure(env,runAt);if(forcedClosure)return null;const season=await loadSeasonPassSeason(env,runAt);if(season.status!=='active')return null;const startsAt=Date.parse(String(season.startsAt||''));const endsAt=Date.parse(String(season.endsAt||''));if((Number.isFinite(startsAt)&&runAt<startsAt)||(Number.isFinite(endsAt)&&runAt>=endsAt))return null;const player=await ensureSeasonPassPlayer(env,season,String(telegramId));const premiumMultiplier=await seasonPassHasXpX2(env,season,String(telegramId),player)?2:1;const earnedMultiplier=seasonPassEarnedXpMultiplierView(season,player,premiumMultiplier,runAt);const multiplier=earnedMultiplier.multiplier;const base=Math.max(1,Number(season.baseRunXp)||100);const awarded=base*multiplier;const now=Math.floor(Date.now()/1000);const id=String(telegramId),rid=String(runId),sid=String(season.id);
     const results=await env.DB.batch([
       env.DB.prepare(`INSERT OR IGNORE INTO season_pass_run_xp(run_id,season_id,telegram_id,base_xp,multiplier,xp_awarded,created_at,applied_at) VALUES(?,?,?,?,?,?,?,0)`).bind(rid,sid,id,base,multiplier,awarded,Number(createdAt)||now),
       env.DB.prepare(`UPDATE season_pass_players SET xp=xp+COALESCE((SELECT xp_awarded FROM season_pass_run_xp WHERE run_id=? AND season_id=? AND telegram_id=? AND applied_at=0),0),revision=revision+1,updated_at=? WHERE season_id=? AND telegram_id=? AND EXISTS(SELECT 1 FROM season_pass_run_xp WHERE run_id=? AND season_id=? AND telegram_id=? AND applied_at=0)`).bind(rid,sid,id,now,sid,id,rid,sid,id),

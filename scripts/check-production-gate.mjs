@@ -68,6 +68,7 @@ const steps = [
   ['rating fast reads', 'node', ['scripts/check-rating-fast-read.mjs']],
   ['rating dethrone delivery', 'node', ['scripts/check-rating-dethrone-delivery.mjs']],
   ['case opening stability', 'node', ['scripts/check-case-stability.mjs']],
+  ['Elite+ XP lifetime', 'node', ['scripts/check-elite-plus-xp-lifetime.mjs']],
   ['mail claim stability', 'node', ['scripts/check-mail-claim-stability.mjs']],
   ['runner case milestones', 'node', ['scripts/check-run-case-milestones.mjs']],
   ['season 3 story', 'node', ['scripts/check-season3-story.mjs']],
