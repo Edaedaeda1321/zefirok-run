@@ -106,6 +106,7 @@ export const REQUIRED_COLUMN_SPECS = Object.freeze([
   { table: 'case_player_state', column: 'revision', definition: 'INTEGER NOT NULL DEFAULT 1' },
   { table: 'level_case_openings', column: 'telegram_id', definition: 'TEXT NOT NULL' },
   { table: 'level_case_openings', column: 'level', definition: 'INTEGER NOT NULL' },
+  { table: 'level_case_openings', column: 'case_count', definition: 'INTEGER NOT NULL DEFAULT 1' },
   { table: 'level_case_openings', column: 'rewards_json', definition: "TEXT NOT NULL DEFAULT '[]'" },
   { table: 'game_run_sessions', column: 'run_id', definition: 'TEXT' },
   { table: 'game_run_sessions', column: 'telegram_id', definition: 'TEXT NOT NULL' },

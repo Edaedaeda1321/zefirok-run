@@ -16566,15 +16566,18 @@ function installProgressInfo(){
 
 
 
-      const LEVEL_CASE_SCHEDULE = Object.freeze(Array.from({ length: 49 }, (_, index) =&gt; {
-        const level = index + 2;
-        const caseType = level % 10 === 0 ? &quot;gold&quot; : level % 5 === 0 ? &quot;sweet&quot; : &quot;small&quot;;
-        return {
-          level,
-          caseType,
-          title: caseType === &quot;legendary&quot; ? &quot;Легендарный кейс&quot; : caseType === &quot;mythic&quot; ? &quot;Мифический кейс&quot; : caseType === &quot;gold&quot; ? &quot;Золотой кейс&quot; : caseType === &quot;sweet&quot; ? &quot;Серебряный кейс&quot; : &quot;Обычный кейс&quot;,
-          slots: 1
-        };
+      const LEVEL_CASE_TYPE_BY_LEVEL = Object.freeze({
+        2:&quot;small&quot;,3:&quot;small&quot;,4:&quot;sweet&quot;,5:&quot;gold&quot;,6:&quot;sweet&quot;,7:&quot;sweet&quot;,8:&quot;sweet&quot;,9:&quot;sweet&quot;,10:&quot;gold&quot;,
+        11:&quot;sweet&quot;,12:&quot;sweet&quot;,13:&quot;gold&quot;,14:&quot;sweet&quot;,15:&quot;gold&quot;,16:&quot;sweet&quot;,17:&quot;gold&quot;,18:&quot;sweet&quot;,19:&quot;gold&quot;,20:&quot;mythic&quot;,
+        21:&quot;gold&quot;,22:&quot;gold&quot;,23:&quot;gold&quot;,24:&quot;gold&quot;,25:&quot;mythic&quot;,26:&quot;gold&quot;,27:&quot;gold&quot;,28:&quot;mythic&quot;,29:&quot;gold&quot;,30:&quot;mythic&quot;,
+        31:&quot;gold&quot;,32:&quot;gold&quot;,33:&quot;mythic&quot;,34:&quot;gold&quot;,35:&quot;mythic&quot;,36:&quot;gold&quot;,37:&quot;mythic&quot;,38:&quot;gold&quot;,39:&quot;mythic&quot;,40:&quot;legendary&quot;,
+        41:&quot;gold&quot;,42:&quot;mythic&quot;,43:&quot;gold&quot;,44:&quot;mythic&quot;,45:&quot;legendary&quot;,46:&quot;mythic&quot;,47:&quot;gold&quot;,48:&quot;mythic&quot;,49:&quot;mythic&quot;,50:&quot;legendary&quot;
+      });
+      const LEVEL_CASE_COUNT_BY_LEVEL = Object.freeze({30:2,47:2,49:2,50:2});
+      const LEVEL_CASE_SCHEDULE = Object.freeze(Object.entries(LEVEL_CASE_TYPE_BY_LEVEL).map(([levelValue,caseType]) =&gt; {
+        const level=Number(levelValue),count=Math.max(1,Math.floor(Number(LEVEL_CASE_COUNT_BY_LEVEL[level])||1));
+        const baseTitle=caseType === &quot;legendary&quot; ? &quot;Легендарный кейс&quot; : caseType === &quot;mythic&quot; ? &quot;Мифический кейс&quot; : caseType === &quot;gold&quot; ? &quot;Золотой кейс&quot; : caseType === &quot;sweet&quot; ? &quot;Серебряный кейс&quot; : &quot;Обычный кейс&quot;;
+        return {level,caseType,count,title:count&gt;1?`${baseTitle} ×${count}`:baseTitle,slots:count};
       }));
       const CASE_IMAGE_CATALOG = Object.freeze({
         small: Object.freeze({
@@ -21051,7 +21054,8 @@ function createTutorialDeck(layer, mount, options, words) {
       function profileAvailableCaseCount() {
         const gifted = normalizeGiftedCases(state.caseGiftedCases);
         const giftedTotal = gifted.small + gifted.sweet + gifted.gold + gifted.mythic + gifted.legendary + gifted.alex;
-        return Math.max(0, giftedTotal + availableLevelCases().length);
+        const levelTotal = availableLevelCases().reduce((sum,entry) =&gt; sum + Math.max(1,Math.floor(Number(entry?.count)||1)),0);
+        return Math.max(0, giftedTotal + levelTotal);
       }
 
       function updateProfileCaseBadges() {
@@ -21681,12 +21685,13 @@ function createTutorialDeck(layer, mount, options, words) {
         const levelCase = LEVEL_CASE_SCHEDULE.find(entry =&gt; entry.level === normalizedLevel);
         if (!levelCase) return;
         const retryType = caseExperienceNormalizeType(levelCase.caseType);
-        const context = {kind:&quot;level&quot;,level:normalizedLevel,caseType:retryType,startedAt:Date.now()};
+        const rewardCount=Math.max(1,Math.floor(Number(levelCase.count)||1));
+        const context = {kind:&quot;level&quot;,level:normalizedLevel,caseType:retryType,caseCount:rewardCount,startedAt:Date.now()};
         caseOpeningRetryContext = context;
         levelCaseOpeningRequestBusy = true;
-        if (button) {button.disabled=true;button.textContent=&quot;Открываем…&quot;;}
+        if (button) {button.disabled=true;button.textContent=rewardCount&gt;1?`Открываем ×${rewardCount}…`:&quot;Открываем…&quot;;}
         showCaseOpeningPreview(retryType);
-        const progressTimer=window.setTimeout(()=&gt;updateCaseOpeningPreviewStatus(&quot;Проверяем результат…&quot;,&quot;Сервер фиксирует награду этого уровня. Повторно кейс не списывается.&quot;),1200);
+        const progressTimer=window.setTimeout(()=&gt;updateCaseOpeningPreviewStatus(&quot;Проверяем результат…&quot;,rewardCount&gt;1?`Сервер фиксирует ${rewardCount} кейса за этот уровень. Повторная проверка не выдаст награду дважды.`:&quot;Сервер фиксирует награду этого уровня. Повторно кейс не списывается.&quot;),1200);
         try {
           const data = await caseApiRequest(CASE_API_OPEN_PATH, {level:normalizedLevel}, CASE_OPEN_REQUEST_TIMEOUT_MS);
           presentConfirmedLevelCase(data, normalizedLevel);
@@ -21708,7 +21713,7 @@ function createTutorialDeck(layer, mount, options, words) {
               showCaseOpenErrorState(retryType,error,true);
             }
           }
-          if (button?.isConnected) {button.disabled=false;button.textContent=&quot;Открыть&quot;;}
+          if (button?.isConnected) {button.disabled=false;button.textContent=rewardCount&gt;1?`Открыть ×${rewardCount}`:&quot;Открыть&quot;;}
         } finally {window.clearTimeout(progressTimer);levelCaseOpeningRequestBusy=false;renderCaseHub();}
       }
 
@@ -22970,7 +22975,8 @@ function createTutorialDeck(layer, mount, options, words) {
         }
         const levelCase = availableLevelCases().find((entry) =&gt; String(entry?.caseType || &quot;&quot;) === type);
         if (levelCase) {
-          return `&lt;button class=&quot;case-info-primary&quot; data-open-level-case=&quot;${Math.floor(Number(levelCase.level || 0))}&quot; type=&quot;button&quot;&gt;Открыть 1 кейс&lt;/button&gt;`;
+          const count=Math.max(1,Math.floor(Number(levelCase.count)||1));
+          return `&lt;button class=&quot;case-info-primary&quot; data-open-level-case=&quot;${Math.floor(Number(levelCase.level || 0))}&quot; type=&quot;button&quot;&gt;${count&gt;1?`Открыть ${count} кейса`:&quot;Открыть 1 кейс&quot;}&lt;/button&gt;`;
         }
         return `&lt;button class=&quot;case-info-primary&quot; type=&quot;button&quot; disabled&gt;Нет кейса в «Моих покупках»&lt;/button&gt;`;
       }
@@ -24889,7 +24895,7 @@ function createTutorialDeck(layer, mount, options, words) {
         if (caseGiftedListEl) {
           const titles = { small:&quot;Обычный кейс&quot;, sweet:&quot;Серебряный кейс&quot;, gold:&quot;Золотой кейс&quot;, mythic:&quot;Мифический кейс&quot;, legendary:&quot;Легендарный кейс&quot;, alex:&quot;Кейс Алекса&quot; };
           const entries = [
-            ...levelCases.map((entry) =&gt; ({ key:`level:${entry.level}`, source:&quot;level&quot;, caseType:entry.caseType, title:entry.title, count:1, level:entry.level })),
+            ...levelCases.map((entry) =&gt; ({ key:`level:${entry.level}`, source:&quot;level&quot;, caseType:entry.caseType, title:entry.title, count:Math.max(1,Math.floor(Number(entry.count)||1)), level:entry.level })),
             ...Object.keys(titles).filter((type) =&gt; gifted[type] &gt; 0).map((type) =&gt; ({ key:`gifted:${type}`, source:&quot;gifted&quot;, caseType:type, title:titles[type], count:gifted[type], level:0 }))
           ];
           caseStockSyncSeen(entries);
@@ -24911,15 +24917,15 @@ function createTutorialDeck(layer, mount, options, words) {
           const cards = visible.map((entry) =&gt; {
             const isNew = Boolean(caseStockSeenState.unseen[entry.key]);
             const rarity = caseStockRarityMeta(entry.caseType);
-            const countBadge = entry.source === &quot;gifted&quot; ? `&lt;b class=&quot;case-stock-count&quot;&gt;×${formatter.format(entry.count)}&lt;/b&gt;` : &quot;&quot;;
+            const countBadge = Number(entry.count||0)&gt;1 ? `&lt;b class=&quot;case-stock-count&quot;&gt;×${formatter.format(entry.count)}&lt;/b&gt;` : &quot;&quot;;
             const newBadge = isNew ? `&lt;em class=&quot;case-stock-new&quot;&gt;Новое&lt;/em&gt;` : &quot;&quot;;
             const rarityBadge = `&lt;em class=&quot;case-stock-rarity&quot;&gt;${escapePurchaseText(rarity.label)}&lt;/em&gt;`;
             const stockMeta = `&lt;span class=&quot;case-stock-meta&quot;&gt;${rarityBadge}${newBadge}&lt;/span&gt;`;
             const subtitle = entry.source === &quot;level&quot;
-              ? `Награда за ${formatter.format(entry.level)} уровень`
+              ? `Награда за ${formatter.format(entry.level)} уровень${Number(entry.count||1)&gt;1?` · ${formatter.format(entry.count)} кейса`:&quot;&quot;}`
               : `В запасе ${formatter.format(entry.count)}`;
             const action = entry.source === &quot;level&quot;
-              ? `&lt;button data-open-level-case=&quot;${entry.level}&quot; data-case-stock-key=&quot;${escapePurchaseText(entry.key)}&quot; type=&quot;button&quot;&gt;Открыть&lt;/button&gt;`
+              ? `&lt;button data-open-level-case=&quot;${entry.level}&quot; data-case-stock-key=&quot;${escapePurchaseText(entry.key)}&quot; type=&quot;button&quot;&gt;${Number(entry.count||1)&gt;1?`Открыть ×${formatter.format(entry.count)}`:&quot;Открыть&quot;}&lt;/button&gt;`
               : `&lt;button data-open-gifted-case=&quot;${entry.caseType}&quot; data-case-stock-key=&quot;${escapePurchaseText(entry.key)}&quot; type=&quot;button&quot;&gt;Открыть&lt;/button&gt;`;
             return `&lt;article class=&quot;gifted-case-card is-${entry.caseType}${isNew ? &quot; is-new-case&quot; : &quot;&quot;}&quot; data-case-stock-card=&quot;${escapePurchaseText(entry.key)}&quot;&gt;&lt;button class=&quot;case-card-info-trigger&quot; data-case-info-type=&quot;${entry.caseType}&quot; data-case-stock-key=&quot;${escapePurchaseText(entry.key)}&quot; type=&quot;button&quot; aria-label=&quot;Награды и шансы: ${escapePurchaseText(entry.title)}&quot;&gt;${caseImageMarkup(entry.caseType, false)}&lt;/button&gt;${countBadge}&lt;span&gt;&lt;strong&gt;${escapePurchaseText(entry.title)}&lt;/strong&gt;&lt;small&gt;${escapePurchaseText(subtitle)}&lt;/small&gt;${stockMeta}&lt;/span&gt;${action}&lt;/article&gt;`;
           }).join(&quot;&quot;);

@@ -137,13 +137,18 @@ const SKIN_PURCHASE_CASE_BONUSES = Object.freeze({
 });
 
 // Уровневые кейсы. Шансы указаны на один слот награды.
-const LEVEL_CASE_SCHEDULE = Object.freeze(Object.fromEntries(
-  Array.from({ length: 49 }, (_, index) => {
-    const level = index + 2;
-    const caseType = level % 10 === 0 ? "gold" : level % 5 === 0 ? "sweet" : "small";
-    return [level, caseType];
-  })
-));
+const LEVEL_CASE_SCHEDULE = Object.freeze({
+  2:"small",3:"small",4:"sweet",5:"gold",6:"sweet",7:"sweet",8:"sweet",9:"sweet",10:"gold",
+  11:"sweet",12:"sweet",13:"gold",14:"sweet",15:"gold",16:"sweet",17:"gold",18:"sweet",19:"gold",20:"mythic",
+  21:"gold",22:"gold",23:"gold",24:"gold",25:"mythic",26:"gold",27:"gold",28:"mythic",29:"gold",30:"mythic",
+  31:"gold",32:"gold",33:"mythic",34:"gold",35:"mythic",36:"gold",37:"mythic",38:"gold",39:"mythic",40:"legendary",
+  41:"gold",42:"mythic",43:"gold",44:"mythic",45:"legendary",46:"mythic",47:"gold",48:"mythic",49:"mythic",50:"legendary"
+});
+const LEVEL_CASE_REWARD_COUNTS = Object.freeze({30:2,47:2,49:2,50:2});
+function levelCaseRewardCount(levelValue) {
+  const level=Math.floor(Number(levelValue)||0);
+  return Math.max(1,Math.min(2,Math.floor(Number(LEVEL_CASE_REWARD_COUNTS[level])||1)));
+}
 
 const LEVEL_CASE_CONFIG = Object.freeze({
   small: Object.freeze({ id: "small", title: "Обычный кейс", slots: 1 }),
@@ -153,6 +158,11 @@ const LEVEL_CASE_CONFIG = Object.freeze({
   legendary: Object.freeze({ id: "legendary", title: "Легендарный кейс", slots: 1 }),
   alex: Object.freeze({ id: "alex", title: "Кейс Алекса", slots: 1 })
 });
+function levelCaseRewardTitle(levelValue, caseType) {
+  const base=LEVEL_CASE_CONFIG[String(caseType||"")]?.title||"Кейс";
+  const count=levelCaseRewardCount(levelValue);
+  return count>1?`${base} ×${count}`:base;
+}
 
 const CASE_AVATARS = Object.freeze({
   royal: Object.freeze({ id: "royal", title: "Королевская", rarity: "legendary", weight: 2 }),
@@ -4793,7 +4803,7 @@ async function collectServerAnalyticsHourly(env, now = Math.floor(Date.now() / 1
     env.DB.prepare(`SELECT COUNT(DISTINCT telegram_id) AS count FROM leaderboard_runs WHERE created_at>=? AND created_at<?`).bind(bucketAt, endAt),
     env.DB.prepare(`SELECT COUNT(*) AS count FROM admin_profile_state WHERE created_at>=? AND created_at<?`).bind(bucketAt, endAt),
     env.DB.prepare(`SELECT COUNT(*) AS total,SUM(CASE WHEN accepted=1 THEN 1 ELSE 0 END) AS accepted FROM leaderboard_runs WHERE created_at>=? AND created_at<?`).bind(bucketAt, endAt),
-    env.DB.prepare(`SELECT COUNT(*) AS count FROM level_case_openings WHERE opened_at>=? AND opened_at<?`).bind(bucketAt, endAt),
+    env.DB.prepare(`SELECT COALESCE(SUM(case_count),0) AS count FROM level_case_openings WHERE opened_at>=? AND opened_at<?`).bind(bucketAt, endAt),
     env.DB.prepare(`SELECT COUNT(*) AS count FROM granted_cases WHERE opened_at>=? AND opened_at<?`).bind(bucketAt, endAt),
     env.DB.prepare(`SELECT COUNT(*) AS count FROM shop_stock_consumptions WHERE created_at>=? AND created_at<?`).bind(bucketAt, endAt),
     env.DB.prepare(`SELECT SUM(CASE WHEN status='delivered' THEN 1 ELSE 0 END) AS delivered,SUM(CASE WHEN status='failed' THEN 1 ELSE 0 END) AS failed FROM reward_delivery_queue WHERE updated_at>=? AND updated_at<?`).bind(bucketAt, endAt),
@@ -7633,7 +7643,7 @@ async function achievementPlayerState(env, telegramId) {
     env.DB.prepare(`SELECT owned_avatars_json,owned_frames_json,owned_trails_json,owned_skins_json,owned_music_json FROM case_player_state WHERE telegram_id=? LIMIT 1`).bind(playerId).first(),
     env.DB.prepare(`SELECT COUNT(*) AS count FROM season_pass_claims WHERE telegram_id=? AND status='delivered'`).bind(playerId).first(),
     env.DB.prepare(`SELECT COUNT(*) AS count FROM referral_links WHERE referrer_telegram_id=? AND status='active'`).bind(playerId).first(),
-    optionalFirst(env.DB.prepare(`SELECT ((SELECT COUNT(*) FROM level_case_openings WHERE telegram_id=?)+(SELECT COUNT(*) FROM granted_cases WHERE telegram_id=? AND status='opened')) AS count`).bind(playerId,playerId)),
+    optionalFirst(env.DB.prepare(`SELECT ((SELECT COALESCE(SUM(case_count),0) FROM level_case_openings WHERE telegram_id=?)+(SELECT COUNT(*) FROM granted_cases WHERE telegram_id=? AND status='opened')) AS count`).bind(playerId,playerId)),
     optionalFirst(env.DB.prepare(`SELECT COUNT(*) AS count FROM season_pass_case_grants WHERE telegram_id=? AND status='opened'`).bind(playerId)),
     optionalFirst(env.DB.prepare(`SELECT COUNT(*) AS count FROM album_milestone_claims WHERE telegram_id=? AND status='delivered'`).bind(playerId)),
     optionalAll(env.DB.prepare(`SELECT i.collection_id,i.item_kind,i.item_id FROM album_collection_items i JOIN album_collections c ON c.collection_id=i.collection_id WHERE c.status='published' AND i.required=1 ORDER BY i.collection_id`)),
@@ -11763,14 +11773,16 @@ function normalizeCurrentActiveSkin(value, ownedSkins = []) {
 async function recentCaseOpeningsForPlayer(env, telegramId, limit = 8) {
   const max=Math.max(1,Math.min(20,Math.floor(Number(limit)||8)));
   const result=await env.DB.prepare(`SELECT * FROM (
-    SELECT 'level' AS source,CAST(level AS TEXT) AS source_id,case_type,rewards_json,opened_at FROM level_case_openings WHERE telegram_id=?
+    SELECT 'level' AS source,CAST(level AS TEXT) AS source_id,case_type,case_count,rewards_json,opened_at FROM level_case_openings WHERE telegram_id=?
     UNION ALL
-    SELECT 'granted' AS source,id AS source_id,case_type,rewards_json,opened_at FROM granted_cases WHERE telegram_id=? AND status='opened'
+    SELECT 'granted' AS source,id AS source_id,case_type,1 AS case_count,rewards_json,opened_at FROM granted_cases WHERE telegram_id=? AND status='opened'
   ) WHERE opened_at>0 ORDER BY opened_at DESC LIMIT ?`).bind(String(telegramId),String(telegramId),max).all();
   return (result.results||[]).map((row)=>{
     let rewards=[];try{const parsed=JSON.parse(String(row.rewards_json||"[]"));if(Array.isArray(parsed))rewards=parsed;}catch{}
     const caseType=normalizeCaseType(row.case_type)||"small";
-    return {source:String(row.source||""),sourceId:String(row.source_id||""),caseType,title:String(LEVEL_CASE_CONFIG[caseType]?.title||"Кейс"),openedAt:Number(row.opened_at||0)*1000,rewards};
+    const level=String(row.source||"")==="level"?Number(row.source_id||0):0;
+    const caseCount=Math.max(1,Math.min(2,Math.floor(Number(row.case_count)||1)));
+    return {source:String(row.source||""),sourceId:String(row.source_id||""),caseType,caseCount,title:level?levelCaseRewardTitle(level,caseType):String(LEVEL_CASE_CONFIG[caseType]?.title||"Кейс"),openedAt:Number(row.opened_at||0)*1000,rewards};
   });
 }
 
@@ -11786,7 +11798,7 @@ async function buildCasePayload(env, telegramId, currentProfile, extra = {}, opt
   const liveops = await readCaseRuntimeConfig(env);
   const [openingsResult, giftedResult] = await env.DB.batch([
     env.DB.prepare(
-      `SELECT level, case_type, rewards_json, opened_at
+      `SELECT level, case_type, case_count, rewards_json, opened_at
        FROM level_case_openings WHERE telegram_id = ? ORDER BY level ASC`
     ).bind(telegramId),
     env.DB.prepare(
@@ -11800,6 +11812,7 @@ async function buildCasePayload(env, telegramId, currentProfile, extra = {}, opt
     return {
       level: Number(row.level || 0),
       caseType: String(row.case_type || "small"),
+      caseCount: Math.max(1,Math.min(2,Math.floor(Number(row.case_count)||1))),
       rewards: Array.isArray(rewards) ? rewards : [],
       openedAt: Number(row.opened_at || 0) * 1000
     };
@@ -11818,7 +11831,8 @@ async function buildCasePayload(env, telegramId, currentProfile, extra = {}, opt
     .map(([level, caseType]) => ({
       level: Number(level),
       caseType,
-      title: LEVEL_CASE_CONFIG[caseType]?.title || "Кейс"
+      count: levelCaseRewardCount(level),
+      title: levelCaseRewardTitle(level,caseType)
     }))
     .filter((entry) => entry.level <= playerLevel && !openedLevels.includes(entry.level));
   return {
@@ -11828,7 +11842,8 @@ async function buildCasePayload(env, telegramId, currentProfile, extra = {}, opt
     schedule: Object.entries(LEVEL_CASE_SCHEDULE).map(([level, caseType]) => ({
       level: Number(level),
       caseType,
-      title: LEVEL_CASE_CONFIG[caseType]?.title || "Кейс"
+      count: levelCaseRewardCount(level),
+      title: levelCaseRewardTitle(level,caseType)
     })),
     eligibleCases,
     openedLevels,
@@ -12543,7 +12558,7 @@ async function getLevelCaseState(request, env, internal = null, ctx = null) {
 // Replays return only the persisted reward and current account state. No roll,
 // reward statement, task increment, analytics or stock reservation runs here.
 async function readLevelCaseOpening(env, telegramId, level) {
-  return env.DB.prepare(`SELECT level,case_type,rewards_json,opened_at FROM level_case_openings
+  return env.DB.prepare(`SELECT level,case_type,case_count,rewards_json,opened_at FROM level_case_openings
     WHERE telegram_id=? AND level=? LIMIT 1`).bind(String(telegramId),level).first();
 }
 async function replayLevelCaseOpening(env, telegramId, row, liveops) {
@@ -12555,10 +12570,10 @@ async function replayLevelCaseOpening(env, telegramId, row, liveops) {
     ensureCasePlayerState(env,String(telegramId),{}),
     readFastCaseInventory(env,String(telegramId))
   ]);
-  const level=Number(row.level),caseType=normalizeCaseType(row.case_type)||"small";
+  const level=Number(row.level),caseType=normalizeCaseType(row.case_type)||"small",caseCount=Math.max(1,Math.min(2,Math.floor(Number(row.case_count)||levelCaseRewardCount(level))));
   return jsonResponse({...buildFastCaseOpenPayload({
     state:fresh.state,liveops,profile:authoritativeProfileView(fresh.profile),inventory,
-    opened:{level,caseType,title:LEVEL_CASE_CONFIG[caseType]?.title||"Кейс",rewards,openedAt:Number(row.opened_at||0)*1000,replayed:true},
+    opened:{level,caseType,caseCount,title:levelCaseRewardTitle(level,caseType),rewards,openedAt:Number(row.opened_at||0)*1000,replayed:true},
     caseDelta:{openedLevel:level},
     operation:operationSuccessMeta(`level:${level}`,"level_case_open",true)
   }),repeated:true});
@@ -12573,6 +12588,7 @@ async function openLevelCase(request, env, ctx = null) {
     const telegramId = String(auth.user.id);
     const requestedLevel = Math.floor(Number(body.level || 0));
     const caseType = LEVEL_CASE_SCHEDULE[requestedLevel];
+    const caseCount = levelCaseRewardCount(requestedLevel);
     if (!caseType) throw new ApiError(400, "На этом уровне кейс не выдаётся.");
     const now = Math.floor(Date.now() / 1000);
     const [liveops, existing] = await Promise.all([
@@ -12592,9 +12608,9 @@ async function openLevelCase(request, env, ctx = null) {
       const ensured = await ensureCasePlayerState(env, telegramId, {});
       const playerLevel = caseProfileLevel(safeAdminNumber(ensured.profile?.profile_xp));
       if (playerLevel < requestedLevel) throw new ApiError(403, `Кейс откроется на ${requestedLevel} уровне.`);
-      const taskEvent = await prepareSeasonPassTaskProgressEvent(env, telegramId, {cases_opened:1}, now)
+      const taskEvent = await prepareSeasonPassTaskProgressEvent(env, telegramId, {cases_opened:caseCount}, now)
         .catch(error => {console.error("level case task progress prepare failed",error);return null;});
-      const rolled = await rollLevelCaseForPlayer(env,caseType,ensured.state,ensured.state.ownedSkins,liveops);
+      const rolled = await rollLevelCaseRewardBundleForPlayer(env,caseType,caseCount,ensured.state,ensured.state.ownedSkins,liveops);
       const physicalRewards = await prepareCasePhysicalRewards(env, {
         rolled,
         telegramId,
@@ -12607,9 +12623,9 @@ async function openLevelCase(request, env, ctx = null) {
         await env.DB.batch([
           caseStateRevisionGuardStatement(env,revisionGuardId,telegramId,ensured.state.revision),
           env.DB.prepare(
-            `INSERT INTO level_case_openings (telegram_id, level, case_type, rewards_json, opened_at)
-             VALUES (?, ?, ?, ?, ?)`
-          ).bind(telegramId, requestedLevel, caseType, JSON.stringify(rolled.rewards), now),
+            `INSERT INTO level_case_openings (telegram_id, level, case_type, case_count, rewards_json, opened_at)
+             VALUES (?, ?, ?, ?, ?, ?)`
+          ).bind(telegramId, requestedLevel, caseType, caseCount, JSON.stringify(rolled.rewards), now),
           env.DB.prepare(
             `UPDATE admin_profile_state SET
               wallet = MIN(999999999,wallet + ?), treats = MIN(999999999,treats + ?), coffee = MIN(999999999,coffee + ?),
@@ -12652,7 +12668,8 @@ async function openLevelCase(request, env, ctx = null) {
     const opened = {
       level: requestedLevel,
       caseType,
-      title: LEVEL_CASE_CONFIG[caseType]?.title || "Кейс",
+      caseCount,
+      title: levelCaseRewardTitle(requestedLevel,caseType),
       openedAt: now * 1000,
       rewards: rolled.rewards
     };
@@ -12671,7 +12688,7 @@ async function openLevelCase(request, env, ctx = null) {
     );
     const background = Promise.allSettled([
       recordCaseRewardsAnalytics(env, telegramId, rolled.rewards, "level_case", `level_${requestedLevel}`, now),
-      recordPlayerTimeline(env, telegramId, "case_open", `открыл ${LEVEL_CASE_CONFIG[caseType]?.title || caseType} за уровень ${requestedLevel}`, { caseType, level: requestedLevel, rewards: rolled.rewards }, `level_case_${requestedLevel}`, auth.user, now)
+      recordPlayerTimeline(env, telegramId, "case_open", `открыл ${levelCaseRewardTitle(requestedLevel,caseType)} за уровень ${requestedLevel}`, { caseType, caseCount, level: requestedLevel, rewards: rolled.rewards }, `level_case_${requestedLevel}`, auth.user, now)
     ]);
     if (ctx?.waitUntil) ctx.waitUntil(background); else void background;
     return jsonResponse(buildFastCaseOpenPayload({
@@ -17213,7 +17230,7 @@ async function v71TaskProgress(env, row, telegramId, now = Math.floor(Date.now()
     const result = await env.DB.prepare(`SELECT COALESCE(SUM(score),0) AS value FROM leaderboard_runs WHERE telegram_id=? AND accepted=1 AND created_at>=? AND created_at<=?`).bind(String(telegramId),start,now).first();
     value = Number(result?.value || 0);
   } else if (row.trigger_type === "opened_cases") {
-    const result = await env.DB.prepare(`SELECT ((SELECT COUNT(*) FROM level_case_openings WHERE telegram_id=? AND opened_at>=? AND opened_at<=?)+(SELECT COUNT(*) FROM granted_cases WHERE telegram_id=? AND status='opened' AND opened_at>=? AND opened_at<=?)) AS value`).bind(String(telegramId),start,now,String(telegramId),start,now).first();
+    const result = await env.DB.prepare(`SELECT ((SELECT COALESCE(SUM(case_count),0) FROM level_case_openings WHERE telegram_id=? AND opened_at>=? AND opened_at<=?)+(SELECT COUNT(*) FROM granted_cases WHERE telegram_id=? AND status='opened' AND opened_at>=? AND opened_at<=?)) AS value`).bind(String(telegramId),start,now,String(telegramId),start,now).first();
     value = Number(result?.value || 0);
   } else if (row.trigger_type === "best_score") {
     const result = await env.DB.prepare(`SELECT best_score AS value FROM admin_profile_state WHERE telegram_id=? LIMIT 1`).bind(String(telegramId)).first();
@@ -23822,7 +23839,7 @@ async function buildAdminOverview(env, options = {}) {
     phase("active_players_d1", () => env.DB.prepare(`SELECT COUNT(DISTINCT telegram_id) AS count FROM leaderboard_runs WHERE created_at >= ?`).bind(startAt).first()),
     phase("new_players_d1", () => env.DB.prepare(`SELECT COUNT(*) AS count FROM admin_profile_state WHERE created_at >= ?`).bind(startAt).first()),
     phase("runs_d1", () => env.DB.prepare(`SELECT COUNT(*) AS total, SUM(CASE WHEN accepted = 1 THEN 1 ELSE 0 END) AS accepted FROM leaderboard_runs WHERE created_at >= ?`).bind(startAt).first()),
-    phase("level_cases_d1", () => env.DB.prepare(`SELECT COUNT(*) AS count FROM level_case_openings WHERE opened_at >= ?`).bind(startAt).first()),
+    phase("level_cases_d1", () => env.DB.prepare(`SELECT COALESCE(SUM(case_count),0) AS count FROM level_case_openings WHERE opened_at >= ?`).bind(startAt).first()),
     phase("granted_cases_d1", () => env.DB.prepare(`SELECT COUNT(*) AS count FROM granted_cases WHERE opened_at >= ?`).bind(startAt).first()),
     phase("shop_ops_d1", () => env.DB.prepare(`SELECT COUNT(*) AS count FROM shop_stock_consumptions WHERE created_at >= ?`).bind(startAt).first()),
     phase("reward_queue_d1", () => env.DB.prepare(`SELECT SUM(CASE WHEN status IN ('pending','delivering') THEN 1 ELSE 0 END) AS pending, SUM(CASE WHEN status = 'failed' THEN 1 ELSE 0 END) AS failed FROM reward_delivery_queue`).first()),
@@ -24218,7 +24235,7 @@ async function buildDailyStaffReport(env, startAt, dateKey) {
   const [players, runs, openedLevel, openedGranted, rewardsCreated, rewardsUsed, casePurchases, skinPurchases, physicalPurchases, staffActive, staffActors, actionErrors, notificationErrors, notificationUnreachable, broadcastErrors, broadcastUnreachable, tickets] = await Promise.all([
     env.DB.prepare(`SELECT COUNT(*) AS count FROM admin_profile_state WHERE created_at >= ?`).bind(startAt).first(),
     env.DB.prepare(`SELECT COUNT(*) AS total, SUM(CASE WHEN accepted = 1 THEN 1 ELSE 0 END) AS accepted FROM leaderboard_runs WHERE created_at >= ?`).bind(startAt).first(),
-    env.DB.prepare(`SELECT COUNT(*) AS count FROM level_case_openings WHERE opened_at >= ?`).bind(startAt).first(),
+    env.DB.prepare(`SELECT COALESCE(SUM(case_count),0) AS count FROM level_case_openings WHERE opened_at >= ?`).bind(startAt).first(),
     env.DB.prepare(`SELECT COUNT(*) AS count FROM granted_cases WHERE opened_at >= ?`).bind(startAt).first(),
     env.DB.prepare(`SELECT COUNT(*) AS count FROM reward_codes WHERE created_at >= ?`).bind(startAt).first(),
     env.DB.prepare(`SELECT COUNT(*) AS count FROM reward_codes WHERE status = 'used' AND redeemed_at >= ?`).bind(startAt).first(),
@@ -25718,6 +25735,18 @@ async function rollLevelCaseForPlayer(env,caseType,sourceState,currentOwnedSkins
   return rollLevelCase(caseType,sourceState,currentOwnedSkins,caseRuntimeConfigWithoutFutureContent(safeLiveops),rng);
 }
 
+async function rollLevelCaseRewardBundleForPlayer(env,caseType,count,sourceState,currentOwnedSkins=[],liveops=null,rng=caseSecureFloat){
+  const safeCount=Math.max(1,Math.min(2,Math.floor(Number(count)||1)));
+  let state=sourceState,ownedSkins=currentOwnedSkins,rewards=[],points=0,treats=0,coffee=0,caseConfig=null;
+  for(let caseRoll=1;caseRoll<=safeCount;caseRoll+=1){
+    const rolled=await rollLevelCaseForPlayer(env,caseType,state,ownedSkins,liveops,rng);
+    state=rolled.state;ownedSkins=rolled.state?.ownedSkins||ownedSkins;caseConfig=rolled.caseConfig||caseConfig;
+    points+=safeAdminNumber(rolled.points);treats+=safeAdminNumber(rolled.treats);coffee+=safeAdminNumber(rolled.coffee);
+    rewards.push(...(Array.isArray(rolled.rewards)?rolled.rewards.map((reward)=>safeCount>1?{...reward,caseRoll}:reward):[]));
+  }
+  return {rewards,state,points,treats,coffee,caseConfig,caseCount:safeCount};
+}
+
 const LIVEOPS_CONFIG_CACHE_TTL_MS = 15 * 1000;
 let liveOpsConfigMemory = { value: null, expiresAt: 0, promise: null, generation: 0 };
 function invalidateLiveOpsConfigCache() {
@@ -26336,7 +26365,7 @@ async function showEconomyDashboard(chatId, user, env) {
     env.DB.prepare(`SELECT COUNT(*) AS players, SUM(wallet) AS wallet, SUM(treats) AS treats, SUM(coffee) AS coffee, SUM(pending_wallet) AS pending_wallet, SUM(pending_treats) AS pending_treats, SUM(pending_coffee) AS pending_coffee FROM admin_profile_state`).first(),
     env.DB.prepare(`SELECT COUNT(*) AS total, SUM(CASE WHEN accepted = 1 THEN 1 ELSE 0 END) AS accepted FROM leaderboard_runs WHERE created_at >= ?`).bind(day).first(),
     env.DB.prepare(`SELECT COUNT(*) AS total, SUM(score) AS score FROM leaderboard_runs WHERE created_at >= ? AND accepted = 1`).bind(week).first(),
-    env.DB.prepare(`SELECT (SELECT COUNT(*) FROM level_case_openings WHERE opened_at >= ?) + (SELECT COUNT(*) FROM granted_cases WHERE opened_at >= ?) AS total`).bind(day, day).first(),
+    env.DB.prepare(`SELECT (SELECT COALESCE(SUM(case_count),0) FROM level_case_openings WHERE opened_at >= ?) + (SELECT COUNT(*) FROM granted_cases WHERE opened_at >= ?) AS total`).bind(day, day).first(),
     env.DB.prepare(`SELECT COUNT(*) AS count FROM reward_codes WHERE status = 'active' AND expires_at > ?`).bind(now).first(),
     env.DB.prepare(`SELECT COUNT(*) AS count FROM staff_action_log WHERE action IN ('add_points','add_zefir','add_coffee','add_keys','grant_avatar','grant_frame','grant_trail','grant_skin') AND created_at >= ?`).bind(day).first(),
     env.DB.prepare(`SELECT telegram_id, wallet, treats, coffee FROM admin_profile_state ORDER BY wallet DESC LIMIT 5`).all()
@@ -30629,7 +30658,7 @@ async function showPlayerTimeline(chatId, user, telegramId, env, pageValue = 1) 
   const queries = await Promise.all([
     env.DB.prepare(`SELECT event_type,title,details_json,source_id,actor_name,created_at FROM player_timeline_events WHERE telegram_id=? ORDER BY created_at DESC LIMIT ?`).bind(playerId,scanLimit).all(),
     env.DB.prepare(`SELECT run_id,score,duration_ms,accepted,rejection_reason,created_at FROM leaderboard_runs WHERE telegram_id=? ORDER BY created_at DESC LIMIT ?`).bind(playerId,scanLimit).all(),
-    env.DB.prepare(`SELECT level,case_type,rewards_json,opened_at FROM level_case_openings WHERE telegram_id=? ORDER BY opened_at DESC LIMIT ?`).bind(playerId,scanLimit).all(),
+    env.DB.prepare(`SELECT level,case_type,case_count,rewards_json,opened_at FROM level_case_openings WHERE telegram_id=? ORDER BY opened_at DESC LIMIT ?`).bind(playerId,scanLimit).all(),
     env.DB.prepare(`SELECT id,case_type,status,granted_by,reason,rewards_json,created_at,opened_at FROM granted_cases WHERE telegram_id=? ORDER BY created_at DESC LIMIT ?`).bind(playerId,scanLimit).all(),
     env.DB.prepare(`SELECT code,product_name,status,created_at,redeemed_at,redeemed_by_name FROM reward_codes WHERE owner_telegram_id=? ORDER BY created_at DESC LIMIT ?`).bind(playerId,scanLimit).all(),
     env.DB.prepare(`SELECT product_id,category,created_at FROM shop_stock_consumptions WHERE telegram_id=? ORDER BY created_at DESC LIMIT ?`).bind(playerId,scanLimit).all(),
@@ -33802,7 +33831,7 @@ async function seasonPassPeriodMetrics(env,telegramId,period,season=null){
   const endAt=Number.isFinite(seasonEnd)?Math.max(startAt,Math.min(bounds.endAt,seasonEnd)):bounds.endAt;
   const [runs,casesA,casesB,casesSeasonal] = await Promise.all([
     env.DB.prepare(`SELECT COUNT(*) AS runs,COALESCE(SUM(score),0) AS score,COALESCE(SUM(run_treats),0) AS treats,COALESCE(SUM(run_coffee),0) AS coffee FROM season_pass_activity_runs WHERE season_id=? AND telegram_id=? AND created_at>=? AND created_at<?`).bind(String(season?.id||DEFAULT_SEASON_PASS_ID),String(telegramId),startAt,endAt).first(),
-    env.DB.prepare(`SELECT COUNT(*) AS count FROM level_case_openings WHERE telegram_id=? AND opened_at>=? AND opened_at<?`).bind(String(telegramId),startAt,endAt).first(),
+    env.DB.prepare(`SELECT COALESCE(SUM(case_count),0) AS count FROM level_case_openings WHERE telegram_id=? AND opened_at>=? AND opened_at<?`).bind(String(telegramId),startAt,endAt).first(),
     env.DB.prepare(`SELECT COUNT(*) AS count FROM granted_cases WHERE telegram_id=? AND status='opened' AND opened_at>=? AND opened_at<?`).bind(String(telegramId),startAt,endAt).first(),
     env.DB.prepare(`SELECT COUNT(*) AS count FROM season_pass_case_grants WHERE telegram_id=? AND status='opened' AND opened_at>=? AND opened_at<?`).bind(String(telegramId),startAt,endAt).first()
   ]);
@@ -33830,7 +33859,7 @@ async function seasonPassHistoricalMetricsPair(env,telegramId,season,nowMs=Date.
       FROM season_pass_activity_runs WHERE season_id=? AND telegram_id=? AND created_at>=? AND created_at<?`).bind(
         daily.startAt,daily.endAt,daily.startAt,daily.endAt,daily.startAt,daily.endAt,daily.startAt,daily.endAt,seasonId,id,weekly.startAt,weekly.endAt
       ).first(),
-    env.DB.prepare(`SELECT COALESCE(SUM(CASE WHEN opened_at>=? AND opened_at<? THEN 1 ELSE 0 END),0) AS daily_count,COUNT(*) AS weekly_count FROM level_case_openings WHERE telegram_id=? AND opened_at>=? AND opened_at<?`).bind(daily.startAt,daily.endAt,id,weekly.startAt,weekly.endAt).first(),
+    env.DB.prepare(`SELECT COALESCE(SUM(CASE WHEN opened_at>=? AND opened_at<? THEN case_count ELSE 0 END),0) AS daily_count,COALESCE(SUM(case_count),0) AS weekly_count FROM level_case_openings WHERE telegram_id=? AND opened_at>=? AND opened_at<?`).bind(daily.startAt,daily.endAt,id,weekly.startAt,weekly.endAt).first(),
     env.DB.prepare(`SELECT COALESCE(SUM(CASE WHEN opened_at>=? AND opened_at<? THEN 1 ELSE 0 END),0) AS daily_count,COUNT(*) AS weekly_count FROM granted_cases WHERE telegram_id=? AND status='opened' AND opened_at>=? AND opened_at<?`).bind(daily.startAt,daily.endAt,id,weekly.startAt,weekly.endAt).first(),
     env.DB.prepare(`SELECT COALESCE(SUM(CASE WHEN opened_at>=? AND opened_at<? THEN 1 ELSE 0 END),0) AS daily_count,COUNT(*) AS weekly_count FROM season_pass_case_grants WHERE telegram_id=? AND status='opened' AND opened_at>=? AND opened_at<?`).bind(daily.startAt,daily.endAt,id,weekly.startAt,weekly.endAt).first()
   ]);
@@ -33988,7 +34017,7 @@ function seasonPassCaseProgressReconcileStatements(env,telegramId,taskEvent,nowS
   for(const period of ['daily','weekly']){
     const bounds=taskEvent.progress?.[period]?.bounds;if(!bounds?.key)continue;
     statements.push(env.DB.prepare(`UPDATE season_pass_task_progress SET cases_opened=MAX(cases_opened,
-      (SELECT COUNT(*) FROM level_case_openings WHERE telegram_id=? AND opened_at>=? AND opened_at<?)
+      (SELECT COALESCE(SUM(case_count),0) FROM level_case_openings WHERE telegram_id=? AND opened_at>=? AND opened_at<?)
       +(SELECT COUNT(*) FROM granted_cases WHERE telegram_id=? AND status='opened' AND opened_at>=? AND opened_at<?)
       +(SELECT COUNT(*) FROM season_pass_case_grants WHERE telegram_id=? AND status='opened' AND opened_at>=? AND opened_at<?)
       ),updated_at=? WHERE season_id=? AND telegram_id=? AND period_key=?`).bind(
@@ -35671,7 +35700,7 @@ async function seasonPassTaskProgressForClaim(env,season,telegramId,row){
   }
   if(metric==='cases_opened'){
     const [levelCases,grantedCases,seasonalCases]=await Promise.all([
-      env.DB.prepare(`SELECT COUNT(*) AS value FROM level_case_openings WHERE telegram_id=? AND opened_at>=? AND opened_at<?`).bind(id,startAt,endAt).first(),
+      env.DB.prepare(`SELECT COALESCE(SUM(case_count),0) AS value FROM level_case_openings WHERE telegram_id=? AND opened_at>=? AND opened_at<?`).bind(id,startAt,endAt).first(),
       env.DB.prepare(`SELECT COUNT(*) AS value FROM granted_cases WHERE telegram_id=? AND status='opened' AND opened_at>=? AND opened_at<?`).bind(id,startAt,endAt).first(),
       env.DB.prepare(`SELECT COUNT(*) AS value FROM season_pass_case_grants WHERE telegram_id=? AND status='opened' AND opened_at>=? AND opened_at<?`).bind(id,startAt,endAt).first()
     ]);
@@ -38711,7 +38740,7 @@ async function processV67AutomationChains(env) {
     } else if (chain.trigger_type === "total_score") {
       targets = (await env.DB.prepare(`SELECT r.telegram_id,b.chat_id,SUM(r.score) AS total_score FROM leaderboard_runs r LEFT JOIN bot_subscribers b ON b.telegram_id=r.telegram_id AND b.active=1 WHERE r.accepted=1 AND NOT EXISTS(SELECT 1 FROM automation_chain_executions e WHERE e.chain_key=? AND e.telegram_id=r.telegram_id) GROUP BY r.telegram_id HAVING SUM(r.score)>=? ORDER BY SUM(r.score) ASC LIMIT 40`).bind(chain.chain_key,Number(chain.trigger_value||10000)).all()).results || [];
     } else if (chain.trigger_type === "opened_cases") {
-      targets = (await env.DB.prepare(`SELECT p.telegram_id,b.chat_id,((SELECT COUNT(*) FROM level_case_openings l WHERE l.telegram_id=p.telegram_id)+(SELECT COUNT(*) FROM granted_cases g WHERE g.telegram_id=p.telegram_id AND g.status='opened')) AS opened_count FROM admin_profile_state p LEFT JOIN bot_subscribers b ON b.telegram_id=p.telegram_id AND b.active=1 WHERE NOT EXISTS(SELECT 1 FROM automation_chain_executions e WHERE e.chain_key=? AND e.telegram_id=p.telegram_id) AND ((SELECT COUNT(*) FROM level_case_openings l WHERE l.telegram_id=p.telegram_id)+(SELECT COUNT(*) FROM granted_cases g WHERE g.telegram_id=p.telegram_id AND g.status='opened'))>=? ORDER BY opened_count ASC LIMIT 40`).bind(chain.chain_key,Number(chain.trigger_value||1)).all()).results || [];
+      targets = (await env.DB.prepare(`SELECT p.telegram_id,b.chat_id,((SELECT COALESCE(SUM(l.case_count),0) FROM level_case_openings l WHERE l.telegram_id=p.telegram_id)+(SELECT COUNT(*) FROM granted_cases g WHERE g.telegram_id=p.telegram_id AND g.status='opened')) AS opened_count FROM admin_profile_state p LEFT JOIN bot_subscribers b ON b.telegram_id=p.telegram_id AND b.active=1 WHERE NOT EXISTS(SELECT 1 FROM automation_chain_executions e WHERE e.chain_key=? AND e.telegram_id=p.telegram_id) AND ((SELECT COALESCE(SUM(l.case_count),0) FROM level_case_openings l WHERE l.telegram_id=p.telegram_id)+(SELECT COUNT(*) FROM granted_cases g WHERE g.telegram_id=p.telegram_id AND g.status='opened'))>=? ORDER BY opened_count ASC LIMIT 40`).bind(chain.chain_key,Number(chain.trigger_value||1)).all()).results || [];
     } else if (chain.trigger_type === "best_score") {
       targets = (await env.DB.prepare(`SELECT p.telegram_id,b.chat_id,p.best_score FROM admin_profile_state p LEFT JOIN bot_subscribers b ON b.telegram_id=p.telegram_id AND b.active=1 WHERE p.best_score>=? AND NOT EXISTS(SELECT 1 FROM automation_chain_executions e WHERE e.chain_key=? AND e.telegram_id=p.telegram_id) ORDER BY p.best_score ASC LIMIT 40`).bind(Number(chain.trigger_value||1000),chain.chain_key).all()).results || [];
     } else if (chain.trigger_type === "promo_activations") {
@@ -40927,7 +40956,7 @@ async function ownerPanelEconomyFlowWindow(env, since) {
       COUNT(*) AS operations
       FROM player_timeline_events WHERE created_at>=? AND event_type IN (${spendTypes.map(()=>'?').join(',')}) GROUP BY event_type`).bind(since,...spendTypes).all(),
     env.DB.prepare(`SELECT
-      (SELECT COUNT(*) FROM level_case_openings WHERE opened_at>=?) +
+      (SELECT COALESCE(SUM(case_count),0) FROM level_case_openings WHERE opened_at>=?) +
       (SELECT COUNT(*) FROM granted_cases WHERE status='opened' AND opened_at>=?) +
       (SELECT COUNT(*) FROM season_pass_case_grants WHERE status='opened' AND opened_at>=?) AS opened,
       (SELECT COUNT(*) FROM level_case_openings o,json_each(CASE WHEN json_valid(o.rewards_json) THEN o.rewards_json ELSE '[]' END) j WHERE o.opened_at>=? AND json_extract(j.value,'$.duplicate')=1) +
@@ -40976,7 +41005,7 @@ async function ownerPanelV8AnalyticsFresh(env, ctx) {
     env.DB.prepare(`SELECT COUNT(DISTINCT r.telegram_id) AS count FROM leaderboard_runs r JOIN admin_profile_state p ON p.telegram_id=r.telegram_id WHERE r.accepted=1 AND r.created_at>=? AND p.created_at<?`).bind(day, day).first(),
     env.DB.prepare(`SELECT COUNT(*) AS total,SUM(CASE WHEN accepted=1 THEN 1 ELSE 0 END) AS accepted,SUM(CASE WHEN accepted=0 THEN 1 ELSE 0 END) AS rejected FROM leaderboard_runs WHERE created_at>=?`).bind(day).first(),
     env.DB.prepare(`SELECT AVG(a.best_score) AS value FROM leaderboard_all_time a WHERE EXISTS(SELECT 1 FROM leaderboard_runs r WHERE r.telegram_id=a.telegram_id AND r.accepted=1 AND r.created_at>=?)`).bind(day).first(),
-    env.DB.prepare(`SELECT (SELECT COUNT(*) FROM level_case_openings WHERE opened_at>=?) + (SELECT COUNT(*) FROM granted_cases WHERE opened_at>=?) AS count`).bind(day, day).first(),
+    env.DB.prepare(`SELECT (SELECT COALESCE(SUM(case_count),0) FROM level_case_openings WHERE opened_at>=?) + (SELECT COUNT(*) FROM granted_cases WHERE opened_at>=?) AS count`).bind(day, day).first(),
     env.DB.prepare(`SELECT (SELECT COUNT(*) FROM shop_stock_consumptions WHERE category='skins' AND created_at>=?) + (SELECT COUNT(*) FROM granted_cases WHERE granted_by='shop' AND created_at>=?) + (SELECT COUNT(*) FROM reward_codes WHERE created_at>=? AND request_id NOT LIKE 'case_reward_%') AS count`).bind(day, day, day).first(),
     env.DB.prepare(`SELECT COUNT(*) AS delivered FROM reward_delivery_queue WHERE status IN ('delivered','claimed') AND delivered_at>=?`).bind(day).first(),
     env.DB.prepare(`SELECT COUNT(*) AS count FROM promo_redemptions WHERE created_at>=?`).bind(day).first(),
@@ -41981,7 +42010,7 @@ async function ownerPanelV85Player360(env,ctx){
   const now=Math.floor(Date.now()/1000),week=now-7*86400;
   const [runStats,cases,purchases,promos,physical,rewardQueue,campaigns,notifications,tickets,fraud,notes,timeline,moderation,moderationHistory,legal,gifts,grantedCases,seasonalCases] = await Promise.all([
     env.DB.prepare(`SELECT COUNT(*) AS total,SUM(CASE WHEN accepted=1 THEN 1 ELSE 0 END) AS accepted,SUM(CASE WHEN accepted=0 THEN 1 ELSE 0 END) AS rejected,ROUND(AVG(CASE WHEN accepted=1 THEN score END),1) AS avg_score,MAX(created_at) AS last_run,MIN(created_at) AS first_run,SUM(CASE WHEN accepted=1 AND created_at>=? THEN 1 ELSE 0 END) AS runs7 FROM leaderboard_runs WHERE telegram_id=?`).bind(week,telegramId).first(),
-    env.DB.prepare(`SELECT (SELECT COUNT(*) FROM level_case_openings WHERE telegram_id=?)+(SELECT COUNT(*) FROM granted_cases WHERE telegram_id=? AND status='opened') AS opened`).bind(telegramId,telegramId).first(),
+    env.DB.prepare(`SELECT (SELECT COALESCE(SUM(case_count),0) FROM level_case_openings WHERE telegram_id=?)+(SELECT COUNT(*) FROM granted_cases WHERE telegram_id=? AND status='opened') AS opened`).bind(telegramId,telegramId).first(),
     env.DB.prepare(`SELECT (SELECT COUNT(*) FROM granted_cases WHERE telegram_id=? AND granted_by='shop')+(SELECT COUNT(*) FROM shop_stock_consumptions WHERE telegram_id=? AND category='skins') AS count`).bind(telegramId,telegramId).first(),
     env.DB.prepare(`SELECT code,status,created_at FROM promo_redemptions WHERE telegram_id=? ORDER BY created_at DESC LIMIT 12`).bind(telegramId).all(),
     env.DB.prepare(`SELECT code,product_id,product_name,status,created_at,redeemed_at FROM reward_codes WHERE owner_telegram_id=? ORDER BY created_at DESC LIMIT 12`).bind(telegramId).all(),
@@ -42454,7 +42483,7 @@ function ownerV85ExperimentMetricLabel(key){return ({runs:"Забеги/игро
 async function ownerV85ExperimentMetrics(env,row){const start=Math.max(0,Number(row.starts_at||0));if(!start)return {control:{players:0},variant:{players:0}};const end=String(row.status)==='completed'&&Number(row.completed_at||0)>0?Number(row.completed_at):Math.floor(Date.now()/1000);const [runs,purchases,cases]=await Promise.all([
   env.DB.prepare(`SELECT telegram_id,COUNT(*) AS runs,AVG(score) AS avg_score FROM leaderboard_runs WHERE accepted=1 AND created_at>=? AND created_at<=? GROUP BY telegram_id LIMIT 10000`).bind(start,end).all(),
   env.DB.prepare(`SELECT telegram_id,SUM(ops) AS ops FROM (SELECT telegram_id,COUNT(*) AS ops FROM granted_cases WHERE granted_by='shop' AND created_at>=? AND created_at<=? GROUP BY telegram_id UNION ALL SELECT telegram_id,COUNT(*) AS ops FROM shop_stock_consumptions WHERE category='skins' AND created_at>=? AND created_at<=? GROUP BY telegram_id) GROUP BY telegram_id LIMIT 10000`).bind(start,end,start,end).all(),
-  env.DB.prepare(`SELECT telegram_id,SUM(opened) AS opened FROM (SELECT telegram_id,COUNT(*) AS opened FROM level_case_openings WHERE opened_at>=? AND opened_at<=? GROUP BY telegram_id UNION ALL SELECT telegram_id,COUNT(*) AS opened FROM granted_cases WHERE status='opened' AND opened_at>=? AND opened_at<=? GROUP BY telegram_id) GROUP BY telegram_id LIMIT 10000`).bind(start,end,start,end).all()
+  env.DB.prepare(`SELECT telegram_id,SUM(opened) AS opened FROM (SELECT telegram_id,COALESCE(SUM(case_count),0) AS opened FROM level_case_openings WHERE opened_at>=? AND opened_at<=? GROUP BY telegram_id UNION ALL SELECT telegram_id,COUNT(*) AS opened FROM granted_cases WHERE status='opened' AND opened_at>=? AND opened_at<=? GROUP BY telegram_id) GROUP BY telegram_id LIMIT 10000`).bind(start,end,start,end).all()
 ]);const map=new Map();for(const r of runs.results||[])map.set(String(r.telegram_id),{runs:Number(r.runs||0),avgScore:Number(r.avg_score||0),purchases:0,cases:0});for(const r of purchases.results||[]){const id=String(r.telegram_id),x=map.get(id)||{runs:0,avgScore:0,purchases:0,cases:0};x.purchases=Number(r.ops||0);map.set(id,x);}for(const r of cases.results||[]){const id=String(r.telegram_id),x=map.get(id)||{runs:0,avgScore:0,purchases:0,cases:0};x.cases=Number(r.opened||0);map.set(id,x);}const group=()=>({players:0,runs:0,scoreWeighted:0,purchases:0,buyers:0,cases:0});const control=group(),variant=group();for(const [id,x] of map){const g=stableRolloutBucket(`${row.flag_key}:${id}`)<Number(row.variant_percent||50)?variant:control;g.players++;g.runs+=x.runs;g.scoreWeighted+=x.avgScore*x.runs;g.purchases+=x.purchases;if(x.purchases>0)g.buyers++;g.cases+=x.cases;}for(const g of [control,variant]){g.runsPerPlayer=g.players?g.runs/g.players:0;g.avgScore=g.runs?g.scoreWeighted/g.runs:0;g.purchaseRate=g.players?g.buyers*100/g.players:0;g.casesPerPlayer=g.players?g.cases/g.players:0;delete g.scoreWeighted;}return {control,variant};}
 async function ownerPanelV85Experiments(env,ctx){
   await ensureControlCenterV85Schema(env);
@@ -45680,7 +45709,7 @@ function testProjectSandboxCasePayload(state, snapshot, extra = {}) {
   const openedLevels=[...(state?.openedLevelCases||[])].map(Number).filter((value)=>value>0);
   const profileLevel=Math.max(1,Math.min(50,caseProfileLevel(Number(state?.profileXp||0))));
   const schedule=Object.entries(LEVEL_CASE_SCHEDULE).map(([level,caseType])=>({
-    level:Number(level),caseType,title:LEVEL_CASE_CONFIG[caseType]?.title||liveops?.cases?.[caseType]?.title||"Кейс"
+    level:Number(level),caseType,count:levelCaseRewardCount(level),title:levelCaseRewardTitle(level,caseType)||liveops?.cases?.[caseType]?.title||"Кейс"
   }));
   const eligibleCases=schedule.filter((entry)=>entry.level<=profileLevel&&!openedLevels.includes(entry.level));
   const cs=testProjectNormalizeCaseState(state?.caseState||{});
@@ -45858,13 +45887,20 @@ async function testProjectSandboxCaseOpenLevel(env, ctx, loaded, payload) {
   const profileLevel=Math.max(1,Math.min(50,caseProfileLevel(Number(state.profileXp||0))));
   if(level>profileLevel)throw new ApiError(409,"Этот уровневый кейс ещё не открыт.");
   if((state.openedLevelCases||[]).includes(level))throw new ApiError(409,"Этот уровневый кейс уже открыт в Test Project.");
-  const rolled=rollLevelCase(caseType,state.caseState,state.caseState.ownedSkins,snapshot?.liveops||{content:{},cases:{}},testProjectCaseRng(state,`level-case:${caseType}:${level}`));
+  const caseCount=levelCaseRewardCount(level);
+  let rolled={state:state.caseState,rewards:[],points:0,treats:0,coffee:0};
+  let rollState=state.caseState,ownedSkins=state.caseState.ownedSkins;
+  for(let caseRoll=1;caseRoll<=caseCount;caseRoll+=1){
+    const part=rollLevelCase(caseType,rollState,ownedSkins,snapshot?.liveops||{content:{},cases:{}},testProjectCaseRng(state,`level-case:${caseType}:${level}:${caseRoll}`));
+    rollState=part.state;ownedSkins=part.state?.ownedSkins||ownedSkins;
+    rolled={state:rollState,rewards:[...rolled.rewards,...(part.rewards||[]).map((reward)=>caseCount>1?{...reward,caseRoll}:reward)],points:Number(rolled.points||0)+Number(part.points||0),treats:Number(rolled.treats||0)+Number(part.treats||0),coffee:Number(rolled.coffee||0)+Number(part.coffee||0)};
+  }
   state.caseState=testProjectNormalizeCaseState(rolled.state); state.openedLevelCases=[...(state.openedLevelCases||[]),level];
-  state.sandbox=testProjectNormalizeSandboxState({...state.sandbox,achievementOpenedCases:Number(state.sandbox?.achievementOpenedCases||0)+1});
+  state.sandbox=testProjectNormalizeSandboxState({...state.sandbox,achievementOpenedCases:Number(state.sandbox?.achievementOpenedCases||0)+caseCount});
   state.points=Math.min(999999999,Number(state.points||0)+Number(rolled.points||0));state.treats=Math.min(9999999,Number(state.treats||0)+Number(rolled.treats||0));state.coffee=Math.min(9999999,Number(state.coffee||0)+Number(rolled.coffee||0));
   const persisted=await testProjectSandboxSave(env,ownerId,state,snapshot,before,"game_case_level_open",`Игра · открыт кейс уровня ${level}`);
   const current=persisted.state;
-  return testProjectSandboxCasePayload(current,persisted.snapshot,{opened:{level,caseType,rewards:rolled.rewards,points:Number(rolled.points||0),treats:Number(rolled.treats||0),coffee:Number(rolled.coffee||0)}});
+  return testProjectSandboxCasePayload(current,persisted.snapshot,{opened:{level,caseType,caseCount,title:levelCaseRewardTitle(level,caseType),rewards:rolled.rewards,points:Number(rolled.points||0),treats:Number(rolled.treats||0),coffee:Number(rolled.coffee||0)}});
 }
 
 async function testProjectSandboxRunSubmit(env, loaded, payload) {
@@ -51039,7 +51075,7 @@ async function ownerPanelControl(env, ctx) {
     env.DB.prepare(`SELECT COUNT(*) AS total,SUM(CASE WHEN accepted=1 THEN 1 ELSE 0 END) AS accepted,COALESCE(SUM(CASE WHEN accepted=1 THEN score ELSE 0 END),0) AS score FROM leaderboard_runs`).first(),
     env.DB.prepare(`SELECT COUNT(*) AS total,SUM(CASE WHEN accepted=1 THEN 1 ELSE 0 END) AS accepted FROM leaderboard_runs WHERE created_at>=?`).bind(day).first(),
     env.DB.prepare(`SELECT COUNT(*) AS total,SUM(score) AS score FROM leaderboard_runs WHERE created_at>=? AND accepted=1`).bind(week).first(),
-    env.DB.prepare(`SELECT (SELECT COUNT(*) FROM level_case_openings WHERE opened_at>=?)+(SELECT COUNT(*) FROM granted_cases WHERE opened_at>=?) AS total`).bind(day,day).first(),
+    env.DB.prepare(`SELECT (SELECT COALESCE(SUM(case_count),0) FROM level_case_openings WHERE opened_at>=?)+(SELECT COUNT(*) FROM granted_cases WHERE opened_at>=?) AS total`).bind(day,day).first(),
     env.DB.prepare(`SELECT COUNT(*) AS count FROM staff_action_log WHERE action IN ('add_points','add_zefir','add_coffee','add_keys','grant_avatar','grant_frame','grant_trail','grant_skin','owner_panel_grant','owner_panel_season_pass_grant','owner_panel_season_pass_compensation','owner_panel_rating_record_grant','owner_panel_season_pass_xp_grant') AND created_at>=?`).bind(day).first(),
     env.DB.prepare(`SELECT COUNT(*) AS count FROM reward_codes WHERE status='active' AND expires_at>?`).bind(now).first(),
     env.DB.prepare(`SELECT p.telegram_id,p.wallet,p.treats,p.coffee,COALESCE(NULLIF(b.display_name,''),NULLIF(b.username,''),p.telegram_id) AS name,b.username FROM admin_profile_state p LEFT JOIN bot_subscribers b ON b.telegram_id=p.telegram_id ORDER BY p.wallet DESC LIMIT 8`).all(),
