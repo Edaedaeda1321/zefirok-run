@@ -1,0 +1,120 @@
+--- a/index.html
++++ b/index.html
+@@ -26734,7 +26734,14 @@
+           }
+           if (data.achievementShowcase &amp;&amp; typeof data.achievementShowcase === &quot;object&quot;) {
+             window.__ZEFIROK_ACHIEVEMENT_PROFILE_STATE__ = data.achievementShowcase;
++            window.__ZEFIROK_ACHIEVEMENT_SHOWCASE_RECOVERY__ = false;
+             try { window.dispatchEvent(new CustomEvent(&quot;zefirok-achievement-showcase-ready&quot;, { detail:data.achievementShowcase })); } catch (error) {}
++          } else {
++            // The startup showcase is deliberately bounded. If that optional section
++            // misses its budget, recover it immediately in the background instead of
++            // waiting until the player opens Profile and staring at a loading card.
++            window.__ZEFIROK_ACHIEVEMENT_SHOWCASE_RECOVERY__ = true;
++            try { window.dispatchEvent(new Event(&quot;zefirok-achievement-showcase-recovery&quot;)); } catch (error) {}
+           }
+           if (data.profile) applyServerProfilePayload(data.profile);
+           else void syncPlayerProfileFromServer();
+@@ -31269,10 +31276,11 @@
+   let inflight=null,initialRefreshTimer=0,hasServerState=false,lastFreshAt=0;
+   const bootstrapState=()=&gt;{try{const live=window.__ZEFIROK_ACHIEVEMENT_PROFILE_STATE__;if(live&amp;&amp;typeof live===&quot;object&quot;&amp;&amp;live.ok)return live;}catch{}const auth=initData();return auth?readShowcaseCache(auth):null;};
+   const applyServerState=(data)=&gt;{if(!data?.ok||typeof data!==&quot;object&quot;)return;const stale=Boolean(data._showcaseStale),clean=stale?{...data}:data;if(stale)delete clean._showcaseStale;window.__ZEFIROK_ACHIEVEMENT_PROFILE_STATE__=clean;if(!stale)writeShowcaseCache(initData(),clean);render(clean);hasServerState=true;lastFreshAt=stale?0:Date.now();};
+-  const refresh=async(force=false)=&gt;{if(!force&amp;&amp;!profileVisible())return;if(!force&amp;&amp;hasServerState&amp;&amp;Date.now()-lastFreshAt&lt;15000)return;if(inflight)return inflight;const auth=initData();if(!auth)return;inflight=(async()=&gt;{try{let data=null;try{const overview=await window.zefirokProfileOverview?.(force);data=overview?.achievements;}catch{}if(!data?.ok)data=await fetchShowcaseDirect(auth);applyServerState(data);}catch{const cached=readShowcaseCache(auth);if(cached&amp;&amp;!hasServerState)applyServerState(cached);}finally{inflight=null;}})();return inflight;};
++  const refresh=async(force=false,directFirst=false)=&gt;{if(!force&amp;&amp;!profileVisible())return;if(!force&amp;&amp;hasServerState&amp;&amp;Date.now()-lastFreshAt&lt;15000)return;if(inflight)return inflight;const auth=initData();if(!auth)return;inflight=(async()=&gt;{try{let data=null;if(directFirst||!hasServerState){try{data=await fetchShowcaseDirect(auth);}catch{}}if(!data?.ok){try{const overview=await window.zefirokProfileOverview?.(force);data=overview?.achievements;}catch{}}if(!data?.ok&amp;&amp;!directFirst)data=await fetchShowcaseDirect(auth);if(data?.ok){window.__ZEFIROK_ACHIEVEMENT_SHOWCASE_RECOVERY__=false;applyServerState(data);}}catch{const cached=readShowcaseCache(auth);if(cached&amp;&amp;!hasServerState)applyServerState(cached);}finally{inflight=null;}})();return inflight;};
+   const refreshVisibleProfile=(attempt=0,force=false)=&gt;{window.clearTimeout(initialRefreshTimer);if(!profileVisible())return;const cached=bootstrapState();if(cached&amp;&amp;!hasServerState)applyServerState(cached);if(!force&amp;&amp;hasServerState&amp;&amp;Date.now()-lastFreshAt&lt;15000)return;if(initData()){void refresh(force);return;}if(attempt&gt;=16)return;initialRefreshTimer=window.setTimeout(()=&gt;refreshVisibleProfile(attempt+1,force),250);};
+   document.addEventListener(&quot;click&quot;,(event)=&gt;{const openButton=event.target?.closest?.(&quot;[data-achievements-open]&quot;);if(openButton){event.preventDefault();openButton.disabled=true;try{window.parent.postMessage({type:&quot;zefirok-open-achievements&quot;,view:openButton.dataset.achievementsView===&quot;showcase&quot;?&quot;showcase&quot;:&quot;goals&quot;},&quot;*&quot;);}catch{try{window.location.href=&quot;/achievements.html?view=&quot;+(openButton.dataset.achievementsView===&quot;showcase&quot;?&quot;showcase&quot;:&quot;goals&quot;);}catch{}}window.setTimeout(()=&gt;{openButton.disabled=false;},900);return;}if(event.target?.closest?.(&#x27;[data-tab=&quot;profile&quot;]&#x27;))window.setTimeout(()=&gt;refreshVisibleProfile(),80);});
+-  window.addEventListener(&quot;zefirok-achievement-showcase-ready&quot;,(event)=&gt;applyServerState(event?.detail));
++  window.addEventListener(&quot;zefirok-achievement-showcase-ready&quot;,(event)=&gt;{window.__ZEFIROK_ACHIEVEMENT_SHOWCASE_RECOVERY__=false;applyServerState(event?.detail);});
++  window.addEventListener(&quot;zefirok-achievement-showcase-recovery&quot;,()=&gt;{if(!hasServerState)void refresh(true,true);});
+   window.addEventListener(&quot;zefirok-profile-overview-updated&quot;,(event)=&gt;{const data=event?.detail?.achievements;if(data?.ok)applyServerState(data);});
+   window.addEventListener(&quot;pageshow&quot;,()=&gt;{document.querySelectorAll(&quot;[data-achievements-open]&quot;).forEach((button)=&gt;{button.disabled=false;});if(profileVisible())refreshVisibleProfile();});
+   window.addEventListener(&quot;message&quot;,(event)=&gt;{if(event.data?.type===&quot;zefirok-achievements-account-updated&quot;)refreshVisibleProfile(0,true);if(event.data?.type===&quot;zefirok-open-screen&quot;&amp;&amp;String(event.data?.screen||&quot;&quot;)===&quot;profile&quot;)window.setTimeout(()=&gt;refreshVisibleProfile(),80);});
+@@ -31280,6 +31288,7 @@
+   if(observedProfileScreen){new MutationObserver(()=&gt;{if(profileVisible())refreshVisibleProfile();}).observe(observedProfileScreen,{attributes:true,attributeFilter:[&quot;hidden&quot;]});}
+   document.addEventListener(&quot;visibilitychange&quot;,()=&gt;{if(!document.hidden&amp;&amp;profileVisible())refreshVisibleProfile(0,Date.now()-lastFreshAt&gt;30000);});
+   const cached=bootstrapState();if(cached)applyServerState(cached);
++  if(!cached&amp;&amp;window.__ZEFIROK_ACHIEVEMENT_SHOWCASE_RECOVERY__)window.setTimeout(()=&gt;void refresh(true,true),0);
+   if(document.readyState===&quot;loading&quot;)document.addEventListener(&quot;DOMContentLoaded&quot;,()=&gt;refreshVisibleProfile(),{once:true});else window.setTimeout(()=&gt;refreshVisibleProfile(),0);
+ })();
+ &lt;/script&gt;
+--- a/src/worker.js
++++ b/src/worker.js
+@@ -7279,9 +7279,9 @@
+   return `sp-${kind}:${safeSeasonId}`.slice(0,80);
+ }
+ 
+-async function achievementSeasonBaseDefinitions(env) {
++async function achievementSeasonBaseDefinitions(env, options = {}) {
+   try {
+-    await ensureSeasonPassSchema(env);
++    if (options?.skipSchemaEnsure !== true) await ensureSeasonPassSchema(env);
+     const now=Math.floor(Date.now()/1000);
+     const rows=(await env.DB.prepare(`SELECT season_id,title,asset_key,starts_at,ends_at,manual_status FROM season_pass_seasons ORDER BY starts_at ASC,season_id ASC LIMIT 120`).all()).results||[];
+     const out=[];
+@@ -7305,9 +7305,9 @@
+   }
+ }
+ 
+-async function achievementStoryCollectibleDefinitions(env){
++async function achievementStoryCollectibleDefinitions(env, options = {}){
+   try{
+-    await ensureSeasonPassSchema(env);
++    if(options?.skipSchemaEnsure!==true)await ensureSeasonPassSchema(env);
+     const rows=(await env.DB.prepare(`SELECT season_id,title,starts_at,ends_at,visuals_json FROM season_pass_seasons ORDER BY starts_at ASC,season_id ASC LIMIT 120`).all()).results||[];
+     const out=[];
+     for(const row of rows){
+@@ -7328,8 +7328,8 @@
+   }catch(error){if(!isMissingRuntimeDatabaseSchemaError(error))console.error('story collectible achievement definitions failed',error);return [];}
+ }
+ 
+-async function achievementBaseDefinitions(env) {
+-  const [seasonDefinitions,storyCollectibleDefinitions]=await Promise.all([achievementSeasonBaseDefinitions(env),achievementStoryCollectibleDefinitions(env)]);
++async function achievementBaseDefinitions(env, options = {}) {
++  const [seasonDefinitions,storyCollectibleDefinitions]=await Promise.all([achievementSeasonBaseDefinitions(env,options),achievementStoryCollectibleDefinitions(env,options)]);
+   return [...ACHIEVEMENTS_V2,...seasonDefinitions,...storyCollectibleDefinitions];
+ }
+ 
+@@ -7342,11 +7342,11 @@
+ }
+ 
+ async function achievementConfiguredDefinitions(env, options = {}) {
+-  await ensureAchievementConfigSchema(env);
++  if(options?.skipSchemaEnsure!==true)await ensureAchievementConfigSchema(env);
+   const includeSeasonDefinitions = options?.includeSeasonDefinitions !== false;
+   const [rows,baseDefinitions]=await Promise.all([
+     env.DB.prepare(`SELECT * FROM achievement_settings`).all().then((result)=>result.results||[]),
+-    includeSeasonDefinitions ? achievementBaseDefinitions(env) : Promise.resolve(ACHIEVEMENTS_V2)
++    includeSeasonDefinitions ? achievementBaseDefinitions(env,options) : Promise.resolve(ACHIEVEMENTS_V2)
+   ]);
+   const overrides = new Map(rows.map((row) => [String(row.achievement_id || ""), row]));
+   return baseDefinitions.map((base, index) => {
+@@ -7674,11 +7674,12 @@
+ 
+ async function achievementShowcasePreviewForPlayer(env, telegramId, options = {}) {
+   requireDatabase(env);
+-  await ensureAchievementConfigSchema(env);
+   const playerId=String(telegramId||"").trim();
+   if(!playerId)return {ok:true,version:1,serverAuthoritative:true,summary:{achievementPoints:0,maxAchievementPoints:0,rank:achievementRankForPoints(0)},showcase:{limit:ACHIEVEMENT_SHOWCASE_LIMIT,count:0,ids:[],items:[],selectedStyleId:"default"}};
+   const optionalFirst=(statement)=>statement.first().catch((error)=>{if(isMissingRuntimeDatabaseSchemaError(error))return null;throw error;});
+-  const definitionsPromise=Array.isArray(options?.definitions)?Promise.resolve(options.definitions):achievementConfiguredDefinitions(env);
++  // Player API requests already pass the migration-backed runtime schema contract.
++  // Do not repeat legacy schema repair/PRAGMA work on this latency-sensitive read.
++  const definitionsPromise=Array.isArray(options?.definitions)?Promise.resolve(options.definitions):achievementConfiguredDefinitions(env,{skipSchemaEnsure:true});
+   const [definitions,showcaseResult,preferenceRow,showcaseStyleOwnershipResult,earnedResult]=await Promise.all([
+     definitionsPromise,
+     env.DB.prepare(`SELECT achievement_id,slot FROM achievement_showcase WHERE telegram_id=? ORDER BY slot`).bind(playerId).all(),
+--- a/scripts/check-p1-read-paths.mjs
++++ b/scripts/check-p1-read-paths.mjs
+@@ -29,6 +29,12 @@
+ if(!index.includes('scope:&quot;profile&quot;'))fail('Profile showcase recovery does not request the lightweight profile scope');
+ if(!index.includes('SHOWCASE_CACHE_PREFIX'))fail('Profile showcase has no last-known-good cache');
+ if(!index.includes('_showcaseStale'))fail('Profile showcase cache is not marked stale for immediate refresh');
++if(!index.includes('zefirok-achievement-showcase-recovery'))fail('Profile showcase does not recover immediately when startup misses its bounded section');
++if(!index.includes('directFirst||!hasServerState'))fail('Profile showcase first load still waits on the broad profile overview before using its lightweight endpoint');
++const showcasePreview=between('async function achievementShowcasePreviewForPlayer','async function getAchievementsV2');
++if(showcasePreview.includes('ensureAchievementConfigSchema(env)'))fail('Profile showcase preview repeats legacy achievement schema repair on the player read path');
++if(!showcasePreview.includes('skipSchemaEnsure:true'))fail('Profile showcase preview does not use the schema-contract fast path');
++if(!worker.includes('achievementBaseDefinitions(env,options)'))fail('Achievement definition fast path does not propagate schema-contract mode to season definitions');
+ if(!index.includes('Загружаем витрину…'))fail('Profile showcase still exposes the false empty initial state');
+ if(!index.includes('controller.abort(), 4000'))fail('Account revision fetch has no bounded timeout');
+ if(!worker.includes("startupBounded('cases'"))fail('Startup cases section is not bounded');

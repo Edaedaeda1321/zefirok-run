@@ -26734,7 +26734,14 @@ function createTutorialDeck(layer, mount, options, words) {
           }
           if (data.achievementShowcase &amp;&amp; typeof data.achievementShowcase === &quot;object&quot;) {
             window.__ZEFIROK_ACHIEVEMENT_PROFILE_STATE__ = data.achievementShowcase;
+            window.__ZEFIROK_ACHIEVEMENT_SHOWCASE_RECOVERY__ = false;
             try { window.dispatchEvent(new CustomEvent(&quot;zefirok-achievement-showcase-ready&quot;, { detail:data.achievementShowcase })); } catch (error) {}
+          } else {
+            // The startup showcase is deliberately bounded. If that optional section
+            // misses its budget, recover it immediately in the background instead of
+            // waiting until the player opens Profile and staring at a loading card.
+            window.__ZEFIROK_ACHIEVEMENT_SHOWCASE_RECOVERY__ = true;
+            try { window.dispatchEvent(new Event(&quot;zefirok-achievement-showcase-recovery&quot;)); } catch (error) {}
           }
           if (data.profile) applyServerProfilePayload(data.profile);
           else void syncPlayerProfileFromServer();
@@ -31269,10 +31276,11 @@ function createTutorialDeck(layer, mount, options, words) {
   let inflight=null,initialRefreshTimer=0,hasServerState=false,lastFreshAt=0;
   const bootstrapState=()=&gt;{try{const live=window.__ZEFIROK_ACHIEVEMENT_PROFILE_STATE__;if(live&amp;&amp;typeof live===&quot;object&quot;&amp;&amp;live.ok)return live;}catch{}const auth=initData();return auth?readShowcaseCache(auth):null;};
   const applyServerState=(data)=&gt;{if(!data?.ok||typeof data!==&quot;object&quot;)return;const stale=Boolean(data._showcaseStale),clean=stale?{...data}:data;if(stale)delete clean._showcaseStale;window.__ZEFIROK_ACHIEVEMENT_PROFILE_STATE__=clean;if(!stale)writeShowcaseCache(initData(),clean);render(clean);hasServerState=true;lastFreshAt=stale?0:Date.now();};
-  const refresh=async(force=false)=&gt;{if(!force&amp;&amp;!profileVisible())return;if(!force&amp;&amp;hasServerState&amp;&amp;Date.now()-lastFreshAt&lt;15000)return;if(inflight)return inflight;const auth=initData();if(!auth)return;inflight=(async()=&gt;{try{let data=null;try{const overview=await window.zefirokProfileOverview?.(force);data=overview?.achievements;}catch{}if(!data?.ok)data=await fetchShowcaseDirect(auth);applyServerState(data);}catch{const cached=readShowcaseCache(auth);if(cached&amp;&amp;!hasServerState)applyServerState(cached);}finally{inflight=null;}})();return inflight;};
+  const refresh=async(force=false,directFirst=false)=&gt;{if(!force&amp;&amp;!profileVisible())return;if(!force&amp;&amp;hasServerState&amp;&amp;Date.now()-lastFreshAt&lt;15000)return;if(inflight)return inflight;const auth=initData();if(!auth)return;inflight=(async()=&gt;{try{let data=null;if(directFirst||!hasServerState){try{data=await fetchShowcaseDirect(auth);}catch{}}if(!data?.ok){try{const overview=await window.zefirokProfileOverview?.(force);data=overview?.achievements;}catch{}}if(!data?.ok&amp;&amp;!directFirst)data=await fetchShowcaseDirect(auth);if(data?.ok){window.__ZEFIROK_ACHIEVEMENT_SHOWCASE_RECOVERY__=false;applyServerState(data);}}catch{const cached=readShowcaseCache(auth);if(cached&amp;&amp;!hasServerState)applyServerState(cached);}finally{inflight=null;}})();return inflight;};
   const refreshVisibleProfile=(attempt=0,force=false)=&gt;{window.clearTimeout(initialRefreshTimer);if(!profileVisible())return;const cached=bootstrapState();if(cached&amp;&amp;!hasServerState)applyServerState(cached);if(!force&amp;&amp;hasServerState&amp;&amp;Date.now()-lastFreshAt&lt;15000)return;if(initData()){void refresh(force);return;}if(attempt&gt;=16)return;initialRefreshTimer=window.setTimeout(()=&gt;refreshVisibleProfile(attempt+1,force),250);};
   document.addEventListener(&quot;click&quot;,(event)=&gt;{const openButton=event.target?.closest?.(&quot;[data-achievements-open]&quot;);if(openButton){event.preventDefault();openButton.disabled=true;try{window.parent.postMessage({type:&quot;zefirok-open-achievements&quot;,view:openButton.dataset.achievementsView===&quot;showcase&quot;?&quot;showcase&quot;:&quot;goals&quot;},&quot;*&quot;);}catch{try{window.location.href=&quot;/achievements.html?view=&quot;+(openButton.dataset.achievementsView===&quot;showcase&quot;?&quot;showcase&quot;:&quot;goals&quot;);}catch{}}window.setTimeout(()=&gt;{openButton.disabled=false;},900);return;}if(event.target?.closest?.(&#x27;[data-tab=&quot;profile&quot;]&#x27;))window.setTimeout(()=&gt;refreshVisibleProfile(),80);});
-  window.addEventListener(&quot;zefirok-achievement-showcase-ready&quot;,(event)=&gt;applyServerState(event?.detail));
+  window.addEventListener(&quot;zefirok-achievement-showcase-ready&quot;,(event)=&gt;{window.__ZEFIROK_ACHIEVEMENT_SHOWCASE_RECOVERY__=false;applyServerState(event?.detail);});
+  window.addEventListener(&quot;zefirok-achievement-showcase-recovery&quot;,()=&gt;{if(!hasServerState)void refresh(true,true);});
   window.addEventListener(&quot;zefirok-profile-overview-updated&quot;,(event)=&gt;{const data=event?.detail?.achievements;if(data?.ok)applyServerState(data);});
   window.addEventListener(&quot;pageshow&quot;,()=&gt;{document.querySelectorAll(&quot;[data-achievements-open]&quot;).forEach((button)=&gt;{button.disabled=false;});if(profileVisible())refreshVisibleProfile();});
   window.addEventListener(&quot;message&quot;,(event)=&gt;{if(event.data?.type===&quot;zefirok-achievements-account-updated&quot;)refreshVisibleProfile(0,true);if(event.data?.type===&quot;zefirok-open-screen&quot;&amp;&amp;String(event.data?.screen||&quot;&quot;)===&quot;profile&quot;)window.setTimeout(()=&gt;refreshVisibleProfile(),80);});
@@ -31280,6 +31288,7 @@ function createTutorialDeck(layer, mount, options, words) {
   if(observedProfileScreen){new MutationObserver(()=&gt;{if(profileVisible())refreshVisibleProfile();}).observe(observedProfileScreen,{attributes:true,attributeFilter:[&quot;hidden&quot;]});}
   document.addEventListener(&quot;visibilitychange&quot;,()=&gt;{if(!document.hidden&amp;&amp;profileVisible())refreshVisibleProfile(0,Date.now()-lastFreshAt&gt;30000);});
   const cached=bootstrapState();if(cached)applyServerState(cached);
+  if(!cached&amp;&amp;window.__ZEFIROK_ACHIEVEMENT_SHOWCASE_RECOVERY__)window.setTimeout(()=&gt;void refresh(true,true),0);
   if(document.readyState===&quot;loading&quot;)document.addEventListener(&quot;DOMContentLoaded&quot;,()=&gt;refreshVisibleProfile(),{once:true});else window.setTimeout(()=&gt;refreshVisibleProfile(),0);
 })();
 &lt;/script&gt;

@@ -7279,9 +7279,9 @@ function achievementSeasonDefinitionId(kind, seasonId) {
   return `sp-${kind}:${safeSeasonId}`.slice(0,80);
 }
 
-async function achievementSeasonBaseDefinitions(env) {
+async function achievementSeasonBaseDefinitions(env, options = {}) {
   try {
-    await ensureSeasonPassSchema(env);
+    if (options?.skipSchemaEnsure !== true) await ensureSeasonPassSchema(env);
     const now=Math.floor(Date.now()/1000);
     const rows=(await env.DB.prepare(`SELECT season_id,title,asset_key,starts_at,ends_at,manual_status FROM season_pass_seasons ORDER BY starts_at ASC,season_id ASC LIMIT 120`).all()).results||[];
     const out=[];
@@ -7305,9 +7305,9 @@ async function achievementSeasonBaseDefinitions(env) {
   }
 }
 
-async function achievementStoryCollectibleDefinitions(env){
+async function achievementStoryCollectibleDefinitions(env, options = {}){
   try{
-    await ensureSeasonPassSchema(env);
+    if(options?.skipSchemaEnsure!==true)await ensureSeasonPassSchema(env);
     const rows=(await env.DB.prepare(`SELECT season_id,title,starts_at,ends_at,visuals_json FROM season_pass_seasons ORDER BY starts_at ASC,season_id ASC LIMIT 120`).all()).results||[];
     const out=[];
     for(const row of rows){
@@ -7328,8 +7328,8 @@ async function achievementStoryCollectibleDefinitions(env){
   }catch(error){if(!isMissingRuntimeDatabaseSchemaError(error))console.error('story collectible achievement definitions failed',error);return [];}
 }
 
-async function achievementBaseDefinitions(env) {
-  const [seasonDefinitions,storyCollectibleDefinitions]=await Promise.all([achievementSeasonBaseDefinitions(env),achievementStoryCollectibleDefinitions(env)]);
+async function achievementBaseDefinitions(env, options = {}) {
+  const [seasonDefinitions,storyCollectibleDefinitions]=await Promise.all([achievementSeasonBaseDefinitions(env,options),achievementStoryCollectibleDefinitions(env,options)]);
   return [...ACHIEVEMENTS_V2,...seasonDefinitions,...storyCollectibleDefinitions];
 }
 
@@ -7342,11 +7342,11 @@ function achievementAvailability(definition = {}, now = Math.floor(Date.now()/10
 }
 
 async function achievementConfiguredDefinitions(env, options = {}) {
-  await ensureAchievementConfigSchema(env);
+  if(options?.skipSchemaEnsure!==true)await ensureAchievementConfigSchema(env);
   const includeSeasonDefinitions = options?.includeSeasonDefinitions !== false;
   const [rows,baseDefinitions]=await Promise.all([
     env.DB.prepare(`SELECT * FROM achievement_settings`).all().then((result)=>result.results||[]),
-    includeSeasonDefinitions ? achievementBaseDefinitions(env) : Promise.resolve(ACHIEVEMENTS_V2)
+    includeSeasonDefinitions ? achievementBaseDefinitions(env,options) : Promise.resolve(ACHIEVEMENTS_V2)
   ]);
   const overrides = new Map(rows.map((row) => [String(row.achievement_id || ""), row]));
   return baseDefinitions.map((base, index) => {
@@ -7674,11 +7674,12 @@ async function achievementPlayerState(env, telegramId) {
 
 async function achievementShowcasePreviewForPlayer(env, telegramId, options = {}) {
   requireDatabase(env);
-  await ensureAchievementConfigSchema(env);
   const playerId=String(telegramId||"").trim();
   if(!playerId)return {ok:true,version:1,serverAuthoritative:true,summary:{achievementPoints:0,maxAchievementPoints:0,rank:achievementRankForPoints(0)},showcase:{limit:ACHIEVEMENT_SHOWCASE_LIMIT,count:0,ids:[],items:[],selectedStyleId:"default"}};
   const optionalFirst=(statement)=>statement.first().catch((error)=>{if(isMissingRuntimeDatabaseSchemaError(error))return null;throw error;});
-  const definitionsPromise=Array.isArray(options?.definitions)?Promise.resolve(options.definitions):achievementConfiguredDefinitions(env);
+  // Player API requests already pass the migration-backed runtime schema contract.
+  // Do not repeat legacy schema repair/PRAGMA work on this latency-sensitive read.
+  const definitionsPromise=Array.isArray(options?.definitions)?Promise.resolve(options.definitions):achievementConfiguredDefinitions(env,{skipSchemaEnsure:true});
   const [definitions,showcaseResult,preferenceRow,showcaseStyleOwnershipResult,earnedResult]=await Promise.all([
     definitionsPromise,
     env.DB.prepare(`SELECT achievement_id,slot FROM achievement_showcase WHERE telegram_id=? ORDER BY slot`).bind(playerId).all(),

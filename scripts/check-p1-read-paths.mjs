@@ -29,6 +29,12 @@ if(!index.includes('fetch(&quot;/api/achievements&quot;'))fail('Profile showcase
 if(!index.includes('scope:&quot;profile&quot;'))fail('Profile showcase recovery does not request the lightweight profile scope');
 if(!index.includes('SHOWCASE_CACHE_PREFIX'))fail('Profile showcase has no last-known-good cache');
 if(!index.includes('_showcaseStale'))fail('Profile showcase cache is not marked stale for immediate refresh');
+if(!index.includes('zefirok-achievement-showcase-recovery'))fail('Profile showcase does not recover immediately when startup misses its bounded section');
+if(!index.includes('directFirst||!hasServerState'))fail('Profile showcase first load still waits on the broad profile overview before using its lightweight endpoint');
+const showcasePreview=between('async function achievementShowcasePreviewForPlayer','async function getAchievementsV2');
+if(showcasePreview.includes('ensureAchievementConfigSchema(env)'))fail('Profile showcase preview repeats legacy achievement schema repair on the player read path');
+if(!showcasePreview.includes('skipSchemaEnsure:true'))fail('Profile showcase preview does not use the schema-contract fast path');
+if(!worker.includes('achievementBaseDefinitions(env,options)'))fail('Achievement definition fast path does not propagate schema-contract mode to season definitions');
 if(!index.includes('Загружаем витрину…'))fail('Profile showcase still exposes the false empty initial state');
 if(!index.includes('controller.abort(), 4000'))fail('Account revision fetch has no bounded timeout');
 if(!worker.includes("startupBounded('cases'"))fail('Startup cases section is not bounded');

@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "catalogHash": "50f68efc93ad29c5",
+  "catalogHash": "1c03ba6f6b8df040",
   "count": 13,
   "images": [
     {
@@ -25,15 +25,8 @@
       "size": 254392
     },
     {
-      "fileName": "news.webp",
-      "label": "News",
-      "path": "/assets/news/news.webp",
-      "hash": "9af281e19afb",
-      "size": 250556
-    },
-    {
       "fileName": "news_pick_v_1.2.5.webp",
-      "label": "Обновление 1.2.5",
+      "label": "News pick v 1.2.5",
       "path": "/assets/news/news_pick_v_1.2.5.webp",
       "hash": "f8d4c9b50c00",
       "size": 463114
@@ -44,6 +37,13 @@
       "path": "/assets/news/news_post_final_season1.webp",
       "hash": "be8a47cadd0f",
       "size": 311232
+    },
+    {
+      "fileName": "news.webp",
+      "label": "News",
+      "path": "/assets/news/news.webp",
+      "hash": "9af281e19afb",
+      "size": 250556
     },
     {
       "fileName": "relise_clear_progress_news.webp",
