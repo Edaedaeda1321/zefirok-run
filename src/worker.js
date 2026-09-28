@@ -24241,6 +24241,19 @@ async function checkLowStockAlerts(env) {
   }
 }
 
+function dailyStaffReportDateLabel(dateKey) {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(dateKey || ""));
+  if (!match) return String(dateKey || "");
+  const monthNames = [
+    "января", "февраля", "марта", "апреля", "мая", "июня",
+    "июля", "августа", "сентября", "октября", "ноября", "декабря"
+  ];
+  const month = Number(match[2]);
+  const day = Number(match[3]);
+  if (!day || month < 1 || month > 12) return String(dateKey || "");
+  return `${day} ${monthNames[month - 1]} ${match[1]}`;
+}
+
 async function buildDailyStaffReport(env, startAt, dateKey) {
   const staffPermanentSql=telegramPermanentDeliverySql("last_error");
   const broadcastPermanentSql=telegramPermanentDeliverySql("error_text");
@@ -24267,26 +24280,56 @@ async function buildDailyStaffReport(env, startAt, dateKey) {
      FROM support_tickets`).bind(startAt).first()
   ]);
   const stockRows = await readShopStockRows(env);
-  const stockLine = ["zefir", "americano", "cappuccino"].map((id) => {
+  const stockLines = [
+    ["zefir", "🍬"],
+    ["americano", "☕"],
+    ["cappuccino", "🥛"]
+  ].map(([id, icon]) => {
     const availability = shopStockAvailabilityFromRows(stockRows, "prize", id);
-    return `${PRODUCTS[id]?.title || id}: ${availability.limited ? availability.remaining : "∞"}`;
-  }).join(" · ");
+    const remaining = availability.limited ? availability.remaining : "∞";
+    return `${icon} ${escapeHtml(PRODUCTS[id]?.title || id)}: <b>${escapeHtml(String(remaining))}</b>`;
+  }).join("\n");
+  const newPlayers = Number(players?.count || 0);
+  const totalRuns = Number(runs?.total || 0);
+  const acceptedRuns = Number(runs?.accepted || 0);
   const openedCases = Number(openedLevel?.count || 0) + Number(openedGranted?.count || 0);
-  const purchases = Number(casePurchases?.count || 0) + Number(skinPurchases?.count || 0) + Number(physicalPurchases?.count || 0);
+  const casePurchaseCount = Number(casePurchases?.count || 0);
+  const skinPurchaseCount = Number(skinPurchases?.count || 0);
+  const physicalPurchaseCount = Number(physicalPurchases?.count || 0);
+  const purchases = casePurchaseCount + skinPurchaseCount + physicalPurchaseCount;
+  const physicalCreated = Number(rewardsCreated?.count || 0);
+  const physicalRedeemed = Number(rewardsUsed?.count || 0);
+  const activeStaff = Number(staffActive?.count || 0);
+  const staffToday = Number(staffActors?.count || 0);
+  const newTickets = Number(tickets?.created || 0);
+  const openTickets = Number(tickets?.open_count || 0);
   const errors = Number(actionErrors?.count || 0) + Number(notificationErrors?.count || 0) + Number(broadcastErrors?.count || 0);
   const unreachableChats = Number(notificationUnreachable?.count || 0) + Number(broadcastUnreachable?.count || 0);
-  return `<b>📊 Итоги за ${escapeHtml(dateKey)}</b>\n\n` +
-    `Новых игроков: <b>${Number(players?.count || 0)}</b>\n` +
-    `Забегов: <b>${Number(runs?.total || 0)}</b> · зачтено ${Number(runs?.accepted || 0)}\n` +
-    `Открыто кейсов: <b>${openedCases}</b>\n` +
-    `Покупок кейсов/скинов/призов: <b>${purchases}</b>\n` +
-    `Создано физических наград: <b>${Number(rewardsCreated?.count || 0)}</b>\n` +
-    `Погашено кодов: <b>${Number(rewardsUsed?.count || 0)}</b>\n` +
-    `Активных сотрудников: <b>${Number(staffActive?.count || 0)}</b> · работали сегодня ${Number(staffActors?.count || 0)}\n` +
-    `Новых обращений: <b>${Number(tickets?.created || 0)}</b> · открыто сейчас ${Number(tickets?.open_count || 0)}\n` +
+  const healthLine = errors || unreachableChats
+    ? `⚠️ <b>Требует внимания:</b> ошибок ${errors} · недоступных чатов ${unreachableChats}`
+    : "✅ Ошибок доставки и недоступных чатов нет";
+  const dateLabel = dailyStaffReportDateLabel(dateKey);
+  return `<b>📊 Итоги дня</b>\n` +
+    `📅 ${escapeHtml(dateLabel)}\n\n` +
+    `<b>Главное</b>\n` +
+    `👥 Новые игроки: <b>${newPlayers}</b>\n` +
+    `🏃 Забеги: <b>${totalRuns}</b> · зачтено <b>${acceptedRuns}</b>\n` +
+    `🎁 Открыто кейсов: <b>${openedCases}</b>\n` +
+    `🛍 Покупки: <b>${purchases}</b>\n` +
+    `└ кейсы ${casePurchaseCount} · скины ${skinPurchaseCount} · призы ${physicalPurchaseCount}\n\n` +
+    `<b>🎁 Физические награды</b>\n` +
+    `Создано: <b>${physicalCreated}</b>\n` +
+    `Погашено кодов: <b>${physicalRedeemed}</b>\n\n` +
+    `<b>👨‍💼 Команда</b>\n` +
+    `Активных сотрудников: <b>${activeStaff}</b>\n` +
+    `Работали сегодня: <b>${staffToday}</b>\n\n` +
+    `<b>💬 Поддержка и доставка</b>\n` +
+    `Новых обращений: <b>${newTickets}</b>\n` +
+    `Открыто сейчас: <b>${openTickets}</b>\n` +
     `Ошибок и повторных доставок: <b>${errors}</b>\n` +
-    `Недоступных Telegram-чатов: <b>${unreachableChats}</b>\n\n` +
-    `<b>Остатки</b>\n${escapeHtml(stockLine)}`;
+    `Недоступных Telegram-чатов: <b>${unreachableChats}</b>\n` +
+    `${healthLine}\n\n` +
+    `<b>📦 Остатки</b>\n${stockLines}`;
 }
 
 async function showDailyStaffReport(chatId, user, env) {
