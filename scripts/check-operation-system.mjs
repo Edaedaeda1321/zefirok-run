@@ -465,11 +465,25 @@ assert(staffTraining.includes('const STAFF_TRAINING_PANEL_GUIDES = Object.freeze
 assert(staffTraining.includes('📚 Шпаргалка кнопок'), 'staff training v2 has no persistent button cheat sheet');
 assert(staffTraining.includes('showPanelGuide: true'), 'staff training v2 does not teach the real panel layout');
 assert(staffTraining.includes('👀 Открыть реальную рабочую панель'), 'staff training cannot jump to the real panel for practice');
-assert(staffTraining.includes('v78_training_back'), 'staff training v2 has no back navigation');
-assert(staffTraining.includes('v78_training_quiz:(\\d+):([a-z]+)'), 'staff training quiz callbacks are not tied to a concrete step');
+assert(staffTraining.includes('callback_data: `v78_training_next:${index}`'), 'staff training next navigation is not tied to the rendered step');
+assert(staffTraining.includes('callback_data: `v78_training_back:${index}`'), 'staff training back navigation is not tied to the rendered step');
+assert(staffTraining.includes('v78_training_quiz:(\\d+):([a-z0-9_-]+)'), 'staff training quiz callbacks are not tied to a concrete step');
+assert(staffTraining.includes('data === "v78_training_next" || data === "v78_training_back"'), 'legacy unscoped training navigation is not rejected safely');
+assert(staffTraining.includes('status.status !== "in_progress" || callbackIndex !== current'), 'training navigation can mutate stale or completed progress');
+assert(staffTraining.includes('if (status.status !== "in_progress")'), 'training quiz/continue flow does not guard inactive course state');
 assert(staffTraining.includes('Проверка 2'), 'staff training v2 does not include the second scenario check');
-for (const label of ['📷 Сканировать QR','⌨️ Ввести код','🎫 Обращения','🎁 Награды','🧰 Компенсации']) {
-  assert(staffTraining.includes(label), `staff training guide does not explain panel button: ${label}`);
+const frontlineTrainingGuide = section(staffTraining, 'const STAFF_FRONTLINE_TRAINING_PANEL_GUIDE', 'const STAFF_ADMIN_TRAINING_PANEL_GUIDE');
+const administratorTrainingGuide = section(staffTraining, 'const STAFF_ADMIN_TRAINING_PANEL_GUIDE', 'const STAFF_TRAINING_PANEL_GUIDES');
+const adminPanelMarkup = section(worker, 'function adminMainMenuMarkup', '\nasync function showAdminMainMenu');
+const frontlinePanelMarkup = section(adminPanelMarkup, 'if (frontline) {', 'if (!access?.owner && role === "administrator") {');
+const administratorPanelMarkup = section(adminPanelMarkup, 'if (!access?.owner && role === "administrator") {', '// Владелец:');
+for (const label of ['🎓 Обучение','🔔 Уведомления','☕ Физические товары','📷 Сканировать QR','⌨️ Ввести код','📦 Прогноз остатков','🎫 Обращения','📚 Все команды','🧹 Очистить чат']) {
+  assert(frontlinePanelMarkup.includes(label), `frontline panel is missing expected button: ${label}`);
+  assert(frontlineTrainingGuide.includes(label), `frontline training guide does not explain panel button: ${label}`);
+}
+for (const label of ['🔄 Обновить','🎓 Обучение','👤 Игроки','👥 Сотрудники','🎁 Награды','🧰 Компенсации','📷 Сканировать QR','⌨️ Ввести код','🎫 Обращения']) {
+  assert(administratorPanelMarkup.includes(label), `administrator panel is missing expected button: ${label}`);
+  assert(administratorTrainingGuide.includes(label), `administrator training guide does not explain panel button: ${label}`);
 }
 
 // Execute the actual Worker quote helpers in isolation. This keeps the build test
