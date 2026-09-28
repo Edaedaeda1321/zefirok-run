@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "catalogHash": "72d524260d3d188c",
+  "catalogHash": "50f68efc93ad29c5",
   "count": 13,
   "images": [
     {
@@ -35,8 +35,8 @@
       "fileName": "news_pick_v_1.2.5.webp",
       "label": "Обновление 1.2.5",
       "path": "/assets/news/news_pick_v_1.2.5.webp",
-      "hash": "30e1f2fe3ed0",
-      "size": 424042
+      "hash": "f8d4c9b50c00",
+      "size": 463114
     },
     {
       "fileName": "news_post_final_season1.webp",

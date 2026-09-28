@@ -1574,7 +1574,7 @@ const DEFAULT_SEASON_RESET_PLAN = Object.freeze({
 
 // Встроенная релизная новость. BOT_NEWS_IMAGE_URL в Cloudflare может переопределить картинку.
 const DEFAULT_BOT_NEWS_IMAGE_URL = "";
-const RELEASE_125_BOT_NEWS_IMAGE_URL = "/assets/news/news_pick_v_1.2.5.webp?v=30e1f2fe3ed0";
+const RELEASE_125_BOT_NEWS_IMAGE_URL = "/assets/news/news_pick_v_1.2.5.webp?v=f8d4c9b50c00";
 const BOT_NEWS_TITLE = "Сладкий Забег 1.2.5 — прогресс, сезоны и важные исправления ✨";
 const BOT_NEWS_TEXT = `Вышло обновление «Сладкого Забега» 1.2.5. В нём мы заметно обновили прогрессию и интерфейс, сохранили историю сезонов и исправили несколько важных ошибок сезонных систем.
 
@@ -11272,7 +11272,7 @@ async function ensureRelease106PlayerFix(env) {
   return release106PlayerFixPromise;
 }
 
-const RELEASE_125_NEWS_KEY = "release-1.2.5-news-v2";
+const RELEASE_125_NEWS_KEY = "release-1.2.5-news-v3";
 let release125NewsReady = false;
 let release125NewsPromise = null;
 
@@ -50582,7 +50582,7 @@ async function ownerPanelDeleteSeasonPassSeason(env, ctx) {
 
 function ownerPanelNewsFallbackPresets(base) {
   return [
-    {label:"Обновление 1.2.5",url:`${base}/assets/news/news_pick_v_1.2.5.webp?v=30e1f2fe3ed0`,path:"/assets/news/news_pick_v_1.2.5.webp",group:"Новости"},
+    {label:"Обновление 1.2.5",url:`${base}/assets/news/news_pick_v_1.2.5.webp?v=f8d4c9b50c00`,path:"/assets/news/news_pick_v_1.2.5.webp",group:"Новости"},
     {label:"Кейсы 5.0.1",url:`${base}/assets/news/cases-5.0.1.webp`,path:"/assets/news/cases-5.0.1.webp",group:"Новости"},
     {label:"Обновление 1.2.2",url:`${base}/assets/news/update_v_1_2_2.webp?v=de67cfa4069a`,path:"/assets/news/update_v_1_2_2.webp",group:"Новости"},{label:"Обновление 1.2.1",url:`${base}/assets/news/news_post_final_season1.webp?v=bedb6870bd5d`,path:"/assets/news/news_post_final_season1.webp",group:"Новости"},{label:"Релиз игры",url:`${base}/assets/news/relise_game_news.webp`,path:"/assets/news/relise_game_news.webp",group:"Новости"}
   ];
