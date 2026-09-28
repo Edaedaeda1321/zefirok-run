@@ -1504,7 +1504,7 @@ body.zefirok-run-expanded>iframe[data-run-expanded="true"]{width:100%!important;
 
   let ratingLayer = null;
   let ratingReadyTimer = 0;
-  const RATING_RELEASE_BUILD = "1.2.2-season2-showcase-title-fix";
+  const RATING_RELEASE_BUILD = "1.2.5-level-badges-release";
   const RATING_READY_TIMEOUT_MS = 16000;
 
   function ratingFrame() {
@@ -12647,7 +12647,7 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
     &lt;span class=&quot;profile-support-meta&quot; data-profile-support-meta&gt;Обращения ещё не загружены&lt;/span&gt;
   &lt;/section&gt;
 
-  &lt;div class=&quot;profile-version-row&quot;&gt;&lt;span&gt;Версия игры&lt;/span&gt;&lt;strong data-profile-game-version&gt;1.2.2&lt;/strong&gt;&lt;/div&gt;
+  &lt;div class=&quot;profile-version-row&quot;&gt;&lt;span&gt;Версия игры&lt;/span&gt;&lt;strong data-profile-game-version&gt;1.2.5&lt;/strong&gt;&lt;/div&gt;
   &lt;div aria-live=&quot;polite&quot; class=&quot;profile-toast&quot; data-profile-toast hidden&gt;&lt;/div&gt;
 &lt;/div&gt;
 &lt;/section&gt;
@@ -12787,8 +12787,8 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
 
 &lt;div aria-hidden=&quot;true&quot; class=&quot;release-layer&quot; data-release-layer hidden&gt;
   &lt;div aria-labelledby=&quot;release-dialog-title&quot; aria-modal=&quot;true&quot; class=&quot;release-dialog&quot; role=&quot;dialog&quot; tabindex=&quot;-1&quot;&gt;
-    &lt;div class=&quot;release-image-wrap&quot; data-release-image-wrap aria-hidden=&quot;true&quot; style=&quot;aspect-ratio:1672/941&quot;&gt;
-      &lt;img class=&quot;release-image&quot; data-release-image src=&quot;/assets/news/update_v_1_2_2.webp?v=de67cfa4069a&quot; alt=&quot;Сладкий Забег — обновление 1.2.2&quot; width=&quot;1672&quot; height=&quot;941&quot; decoding=&quot;async&quot; loading=&quot;lazy&quot; fetchpriority=&quot;low&quot;/&gt;
+    &lt;div class=&quot;release-image-wrap&quot; data-release-image-wrap aria-hidden=&quot;true&quot; style=&quot;aspect-ratio:1055/1491&quot; hidden&gt;
+      &lt;img class=&quot;release-image&quot; data-release-image src=&quot;/assets/news/news_pick_v_1.2.5.webp?v=30e1f2fe3ed0&quot; alt=&quot;Сладкий Забег — обновление 1.2.5&quot; width=&quot;1055&quot; height=&quot;1491&quot; decoding=&quot;async&quot; loading=&quot;lazy&quot; fetchpriority=&quot;low&quot;/&gt;
     &lt;/div&gt;
     &lt;div class=&quot;release-kicker&quot; data-release-kicker&gt;Новое обновление&lt;/div&gt;
     &lt;h2 id=&quot;release-dialog-title&quot; data-release-title&gt;Обновление&lt;/h2&gt;
@@ -14159,26 +14159,69 @@ function installProgressInfo(){
       // Заголовок, текст и кнопку ниже можно свободно редактировать.
       // Переносы строк внутри UPDATE_NOTICE_TEXT сохраняются.
       // Версия: год игры.сезонное обновление.исправление.
-      const GAME_VERSION = &quot;1.2.2&quot;;
+      const GAME_VERSION = &quot;1.2.5&quot;;
       const ECONOMY_RESET_KEY = &quot;economy-reset-0.1.1-beta-purchase-limit-fix-2026-07-23&quot;;
-      const UPDATE_NOTICE_KEY = &quot;release-1-2-2-critical-fixes-2026-09-16&quot;;
+      const UPDATE_NOTICE_KEY = &quot;release-1-2-5-progression-season-fixes-2026-09-28&quot;;
       const UPDATE_NOTICE_ENABLED = true;
-      const UPDATE_NOTICE_TITLE = &quot;Обновление 1.2.2 — исправления и улучшения&quot;;
-      const UPDATE_NOTICE_TEXT = `В 1.2.2 мы исправили критические ошибки и обновили ключевые системы игры.
+      const UPDATE_NOTICE_TITLE = &quot;Сладкий Забег 1.2.5&quot;;
+      const UPDATE_NOTICE_TEXT = `Что нового
 
-Исправлено: игроки снова корректно учитываются в рейтинге, усилители активируются автоматически, устранены ошибки при открытии кейсов, снова открывается Альбом.
+Переработали отображение уровня игрока. Шильдики уровня в рейтинге и профилях стали заметнее и понятнее. По мере роста уровня меняется оформление плашки, поэтому прогресс теперь ощущается визуально.
 
-Добавлено и обновлено: новые сезонные препятствия и дорожка витрины, полностью обновлённые обучения, более информативный дизайн разделов и уведомлений, Telegram-сообщение при смещении с первого места рейтинга, новый дизайн сезонного пропуска, актуализированное содержимое кейсов и переработанные анимации их открытия.
+Полностью обновили интерфейс раздела «Документы и конфиденциальность». Документы, их версии и статус подтверждения теперь отображаются понятнее, а сам раздел стал визуально ближе к остальному интерфейсу игры.
 
-Теперь кейсы можно встретить прямо в забеге на каждом пороге в 1000 очков — обычный, серебряный, золотой, мифический или легендарный.
+Изменили подготовку сцены перед забегом. Запуск может занимать немного больше времени, потому что игра сначала получает и подготавливает актуальную сцену целиком. Зато сцена больше не должна неожиданно меняться или догружаться уже во время забега.
 
-Мы также обновили архитектуру проекта и улучшили инструменты сотрудников кафе. Старые ошибки соединения должны возникать реже. Если заметите баг — обязательно сообщите нам!`;
+Пересмотрели экономику скинов и кейсов — цены стали доступнее.
+
+Обновили награды за уровни профиля. Чем выше уровень, тем ценнее становятся кейсы и награды за прогрессию.
+
+В разделе оформления профиля появились сюжетные оформления игры, которые можно получать из сезонного контента и использовать в своём стиле.
+
+Сюжетные воспоминания сезонов теперь сохраняются в Альбоме Зеффи, чтобы к пройденным историям можно было возвращаться позже.
+
+Переработали ежедневную активность: прогресс стал понятнее, информативнее и лучше показывает, что уже выполнено и что ждёт игрока дальше.
+
+Добавили экран итогов сезона рейтинга — после завершения сезона можно увидеть свои результаты и итоговую статистику.
+
+Исправления
+
+Исправили отображение витрин достижений и улучшили стабильность их загрузки.
+
+Исправили витрину 2 сезона «Ночь сладких чудес», из-за которой могли пропадать названия достижений.
+
+Исправили ошибку сезонного пропуска: после прохождения основной прогрессии бонус ×2 к XP у Элит+ больше не пропадает и продолжает действовать в течение сезона.
+
+Исправили получение наград 50+ после завершения основной дорожки сезонного пропуска, в том числе ситуацию с несколькими накопленными наградами.
+
+Исправили отдельные ошибки сюжетных оформлений и отображения классической сцены кафе.`;
       const UPDATE_NOTICE_BUTTON = &quot;Продолжить&quot;;
       const RELEASE_CENTER_SEASON_2_START_MS = Date.parse(&quot;2026-09-13T00:00:00+03:00&quot;);
       const RELEASE_CENTER_RELEASES = Object.freeze([
         Object.freeze({
-          version: &quot;1.2.2&quot;,
+          version: &quot;1.2.5&quot;,
           current: true,
+          type: &quot;Обновление прогрессии, интерфейса и сезонных систем&quot;,
+          date: &quot;28 сентября 2026&quot;,
+          title: &quot;Прогресс заметнее, история сезонов — ближе&quot;,
+          summary: &quot;Переработали уровни, документы, ежедневную активность и награды, добавили сюжетные воспоминания и экран итогов рейтинга, а также исправили сезонный пропуск и витрины достижений.&quot;,
+          highlights: Object.freeze([
+            Object.freeze({ icon: &quot;/assets/ui/icon_o_profile.webp&quot;, title: &quot;Новые шильдики уровня&quot;, text: &quot;Оформление уровня теперь меняется вместе с прогрессом и одинаково работает в профилях и рейтинге.&quot; }),
+            Object.freeze({ icon: &quot;/assets/ui/icon_documents.webp&quot;, title: &quot;Документы и конфиденциальность&quot;, text: &quot;Полностью обновили раздел документов, версии и статусы подтверждения.&quot; }),
+            Object.freeze({ icon: &quot;/assets/ui/icon_game_button.webp&quot;, title: &quot;Подготовка сцены&quot;, text: &quot;Перед стартом игра подготавливает актуальную сцену целиком, чтобы она не менялась и не догружалась уже во время забега.&quot; }),
+            Object.freeze({ icon: &quot;/assets/ui/icon_shopping.webp&quot;, title: &quot;Скины и кейсы&quot;, text: &quot;Пересмотрели экономику скинов и кейсов — цены стали доступнее.&quot; }),
+            Object.freeze({ icon: &quot;/assets/ui/icon_prize.webp&quot;, title: &quot;Награды за уровень&quot;, text: &quot;Чем выше уровень профиля, тем ценнее кейсы и награды за прогрессию.&quot; }),
+            Object.freeze({ icon: &quot;/assets/ui/icon_sushet_season.webp&quot;, title: &quot;Сюжетные оформления&quot;, text: &quot;Сезонные сюжетные оформления можно получать и использовать в оформлении профиля.&quot; }),
+            Object.freeze({ icon: &quot;/assets/ui/icon_albom.webp&quot;, title: &quot;Альбом Зеффи&quot;, text: &quot;Пройденные сезонные истории сохраняются как постоянные сюжетные воспоминания.&quot; }),
+            Object.freeze({ icon: &quot;/assets/ui/icon_goal.webp&quot;, title: &quot;Ежедневная активность&quot;, text: &quot;Прогресс стал понятнее и лучше показывает выполненные и следующие шаги.&quot; }),
+            Object.freeze({ icon: &quot;/assets/ui/icon_reiting.webp&quot;, title: &quot;Итоги рейтингового сезона&quot;, text: &quot;После завершения сезона можно увидеть свой итоговый результат и статистику.&quot; }),
+            Object.freeze({ icon: &quot;/assets/ui/icon_battlepass.webp&quot;, title: &quot;Сезонный пропуск&quot;, text: &quot;Исправили ×2 XP у Элит+ после основной дорожки и получение нескольких накопленных наград 50+.&quot; }),
+            Object.freeze({ icon: &quot;/assets/ui/icon_vitrina.webp&quot;, title: &quot;Витрины достижений&quot;, text: &quot;Улучшили загрузку витрин и исправили названия достижений 2 сезона «Ночь сладких чудес».&quot; })
+          ])
+        }),
+        Object.freeze({
+          version: &quot;1.2.2&quot;,
+          current: false,
           type: &quot;Исправление критических ошибок и обновление систем&quot;,
           date: &quot;16 сентября 2026&quot;,
           title: &quot;Стабильнее, понятнее и больше нового в забеге&quot;,
@@ -17798,8 +17841,8 @@ function createTutorialDeck(layer, mount, options, words) {
         dialog?.classList.add(&quot;is-release-center&quot;);
         if (releaseCloseButton) releaseCloseButton.hidden = false;
         if (seasonTaskActionsEl) seasonTaskActionsEl.hidden = true;
-        if (releaseImageWrapEl) releaseImageWrapEl.hidden = false;
-        if (releaseImageEl) {
+        if (releaseImageWrapEl) releaseImageWrapEl.hidden = !builtInReleaseImageSrc;
+        if (releaseImageEl &amp;&amp; builtInReleaseImageSrc) {
           releaseImageEl.src = builtInReleaseImageSrc;
           releaseImageEl.alt = builtInReleaseImageAlt;
         }

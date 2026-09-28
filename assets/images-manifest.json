@@ -1,8 +1,8 @@
 {
   "version": 2,
   "hashAlgorithm": "sha256",
-  "catalogHash": "1591efa35af7b068",
-  "count": 545,
+  "catalogHash": "d6f63fa99d53dc5a",
+  "count": 550,
   "images": [
     {
       "fileName": "achievements/background_achivment_panel.webp",
@@ -1253,6 +1253,14 @@
       "size": 45076
     },
     {
+      "fileName": "cases/trails/Epik_sled_season2.webp",
+      "label": "Epik sled season2",
+      "folder": "cases/trails",
+      "path": "/assets/cases/trails/Epik_sled_season2.webp",
+      "hash": "b8ae5753621a",
+      "size": 220790
+    },
+    {
       "fileName": "cases/trails/Epik_sled_season2_2.webp",
       "label": "Epik sled season2 2",
       "folder": "cases/trails",
@@ -1261,12 +1269,12 @@
       "size": 285452
     },
     {
-      "fileName": "cases/trails/Epik_sled_season2.webp",
-      "label": "Epik sled season2",
+      "fileName": "cases/trails/legendary+_sled_season_2.webp",
+      "label": "Legendary+ sled season 2",
       "folder": "cases/trails",
-      "path": "/assets/cases/trails/Epik_sled_season2.webp",
-      "hash": "b8ae5753621a",
-      "size": 220790
+      "path": "/assets/cases/trails/legendary%2B_sled_season_2.webp",
+      "hash": "176f1fe81c12",
+      "size": 286812
     },
     {
       "fileName": "cases/trails/Legendary_sled_season2.webp",
@@ -1315,14 +1323,6 @@
       "path": "/assets/cases/trails/legendary_trail_5_season2.webp",
       "hash": "90d453b0c580",
       "size": 229726
-    },
-    {
-      "fileName": "cases/trails/legendary+_sled_season_2.webp",
-      "label": "Legendary+ sled season 2",
-      "folder": "cases/trails",
-      "path": "/assets/cases/trails/legendary%2B_sled_season_2.webp",
-      "hash": "176f1fe81c12",
-      "size": 286812
     },
     {
       "fileName": "cases/trails/mifik_sled_season2.webp",
@@ -1621,20 +1621,28 @@
       "size": 254392
     },
     {
-      "fileName": "news/news_post_final_season1.webp",
-      "label": "News post final season1",
-      "folder": "news",
-      "path": "/assets/news/news_post_final_season1.webp",
-      "hash": "be8a47cadd0f",
-      "size": 311232
-    },
-    {
       "fileName": "news/news.webp",
       "label": "News",
       "folder": "news",
       "path": "/assets/news/news.webp",
       "hash": "9af281e19afb",
       "size": 250556
+    },
+    {
+      "fileName": "news/news_pick_v_1.2.5.webp",
+      "label": "News pick v 1.2.5",
+      "folder": "news",
+      "path": "/assets/news/news_pick_v_1.2.5.webp",
+      "hash": "30e1f2fe3ed0",
+      "size": 424042
+    },
+    {
+      "fileName": "news/news_post_final_season1.webp",
+      "label": "News post final season1",
+      "folder": "news",
+      "path": "/assets/news/news_post_final_season1.webp",
+      "hash": "be8a47cadd0f",
+      "size": 311232
     },
     {
       "fileName": "news/relise_clear_progress_news.webp",
@@ -2797,30 +2805,6 @@
       "size": 443886
     },
     {
-      "fileName": "rating/v8/season_3_reiting.webp",
-      "label": "Season 3 reiting",
-      "folder": "rating/v8",
-      "path": "/assets/rating/v8/season_3_reiting.webp",
-      "hash": "c931a1352ba4",
-      "size": 141004
-    },
-    {
-      "fileName": "rating/v8/season_4_reiting.webp",
-      "label": "Season 4 reiting",
-      "folder": "rating/v8",
-      "path": "/assets/rating/v8/season_4_reiting.webp",
-      "hash": "58f3e3f6fcba",
-      "size": 218176
-    },
-    {
-      "fileName": "rating/v8/season_Park_reiting.webp",
-      "label": "Season Park reiting",
-      "folder": "rating/v8",
-      "path": "/assets/rating/v8/season_Park_reiting.webp",
-      "hash": "76c2d290b938",
-      "size": 225388
-    },
-    {
       "fileName": "rating/v8/season-1-cafe-opening.webp",
       "label": "Season 1 cafe opening",
       "folder": "rating/v8",
@@ -2843,6 +2827,30 @@
       "path": "/assets/rating/v8/season3_reiting_all.webp",
       "hash": "79e6501b7c0e",
       "size": 139882
+    },
+    {
+      "fileName": "rating/v8/season_3_reiting.webp",
+      "label": "Season 3 reiting",
+      "folder": "rating/v8",
+      "path": "/assets/rating/v8/season_3_reiting.webp",
+      "hash": "c931a1352ba4",
+      "size": 141004
+    },
+    {
+      "fileName": "rating/v8/season_4_reiting.webp",
+      "label": "Season 4 reiting",
+      "folder": "rating/v8",
+      "path": "/assets/rating/v8/season_4_reiting.webp",
+      "hash": "58f3e3f6fcba",
+      "size": 218176
+    },
+    {
+      "fileName": "rating/v8/season_Park_reiting.webp",
+      "label": "Season Park reiting",
+      "folder": "rating/v8",
+      "path": "/assets/rating/v8/season_Park_reiting.webp",
+      "hash": "76c2d290b938",
+      "size": 225388
     },
     {
       "fileName": "runner-builder/previews/pouf.webp",
@@ -2877,20 +2885,20 @@
       "size": 403404
     },
     {
-      "fileName": "season-pass/avatars_season_pass_3.webp",
-      "label": "Avatars season pass 3",
-      "folder": "season-pass",
-      "path": "/assets/season-pass/avatars_season_pass_3.webp",
-      "hash": "036cb6fd1740",
-      "size": 475136
-    },
-    {
       "fileName": "season-pass/avatars_season_pass3.webp",
       "label": "Avatars season pass3",
       "folder": "season-pass",
       "path": "/assets/season-pass/avatars_season_pass3.webp",
       "hash": "c618b716950a",
       "size": 328530
+    },
+    {
+      "fileName": "season-pass/avatars_season_pass_3.webp",
+      "label": "Avatars season pass 3",
+      "folder": "season-pass",
+      "path": "/assets/season-pass/avatars_season_pass_3.webp",
+      "hash": "036cb6fd1740",
+      "size": 475136
     },
     {
       "fileName": "season-pass/avatars_white_rabbit_s4.webp",
@@ -2901,20 +2909,20 @@
       "size": 363924
     },
     {
-      "fileName": "season-pass/elite_plus.webp",
-      "label": "Elite plus",
-      "folder": "season-pass",
-      "path": "/assets/season-pass/elite_plus.webp",
-      "hash": "2f6438f93199",
-      "size": 299060
-    },
-    {
       "fileName": "season-pass/elite.webp",
       "label": "Elite",
       "folder": "season-pass",
       "path": "/assets/season-pass/elite.webp",
       "hash": "11c5fab8f5a6",
       "size": 267892
+    },
+    {
+      "fileName": "season-pass/elite_plus.webp",
+      "label": "Elite plus",
+      "folder": "season-pass",
+      "path": "/assets/season-pass/elite_plus.webp",
+      "hash": "2f6438f93199",
+      "size": 299060
     },
     {
       "fileName": "season-pass/free_line.webp",
@@ -2933,20 +2941,20 @@
       "size": 287246
     },
     {
-      "fileName": "season-pass/icon_tarif_elit_plus.webp",
-      "label": "Icon tarif elit plus",
-      "folder": "season-pass",
-      "path": "/assets/season-pass/icon_tarif_elit_plus.webp",
-      "hash": "b86160425e5a",
-      "size": 410538
-    },
-    {
       "fileName": "season-pass/icon_tarif_elit.webp",
       "label": "Icon tarif elit",
       "folder": "season-pass",
       "path": "/assets/season-pass/icon_tarif_elit.webp",
       "hash": "de4647ca174f",
       "size": 349994
+    },
+    {
+      "fileName": "season-pass/icon_tarif_elit_plus.webp",
+      "label": "Icon tarif elit plus",
+      "folder": "season-pass",
+      "path": "/assets/season-pass/icon_tarif_elit_plus.webp",
+      "hash": "b86160425e5a",
+      "size": 410538
     },
     {
       "fileName": "season-pass/levels_5.webp",
@@ -2965,14 +2973,6 @@
       "size": 597916
     },
     {
-      "fileName": "season-pass/quest_white_rabbit_s4.webp",
-      "label": "Quest white rabbit s4",
-      "folder": "season-pass",
-      "path": "/assets/season-pass/quest_white_rabbit_s4.webp",
-      "hash": "a37dce8108e6",
-      "size": 324544
-    },
-    {
       "fileName": "season-pass/quest.webp",
       "label": "Quest",
       "folder": "season-pass",
@@ -2981,12 +2981,84 @@
       "size": 162498
     },
     {
+      "fileName": "season-pass/quest_white_rabbit_s4.webp",
+      "label": "Quest white rabbit s4",
+      "folder": "season-pass",
+      "path": "/assets/season-pass/quest_white_rabbit_s4.webp",
+      "hash": "a37dce8108e6",
+      "size": 324544
+    },
+    {
+      "fileName": "season-pass/season.webp",
+      "label": "Season",
+      "folder": "season-pass",
+      "path": "/assets/season-pass/season.webp",
+      "hash": "f0e1ed581093",
+      "size": 213746
+    },
+    {
       "fileName": "season-pass/season_3_pass.webp",
       "label": "Season 3 pass",
       "folder": "season-pass",
       "path": "/assets/season-pass/season_3_pass.webp",
       "hash": "ee0b79e19268",
       "size": 290120
+    },
+    {
+      "fileName": "season-pass/season_pass1.webp",
+      "label": "Season pass1",
+      "folder": "season-pass",
+      "path": "/assets/season-pass/season_pass1.webp",
+      "hash": "a504ae3d88e3",
+      "size": 305284
+    },
+    {
+      "fileName": "season-pass/Season_pass3.webp",
+      "label": "Season pass3",
+      "folder": "season-pass",
+      "path": "/assets/season-pass/Season_pass3.webp",
+      "hash": "d4d55b5f743d",
+      "size": 209972
+    },
+    {
+      "fileName": "season-pass/season_pass3_2xp.webp",
+      "label": "Season pass3 2xp",
+      "folder": "season-pass",
+      "path": "/assets/season-pass/season_pass3_2xp.webp",
+      "hash": "0a41f660b9ba",
+      "size": 303888
+    },
+    {
+      "fileName": "season-pass/season_pass3_5levels.webp",
+      "label": "Season pass3 5levels",
+      "folder": "season-pass",
+      "path": "/assets/season-pass/season_pass3_5levels.webp",
+      "hash": "33dded205d4d",
+      "size": 316750
+    },
+    {
+      "fileName": "season-pass/season_pass3_prize.webp",
+      "label": "Season pass3 prize",
+      "folder": "season-pass",
+      "path": "/assets/season-pass/season_pass3_prize.webp",
+      "hash": "54691b36d5a6",
+      "size": 286330
+    },
+    {
+      "fileName": "season-pass/season_pass3_quest.webp",
+      "label": "Season pass3 quest",
+      "folder": "season-pass",
+      "path": "/assets/season-pass/season_pass3_quest.webp",
+      "hash": "127c427ec425",
+      "size": 281552
+    },
+    {
+      "fileName": "season-pass/season_pass3_xp.webp",
+      "label": "Season pass3 xp",
+      "folder": "season-pass",
+      "path": "/assets/season-pass/season_pass3_xp.webp",
+      "hash": "51df646961aa",
+      "size": 374844
     },
     {
       "fileName": "season-pass/season_pass_park_2xp.webp",
@@ -3045,76 +3117,20 @@
       "size": 426368
     },
     {
-      "fileName": "season-pass/season_pass1.webp",
-      "label": "Season pass1",
-      "folder": "season-pass",
-      "path": "/assets/season-pass/season_pass1.webp",
-      "hash": "a504ae3d88e3",
-      "size": 305284
-    },
-    {
-      "fileName": "season-pass/season_pass3_2xp.webp",
-      "label": "Season pass3 2xp",
-      "folder": "season-pass",
-      "path": "/assets/season-pass/season_pass3_2xp.webp",
-      "hash": "0a41f660b9ba",
-      "size": 303888
-    },
-    {
-      "fileName": "season-pass/season_pass3_5levels.webp",
-      "label": "Season pass3 5levels",
-      "folder": "season-pass",
-      "path": "/assets/season-pass/season_pass3_5levels.webp",
-      "hash": "33dded205d4d",
-      "size": 316750
-    },
-    {
-      "fileName": "season-pass/season_pass3_prize.webp",
-      "label": "Season pass3 prize",
-      "folder": "season-pass",
-      "path": "/assets/season-pass/season_pass3_prize.webp",
-      "hash": "54691b36d5a6",
-      "size": 286330
-    },
-    {
-      "fileName": "season-pass/season_pass3_quest.webp",
-      "label": "Season pass3 quest",
-      "folder": "season-pass",
-      "path": "/assets/season-pass/season_pass3_quest.webp",
-      "hash": "127c427ec425",
-      "size": 281552
-    },
-    {
-      "fileName": "season-pass/season_pass3_xp.webp",
-      "label": "Season pass3 xp",
-      "folder": "season-pass",
-      "path": "/assets/season-pass/season_pass3_xp.webp",
-      "hash": "51df646961aa",
-      "size": 374844
-    },
-    {
-      "fileName": "season-pass/Season_pass3.webp",
-      "label": "Season pass3",
-      "folder": "season-pass",
-      "path": "/assets/season-pass/Season_pass3.webp",
-      "hash": "d4d55b5f743d",
-      "size": 209972
-    },
-    {
-      "fileName": "season-pass/season.webp",
-      "label": "Season",
-      "folder": "season-pass",
-      "path": "/assets/season-pass/season.webp",
-      "hash": "f0e1ed581093",
-      "size": 213746
-    },
-    {
       "fileName": "season-pass/X2 XP_white_rabbit_s4.webp",
       "label": "X2 XP white rabbit s4",
       "folder": "season-pass",
       "path": "/assets/season-pass/X2%20XP_white_rabbit_s4.webp",
       "hash": "3e5a781ad943",
       "size": 390910
+    },
+    {
+      "fileName": "season-pass/xp.webp",
+      "label": "Xp",
+      "folder": "season-pass",
+      "path": "/assets/season-pass/xp.webp",
+      "hash": "e9695cb75e47",
+      "size": 311240
     },
     {
       "fileName": "season-pass/XP_white_rabbit_s4.webp",
@@ -3131,14 +3147,6 @@
       "path": "/assets/season-pass/xp_x2.webp",
       "hash": "d8f1d631ad19",
       "size": 188170
-    },
-    {
-      "fileName": "season-pass/xp.webp",
-      "label": "Xp",
-      "folder": "season-pass",
-      "path": "/assets/season-pass/xp.webp",
-      "hash": "e9695cb75e47",
-      "size": 311240
     },
     {
       "fileName": "season-pass/zaglyshka_season.webp",
@@ -4157,20 +4165,20 @@
       "size": 31990
     },
     {
-      "fileName": "ui/icon_player_elit.webp",
-      "label": "Icon player elit",
-      "folder": "ui",
-      "path": "/assets/ui/icon_player_elit.webp",
-      "hash": "1ad0d9bc0c59",
-      "size": 21746
-    },
-    {
       "fileName": "ui/icon_player_elit+.webp",
       "label": "Icon player elit+",
       "folder": "ui",
       "path": "/assets/ui/icon_player_elit%2B.webp",
       "hash": "d5725402c05b",
       "size": 39336
+    },
+    {
+      "fileName": "ui/icon_player_elit.webp",
+      "label": "Icon player elit",
+      "folder": "ui",
+      "path": "/assets/ui/icon_player_elit.webp",
+      "hash": "1ad0d9bc0c59",
+      "size": 21746
     },
     {
       "fileName": "ui/icon_prize.webp",
@@ -4339,6 +4347,38 @@
       "path": "/assets/ui/icone_reward.webp",
       "hash": "ee15952afd0f",
       "size": 52476
+    },
+    {
+      "fileName": "ui/legal/icon_License_Agreement.webp",
+      "label": "Icon License Agreement",
+      "folder": "ui/legal",
+      "path": "/assets/ui/legal/icon_License_Agreement.webp",
+      "hash": "3bdf16ec5462",
+      "size": 24290
+    },
+    {
+      "fileName": "ui/legal/icon_licenz_sogl.webp",
+      "label": "Icon licenz sogl",
+      "folder": "ui/legal",
+      "path": "/assets/ui/legal/icon_licenz_sogl.webp",
+      "hash": "c1c8aa2e7c19",
+      "size": 24534
+    },
+    {
+      "fileName": "ui/legal/icon_sogl_PDn.webp",
+      "label": "Icon sogl PDn",
+      "folder": "ui/legal",
+      "path": "/assets/ui/legal/icon_sogl_PDn.webp",
+      "hash": "d110c836fa1b",
+      "size": 26912
+    },
+    {
+      "fileName": "ui/legal/icon_Your_Docum.webp",
+      "label": "Icon Your Docum",
+      "folder": "ui/legal",
+      "path": "/assets/ui/legal/icon_Your_Docum.webp",
+      "hash": "9986ba8eab84",
+      "size": 57852
     },
     {
       "fileName": "ui/new_avatars_game.webp",

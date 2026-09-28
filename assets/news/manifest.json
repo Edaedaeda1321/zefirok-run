@@ -1,7 +1,7 @@
 {
   "version": 1,
-  "catalogHash": "4b24f013e74167bf",
-  "count": 12,
+  "catalogHash": "72d524260d3d188c",
+  "count": 13,
   "images": [
     {
       "fileName": "cases-5.0.1.webp",
@@ -25,18 +25,25 @@
       "size": 254392
     },
     {
-      "fileName": "news_post_final_season1.webp",
-      "label": "News post final season1",
-      "path": "/assets/news/news_post_final_season1.webp",
-      "hash": "be8a47cadd0f",
-      "size": 311232
-    },
-    {
       "fileName": "news.webp",
       "label": "News",
       "path": "/assets/news/news.webp",
       "hash": "9af281e19afb",
       "size": 250556
+    },
+    {
+      "fileName": "news_pick_v_1.2.5.webp",
+      "label": "Обновление 1.2.5",
+      "path": "/assets/news/news_pick_v_1.2.5.webp",
+      "hash": "30e1f2fe3ed0",
+      "size": 424042
+    },
+    {
+      "fileName": "news_post_final_season1.webp",
+      "label": "News post final season1",
+      "path": "/assets/news/news_post_final_season1.webp",
+      "hash": "be8a47cadd0f",
+      "size": 311232
     },
     {
       "fileName": "relise_clear_progress_news.webp",
