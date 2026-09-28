@@ -25990,15 +25990,19 @@ function adminMainMenuMarkup(access, overview = {}, env = {}) {
   if (frontline) {
     return {
       inline_keyboard: [
-        [{ text: "🎓 Обучение", callback_data: "v78_training" }],
+        [
+          { text: "🎓 Обучение", callback_data: "v78_training" },
+          { text: "🔔 Уведомления", callback_data: "v57_notifications" }
+        ],
         [{ text: "☕ Физические товары", callback_data: "adm_physical" }],
         [
           { text: "📷 Сканировать QR", web_app: { url: configuredStaffQrUrl(env) } },
           { text: "⌨️ Ввести код", callback_data: "adm_redeem_manual" }
         ],
-        [{ text: "🔔 Уведомления", callback_data: "v57_notifications" }],
-        [{ text: "📦 Прогноз остатков", callback_data: "v67_stock_forecast" }],
-        [{ text: "🎫 Обращения", callback_data: "tickets_open" }],
+        [
+          { text: "📦 Прогноз остатков", callback_data: "v67_stock_forecast" },
+          { text: "🎫 Обращения", callback_data: "tickets_open" }
+        ],
         [
           { text: "📚 Все команды", callback_data: "adminpanel_commands" },
           { text: "🧹 Очистить чат", callback_data: "admin_clean_chat" }
@@ -26010,28 +26014,35 @@ function adminMainMenuMarkup(access, overview = {}, env = {}) {
     return {
       inline_keyboard: [
         [
+          { text: "🔄 Обновить", callback_data: "adm_home_refresh" },
+          { text: "🎓 Обучение", callback_data: "v78_training" }
+        ],
+        [
           { text: "👤 Игроки", callback_data: "adm_players" },
           { text: "👥 Сотрудники", callback_data: "adm_team" }
-        ],
-        [{ text: "🎓 Обучение", callback_data: "v78_training" }],
-        [
-          { text: "📷 Сканировать QR", web_app: { url: configuredStaffQrUrl(env) } },
-          { text: "⌨️ Ввести код", callback_data: "adm_redeem_manual" }
         ],
         [
           { text: "🎁 Награды", callback_data: "grant_home" },
           { text: "🧰 Компенсации", callback_data: "safe_comp" }
+        ],
+        [
+          { text: "📷 Сканировать QR", web_app: { url: configuredStaffQrUrl(env) } },
+          { text: "⌨️ Ввести код", callback_data: "adm_redeem_manual" }
         ],
         [{ text: "🎫 Обращения", callback_data: "tickets_open" }]
       ]
     };
   }
 
-  // Владелец: все визуальные и аналитические разделы перенесены в Mini App.
-  // В боте оставляем только действия, которые удобно выполнять прямо в рабочем чате.
+  // Владелец: в боте остаются быстрые действия и компактная оперативная сводка.
+  // Полная аналитика и управление по-прежнему открываются в Owner Panel Mini App.
   if (access?.owner) {
     return { inline_keyboard: [
       [{ text: "👑 Панель владельца", web_app: { url: configuredOwnerPanelUrl(env) } }],
+      [
+        { text: "🔄 Обновить", callback_data: "adm_home_refresh" },
+        { text: "📊 Итоги дня", callback_data: "daily_report_refresh" }
+      ],
       [
         { text: "🎁 Быстрая выдача", callback_data: "grant_home" },
         { text: "☕ Физические товары", callback_data: "adm_physical" }
@@ -26167,24 +26178,42 @@ async function showAdminMainMenu(chatId, user, env, options = {}) {
     }
   }
   const summary = overview
-    ? `\n\n<b>${overview.healthIcon} Состояние игры</b>\n` +
-      `Cron: <b>${escapeHtml(overview.cronText)}</b>\n` +
-      `Сезон: <b>${escapeHtml(overview.seasonTitle)}</b> · ${escapeHtml(overview.seasonStatus)}\n` +
-      `Проблемы: <b>${overview.issueCount}</b>${overview.urgent ? ` · срочных ${overview.urgent}` : ""}\n` +
-      `Очередь наград: <b>${overview.queuePending}</b>${overview.queueFailed ? ` · ошибок ${overview.queueFailed}` : ""}\n\n` +
-      `<b>Сегодня</b>\nИгроков: <b>${overview.activePlayers}</b> · новых ${overview.newPlayers}\n` +
-      `Забегов: <b>${overview.runs}</b> · зачтено ${overview.acceptedRuns}\n` +
-      `Кейсов: <b>${overview.cases}</b> · операций магазина ${overview.shopOps}\n` +
-      `Обращений открыто: <b>${overview.tickets}</b> · ошибок за час ${overview.errors}` +
-      `${overview.cacheAgeSeconds > 5 ? `\n<i>Сводка: ${Math.max(1, Math.floor(overview.cacheAgeSeconds / 60))} мин. назад</i>` : ""}`
-    : `\n\n🟡 Быстрая сводка временно недоступна. Остальные разделы работают.`;
+    ? (() => {
+        const issueCount = Math.max(0, Number(overview.issueCount || 0));
+        const urgent = Math.max(0, Number(overview.urgent || 0));
+        const queuePending = Math.max(0, Number(overview.queuePending || 0));
+        const queueFailed = Math.max(0, Number(overview.queueFailed || 0));
+        const errors = Math.max(0, Number(overview.errors || 0));
+        const statusIcon = urgent > 0 || queueFailed > 0 ? "🔴" : issueCount > 0 || errors > 0 ? "🟡" : "🟢";
+        const statusTitle = urgent > 0 || queueFailed > 0 ? "Требует внимания" : issueCount > 0 || errors > 0 ? "Есть замечания" : "Всё работает";
+        const cacheAgeSeconds = Math.max(0, Number(overview.cacheAgeSeconds || 0));
+        const cacheLine = cacheAgeSeconds > 5
+          ? `\n<i>Сводка обновлена ${Math.max(1, Math.floor(cacheAgeSeconds / 60))} мин. назад</i>`
+          : "";
+        return `\n\n<b>${statusIcon} ${statusTitle}</b>\n` +
+          `🏆 Сезон: <b>${escapeHtml(overview.seasonTitle)}</b> · ${escapeHtml(overview.seasonStatus)}\n` +
+          `🚨 Проблемы: <b>${issueCount}</b>${urgent ? ` · срочных <b>${urgent}</b>` : ""}\n` +
+          `📬 Очередь наград: <b>${queuePending}</b>${queueFailed ? ` · ошибок <b>${queueFailed}</b>` : ""}\n` +
+          `⏱ Cron: <b>${escapeHtml(overview.cronText)}</b>\n\n` +
+          `<b>📊 Сегодня</b>\n` +
+          `👥 Игроки: <b>${Number(overview.activePlayers || 0)}</b> · новых <b>${Number(overview.newPlayers || 0)}</b>\n` +
+          `🏃 Забеги: <b>${Number(overview.runs || 0)}</b> · зачтено <b>${Number(overview.acceptedRuns || 0)}</b>\n` +
+          `🎁 Кейсы: <b>${Number(overview.cases || 0)}</b>\n` +
+          `🛍 Магазин: <b>${Number(overview.shopOps || 0)}</b> операций\n` +
+          `🎫 Обращения: <b>${Number(overview.tickets || 0)}</b>\n` +
+          `⚠️ Ошибки за час: <b>${errors}</b>${cacheLine}`;
+      })()
+    : `\n\n🟡 <b>Сводка временно недоступна</b>\nОстальные разделы продолжают работать.`;
+  const displayName = escapeHtml(telegramDisplayName(user));
+  const roleTitle = escapeHtml(staffRoleTitle(access));
+  const workerVersion = escapeHtml(WORKER_BUILD);
   const panelText = frontline
-    ? `<b>🧾 Рабочая панель</b>\n\nСотрудник: <b>${escapeHtml(telegramDisplayName(user))}</b>\nРоль: <b>${escapeHtml(staffRoleTitle(access))}</b>\n\nВыберите нужный рабочий раздел.`
+    ? `<b>🧾 Рабочая панель</b>\n\n<b>${displayName}</b> · ${roleTitle}\nWorker: <b>v${workerVersion}</b>\n\n🟢 <b>Рабочая сессия активна</b>\nБыстрые действия для выдачи, товаров и обращений — ниже.`
     : limitedAdministrator
-      ? `<b>⚙️ Админ-панель</b>\n\nСотрудник: <b>${escapeHtml(telegramDisplayName(user))}</b>\nРоль: <b>${escapeHtml(staffRoleTitle(access))}</b>\nWorker: <b>v${escapeHtml(WORKER_BUILD)}</b>\n\nДоступны только рабочие разделы, назначенные владельцем.`
+      ? `<b>⚙️ Админ-панель</b>\n\n<b>${displayName}</b> · ${roleTitle}\nWorker: <b>v${workerVersion}</b>\n\n🟢 <b>Рабочая сессия активна</b>\nНиже показаны только разделы, доступные вашей роли.`
       : access.owner
-        ? `<b>⚙️ Панель владельца</b>\n\nВладелец: <b>${escapeHtml(telegramDisplayName(user))}</b>\nWorker: <b>v${escapeHtml(WORKER_BUILD)}</b>${summary}\n\nВ <b>👑 Панель владельца</b> перенесены игроки, сезоны, экономика, проблемы, модерация, обращения, кейсы, магазин, промокоды, опросы и системное управление. В боте оставлены только быстрые действия для работы в чате.`
-        : `<b>⚙️ Админ-панель</b>\n\nСотрудник: <b>${escapeHtml(telegramDisplayName(user))}</b>\nРоль: <b>${escapeHtml(staffRoleTitle(access))}</b>\nWorker: <b>v${escapeHtml(WORKER_BUILD)}</b>${summary}\n\nВыберите раздел. Критические действия требуют подтверждения и записываются в журнал.`;
+        ? `<b>👑 Панель владельца</b>\n\n<b>${displayName}</b> · Worker <b>v${workerVersion}</b>${summary}`
+        : `<b>⚙️ Админ-панель</b>\n\n<b>${displayName}</b> · ${roleTitle}\nWorker: <b>v${workerVersion}</b>${summary}\n\nВыберите рабочий раздел ниже.`;
   const panelMarkup = adminMainMenuMarkup(access, overview || {}, env);
   const editMessageId = Math.floor(Number(options.editMessageId) || 0);
   if (editMessageId > 0) {
