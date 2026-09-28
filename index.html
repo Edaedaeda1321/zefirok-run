@@ -1504,7 +1504,7 @@ body.zefirok-run-expanded>iframe[data-run-expanded="true"]{width:100%!important;
 
   let ratingLayer = null;
   let ratingReadyTimer = 0;
-  const RATING_RELEASE_BUILD = "1.2.2-season2-showcase-title-fix";
+  const RATING_RELEASE_BUILD = "1.2.5-release";
   const RATING_READY_TIMEOUT_MS = 16000;
 
   function ratingFrame() {
@@ -12647,7 +12647,7 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
     &lt;span class=&quot;profile-support-meta&quot; data-profile-support-meta&gt;Обращения ещё не загружены&lt;/span&gt;
   &lt;/section&gt;
 
-  &lt;div class=&quot;profile-version-row&quot;&gt;&lt;span&gt;Версия игры&lt;/span&gt;&lt;strong data-profile-game-version&gt;1.2.2&lt;/strong&gt;&lt;/div&gt;
+  &lt;div class=&quot;profile-version-row&quot;&gt;&lt;span&gt;Версия игры&lt;/span&gt;&lt;strong data-profile-game-version&gt;1.2.5&lt;/strong&gt;&lt;/div&gt;
   &lt;div aria-live=&quot;polite&quot; class=&quot;profile-toast&quot; data-profile-toast hidden&gt;&lt;/div&gt;
 &lt;/div&gt;
 &lt;/section&gt;
@@ -12787,8 +12787,8 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
 
 &lt;div aria-hidden=&quot;true&quot; class=&quot;release-layer&quot; data-release-layer hidden&gt;
   &lt;div aria-labelledby=&quot;release-dialog-title&quot; aria-modal=&quot;true&quot; class=&quot;release-dialog&quot; role=&quot;dialog&quot; tabindex=&quot;-1&quot;&gt;
-    &lt;div class=&quot;release-image-wrap&quot; data-release-image-wrap aria-hidden=&quot;true&quot; style=&quot;aspect-ratio:1672/941&quot;&gt;
-      &lt;img class=&quot;release-image&quot; data-release-image src=&quot;/assets/news/update_v_1_2_2.webp?v=de67cfa4069a&quot; alt=&quot;Сладкий Забег — обновление 1.2.2&quot; width=&quot;1672&quot; height=&quot;941&quot; decoding=&quot;async&quot; loading=&quot;lazy&quot; fetchpriority=&quot;low&quot;/&gt;
+    &lt;div class=&quot;release-image-wrap&quot; data-release-image-wrap aria-hidden=&quot;true&quot; style=&quot;aspect-ratio:1/1&quot;&gt;
+      &lt;img class=&quot;release-image&quot; data-release-image src=&quot;/assets/news/relise_game_news.webp?v=fd804e0c7e73&quot; alt=&quot;Сладкий Забег — обновление 1.2.5&quot; width=&quot;1254&quot; height=&quot;1254&quot; decoding=&quot;async&quot; loading=&quot;lazy&quot; fetchpriority=&quot;low&quot;/&gt;
     &lt;/div&gt;
     &lt;div class=&quot;release-kicker&quot; data-release-kicker&gt;Новое обновление&lt;/div&gt;
     &lt;h2 id=&quot;release-dialog-title&quot; data-release-title&gt;Обновление&lt;/h2&gt;
@@ -14159,26 +14159,44 @@ function installProgressInfo(){
       // Заголовок, текст и кнопку ниже можно свободно редактировать.
       // Переносы строк внутри UPDATE_NOTICE_TEXT сохраняются.
       // Версия: год игры.сезонное обновление.исправление.
-      const GAME_VERSION = &quot;1.2.2&quot;;
+      const GAME_VERSION = &quot;1.2.5&quot;;
       const ECONOMY_RESET_KEY = &quot;economy-reset-0.1.1-beta-purchase-limit-fix-2026-07-23&quot;;
-      const UPDATE_NOTICE_KEY = &quot;release-1-2-2-critical-fixes-2026-09-16&quot;;
+      const UPDATE_NOTICE_KEY = &quot;release-1-2-5-progression-ui-balance-2026-09-28&quot;;
       const UPDATE_NOTICE_ENABLED = true;
-      const UPDATE_NOTICE_TITLE = &quot;Обновление 1.2.2 — исправления и улучшения&quot;;
-      const UPDATE_NOTICE_TEXT = `В 1.2.2 мы исправили критические ошибки и обновили ключевые системы игры.
+      const UPDATE_NOTICE_TITLE = &quot;Обновление 1.2.5 — прогрессия, интерфейсы и баланс&quot;;
+      const UPDATE_NOTICE_TEXT = `В 1.2.5 мы сделали прогрессию заметнее, интерфейсы понятнее, а награды и экономику — приятнее.
 
-Исправлено: игроки снова корректно учитываются в рейтинге, усилители активируются автоматически, устранены ошибки при открытии кейсов, снова открывается Альбом.
+Переработаны шильдики уровня в рейтинге и профилях: теперь уровень читается лучше, а оформление плашки меняется вместе с прогрессией. Полностью обновлён раздел «Документы и конфиденциальность».
 
-Добавлено и обновлено: новые сезонные препятствия и дорожка витрины, полностью обновлённые обучения, более информативный дизайн разделов и уведомлений, Telegram-сообщение при смещении с первого места рейтинга, новый дизайн сезонного пропуска, актуализированное содержимое кейсов и переработанные анимации их открытия.
+Перед стартом забега игра теперь сначала загружает актуальную сцену целиком. Подготовка может занимать немного больше времени, зато сцена больше не должна меняться или догружаться уже во время забега.
 
-Теперь кейсы можно встретить прямо в забеге на каждом пороге в 1000 очков — обычный, серебряный, золотой, мифический или легендарный.
+Пересмотрены цены скинов и кейсов, обновлены награды за уровни профиля, добавлены сюжетные оформления игры и сохранение сезонных воспоминаний в Альбоме. Ежедневная активность стала информативнее и понятнее.
 
-Мы также обновили архитектуру проекта и улучшили инструменты сотрудников кафе. Старые ошибки соединения должны возникать реже. Если заметите баг — обязательно сообщите нам!`;
+Исправлены витрины достижений, пропадающие названия во витрине 2 сезона, бонус ×2 XP Элит+ после прохождения основной дорожки сезонного пропуска и получение накопленных наград 50+.`;
       const UPDATE_NOTICE_BUTTON = &quot;Продолжить&quot;;
       const RELEASE_CENTER_SEASON_2_START_MS = Date.parse(&quot;2026-09-13T00:00:00+03:00&quot;);
       const RELEASE_CENTER_RELEASES = Object.freeze([
         Object.freeze({
-          version: &quot;1.2.2&quot;,
+          version: &quot;1.2.5&quot;,
           current: true,
+          type: &quot;Обновление прогрессии, интерфейсов и баланса&quot;,
+          date: &quot;28 сентября 2026&quot;,
+          title: &quot;Уровни заметнее, интерфейсы понятнее, прогресс ценнее&quot;,
+          summary: &quot;Обновили уровни и рейтинг, документы, загрузку сцен, экономику, награды профиля, сюжетные оформления и ежедневную активность. Исправили витрины и бонусы сезонного пропуска.&quot;,
+          highlights: Object.freeze([
+            Object.freeze({ icon: &quot;/assets/ui/icon_reiting.webp&quot;, title: &quot;Новая прогрессия уровня&quot;, text: &quot;Шильдики уровня в рейтинге и профилях стали заметнее. По мере роста уровня меняется и оформление плашки.&quot; }),
+            Object.freeze({ icon: &quot;/assets/ui/icon_documents.webp&quot;, title: &quot;Новые документы&quot;, text: &quot;Полностью обновили интерфейс «Документы и конфиденциальность»: версии, статусы и история подтверждений читаются проще.&quot; }),
+            Object.freeze({ icon: &quot;/assets/ui/icon_game_button.webp&quot;, title: &quot;Актуальная сцена до старта&quot;, text: &quot;Игра сначала подготавливает актуальную сцену, поэтому запуск может быть чуть дольше, но сцена не должна догружаться уже во время забега.&quot; }),
+            Object.freeze({ icon: &quot;/assets/cases/gold_closed.webp&quot;, title: &quot;Экономика и награды профиля&quot;, text: &quot;Снизили цены на скины и кейсы и сделали награды за высокие уровни профиля ценнее.&quot; }),
+            Object.freeze({ icon: &quot;/assets/ui/icon_albom.webp&quot;, title: &quot;Сюжетные оформления&quot;, text: &quot;В «Моём стиле» можно выбирать сюжетные оформления игры, а сезонные воспоминания сохраняются в Альбоме Зеффи.&quot; }),
+            Object.freeze({ icon: &quot;/assets/ui/icon_battlepass.webp&quot;, title: &quot;Ежедневная активность&quot;, text: &quot;Переработали ежедневную активность: прогресс стал понятнее, информативнее и лучше показывает следующие цели.&quot; }),
+            Object.freeze({ icon: &quot;/assets/ui/icon_score_acivment.webp&quot;, title: &quot;Витрины достижений&quot;, text: &quot;Исправили загрузку витрин и проблему 2 сезона, из-за которой пропадали названия достижений.&quot; }),
+            Object.freeze({ icon: &quot;/assets/ui/icon_battlepass.webp&quot;, title: &quot;Сезонный пропуск&quot;, text: &quot;Бонус ×2 XP Элит+ сохраняется после основной дорожки. Исправлено получение одной и нескольких накопленных наград 50+.&quot; })
+          ])
+        }),
+        Object.freeze({
+          version: &quot;1.2.2&quot;,
+          current: false,
           type: &quot;Исправление критических ошибок и обновление систем&quot;,
           date: &quot;16 сентября 2026&quot;,
           title: &quot;Стабильнее, понятнее и больше нового в забеге&quot;,
