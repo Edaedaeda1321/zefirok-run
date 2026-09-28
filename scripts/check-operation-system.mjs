@@ -459,6 +459,19 @@ assert(!worker.includes('DELETE FROM player_notification_log WHERE sent_at<?'), 
 assert(worker.includes("(status IN ('sent','cancelled') OR (status='failed' AND attempts>=5))"), 'player notification retention can remove retryable failed deliveries');
 assert(worker.includes("(status IN ('delivered','claimed','cancelled') OR (status='failed' AND attempts>=5))"), 'reward retention can remove retryable failed deliveries');
 
+// Staff training v2 must stay role-specific, resumable and aligned with the real Telegram panels.
+const staffTraining = section(worker, 'const STAFF_TRAINING_VERSION = 2;', '\nasync function requirePlayerResetAccess');
+assert(staffTraining.includes('const STAFF_TRAINING_PANEL_GUIDES = Object.freeze({'), 'staff training v2 has no role-specific panel guide');
+assert(staffTraining.includes('📚 Шпаргалка кнопок'), 'staff training v2 has no persistent button cheat sheet');
+assert(staffTraining.includes('showPanelGuide: true'), 'staff training v2 does not teach the real panel layout');
+assert(staffTraining.includes('👀 Открыть реальную рабочую панель'), 'staff training cannot jump to the real panel for practice');
+assert(staffTraining.includes('v78_training_back'), 'staff training v2 has no back navigation');
+assert(staffTraining.includes('v78_training_quiz:(\\d+):([a-z]+)'), 'staff training quiz callbacks are not tied to a concrete step');
+assert(staffTraining.includes('Проверка 2'), 'staff training v2 does not include the second scenario check');
+for (const label of ['📷 Сканировать QR','⌨️ Ввести код','🎫 Обращения','🎁 Награды','🧰 Компенсации']) {
+  assert(staffTraining.includes(label), `staff training guide does not explain panel button: ${label}`);
+}
+
 // Execute the actual Worker quote helpers in isolation. This keeps the build test
 // behavioral without importing or booting the production Worker.
 const helperSource = [

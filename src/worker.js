@@ -39810,7 +39810,8 @@ async function handleV67Callback(query,env){
 // =============================================================
 // STAFF TRAINING + PLAYER RESET CENTER v0.78
 // =============================================================
-const STAFF_TRAINING_VERSION = 1;
+const STAFF_TRAINING_VERSION = 2;
+const STAFF_TRAINING_ESTIMATED_MINUTES = Object.freeze({ cashier: 5, cook: 5, administrator: 7 });
 const PLAYER_RESET_COMPONENTS = Object.freeze({
   points: Object.freeze({ label: "Очки", icon: "⭐" }),
   treats: Object.freeze({ label: "Зефир", icon: "🍥" }),
@@ -39822,39 +39823,259 @@ const PLAYER_RESET_COMPONENTS = Object.freeze({
 });
 const PLAYER_RESET_COMPONENT_KEYS = Object.freeze(Object.keys(PLAYER_RESET_COMPONENTS));
 
+const STAFF_FRONTLINE_TRAINING_PANEL_GUIDE = Object.freeze([
+  Object.freeze({ label: "🎓 Обучение", description: "курс по вашей роли; его можно повторить в любой момент" }),
+  Object.freeze({ label: "🔔 Уведомления", description: "настройка рабочих оповещений, которые нужны именно вам" }),
+  Object.freeze({ label: "☕ Физические товары", description: "рабочий раздел выдачи физических наград и товаров" }),
+  Object.freeze({ label: "📷 Сканировать QR", description: "открывает сканер для кода гостя" }),
+  Object.freeze({ label: "⌨️ Ввести код", description: "ручная проверка кода, если QR не считывается" }),
+  Object.freeze({ label: "📦 Прогноз остатков", description: "показывает прогноз по товарам; перед выдачей всё равно проверьте фактическое наличие" }),
+  Object.freeze({ label: "🎫 Обращения", description: "спорные случаи, ошибки, отсутствие товара и ситуации, где нужна помощь" }),
+  Object.freeze({ label: "📚 Все команды", description: "шпаргалка по доступным вашей роли командам" }),
+  Object.freeze({ label: "🧹 Очистить чат", description: "убирает старые рабочие сообщения и возвращает чистую панель" })
+]);
+
+const STAFF_ADMIN_TRAINING_PANEL_GUIDE = Object.freeze([
+  Object.freeze({ label: "🔄 Обновить", description: "обновляет рабочую панель и её текущие данные" }),
+  Object.freeze({ label: "🎓 Обучение", description: "курс администратора и постоянная шпаргалка по кнопкам" }),
+  Object.freeze({ label: "👤 Игроки", description: "поиск и карточки игроков; используйте только для рабочей задачи" }),
+  Object.freeze({ label: "👥 Сотрудники", description: "управление доступом команды в пределах ваших разрешений" }),
+  Object.freeze({ label: "🎁 Награды", description: "безопасный мастер ручной выдачи с причиной и аудитом" }),
+  Object.freeze({ label: "🧰 Компенсации", description: "готовые сценарии компенсаций после проверки фактов" }),
+  Object.freeze({ label: "📷 Сканировать QR", description: "проверка физического кода через сканер" }),
+  Object.freeze({ label: "⌨️ Ввести код", description: "ручная проверка физического кода" }),
+  Object.freeze({ label: "🎫 Обращения", description: "очередь обращений и рабочие спорные ситуации" })
+]);
+
+const STAFF_TRAINING_PANEL_GUIDES = Object.freeze({
+  cashier: STAFF_FRONTLINE_TRAINING_PANEL_GUIDE,
+  cook: STAFF_FRONTLINE_TRAINING_PANEL_GUIDE,
+  administrator: STAFF_ADMIN_TRAINING_PANEL_GUIDE
+});
+
 const STAFF_TRAINING_STEPS = Object.freeze({
   cashier: Object.freeze([
-    Object.freeze({ title: "Роль бариста", text: "Бариста проверяет и погашает только конкретные коды физических наград. Списки игроков и история заказов недоступны." }),
-    Object.freeze({ title: "Проверка кода", text: "Сначала отсканируйте QR или введите код вручную. Сверьте товар, срок действия и статус. Не подтверждайте выдачу по фотографии старого кода." }),
-    Object.freeze({ title: "Передача товара", text: "Нажимайте «Подарок выдан» только после фактической передачи гостю. При сомнении отмените действие и позовите администратора." }),
-    Object.freeze({ title: "Ошибки и безопасность", text: "Не просите пароль игрока, не меняйте его баланс и не передавайте рабочую сессию другому человеку. Ошибочное списание сразу оформляйте через обращение." }),
-    Object.freeze({ title: "Проверка знаний", text: "Когда можно нажать «Подарок выдан»?", answers: Object.freeze([
-      Object.freeze({ id: "after", title: "После передачи товара", correct: true }),
-      Object.freeze({ id: "before", title: "До передачи, чтобы ускорить очередь", correct: false }),
-      Object.freeze({ id: "photo", title: "По фотографии кода", correct: false })
-    ]) })
+    Object.freeze({
+      title: "Твоя роль · Бариста",
+      text: "Главная задача бариста — безопасно проверить код гостя и выдать физический товар. Игровой баланс, списки игроков, история чужих заказов и административные настройки для этой роли закрыты.",
+      bullets: Object.freeze([
+        "Работайте только через свою рабочую сессию.",
+        "Если данных недостаточно — не угадывайте и не списывайте код.",
+        "Спорный случай передавайте через обращение или администратору."
+      ]),
+      remember: "Код списывается только в момент реальной выдачи товара гостю."
+    }),
+    Object.freeze({
+      title: "Карта рабочей панели",
+      text: "Панель специально оставляет только те действия, которые нужны бариста. Ниже — назначение каждой кнопки.",
+      showPanelGuide: true,
+      remember: "Если забыли назначение кнопки, откройте «🎓 Обучение» → «📚 Шпаргалка кнопок»."
+    }),
+    Object.freeze({
+      title: "Выдача по QR или коду",
+      text: "Перед выдачей всегда проходите один и тот же короткий сценарий.",
+      bullets: Object.freeze([
+        "1. Нажмите «📷 Сканировать QR» или «⌨️ Ввести код».",
+        "2. Сверьте название товара, статус и срок действия кода.",
+        "3. Убедитесь, что нужный товар физически есть на точке.",
+        "4. Передайте товар гостю.",
+        "5. Только после передачи подтвердите выдачу в боте."
+      ]),
+      remember: "Фотография старого QR или скриншот сами по себе не являются основанием для выдачи."
+    }),
+    Object.freeze({
+      title: "Товары и остатки",
+      text: "«☕ Физические товары» помогает работать с выдачей, а «📦 Прогноз остатков» показывает, что может скоро закончиться.",
+      bullets: Object.freeze([
+        "Прогноз — подсказка, а не подтверждение наличия на полке.",
+        "Если товар закончился, не списывайте код как выданный.",
+        "Если остаток или товар в боте не совпадает с реальностью, создайте обращение."
+      ]),
+      remember: "Сначала наличие и передача товара — потом подтверждение в системе."
+    }),
+    Object.freeze({
+      title: "Уведомления, обращения и чат",
+      text: "Рабочая панель должна помогать, а не превращаться в длинный чат.",
+      bullets: Object.freeze([
+        "«🔔 Уведомления» — оставляйте только полезные рабочие оповещения.",
+        "«🎫 Обращения» — используйте для ошибки, спорного кода, отсутствия товара или вопроса администратору.",
+        "«📚 Все команды» — справочник вашей роли.",
+        "«🧹 Очистить чат» — безопасно убирает старые рабочие сообщения."
+      ]),
+      remember: "Не просите у гостя пароль, доступ к аккаунту или лишние персональные данные."
+    }),
+    Object.freeze({
+      title: "Проверка 1 · момент списания",
+      text: "Код действующий, товар найден, но вы ещё не передали его гостю. Что делать?",
+      answers: Object.freeze([
+        Object.freeze({ id: "wait", title: "Передать товар и только потом подтвердить", correct: true, feedback: "Верно. Списание подтверждаем после фактической передачи." }),
+        Object.freeze({ id: "redeem", title: "Сразу нажать «выдано»", correct: false, feedback: "Слишком рано: сначала товар должен быть передан гостю." }),
+        Object.freeze({ id: "photo", title: "Попросить фотографию кода", correct: false, feedback: "Фото не заменяет безопасную проверку и фактическую выдачу." })
+      ])
+    }),
+    Object.freeze({
+      title: "Проверка 2 · проблема на выдаче",
+      text: "Код действующий, но нужного товара нет или данные на точке не совпадают. Как поступить?",
+      answers: Object.freeze([
+        Object.freeze({ id: "stop", title: "Не списывать код и создать обращение", correct: true, feedback: "Верно. Код остаётся невыданным, ситуацию фиксируем." }),
+        Object.freeze({ id: "replace", title: "Выдать другой товар без согласования", correct: false, feedback: "Нельзя самовольно заменять награду другим товаром." }),
+        Object.freeze({ id: "redeem", title: "Списать код, а товар отдать позже", correct: false, feedback: "Нельзя отмечать выдачу до фактической передачи товара." })
+      ])
+    })
   ]),
   cook: Object.freeze([
-    Object.freeze({ title: "Роль повара", text: "Повар использует только рабочие разделы точки: обучение, физические товары, сканер, уведомления, остатки и обращения. Доступ к игрокам, их балансам и игровому управлению закрыт." }),
-    Object.freeze({ title: "Проверка кода", text: "Отсканируйте QR или введите код вручную. Сверьте название товара, срок действия и статус. Не подтверждайте выдачу по фотографии старого кода." }),
-    Object.freeze({ title: "Передача товара", text: "Нажимайте «Подарок выдан» только после фактической передачи товара гостю. Если товара нет или данные не совпадают, не списывайте код и создайте обращение." }),
-    Object.freeze({ title: "Безопасность", text: "Не запрашивайте пароль, баланс или историю игрока и не используйте чужую рабочую сессию. По спорным ситуациям обращайтесь к администратору." }),
-    Object.freeze({ title: "Проверка знаний", text: "Когда можно подтвердить списание физического кода?", answers: Object.freeze([
-      Object.freeze({ id: "after", title: "После фактической передачи товара", correct: true }),
-      Object.freeze({ id: "before", title: "До передачи товара", correct: false }),
-      Object.freeze({ id: "photo", title: "По фотографии кода", correct: false })
-    ]) })
+    Object.freeze({
+      title: "Твоя роль · Повар",
+      text: "Повар работает только с операциями точки: физическими товарами, кодами, остатками, уведомлениями и обращениями. Игровые профили, балансы и управление игроками этой роли не нужны и закрыты.",
+      bullets: Object.freeze([
+        "Используйте только свою рабочую сессию.",
+        "Не подтверждайте действие, которое фактически не выполнено.",
+        "В спорной ситуации остановитесь и передайте вопрос администратору."
+      ]),
+      remember: "Рабочая роль даёт ровно те кнопки, которые нужны на точке — обходить ограничения не нужно."
+    }),
+    Object.freeze({
+      title: "Карта рабочей панели",
+      text: "У повара используется та же компактная рабочая панель точки. Разберём каждую кнопку.",
+      showPanelGuide: true,
+      remember: "Шпаргалка по кнопкам остаётся доступна после завершения курса."
+    }),
+    Object.freeze({
+      title: "Проверка физического кода",
+      text: "QR и ручной ввод ведут к одной и той же безопасной проверке.",
+      bullets: Object.freeze([
+        "1. Сканируйте QR или введите код вручную.",
+        "2. Проверьте товар, статус и срок действия.",
+        "3. Сверьте заказ с тем, что реально можете передать гостю.",
+        "4. Подтверждайте выдачу только после передачи товара."
+      ]),
+      remember: "Не списывайте код заранее, даже если очередь большая."
+    }),
+    Object.freeze({
+      title: "Наличие и замены",
+      text: "Прогноз остатков помогает подготовиться, но не разрешает автоматически заменять один товар другим.",
+      bullets: Object.freeze([
+        "Если товара нет — не отмечайте заказ выданным.",
+        "Не меняйте награду гостя на другой товар по собственной инициативе.",
+        "Несовпадение остатков или состава заказа фиксируйте через обращение."
+      ]),
+      remember: "Любая замена или исключение проходит через администратора, а не через устную договорённость."
+    }),
+    Object.freeze({
+      title: "Рабочая связь и безопасность",
+      text: "«🔔 Уведомления», «🎫 Обращения», «📚 Все команды» и «🧹 Очистить чат» помогают держать рабочий процесс понятным.",
+      bullets: Object.freeze([
+        "Обращение создавайте, когда нужна фиксация проблемы или решение администратора.",
+        "Не используйте чужую сессию сотрудника.",
+        "Не запрашивайте у гостя пароль, баланс или историю аккаунта."
+      ]),
+      remember: "Если не уверены — остановите выдачу и уточните, а не исправляйте ситуацию вручную."
+    }),
+    Object.freeze({
+      title: "Проверка 1 · выдача",
+      text: "Товар подготовлен, но ещё не передан гостю. Когда подтверждать списание?",
+      answers: Object.freeze([
+        Object.freeze({ id: "after", title: "После фактической передачи товара", correct: true, feedback: "Верно. Система должна отражать реальную выдачу." }),
+        Object.freeze({ id: "before", title: "До передачи, чтобы ускориться", correct: false, feedback: "Нет. Подтверждение до передачи создаёт ложную выдачу." }),
+        Object.freeze({ id: "photo", title: "Когда гость покажет фото кода", correct: false, feedback: "Фото кода не заменяет проверку и фактическую передачу." })
+      ])
+    }),
+    Object.freeze({
+      title: "Проверка 2 · товара нет",
+      text: "Код корректный, но нужный товар закончился. Что правильно сделать?",
+      answers: Object.freeze([
+        Object.freeze({ id: "ticket", title: "Не списывать код и передать вопрос через обращение", correct: true, feedback: "Верно. Так код и фактическая выдача останутся согласованными." }),
+        Object.freeze({ id: "swap", title: "Самостоятельно заменить товар", correct: false, feedback: "Замена без согласования не допускается." }),
+        Object.freeze({ id: "later", title: "Списать сейчас, отдать потом", correct: false, feedback: "Подтверждать невыданный товар нельзя." })
+      ])
+    })
   ]),
   administrator: Object.freeze([
-    Object.freeze({ title: "Роль администратора", text: "Администратор управляет игроками, магазином, заданиями, опросами и автоматизациями. Каждое опасное действие записывается в аудит." }),
-    Object.freeze({ title: "Награды и экономика", text: "Перед массовой выдачей проверяйте аудиторию, причину и итоговую стоимость. Сначала используйте предпросмотр или диагностику на одном тестовом аккаунте." }),
-    Object.freeze({ title: "Сбросы и блокировки", text: "Сброс прогресса необратим. Для всех игроков он доступен только владельцу. Всегда указывайте понятную причину и проверяйте выбранные параметры." }),
-    Object.freeze({ title: "Автоматизации", text: "Перед включением проверяйте конфликты, условия, награды и видимость задания. После запуска смотрите аналитику и очередь доставки." }),
-    Object.freeze({ title: "Проверка знаний", text: "Что нужно сделать перед массовым опасным действием?", answers: Object.freeze([
-      Object.freeze({ id: "preview", title: "Проверить параметры и подтверждение", correct: true }),
-      Object.freeze({ id: "fast", title: "Запустить сразу без проверки", correct: false }),
-      Object.freeze({ id: "cashier", title: "Передать действие бариста", correct: false })
-    ]) })
+    Object.freeze({
+      title: "Твоя роль · Администратор",
+      text: "Администратор работает с игроками, сотрудниками, ручными наградами, компенсациями, физическими кодами и обращениями — в пределах назначенных прав. Владелец и сервер всё равно остаются финальной точкой контроля для недоступных или опасных операций.",
+      bullets: Object.freeze([
+        "Не обходите ограничения роли ручными командами.",
+        "Каждое изменение должно иметь понятную рабочую причину.",
+        "Перед подтверждением сверяйте игрока, предмет операции и результат."
+      ]),
+      remember: "Права определяют доступ, а аудит сохраняет историю выполненных действий."
+    }),
+    Object.freeze({
+      title: "Карта админ-панели",
+      text: "Актуальная панель администратора компактнее старой: в ней оставлены только реальные доступные разделы.",
+      showPanelGuide: true,
+      remember: "Если кнопки нет в вашей панели, это не ошибка: раздел может быть владельческим или не входить в вашу роль."
+    }),
+    Object.freeze({
+      title: "Игроки и сотрудники",
+      text: "«👤 Игроки» и «👥 Сотрудники» решают разные задачи.",
+      bullets: Object.freeze([
+        "В «Игроках» сначала найдите нужного человека и проверьте карточку до любого изменения.",
+        "В «Сотрудниках» меняйте доступ только в рамках своих разрешений.",
+        "Не используйте карточку похожего имени без проверки Telegram ID."
+      ]),
+      remember: "Перед действием всегда перепроверьте, над каким аккаунтом вы работаете."
+    }),
+    Object.freeze({
+      title: "Награды и компенсации",
+      text: "«🎁 Награды» — ручная выдача по конкретной рабочей причине. «🧰 Компенсации» — готовый сценарий исправления подтверждённой проблемы.",
+      bullets: Object.freeze([
+        "Сначала проверьте факт проблемы или основание выдачи.",
+        "Выбирайте минимально необходимую компенсацию, а не максимальную доступную.",
+        "Проверяйте итоговый экран перед подтверждением."
+      ]),
+      remember: "Компенсация не заменяет диагностику: сначала причина, потом выдача."
+    }),
+    Object.freeze({
+      title: "Физические коды",
+      text: "Администратор может использовать QR-сканер и ручной ввод, но правила выдачи такие же, как у сотрудников точки.",
+      bullets: Object.freeze([
+        "Проверить код, товар, статус и срок действия.",
+        "Убедиться в фактическом наличии товара.",
+        "Подтвердить только после реальной передачи гостю."
+      ]),
+      remember: "Административная роль не разрешает списывать код заранее или по фотографии."
+    }),
+    Object.freeze({
+      title: "Обращения и обновление панели",
+      text: "«🎫 Обращения» — рабочая очередь проблем. «🔄 Обновить» перечитывает актуальное состояние панели, если данные могли измениться.",
+      bullets: Object.freeze([
+        "Перед компенсацией полезно открыть связанное обращение и проверить контекст.",
+        "После действия обновите нужный экран, если важно убедиться в новом состоянии.",
+        "Не создавайте дублирующие операции, если первый запрос ещё обрабатывается."
+      ]),
+      remember: "Если результат операции неясен, сначала проверьте состояние, а не повторяйте действие."
+    }),
+    Object.freeze({
+      title: "Безопасность администратора",
+      text: "Администратор влияет на реальные данные игроков и команды, поэтому ошибка здесь дороже обычной навигационной ошибки.",
+      bullets: Object.freeze([
+        "Не выдавайте награду без понятной причины.",
+        "Не меняйте доступ сотрудника по устной просьбе неизвестного человека.",
+        "Не повторяйте опасную операцию только потому, что ответ пришёл не сразу.",
+        "Используйте обращение или владельца, если задача выходит за пределы вашей роли."
+      ]),
+      remember: "Лучше остановить сомнительную операцию, чем потом восстанавливать данные."
+    }),
+    Object.freeze({
+      title: "Проверка 1 · компенсация",
+      text: "Игрок пишет, что не получил награду, но вы ещё не проверили его карточку и обращение. Что делать первым?",
+      answers: Object.freeze([
+        Object.freeze({ id: "verify", title: "Проверить игрока и факты, затем решать по компенсации", correct: true, feedback: "Верно. Компенсация идёт после проверки причины и текущего состояния." }),
+        Object.freeze({ id: "grant", title: "Сразу выдать максимальную компенсацию", correct: false, feedback: "Сначала нужно подтвердить проблему и выбрать подходящую компенсацию." }),
+        Object.freeze({ id: "ignore", title: "Закрыть обращение без проверки", correct: false, feedback: "Обращение требует проверки фактов, а не автоматического закрытия." })
+      ])
+    }),
+    Object.freeze({
+      title: "Проверка 2 · повтор операции",
+      text: "После нажатия кнопки ответ задержался, и вы не уверены, выполнилась ли выдача. Что безопаснее?",
+      answers: Object.freeze([
+        Object.freeze({ id: "check", title: "Проверить актуальное состояние и только потом решать", correct: true, feedback: "Верно. Сначала проверяем результат, чтобы не создать дубль." }),
+        Object.freeze({ id: "repeat", title: "Нажать выдачу ещё раз", correct: false, feedback: "Повтор без проверки может создать двойную операцию." }),
+        Object.freeze({ id: "bypass", title: "Попробовать другую команду в обход панели", correct: false, feedback: "Обход панели не делает операцию безопаснее и может нарушить рабочий процесс." })
+      ])
+    })
   ])
 });
 
@@ -39913,6 +40134,71 @@ function trainingStepsForRole(roleValue) {
   return STAFF_TRAINING_STEPS[normalizeTeamRole(roleValue)] || STAFF_TRAINING_STEPS.cashier;
 }
 
+function staffTrainingPanelGuideForRole(roleValue) {
+  return STAFF_TRAINING_PANEL_GUIDES[normalizeTeamRole(roleValue)] || STAFF_FRONTLINE_TRAINING_PANEL_GUIDE;
+}
+
+function staffTrainingQuizCount(steps) {
+  return (steps || []).reduce((count, step) => count + (Array.isArray(step?.answers) ? 1 : 0), 0);
+}
+
+function staffTrainingProgressBar(index, total) {
+  const slots = 8;
+  const safeTotal = Math.max(1, Number(total || 1));
+  const completed = Math.max(0, Math.min(slots, Math.round((Math.max(0, Number(index || 0)) / safeTotal) * slots)));
+  return `${"▓".repeat(completed)}${"░".repeat(slots - completed)}`;
+}
+
+function staffTrainingGuideMarkup(roleValue) {
+  return staffTrainingPanelGuideForRole(roleValue)
+    .map((item) => `<b>${escapeHtml(item.label)}</b> — ${escapeHtml(item.description)}`)
+    .join("\n");
+}
+
+function staffTrainingStepMarkup(step, roleValue, index, total, quizScore = 0) {
+  const progressPercent = Math.round(((index + 1) / Math.max(1, total)) * 100);
+  const lines = [
+    `<b>🎓 ${escapeHtml(step.title)}</b>`,
+    `Шаг <b>${index + 1} из ${total}</b> · ${progressPercent}%`,
+    `<code>${staffTrainingProgressBar(index + 1, total)}</code>`,
+    "",
+    escapeHtml(step.text || "")
+  ];
+  if (Array.isArray(step.bullets) && step.bullets.length) {
+    lines.push("", ...step.bullets.map((item) => `• ${escapeHtml(item)}`));
+  }
+  if (step.showPanelGuide) {
+    lines.push("", `<b>Кнопки панели</b>`, staffTrainingGuideMarkup(roleValue));
+  }
+  if (step.remember) lines.push("", `<b>💡 Запомни</b>`, escapeHtml(step.remember));
+  if (Array.isArray(step.answers)) {
+    const quizTotal = staffTrainingQuizCount(trainingStepsForRole(roleValue));
+    lines.push("", `<b>Проверка знаний</b> · результат ${Math.max(0, Number(quizScore || 0))}/${quizTotal}`);
+  }
+  return lines.join("\n");
+}
+
+async function sendOrEditStaffTrainingMessage(chatId, env, text, replyMarkup, editMessageId = 0) {
+  const messageId = Math.floor(Number(editMessageId || 0));
+  if (messageId > 0) {
+    try {
+      await telegramApi(env, "editMessageText", {
+        chat_id: chatId,
+        message_id: messageId,
+        text,
+        parse_mode: "HTML",
+        disable_web_page_preview: true,
+        reply_markup: replyMarkup
+      });
+      return;
+    } catch (error) {
+      if (/message is not modified/i.test(String(error?.description || error?.message || ""))) return;
+      console.error("staff training edit fallback", error);
+    }
+  }
+  await sendTelegramMessage(env, chatId, text, replyMarkup);
+}
+
 async function getStaffTrainingStatus(env, telegramId, roleValue) {
   await ensureV78Schema(env);
   const role = normalizeTeamRole(roleValue);
@@ -39922,7 +40208,8 @@ async function getStaffTrainingStatus(env, telegramId, roleValue) {
     await env.DB.prepare(`INSERT INTO staff_training_progress(telegram_id,role,training_version,step_index,quiz_score,status,started_at,completed_at,updated_at,updated_by) VALUES(?,?,?,0,0,'not_started',0,0,?,'system')`).bind(String(telegramId), role, STAFF_TRAINING_VERSION, now).run();
     row = await env.DB.prepare(`SELECT * FROM staff_training_progress WHERE telegram_id=? LIMIT 1`).bind(String(telegramId)).first();
   } else if (normalizeTeamRole(row.role) !== role || Number(row.training_version || 0) !== STAFF_TRAINING_VERSION) {
-    await resetStaffTrainingRecord(env, telegramId, role, "role-change");
+    const resetReason = normalizeTeamRole(row.role) !== role ? "role-change" : `training-v${STAFF_TRAINING_VERSION}`;
+    await resetStaffTrainingRecord(env, telegramId, role, resetReason);
     row = await env.DB.prepare(`SELECT * FROM staff_training_progress WHERE telegram_id=? LIMIT 1`).bind(String(telegramId)).first();
   }
   return row;
@@ -39949,19 +40236,76 @@ async function showStaffTraining(chatId, user, env, options = {}) {
     return;
   }
   if (access.owner) {
-    await sendTelegramMessage(env, chatId, `<b>🎓 Обучение сотрудников</b>\n\nВладельцу обучение не требуется. Статус каждого сотрудника отображается в разделе «Сотрудники».`, { inline_keyboard: [[{ text: "👥 Сотрудники", callback_data: "adm_team" }], [{ text: "⬅️ Админ-панель", callback_data: "adm_home" }]] });
+    await sendOrEditStaffTrainingMessage(chatId, env,
+      `<b>🎓 Обучение сотрудников</b>\n\nВладельцу курс не требуется. Новое обучение v${STAFF_TRAINING_VERSION} автоматически назначается сотрудникам по их роли. Статус виден в разделе «Сотрудники».`,
+      { inline_keyboard: [[{ text: "👥 Сотрудники", callback_data: "adm_team" }], [{ text: "⬅️ Панель владельца", callback_data: "adm_home" }]] },
+      options.editMessageId
+    );
     return;
   }
   const status = await getStaffTrainingStatus(env, String(user.id), access.role);
+  const steps = trainingStepsForRole(access.role);
+  const quizTotal = staffTrainingQuizCount(steps);
+  const minutes = STAFF_TRAINING_ESTIMATED_MINUTES[normalizeTeamRole(access.role)] || 5;
   if (status.status === "completed" && !options.force) {
-    await sendTelegramMessage(env, chatId, `<b>✅ Обучение пройдено</b>\n\nРоль: <b>${escapeHtml(teamRoleLabel(access.role))}</b>\nДата: <b>${escapeHtml(formatUtcDate(status.completed_at))}</b>\nРезультат: <b>${Number(status.quiz_score || 1)} из 1</b>`, { inline_keyboard: [[{ text: "🔁 Повторить обучение", callback_data: "v78_training_restart" }], [{ text: "⚙️ Админ-панель", callback_data: "adm_home" }]] });
+    await sendOrEditStaffTrainingMessage(chatId, env,
+      `<b>✅ Обучение пройдено</b>\n\n` +
+      `Роль: <b>${escapeHtml(teamRoleLabel(access.role))}</b>\n` +
+      `Курс: <b>v${STAFF_TRAINING_VERSION}</b>\n` +
+      `Дата: <b>${escapeHtml(formatUtcDate(status.completed_at))}</b>\n` +
+      `Проверка знаний: <b>${Math.min(quizTotal, Number(status.quiz_score || 0))} из ${quizTotal}</b>\n\n` +
+      `Шпаргалка по кнопкам остаётся доступна в любой момент.`,
+      { inline_keyboard: [
+        [{ text: "📚 Шпаргалка кнопок", callback_data: "v78_training_guide" }],
+        [{ text: "🔁 Повторить обучение", callback_data: "v78_training_restart" }],
+        [{ text: "⚙️ Рабочая панель", callback_data: "adm_home" }]
+      ] },
+      options.editMessageId
+    );
     return;
   }
   const title = options.compact ? "🎓 Перед началом работы" : "🎓 Обучение сотрудника";
-  await sendTelegramMessage(env, chatId, `<b>${title}</b>\n\nРоль: <b>${escapeHtml(teamRoleLabel(access.role))}</b>\nСтатус: <b>${escapeHtml(staffTrainingStatusLabel(status))}</b>\n\nКурс займёт несколько минут. В конце будет один проверочный вопрос.`, { inline_keyboard: [[{ text: status.status === "in_progress" ? "▶️ Продолжить" : "▶️ Начать обучение", callback_data: status.status === "in_progress" ? "v78_training_continue" : "v78_training_start" }], [{ text: "⬅️ Админ-панель", callback_data: "adm_home" }]] });
+  const stepIndex = Math.max(0, Math.min(steps.length - 1, Number(status.step_index || 0)));
+  const progress = status.status === "in_progress"
+    ? `\nПрогресс: <b>${stepIndex + 1} из ${steps.length}</b> · <code>${staffTrainingProgressBar(stepIndex + 1, steps.length)}</code>`
+    : "";
+  await sendOrEditStaffTrainingMessage(chatId, env,
+    `<b>${title}</b>\n\n` +
+    `Роль: <b>${escapeHtml(teamRoleLabel(access.role))}</b>\n` +
+    `Статус: <b>${escapeHtml(staffTrainingStatusLabel(status))}</b>${progress}\n\n` +
+    `Курс v${STAFF_TRAINING_VERSION}: <b>${steps.length} шагов</b> · <b>${quizTotal} проверки</b> · около <b>${minutes} мин.</b>\n` +
+    `Разберём реальные кнопки вашей панели, безопасные рабочие сценарии и ошибки, которые нельзя допускать.\n\n` +
+    `<i>Курс можно закрыть в любой момент — прогресс сохранится.</i>`,
+    { inline_keyboard: [
+      [{ text: status.status === "in_progress" ? "▶️ Продолжить" : "▶️ Начать обучение", callback_data: status.status === "in_progress" ? "v78_training_continue" : "v78_training_start" }],
+      [{ text: "📚 Шпаргалка кнопок", callback_data: "v78_training_guide" }],
+      [{ text: "⬅️ Рабочая панель", callback_data: "adm_home" }]
+    ] },
+    options.editMessageId
+  );
 }
 
-async function showStaffTrainingStep(chatId, user, env) {
+async function showStaffTrainingGuide(chatId, user, env, options = {}) {
+  const access = await getTeamAccess(user, env);
+  if (!access.authorized || access.owner) return;
+  const role = normalizeTeamRole(access.role);
+  const status = await getStaffTrainingStatus(env, String(user.id), access.role);
+  const backButton = status.status === "in_progress"
+    ? { text: "▶️ Вернуться к текущему шагу", callback_data: "v78_training_continue" }
+    : { text: "🎓 К обучению", callback_data: "v78_training_home" };
+  await sendOrEditStaffTrainingMessage(chatId, env,
+    `<b>📚 Шпаргалка · ${escapeHtml(teamRoleLabel(role))}</b>\n\n` +
+    `${staffTrainingGuideMarkup(role)}\n\n` +
+    `<i>Шпаргалка объясняет назначение кнопок, но сама ничего не изменяет.</i>`,
+    { inline_keyboard: [
+      [backButton],
+      [{ text: "⚙️ Рабочая панель", callback_data: "adm_home" }]
+    ] },
+    options.editMessageId
+  );
+}
+
+async function showStaffTrainingStep(chatId, user, env, options = {}) {
   const access = await getTeamAccess(user, env);
   if (!access.authorized || access.owner) return;
   const status = await getStaffTrainingStatus(env, String(user.id), access.role);
@@ -39970,25 +40314,78 @@ async function showStaffTrainingStep(chatId, user, env) {
   const step = steps[index];
   const rows = [];
   if (Array.isArray(step.answers)) {
-    for (const answer of step.answers) rows.push([{ text: answer.title, callback_data: `v78_training_quiz:${answer.id}` }]);
+    for (const answer of step.answers) rows.push([{ text: answer.title, callback_data: `v78_training_quiz:${index}:${answer.id}` }]);
   } else {
-    rows.push([{ text: index + 1 >= steps.length ? "✅ Завершить" : "Далее →", callback_data: "v78_training_next" }]);
+    const navigation = [];
+    if (index > 0) navigation.push({ text: "← Назад", callback_data: "v78_training_back" });
+    navigation.push({ text: "Далее →", callback_data: "v78_training_next" });
+    rows.push(navigation);
   }
-  rows.push([{ text: "❌ Закрыть", callback_data: "v78_training_close" }]);
-  await sendTelegramMessage(env, chatId, `<b>🎓 ${escapeHtml(step.title)}</b>\n\nШаг <b>${index + 1} из ${steps.length}</b>\n\n${escapeHtml(step.text)}`, { inline_keyboard: rows });
+  if (Array.isArray(step.answers) && index > 0) rows.push([{ text: "← Назад", callback_data: "v78_training_back" }]);
+  if (step.showPanelGuide) rows.push([{ text: "👀 Открыть реальную рабочую панель", callback_data: "adm_home" }]);
+  rows.push([
+    { text: "📚 Шпаргалка", callback_data: "v78_training_guide" },
+    { text: "⏸ Сохранить и выйти", callback_data: "v78_training_close" }
+  ]);
+  await sendOrEditStaffTrainingMessage(chatId, env,
+    staffTrainingStepMarkup(step, access.role, index, steps.length, status.quiz_score),
+    { inline_keyboard: rows },
+    options.editMessageId
+  );
+}
+
+async function completeStaffTraining(chatId, user, access, env, status, steps, editMessageId = 0) {
+  const now = Math.floor(Date.now() / 1000);
+  const quizTotal = staffTrainingQuizCount(steps);
+  const score = Math.min(quizTotal, Math.max(0, Number(status?.quiz_score || 0)));
+  await env.DB.prepare(`UPDATE staff_training_progress SET status='completed',step_index=?,quiz_score=?,completed_at=?,updated_at=?,updated_by=? WHERE telegram_id=?`).bind(steps.length - 1, score, now, now, String(user.id), String(user.id)).run();
+  const teamAccess = await getTeamAccess(user, env);
+  await logStaffAction(env, user, teamAccess, "staff_training_completed", String(user.id), "staff_training", null, "completed", { role: access.role, version: STAFF_TRAINING_VERSION, quizScore: score, quizTotal });
+  await sendOrEditStaffTrainingMessage(chatId, env,
+    `<b>✅ Обучение завершено</b>\n\n` +
+    `Роль: <b>${escapeHtml(teamRoleLabel(access.role))}</b>\n` +
+    `Курс: <b>v${STAFF_TRAINING_VERSION}</b>\n` +
+    `Проверка знаний: <b>${score} из ${quizTotal}</b>\n` +
+    `Дата: <b>${escapeHtml(formatUtcDate(now))}</b>\n\n` +
+    `Теперь можно работать из панели. Если забудете назначение кнопки — шпаргалка остаётся доступна в разделе «🎓 Обучение».`,
+    { inline_keyboard: [
+      [{ text: "📚 Шпаргалка кнопок", callback_data: "v78_training_guide" }],
+      [{ text: "⚙️ Открыть рабочую панель", callback_data: "adm_home" }]
+    ] },
+    editMessageId
+  );
 }
 
 async function handleStaffTrainingCallback(query, env) {
   const data = String(query.data || "");
   const chatId = query.message?.chat?.id;
+  const editMessageId = query.message?.message_id;
   if (!chatId) return false;
-  if (data === "v78_training") { await answerCallback(env, query.id, "Открываю обучение."); await showStaffTraining(chatId, query.from, env); return true; }
-  if (data === "v78_training_close") { await answerCallback(env, query.id, "Обучение закрыто."); await showAdminMainMenu(chatId, query.from, env); return true; }
+  if (data === "v78_training") {
+    await answerCallback(env, query.id, "Открываю обучение.");
+    await showStaffTraining(chatId, query.from, env, { editMessageId });
+    return true;
+  }
+  if (data === "v78_training_home") {
+    await answerCallback(env, query.id, "К обучению.");
+    await showStaffTraining(chatId, query.from, env, { editMessageId });
+    return true;
+  }
+  if (data === "v78_training_guide") {
+    await answerCallback(env, query.id, "Открываю шпаргалку.");
+    await showStaffTrainingGuide(chatId, query.from, env, { editMessageId });
+    return true;
+  }
+  if (data === "v78_training_close") {
+    await answerCallback(env, query.id, "Прогресс сохранён.");
+    await showAdminMainMenu(chatId, query.from, env, { editMessageId });
+    return true;
+  }
   if (data === "v78_training_continue") {
     const access = await getTeamAccess(query.from, env);
     if (!access.authorized || access.owner) { await answerCallback(env, query.id, "Обучение для этой роли не требуется.", true); return true; }
     await answerCallback(env, query.id, "Продолжаем обучение.");
-    await showStaffTrainingStep(chatId, query.from, env);
+    await showStaffTrainingStep(chatId, query.from, env, { editMessageId });
     return true;
   }
   if (data === "v78_training_start" || data === "v78_training_restart") {
@@ -39996,39 +40393,70 @@ async function handleStaffTrainingCallback(query, env) {
     if (!access.authorized || access.owner) { await answerCallback(env, query.id, "Обучение для этой роли не требуется.", true); return true; }
     await getStaffTrainingStatus(env, String(query.from.id), access.role);
     const now = Math.floor(Date.now() / 1000);
-    await env.DB.prepare(`UPDATE staff_training_progress SET status='in_progress',step_index=0,quiz_score=0,started_at=CASE WHEN started_at=0 THEN ? ELSE started_at END,completed_at=0,updated_at=?,updated_by=? WHERE telegram_id=?`).bind(now, now, String(query.from.id), String(query.from.id)).run();
-    await answerCallback(env, query.id, data.endsWith("restart") ? "Обучение начато заново." : "Обучение начато.");
-    await showStaffTrainingStep(chatId, query.from, env);
+    await env.DB.prepare(`UPDATE staff_training_progress SET status='in_progress',step_index=0,quiz_score=0,started_at=?,completed_at=0,updated_at=?,updated_by=? WHERE telegram_id=?`).bind(now, now, String(query.from.id), String(query.from.id)).run();
+    await answerCallback(env, query.id, data.endsWith("restart") ? "Курс начат заново." : "Обучение начато.");
+    await showStaffTrainingStep(chatId, query.from, env, { editMessageId });
     return true;
   }
   if (data === "v78_training_next") {
     const access = await getTeamAccess(query.from, env);
     if (!access.authorized || access.owner) return true;
     const status = await getStaffTrainingStatus(env, String(query.from.id), access.role);
-    const max = trainingStepsForRole(access.role).length - 1;
-    await env.DB.prepare(`UPDATE staff_training_progress SET status='in_progress',step_index=MIN(?,step_index+1),updated_at=?,updated_by=? WHERE telegram_id=?`).bind(max, Math.floor(Date.now() / 1000), String(query.from.id), String(query.from.id)).run();
+    const steps = trainingStepsForRole(access.role);
+    const current = Math.max(0, Math.min(steps.length - 1, Number(status.step_index || 0)));
+    if (current >= steps.length - 1) {
+      await answerCallback(env, query.id, "Курс завершён.");
+      await completeStaffTraining(chatId, query.from, access, env, status, steps, editMessageId);
+      return true;
+    }
+    await env.DB.prepare(`UPDATE staff_training_progress SET status='in_progress',step_index=?,updated_at=?,updated_by=? WHERE telegram_id=?`).bind(current + 1, Math.floor(Date.now() / 1000), String(query.from.id), String(query.from.id)).run();
     await answerCallback(env, query.id, "Следующий шаг.");
-    await showStaffTrainingStep(chatId, query.from, env);
+    await showStaffTrainingStep(chatId, query.from, env, { editMessageId });
     return true;
   }
-  const quiz = data.match(/^v78_training_quiz:([a-z]+)$/);
+  if (data === "v78_training_back") {
+    const access = await getTeamAccess(query.from, env);
+    if (!access.authorized || access.owner) return true;
+    const status = await getStaffTrainingStatus(env, String(query.from.id), access.role);
+    const current = Math.max(0, Number(status.step_index || 0));
+    await env.DB.prepare(`UPDATE staff_training_progress SET status='in_progress',step_index=?,updated_at=?,updated_by=? WHERE telegram_id=?`).bind(Math.max(0, current - 1), Math.floor(Date.now() / 1000), String(query.from.id), String(query.from.id)).run();
+    await answerCallback(env, query.id, "Предыдущий шаг.");
+    await showStaffTrainingStep(chatId, query.from, env, { editMessageId });
+    return true;
+  }
+  const quiz = data.match(/^v78_training_quiz:(\d+):([a-z]+)$/);
   if (quiz) {
     const access = await getTeamAccess(query.from, env);
     if (!access.authorized || access.owner) return true;
     const status = await getStaffTrainingStatus(env, String(query.from.id), access.role);
     const steps = trainingStepsForRole(access.role);
-    const step = steps[Math.max(0, Math.min(steps.length - 1, Number(status.step_index || 0)))];
-    const answer = (step.answers || []).find((item) => item.id === quiz[1]);
+    const currentIndex = Math.max(0, Math.min(steps.length - 1, Number(status.step_index || 0)));
+    const callbackIndex = Number(quiz[1]);
+    if (callbackIndex !== currentIndex) {
+      await answerCallback(env, query.id, "Этот вопрос уже не актуален. Продолжаем с текущего шага.", true);
+      await showStaffTrainingStep(chatId, query.from, env, { editMessageId });
+      return true;
+    }
+    const step = steps[currentIndex];
+    const answer = (step.answers || []).find((item) => item.id === quiz[2]);
     if (!answer?.correct) {
-      await answerCallback(env, query.id, "Неверно. Попробуйте ещё раз.", true);
+      await answerCallback(env, query.id, answer?.feedback || "Не совсем. Попробуйте ещё раз.", true);
       return true;
     }
     const now = Math.floor(Date.now() / 1000);
-    await env.DB.prepare(`UPDATE staff_training_progress SET status='completed',step_index=?,quiz_score=1,completed_at=?,updated_at=?,updated_by=? WHERE telegram_id=?`).bind(steps.length - 1, now, now, String(query.from.id), String(query.from.id)).run();
-    const teamAccess = await getTeamAccess(query.from, env);
-    await logStaffAction(env, query.from, teamAccess, "staff_training_completed", String(query.from.id), "staff_training", null, "completed", { role: access.role, version: STAFF_TRAINING_VERSION });
-    await answerCallback(env, query.id, "Обучение завершено.");
-    await sendTelegramMessage(env, chatId, `<b>✅ Обучение завершено</b>\n\nРоль: <b>${escapeHtml(teamRoleLabel(access.role))}</b>\nРезультат: <b>1 из 1</b>\nДата: <b>${escapeHtml(formatUtcDate(now))}</b>\n\nРабочая панель готова к использованию.`, { inline_keyboard: [[{ text: "⚙️ Открыть админ-панель", callback_data: "adm_home" }]] });
+    const nextScore = Math.max(
+      Math.max(0, Number(status.quiz_score || 0)),
+      staffTrainingQuizCount(steps.slice(0, currentIndex + 1))
+    );
+    if (currentIndex >= steps.length - 1) {
+      const completedStatus = { ...status, quiz_score: nextScore };
+      await answerCallback(env, query.id, answer.feedback || "Верно! Обучение завершено.");
+      await completeStaffTraining(chatId, query.from, access, env, completedStatus, steps, editMessageId);
+      return true;
+    }
+    await env.DB.prepare(`UPDATE staff_training_progress SET status='in_progress',step_index=?,quiz_score=?,updated_at=?,updated_by=? WHERE telegram_id=?`).bind(currentIndex + 1, nextScore, now, String(query.from.id), String(query.from.id)).run();
+    await answerCallback(env, query.id, answer.feedback || "Верно!");
+    await showStaffTrainingStep(chatId, query.from, env, { editMessageId });
     return true;
   }
   const reset = data.match(/^v78_training_reset:(\d{4,20})$/);
@@ -40038,7 +40466,7 @@ async function handleStaffTrainingCallback(query, env) {
     const target = await targetTeamMember(env, reset[1]);
     if (!target) { await answerCallback(env, query.id, "Сотрудник не найден.", true); return true; }
     await resetStaffTrainingRecord(env, reset[1], target.role, String(query.from.id));
-    await logStaffAction(env, query.from, access, "staff_training_reset", reset[1], "staff_training", "completed", "not_started", {});
+    await logStaffAction(env, query.from, access, "staff_training_reset", reset[1], "staff_training", "completed", "not_started", { version: STAFF_TRAINING_VERSION });
     await answerCallback(env, query.id, "Обучение сброшено.");
     await showStaffMemberCard(chatId, query.from, reset[1], env);
     return true;
