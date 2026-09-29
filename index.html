@@ -4913,7 +4913,7 @@ html&gt;body{padding:
 #zefirok-maltipoo-runner .support-dialog[data-simple-swipe]{grid-template-rows:auto auto minmax(0,1fr)}
 #zefirok-maltipoo-runner .support-dialog&gt;.simple-sheet-grip{margin-bottom:0}
 
-\n.zefirok-tasks-open-card{margin:12px auto 8px;width:calc(100% - 24px);box-sizing:border-box;border:1px solid #efd0dc;border-radius:22px;background:linear-gradient(135deg,#fff7fa,#fffaf0);padding:12px 14px;display:flex;align-items:center;gap:12px;box-shadow:0 8px 24px rgba(120,60,80,.08);cursor:pointer;text-align:left;color:#65414e}.zefirok-tasks-open-card .icon{width:42px;height:42px;border-radius:14px;background:#ffe7f0;display:grid;place-items:center;font-size:23px}.zefirok-tasks-open-card strong{display:block;font-size:15px}.zefirok-tasks-open-card span{display:block;color:#9a7683;font-size:11px;margin-top:3px}&lt;/style&gt;
+&lt;/style&gt;
 
 &lt;style id=&quot;final-equal-main-tabs-fix&quot;&gt;
   /* Final navigation sizing: all three tabs use the Play tab dimensions. */
@@ -11948,11 +11948,12 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
 &lt;div class=&quot;stat&quot;&gt;&lt;img alt=&quot;&quot; class=&quot;stat-icon&quot; data-shop-img=&quot;iconTreatPanel&quot;/&gt;&lt;span&gt;Зефир&lt;/span&gt;&lt;strong data-treats=&quot;&quot;&gt;0&lt;/strong&gt;&lt;/div&gt;
 &lt;div class=&quot;stat&quot;&gt;&lt;img alt=&quot;&quot; class=&quot;stat-icon&quot; data-shop-img=&quot;iconCoffee&quot;/&gt;&lt;span&gt;Кофе&lt;/span&gt;&lt;strong data-coffee=&quot;&quot;&gt;0&lt;/strong&gt;&lt;/div&gt;
 &lt;/div&gt;
+&lt;button type=&quot;button&quot; class=&quot;liveops-run-banner&quot; onclick=&quot;window.location.href='/tasks.html'&quot; style=&quot;display:flex;cursor:pointer;width:100%;border:1px solid #efd7df;border-radius:20px;background:#fff8fb;padding:12px;text-align:left&quot;&gt;📋 &lt;strong&gt;Задания&lt;/strong&gt;&amp;nbsp; Выполняй цели и получай XP&lt;/button&gt;
 &lt;div class=&quot;liveops-run-banner&quot; data-liveops-run-banner hidden&gt;
   &lt;div class=&quot;liveops-run-banner-icon&quot; aria-hidden=&quot;true&quot;&gt;⚡&lt;/div&gt;
   &lt;div class=&quot;liveops-run-banner-copy&quot;&gt;&lt;strong data-liveops-run-title&gt;LiveOps&lt;/strong&gt;&lt;span data-liveops-run-meta&gt;&lt;/span&gt;&lt;/div&gt;
 &lt;/div&gt;
-\n&lt;button class=&quot;zefirok-tasks-open-card&quot; type=&quot;button&quot; data-open-tasks&gt;\n&lt;div class=&quot;icon&quot;&gt;📋&lt;/div&gt;\n&lt;div&gt;&lt;strong&gt;Задания&lt;/strong&gt;&lt;span&gt;Выполняй цели и получай XP профиля&lt;/span&gt;&lt;/div&gt;\n&lt;/button&gt;\n&lt;div class=&quot;stage&quot; data-stage=&quot;&quot;&gt;
+&lt;div class=&quot;stage&quot; data-stage=&quot;&quot;&gt;
 &lt;button aria-label=&quot;Развернуть игру на весь экран&quot; aria-pressed=&quot;false&quot; class=&quot;game-expand-toggle&quot; data-game-expand-toggle title=&quot;На весь экран&quot; type=&quot;button&quot;&gt;
 &lt;svg aria-hidden=&quot;true&quot; class=&quot;game-expand-icon game-expand-icon--expand&quot; viewBox=&quot;0 0 24 24&quot;&gt;&lt;path d=&quot;M8 3H3v5M16 3h5v5M8 21H3v-5M16 21h5v-5&quot;/&gt;&lt;/svg&gt;
 &lt;svg aria-hidden=&quot;true&quot; class=&quot;game-expand-icon game-expand-icon--collapse&quot; viewBox=&quot;0 0 24 24&quot;&gt;&lt;path d=&quot;M9 3v6H3M15 3v6h6M9 21v-6H3M15 21v-6h6&quot;/&gt;&lt;/svg&gt;
@@ -18036,7 +18037,7 @@ function createTutorialDeck(layer, mount, options, words) {
         }, 60);
       }
 
-      let tasksLayer = null;\n  function openTasksOverlay(){\n    if(tasksLayer?.isConnected)return;\n    const layer=document.createElement(&quot;div&quot;);\n    layer.style.cssText=&quot;position:fixed;inset:0;z-index:2147483000;background:rgba(70,40,50,.45);backdrop-filter:blur(8px);&quot;;\n    const frame=document.createElement(&quot;iframe&quot;);\n    frame.style.cssText=&quot;width:100%;height:100%;border:0;background:#fff4f7;&quot;;\n    frame.src=&quot;/tasks.html?v=1.0.0&quot;;\n    layer.append(frame);\n    layer.addEventListener(&quot;click&quot;,e=&gt;{if(e.target===layer){layer.remove();tasksLayer=null;}});\n    document.body.append(layer);tasksLayer=layer;\n  }\n  document.addEventListener(&quot;click&quot;,e=&gt;{if(e.target.closest?.(&quot;[data-open-tasks]&quot;))openTasksOverlay();});\n\n  window.addEventListener(&quot;message&quot;, (event) =&gt; {
+      window.addEventListener(&quot;message&quot;, (event) =&gt; {
         if (event?.data?.type === &quot;tp-tutorial-open&quot;) openTestProjectTutorial(event.data.payload || {});
       });
 
