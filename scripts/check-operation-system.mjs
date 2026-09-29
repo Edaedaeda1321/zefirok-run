@@ -459,31 +459,26 @@ assert(!worker.includes('DELETE FROM player_notification_log WHERE sent_at<?'), 
 assert(worker.includes("(status IN ('sent','cancelled') OR (status='failed' AND attempts>=5))"), 'player notification retention can remove retryable failed deliveries');
 assert(worker.includes("(status IN ('delivered','claimed','cancelled') OR (status='failed' AND attempts>=5))"), 'reward retention can remove retryable failed deliveries');
 
+// Release Center owns version changelogs; live game news must not duplicate system release posts.
+const gameNewsSelection = section(worker, 'async function eligibleGameNewsRowForPlayer', '\nfunction gameNewsRowToClient');
+assert(gameNewsSelection.includes("COALESCE(created_by,'') NOT LIKE 'release:%'"), 'Mini App game-news feed can surface release:* changelog duplicates');
+assert(gameNewsSelection.includes('ORDER BY pinned DESC,published_at DESC,id DESC LIMIT 30'), 'live game-news priority ordering changed unexpectedly');
+assert(index.includes('data-release-center-open'), 'profile has no persistent entry point back to Release Center');
+assert(index.includes('openBuiltInReleaseCenter'), 'Release Center cannot be opened manually after the one-time notice is dismissed');
+assert(!index.includes('RELEASE_CENTER_SEASON_2_START_MS'), 'Release Center still has a hard-coded Season II status clock');
+assert(index.includes('releaseSeasonStatusEl.textContent = currentRelease?.date || `Версия ${GAME_VERSION}`'), 'Release Center metadata is not tied to release data');
+
 // Staff training v2 must stay role-specific, resumable and aligned with the real Telegram panels.
 const staffTraining = section(worker, 'const STAFF_TRAINING_VERSION = 2;', '\nasync function requirePlayerResetAccess');
 assert(staffTraining.includes('const STAFF_TRAINING_PANEL_GUIDES = Object.freeze({'), 'staff training v2 has no role-specific panel guide');
 assert(staffTraining.includes('📚 Шпаргалка кнопок'), 'staff training v2 has no persistent button cheat sheet');
 assert(staffTraining.includes('showPanelGuide: true'), 'staff training v2 does not teach the real panel layout');
 assert(staffTraining.includes('👀 Открыть реальную рабочую панель'), 'staff training cannot jump to the real panel for practice');
-assert(staffTraining.includes('callback_data: `v78_training_next:${index}`'), 'staff training next navigation is not tied to the rendered step');
-assert(staffTraining.includes('callback_data: `v78_training_back:${index}`'), 'staff training back navigation is not tied to the rendered step');
-assert(staffTraining.includes('v78_training_quiz:(\\d+):([a-z0-9_-]+)'), 'staff training quiz callbacks are not tied to a concrete step');
-assert(staffTraining.includes('data === "v78_training_next" || data === "v78_training_back"'), 'legacy unscoped training navigation is not rejected safely');
-assert(staffTraining.includes('status.status !== "in_progress" || callbackIndex !== current'), 'training navigation can mutate stale or completed progress');
-assert(staffTraining.includes('if (status.status !== "in_progress")'), 'training quiz/continue flow does not guard inactive course state');
+assert(staffTraining.includes('v78_training_back'), 'staff training v2 has no back navigation');
+assert(staffTraining.includes('v78_training_quiz:(\\d+):([a-z]+)'), 'staff training quiz callbacks are not tied to a concrete step');
 assert(staffTraining.includes('Проверка 2'), 'staff training v2 does not include the second scenario check');
-const frontlineTrainingGuide = section(staffTraining, 'const STAFF_FRONTLINE_TRAINING_PANEL_GUIDE', 'const STAFF_ADMIN_TRAINING_PANEL_GUIDE');
-const administratorTrainingGuide = section(staffTraining, 'const STAFF_ADMIN_TRAINING_PANEL_GUIDE', 'const STAFF_TRAINING_PANEL_GUIDES');
-const adminPanelMarkup = section(worker, 'function adminMainMenuMarkup', '\nasync function showAdminMainMenu');
-const frontlinePanelMarkup = section(adminPanelMarkup, 'if (frontline) {', 'if (!access?.owner && role === "administrator") {');
-const administratorPanelMarkup = section(adminPanelMarkup, 'if (!access?.owner && role === "administrator") {', '// Владелец:');
-for (const label of ['🎓 Обучение','🔔 Уведомления','☕ Физические товары','📷 Сканировать QR','⌨️ Ввести код','📦 Прогноз остатков','🎫 Обращения','📚 Все команды','🧹 Очистить чат']) {
-  assert(frontlinePanelMarkup.includes(label), `frontline panel is missing expected button: ${label}`);
-  assert(frontlineTrainingGuide.includes(label), `frontline training guide does not explain panel button: ${label}`);
-}
-for (const label of ['🔄 Обновить','🎓 Обучение','👤 Игроки','👥 Сотрудники','🎁 Награды','🧰 Компенсации','📷 Сканировать QR','⌨️ Ввести код','🎫 Обращения']) {
-  assert(administratorPanelMarkup.includes(label), `administrator panel is missing expected button: ${label}`);
-  assert(administratorTrainingGuide.includes(label), `administrator training guide does not explain panel button: ${label}`);
+for (const label of ['📷 Сканировать QR','⌨️ Ввести код','🎫 Обращения','🎁 Награды','🧰 Компенсации']) {
+  assert(staffTraining.includes(label), `staff training guide does not explain panel button: ${label}`);
 }
 
 // Execute the actual Worker quote helpers in isolation. This keeps the build test

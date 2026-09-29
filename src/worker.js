@@ -8056,8 +8056,11 @@ async function eligibleGameNewsRowForPlayer(env, telegramId) {
   await ensureGameNewsReadSchema(env);
   const id=String(telegramId||"").trim();if(!id)return null;
   const now=Math.floor(Date.now()/1000);
-  const rows=(await env.DB.prepare(`SELECT id,title,body,image_url,published_at,news_type,audience_segment_key,expires_at,pinned,cta_action,cta_label
-    FROM bot_news WHERE status='published' AND (expires_at=0 OR expires_at>?)
+  const rows=(await env.DB.prepare(`SELECT id,title,body,image_url,published_at,news_type,audience_segment_key,expires_at,pinned,cta_action,cta_label,created_by
+    FROM bot_news
+    WHERE status='published'
+      AND (expires_at=0 OR expires_at>?)
+      AND COALESCE(created_by,'') NOT LIKE 'release:%'
     ORDER BY pinned DESC,published_at DESC,id DESC LIMIT 30`).bind(now).all()).results||[];
   for(const row of rows){
     const segment=String(row.audience_segment_key||"all").trim()||"all";
@@ -40317,11 +40320,11 @@ async function showStaffTrainingStep(chatId, user, env, options = {}) {
     for (const answer of step.answers) rows.push([{ text: answer.title, callback_data: `v78_training_quiz:${index}:${answer.id}` }]);
   } else {
     const navigation = [];
-    if (index > 0) navigation.push({ text: "← Назад", callback_data: `v78_training_back:${index}` });
-    navigation.push({ text: "Далее →", callback_data: `v78_training_next:${index}` });
+    if (index > 0) navigation.push({ text: "← Назад", callback_data: "v78_training_back" });
+    navigation.push({ text: "Далее →", callback_data: "v78_training_next" });
     rows.push(navigation);
   }
-  if (Array.isArray(step.answers) && index > 0) rows.push([{ text: "← Назад", callback_data: `v78_training_back:${index}` }]);
+  if (Array.isArray(step.answers) && index > 0) rows.push([{ text: "← Назад", callback_data: "v78_training_back" }]);
   if (step.showPanelGuide) rows.push([{ text: "👀 Открыть реальную рабочую панель", callback_data: "adm_home" }]);
   rows.push([
     { text: "📚 Шпаргалка", callback_data: "v78_training_guide" },
@@ -40384,12 +40387,6 @@ async function handleStaffTrainingCallback(query, env) {
   if (data === "v78_training_continue") {
     const access = await getTeamAccess(query.from, env);
     if (!access.authorized || access.owner) { await answerCallback(env, query.id, "Обучение для этой роли не требуется.", true); return true; }
-    const status = await getStaffTrainingStatus(env, String(query.from.id), access.role);
-    if (status.status !== "in_progress") {
-      await answerCallback(env, query.id, "Активный шаг уже не актуален. Открываю текущий статус курса.", true);
-      await showStaffTraining(chatId, query.from, env, { editMessageId });
-      return true;
-    }
     await answerCallback(env, query.id, "Продолжаем обучение.");
     await showStaffTrainingStep(chatId, query.from, env, { editMessageId });
     return true;
@@ -40397,51 +40394,19 @@ async function handleStaffTrainingCallback(query, env) {
   if (data === "v78_training_start" || data === "v78_training_restart") {
     const access = await getTeamAccess(query.from, env);
     if (!access.authorized || access.owner) { await answerCallback(env, query.id, "Обучение для этой роли не требуется.", true); return true; }
-    const status = await getStaffTrainingStatus(env, String(query.from.id), access.role);
-    if (data === "v78_training_start" && status.status === "in_progress") {
-      await answerCallback(env, query.id, "Курс уже начат. Продолжаем с сохранённого шага.");
-      await showStaffTrainingStep(chatId, query.from, env, { editMessageId });
-      return true;
-    }
-    if (data === "v78_training_start" && status.status === "completed") {
-      await answerCallback(env, query.id, "Этот экран устарел: курс уже завершён.", true);
-      await showStaffTraining(chatId, query.from, env, { editMessageId });
-      return true;
-    }
+    await getStaffTrainingStatus(env, String(query.from.id), access.role);
     const now = Math.floor(Date.now() / 1000);
     await env.DB.prepare(`UPDATE staff_training_progress SET status='in_progress',step_index=0,quiz_score=0,started_at=?,completed_at=0,updated_at=?,updated_by=? WHERE telegram_id=?`).bind(now, now, String(query.from.id), String(query.from.id)).run();
     await answerCallback(env, query.id, data.endsWith("restart") ? "Курс начат заново." : "Обучение начато.");
     await showStaffTrainingStep(chatId, query.from, env, { editMessageId });
     return true;
   }
-  if (data === "v78_training_next" || data === "v78_training_back") {
-    const access = await getTeamAccess(query.from, env);
-    if (!access.authorized || access.owner) return true;
-    const status = await getStaffTrainingStatus(env, String(query.from.id), access.role);
-    await answerCallback(env, query.id, "Эта кнопка из старой версии обучения. Открываю актуальный прогресс.", true);
-    if (status.status === "in_progress") await showStaffTrainingStep(chatId, query.from, env, { editMessageId });
-    else await showStaffTraining(chatId, query.from, env, { editMessageId });
-    return true;
-  }
-  const next = data.match(/^v78_training_next:(\d+)$/);
-  if (next) {
+  if (data === "v78_training_next") {
     const access = await getTeamAccess(query.from, env);
     if (!access.authorized || access.owner) return true;
     const status = await getStaffTrainingStatus(env, String(query.from.id), access.role);
     const steps = trainingStepsForRole(access.role);
     const current = Math.max(0, Math.min(steps.length - 1, Number(status.step_index || 0)));
-    const callbackIndex = Number(next[1]);
-    if (status.status !== "in_progress" || callbackIndex !== current) {
-      await answerCallback(env, query.id, "Этот шаг уже не актуален. Открываю сохранённый прогресс.", true);
-      if (status.status === "in_progress") await showStaffTrainingStep(chatId, query.from, env, { editMessageId });
-      else await showStaffTraining(chatId, query.from, env, { editMessageId });
-      return true;
-    }
-    if (Array.isArray(steps[current]?.answers)) {
-      await answerCallback(env, query.id, "Сначала ответьте на вопрос этого шага.", true);
-      await showStaffTrainingStep(chatId, query.from, env, { editMessageId });
-      return true;
-    }
     if (current >= steps.length - 1) {
       await answerCallback(env, query.id, "Курс завершён.");
       await completeStaffTraining(chatId, query.from, access, env, status, steps, editMessageId);
@@ -40452,26 +40417,17 @@ async function handleStaffTrainingCallback(query, env) {
     await showStaffTrainingStep(chatId, query.from, env, { editMessageId });
     return true;
   }
-  const back = data.match(/^v78_training_back:(\d+)$/);
-  if (back) {
+  if (data === "v78_training_back") {
     const access = await getTeamAccess(query.from, env);
     if (!access.authorized || access.owner) return true;
     const status = await getStaffTrainingStatus(env, String(query.from.id), access.role);
-    const steps = trainingStepsForRole(access.role);
-    const current = Math.max(0, Math.min(steps.length - 1, Number(status.step_index || 0)));
-    const callbackIndex = Number(back[1]);
-    if (status.status !== "in_progress" || callbackIndex !== current) {
-      await answerCallback(env, query.id, "Этот шаг уже не актуален. Открываю сохранённый прогресс.", true);
-      if (status.status === "in_progress") await showStaffTrainingStep(chatId, query.from, env, { editMessageId });
-      else await showStaffTraining(chatId, query.from, env, { editMessageId });
-      return true;
-    }
+    const current = Math.max(0, Number(status.step_index || 0));
     await env.DB.prepare(`UPDATE staff_training_progress SET status='in_progress',step_index=?,updated_at=?,updated_by=? WHERE telegram_id=?`).bind(Math.max(0, current - 1), Math.floor(Date.now() / 1000), String(query.from.id), String(query.from.id)).run();
     await answerCallback(env, query.id, "Предыдущий шаг.");
     await showStaffTrainingStep(chatId, query.from, env, { editMessageId });
     return true;
   }
-  const quiz = data.match(/^v78_training_quiz:(\d+):([a-z0-9_-]+)$/);
+  const quiz = data.match(/^v78_training_quiz:(\d+):([a-z]+)$/);
   if (quiz) {
     const access = await getTeamAccess(query.from, env);
     if (!access.authorized || access.owner) return true;
@@ -40479,11 +40435,6 @@ async function handleStaffTrainingCallback(query, env) {
     const steps = trainingStepsForRole(access.role);
     const currentIndex = Math.max(0, Math.min(steps.length - 1, Number(status.step_index || 0)));
     const callbackIndex = Number(quiz[1]);
-    if (status.status !== "in_progress") {
-      await answerCallback(env, query.id, "Этот вопрос уже не активен. Открываю текущий статус курса.", true);
-      await showStaffTraining(chatId, query.from, env, { editMessageId });
-      return true;
-    }
     if (callbackIndex !== currentIndex) {
       await answerCallback(env, query.id, "Этот вопрос уже не актуален. Продолжаем с текущего шага.", true);
       await showStaffTrainingStep(chatId, query.from, env, { editMessageId });

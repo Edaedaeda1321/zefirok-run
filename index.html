@@ -7283,6 +7283,7 @@ html&gt;body{padding:
     align-items: center;
     justify-content: space-between;
     gap: 12px;
+    width: 100%;
     min-height: 45px;
     margin-top: 2px;
     padding: 10px 13px;
@@ -7290,7 +7291,15 @@ html&gt;body{padding:
     border-radius: 16px;
     background: rgba(255,255,255,.66);
     color: #7a7377;
+    font: inherit;
     font-size: 13px;
+    text-align: left;
+    appearance: none;
+    -webkit-appearance: none;
+    cursor: pointer;
+  }
+  #zefirok-maltipoo-runner .profile-version-row:active {
+    transform: scale(.99);
   }
   #zefirok-maltipoo-runner .profile-version-row strong {
     color: #b45477;
@@ -12647,7 +12656,7 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
     &lt;span class=&quot;profile-support-meta&quot; data-profile-support-meta&gt;Обращения ещё не загружены&lt;/span&gt;
   &lt;/section&gt;
 
-  &lt;div class=&quot;profile-version-row&quot;&gt;&lt;span&gt;Версия игры&lt;/span&gt;&lt;strong data-profile-game-version&gt;1.2.5&lt;/strong&gt;&lt;/div&gt;
+  &lt;button class=&quot;profile-version-row&quot; data-release-center-open type=&quot;button&quot; aria-label=&quot;Открыть список обновлений игры&quot;&gt;&lt;span&gt;Версия игры&lt;/span&gt;&lt;strong&gt;&lt;span data-profile-game-version&gt;1.2.5&lt;/span&gt; ›&lt;/strong&gt;&lt;/button&gt;
   &lt;div aria-live=&quot;polite&quot; class=&quot;profile-toast&quot; data-profile-toast hidden&gt;&lt;/div&gt;
 &lt;/div&gt;
 &lt;/section&gt;
@@ -13241,6 +13250,7 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
       const storyVisualToastEl = root.querySelector(&quot;[data-story-visual-toast]&quot;);
       const profileRunRuleEl = root.querySelector(&quot;[data-profile-run-rule]&quot;);
       const profileGameVersionEl = root.querySelector(&quot;[data-profile-game-version]&quot;);
+      const releaseCenterOpenButton = root.querySelector(&quot;[data-release-center-open]&quot;);
       const profileSoundToggle = root.querySelector(&quot;[data-profile-sound-toggle]&quot;);
       const profileSoundLabelEl = root.querySelector(&quot;[data-profile-sound-label]&quot;);
       const profileSoundStatusEl = root.querySelector(&quot;[data-profile-sound-status]&quot;);
@@ -14196,7 +14206,6 @@ function installProgressInfo(){
 
 Исправили отдельные ошибки сюжетных оформлений и отображения классической сцены кафе.`;
       const UPDATE_NOTICE_BUTTON = &quot;Продолжить&quot;;
-      const RELEASE_CENTER_SEASON_2_START_MS = Date.parse(&quot;2026-09-13T00:00:00+03:00&quot;);
       const RELEASE_CENTER_RELEASES = Object.freeze([
         Object.freeze({
           version: &quot;1.2.5&quot;,
@@ -17769,13 +17778,6 @@ function createTutorialDeck(layer, mount, options, words) {
         } else if (pendingReleaseNotice &amp;&amp; UPDATE_NOTICE_ENABLED) scheduleReleaseNotice(260);
       }
 
-      function releaseCenterSeasonStatusText() {
-        const remaining = RELEASE_CENTER_SEASON_2_START_MS - Date.now();
-        if (!Number.isFinite(remaining) || remaining &lt;= 0) return &quot;Сезон II уже начался&quot;;
-        const days = Math.max(1, Math.ceil(remaining / 86400000));
-        return `До Сезона II · ${days} дн.`;
-      }
-
       function releaseCenterHighlightMarkup(item, compact = false) {
         const icon = escapeReleaseText(item?.icon || &quot;/assets/ui/error404-no-icon.webp&quot;);
         const title = escapeReleaseText(item?.title || &quot;Обновление&quot;);
@@ -17859,7 +17861,7 @@ function createTutorialDeck(layer, mount, options, words) {
             : `Версия ${GAME_VERSION} · ${currentRelease?.type || &quot;Обновление&quot;}`;
         }
         if (releaseCenterSummaryEl) releaseCenterSummaryEl.hidden = false;
-        if (releaseSeasonStatusEl) releaseSeasonStatusEl.textContent = releaseCenterSeasonStatusText();
+        if (releaseSeasonStatusEl) releaseSeasonStatusEl.textContent = currentRelease?.date || `Версия ${GAME_VERSION}`;
         if (releaseCenterIntroEl) releaseCenterIntroEl.textContent = currentRelease?.summary || &quot;В игре появились новые возможности и улучшения.&quot;;
         if (releaseCenterHighlightsEl) releaseCenterHighlightsEl.innerHTML = (currentRelease?.highlights || []).map((item) =&gt; releaseCenterHighlightMarkup(item)).join(&quot;&quot;);
         if (releaseDetailsPanelEl) {
@@ -17924,11 +17926,11 @@ function createTutorialDeck(layer, mount, options, words) {
         window.requestAnimationFrame(() =&gt; releaseDialog?.focus({ preventScroll:true }));
       }
 
-      function showReleaseNotice() {
-        window.clearTimeout(releaseNoticeTimer);
-        if (!pendingReleaseNotice || !UPDATE_NOTICE_ENABLED || !releaseLayer) return;
+      function openBuiltInReleaseCenter() {
+        if (!UPDATE_NOTICE_ENABLED || !releaseLayer) return;
         if (tutorialLayer &amp;&amp; !tutorialLayer.hidden) closeTutorial(false);
         if (purchaseLayer &amp;&amp; !purchaseLayer.hidden) closePurchaseLayer();
+        if (caseLayer &amp;&amp; !caseLayer.hidden) closeCaseLayer();
         if (state.running &amp;&amp; !state.paused) togglePause();
         applyBuiltInReleaseContent();
         releaseLayer.hidden = false;
@@ -17946,6 +17948,12 @@ function createTutorialDeck(layer, mount, options, words) {
           window.requestAnimationFrame(resetReleaseScroll);
         });
         window.setTimeout(resetReleaseScroll, 80);
+      }
+
+      function showReleaseNotice() {
+        window.clearTimeout(releaseNoticeTimer);
+        if (!pendingReleaseNotice) return;
+        openBuiltInReleaseCenter();
       }
 
       function scheduleReleaseNotice(delay = 250) {
@@ -29982,6 +29990,7 @@ function createTutorialDeck(layer, mount, options, words) {
       if (seasonTaskStayButton) seasonTaskStayButton.addEventListener(&quot;click&quot;, () =&gt; finishSeasonTaskNotice(false));
       if (seasonTaskClaimButton) seasonTaskClaimButton.addEventListener(&quot;click&quot;, () =&gt; finishSeasonTaskNotice(true));
       if (releaseHistoryOpenButton) releaseHistoryOpenButton.addEventListener(&quot;click&quot;, openReleaseHistory);
+      if (releaseCenterOpenButton) releaseCenterOpenButton.addEventListener(&quot;click&quot;, () =&gt; { hapticSelection(35); openBuiltInReleaseCenter(); });
       if (releaseNewsCtaButton) releaseNewsCtaButton.addEventListener(&quot;click&quot;, () =&gt; runGameNewsCta(releaseNewsCtaButton.dataset.newsCtaAction || &quot;&quot;));
       if (releaseHistoryBackButton) releaseHistoryBackButton.addEventListener(&quot;click&quot;, applyBuiltInReleaseContent);
       if (releaseDetailsButton) releaseDetailsButton.addEventListener(&quot;click&quot;, toggleReleaseDetails);
