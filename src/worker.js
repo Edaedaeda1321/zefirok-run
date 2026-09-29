@@ -2247,6 +2247,16 @@ export default {
       const maintenanceResponse = await enforceMaintenanceForRequest(request, url, env);
       if (maintenanceResponse) return maintenanceResponse;
 
+      if (url.pathname === "/api/tasks/state" && request.method === "POST") {
+        const legalGate = await enforceLegalAcceptanceForRequest(request, env);
+        if (legalGate) return legalGate;
+        return await getPlayerTasksState(request, env);
+      }
+      if (url.pathname === "/api/tasks/claim" && request.method === "POST") {
+        const legalGate = await enforceLegalAcceptanceForRequest(request, env);
+        if (legalGate) return legalGate;
+        return await claimPlayerTaskWeb(request, env);
+      }
       if (url.pathname === "/api/profile/overview" && request.method === "POST") {
         const legalGate = await enforceLegalAcceptanceForRequest(request, env);
         if (legalGate) return legalGate;
@@ -47724,6 +47734,76 @@ async function buildReferralState(env, telegramId, actor = null) {
   const pendingChoices=networkViews.filter((row)=>row.choice?.pending);
   const feed=await buildReferralFeed(env,id).catch((error)=>{console.error('referral feed failed',error);return [];});
   return {ok:true,program:config,self:{telegramId:id,code,displayName:identities.get(id)?.displayName||telegramDisplayName(actor||{})||'Игрок'},inviter,milestoneRules:milestones.map((m)=>({key:String(m.milestone_key),title:String(m.title||''),description:String(m.description||''),triggerType:String(m.trigger_type||''),triggerValue:String(m.trigger_value||'')})),totalInvited:freshFriends.length,activeFriends,notifications:notificationState,friendGift:giftProgram,weeklyProgram:{enabled:Boolean(config.enabled&&config.weeklyEnabled),weekKey:period.key,target:weeklyTarget,myRuns:myWeekRuns,endsAt:period.endAt,completed:Boolean(weeklyAsReferrer),partnerId:String(weeklyAsReferrer?.invitee_telegram_id||''),achievedAt:Number(weeklyAsReferrer?.achieved_at||0),referrerReward:config.weeklyReferrerReward,referrerRewardLabel:referralRewardLabel(config.weeklyReferrerReward),inviteeReward:config.weeklyInviteeReward,inviteeRewardLabel:referralRewardLabel(config.weeklyInviteeReward)},nextNetworkMilestone:nextNetwork?{threshold:Number(nextNetwork.threshold),title:String(nextNetwork.title||''),remaining:Math.max(0,Number(nextNetwork.threshold)-activeFriends),reward:nextNetwork.reward,rewardLabel:nextNetwork.rewardLabel,choice:nextNetwork.choice}:null,networkMilestones:networkViews,pendingChoices,feed,friends:friendViews,rewards:rewards.map((row)=>({id:String(row.reward_id),inviteeTelegramId:String(row.invitee_telegram_id||''),role:String(row.role||''),sourceType:String(row.source_type||''),sourceKey:String(row.source_key||''),status:String(row.status||''),reward:referralSafeReward(row.reward_json),rewardLabel:referralRewardLabel(row.reward_json),targetSeasonId:String(row.target_season_id||''),createdAt:Number(row.created_at||0),deliveredAt:Number(row.delivered_at||0),error:String(row.error_text||'')})),pendingCount:rewards.filter((row)=>['pending','failed'].includes(String(row.status))).length+pendingChoices.length};
+}
+
+
+async function buildPlayerTasksState(env, telegramId){
+  await ensureV67Schema(env);
+  const now=Math.floor(Date.now()/1000);
+  const rows=(await env.DB.prepare(`SELECT * FROM automation_chains WHERE enabled=1 AND COALESCE(show_as_task,0)=1 AND action_type='reward' ORDER BY created_at DESC LIMIT 50`).all()).results||[];
+  const tasks=[];
+  for(const row of rows){
+    if(!v71TaskTriggerSupported(row.trigger_type)) continue;
+    const progress=await v71TaskProgress(env,row,String(telegramId),now);
+    const claimKey=`${row.chain_key}:${telegramId}:${progress.cycleKey}`;
+    const claim=await env.DB.prepare(`SELECT status FROM player_task_claims WHERE claim_key=? LIMIT 1`).bind(claimKey).first();
+    const completed=claim?.status==='claimed';
+    const reward=safeJson(row.action_json,{});
+    tasks.push({
+      id:String(row.chain_key),
+      title:String(row.title||'Задание'),
+      description:String(row.task_description||row.description||v67AutomationTriggerLabel(row.trigger_type,row.trigger_value)||''),
+      progress:Math.min(Number(progress.value||0),Number(progress.target||1)),
+      target:Number(progress.target||1),
+      progressText:v71TaskProgressText(row,progress),
+      completed,
+      canClaim:!completed&&progress.completed,
+      reward,
+      rewardText:safeRewardDescription(reward)
+    });
+  }
+  return {tasks,claimableCount:tasks.filter(t=>t.canClaim).length};
+}
+
+async function getPlayerTasksState(request, env){
+  try{
+    const body=await readJson(request);
+    const auth=await validateTelegramInitData(String(body?.initData||body?.init_data||''),env);
+    return jsonResponse({ok:true,...await buildPlayerTasksState(env,String(auth.user.id))});
+  }catch(error){
+    if(error instanceof ApiError)return jsonResponse({ok:false,error:error.message},error.status);
+    console.error('getPlayerTasksState failed',error);
+    return jsonResponse({ok:false,error:'Не удалось загрузить задания.'},500);
+  }
+}
+
+async function claimPlayerTaskWeb(request, env){
+  try{
+    const body=await readJson(request);
+    const auth=await validateTelegramInitData(String(body?.initData||body?.init_data||''),env);
+    const telegramId=String(auth.user.id);
+    await ensureV67Schema(env);
+    const chainKey=String(body?.chainKey||'').trim();
+    if(!chainKey) throw new ApiError(400,'Задание не выбрано.');
+    const row=await env.DB.prepare(`SELECT * FROM automation_chains WHERE chain_key=? AND enabled=1 AND COALESCE(show_as_task,0)=1 AND action_type='reward' LIMIT 1`).bind(chainKey).first();
+    if(!row||!v71TaskTriggerSupported(row.trigger_type)) throw new ApiError(404,'Задание не найдено.');
+    const now=Math.floor(Date.now()/1000);
+    const progress=await v71TaskProgress(env,row,telegramId,now);
+    if(!progress.completed) throw new ApiError(400,'Задание ещё не выполнено.');
+    const claimKey=`${chainKey}:${telegramId}:${progress.cycleKey}`;
+    const reward=safeJson(row.action_json,{});
+    await env.DB.prepare(`INSERT OR IGNORE INTO player_task_claims(claim_key,chain_key,telegram_id,cycle_key,status,queue_id,reward_json,created_at,updated_at,claimed_at) VALUES(?,?,?,?, 'pending',0,?,?,?,0)`).bind(claimKey,chainKey,telegramId,progress.cycleKey,JSON.stringify(reward),now,now).run();
+    const queueId=await enqueueRewardDelivery(env,telegramId,'task',claimKey,reward,String(row.title||'Задание'),'');
+    await env.DB.prepare(`UPDATE player_task_claims SET queue_id=?,updated_at=? WHERE claim_key=?`).bind(queueId,now,claimKey).run();
+    await processRewardDeliveryQueue(env,10);
+    const queue=await env.DB.prepare(`SELECT status FROM reward_delivery_queue WHERE id=? LIMIT 1`).bind(queueId).first();
+    if(queue?.status==='delivered') await env.DB.prepare(`UPDATE player_task_claims SET status='claimed',claimed_at=?,updated_at=? WHERE claim_key=?`).bind(now,now,claimKey).run();
+    return jsonResponse({ok:true,state:await buildPlayerTasksState(env,telegramId)});
+  }catch(error){
+    if(error instanceof ApiError)return jsonResponse({ok:false,error:error.message},error.status);
+    console.error('claimPlayerTaskWeb failed',error);
+    return jsonResponse({ok:false,error:'Не удалось получить награду.'},500);
+  }
 }
 
 async function getProfileOverview(request, env){
