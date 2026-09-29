@@ -11948,6 +11948,7 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
 &lt;div class=&quot;stat&quot;&gt;&lt;img alt=&quot;&quot; class=&quot;stat-icon&quot; data-shop-img=&quot;iconTreatPanel&quot;/&gt;&lt;span&gt;Зефир&lt;/span&gt;&lt;strong data-treats=&quot;&quot;&gt;0&lt;/strong&gt;&lt;/div&gt;
 &lt;div class=&quot;stat&quot;&gt;&lt;img alt=&quot;&quot; class=&quot;stat-icon&quot; data-shop-img=&quot;iconCoffee&quot;/&gt;&lt;span&gt;Кофе&lt;/span&gt;&lt;strong data-coffee=&quot;&quot;&gt;0&lt;/strong&gt;&lt;/div&gt;
 &lt;/div&gt;
+&lt;button class=&quot;task-entry-card&quot; data-open-tasks type=&quot;button&quot;&gt;&lt;span class=&quot;task-entry-icon&quot;&gt;📋&lt;/span&gt;&lt;span class=&quot;task-entry-copy&quot;&gt;&lt;strong&gt;Задания&lt;/strong&gt;&lt;small&gt;Проверь активные цели и награды&lt;/small&gt;&lt;/span&gt;&lt;span class=&quot;task-entry-arrow&quot;&gt;›&lt;/span&gt;&lt;/button&gt;
 &lt;div class=&quot;liveops-run-banner&quot; data-liveops-run-banner hidden&gt;
   &lt;div class=&quot;liveops-run-banner-icon&quot; aria-hidden=&quot;true&quot;&gt;⚡&lt;/div&gt;
   &lt;div class=&quot;liveops-run-banner-copy&quot;&gt;&lt;strong data-liveops-run-title&gt;LiveOps&lt;/strong&gt;&lt;span data-liveops-run-meta&gt;&lt;/span&gt;&lt;/div&gt;
@@ -30102,6 +30103,10 @@ function createTutorialDeck(layer, mount, options, words) {
       for (const button of tabButtons) {
         button.addEventListener(&quot;click&quot;, () =&gt; switchScreen(button.dataset.tab));
       }
+      const tasksEntry = root.querySelector("[data-open-tasks]");
+      if (tasksEntry) tasksEntry.addEventListener("click", () =&gt; switchScreen("tasks"));
+      const tasksBack = root.querySelector("[data-tasks-back]");
+      if (tasksBack) tasksBack.addEventListener("click", () =&gt; switchScreen("game"));
       for (const button of shopModeButtons) {
         button.addEventListener(&quot;click&quot;, () =&gt; switchShopPanel(button.dataset.shopMode));
       }
