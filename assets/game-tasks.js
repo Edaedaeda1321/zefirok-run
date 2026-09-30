@@ -262,7 +262,8 @@
 
   function taskArtMarkup(task){
     const src=String(task?.artUrl||'/assets/ui/icon_quest_game.webp');
-    return `<div class="gt-task-art"><img src="${esc(src)}" alt="" loading="lazy" decoding="async" onerror="this.onerror=null;this.src='/assets/ui/icon_quest_game.webp'"></div>`;
+    const categoryArt=src.startsWith('/assets/tasks/');
+    return `<div class="gt-task-art${categoryArt?' is-category-art':''}"><img src="${esc(src)}" alt="" loading="lazy" decoding="async" onerror="this.onerror=null;this.src='/assets/ui/icon_quest_game.webp'"></div>`;
   }
 
   function taskActionMarkup(task,index){
@@ -325,8 +326,9 @@
 
   function claimedTaskMarkup(task){
     const src=String(task?.artUrl||'/assets/ui/icon_quest_game.webp');
+    const categoryArt=src.startsWith('/assets/tasks/');
     const context=[taskKindLabel(task),task?.rewardLabel?`🎁 ${task.rewardLabel}`:''].filter(Boolean).join(' · ');
-    return `<article class="gt-history-task"><span class="gt-history-art"><img src="${esc(src)}" alt="" loading="lazy" decoding="async" onerror="this.onerror=null;this.src='/assets/ui/icon_quest_game.webp'"></span><span class="gt-history-copy"><strong>${esc(task.title||'Задание')}</strong><span>${esc(context||'Награда получена')}</span></span><span class="gt-history-done">✓ Получено</span></article>`;
+    return `<article class="gt-history-task"><span class="gt-history-art${categoryArt?' is-category-art':''}"><img src="${esc(src)}" alt="" loading="lazy" decoding="async" onerror="this.onerror=null;this.src='/assets/ui/icon_quest_game.webp'"></span><span class="gt-history-copy"><strong>${esc(task.title||'Задание')}</strong><span>${esc(context||'Награда получена')}</span></span><span class="gt-history-done">✓ Получено</span></article>`;
   }
 
   function claimedHistoryMarkup(){

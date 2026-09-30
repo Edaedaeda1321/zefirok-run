@@ -1,8 +1,8 @@
 {
   "version": 2,
   "hashAlgorithm": "sha256",
-  "catalogHash": "c06d4dec3c502a60",
-  "count": 551,
+  "catalogHash": "4fd01e2bc8b0e8d5",
+  "count": 567,
   "images": [
     {
       "fileName": "achievements/background_achivment_panel.webp",
@@ -3971,6 +3971,134 @@
       "path": "/assets/sounds/covers/season4_white_rabbit_soundtrack.webp",
       "hash": "7f2f8aaff09b",
       "size": 305852
+    },
+    {
+      "fileName": "tasks/task_boosters.webp",
+      "label": "Task boosters",
+      "folder": "tasks",
+      "path": "/assets/tasks/task_boosters.webp",
+      "hash": "4cb154d4a922",
+      "size": 147874
+    },
+    {
+      "fileName": "tasks/task_cases.webp",
+      "label": "Task cases",
+      "folder": "tasks",
+      "path": "/assets/tasks/task_cases.webp",
+      "hash": "240ecb8c6612",
+      "size": 146074
+    },
+    {
+      "fileName": "tasks/task_coffee.webp",
+      "label": "Task coffee",
+      "folder": "tasks",
+      "path": "/assets/tasks/task_coffee.webp",
+      "hash": "3c4d4c321e1b",
+      "size": 146384
+    },
+    {
+      "fileName": "tasks/task_event.webp",
+      "label": "Task event",
+      "folder": "tasks",
+      "path": "/assets/tasks/task_event.webp",
+      "hash": "f3deabfc4f04",
+      "size": 166202
+    },
+    {
+      "fileName": "tasks/task_level.webp",
+      "label": "Task level",
+      "folder": "tasks",
+      "path": "/assets/tasks/task_level.webp",
+      "hash": "5cb225cd8c80",
+      "size": 159358
+    },
+    {
+      "fileName": "tasks/task_no_boosters.webp",
+      "label": "Task no boosters",
+      "folder": "tasks",
+      "path": "/assets/tasks/task_no_boosters.webp",
+      "hash": "f35cea438317",
+      "size": 151806
+    },
+    {
+      "fileName": "tasks/task_record.webp",
+      "label": "Task record",
+      "folder": "tasks",
+      "path": "/assets/tasks/task_record.webp",
+      "hash": "9e2cc45bde8b",
+      "size": 166228
+    },
+    {
+      "fileName": "tasks/task_runs.webp",
+      "label": "Task runs",
+      "folder": "tasks",
+      "path": "/assets/tasks/task_runs.webp",
+      "hash": "a1d78e2d7749",
+      "size": 127540
+    },
+    {
+      "fileName": "tasks/task_score.webp",
+      "label": "Task score",
+      "folder": "tasks",
+      "path": "/assets/tasks/task_score.webp",
+      "hash": "32b8982b7b95",
+      "size": 139438
+    },
+    {
+      "fileName": "tasks/task_series_final.webp",
+      "label": "Task series final",
+      "folder": "tasks",
+      "path": "/assets/tasks/task_series_final.webp",
+      "hash": "720b032e51c6",
+      "size": 174570
+    },
+    {
+      "fileName": "tasks/task_series.webp",
+      "label": "Task series",
+      "folder": "tasks",
+      "path": "/assets/tasks/task_series.webp",
+      "hash": "1695375d9cec",
+      "size": 185660
+    },
+    {
+      "fileName": "tasks/task_single_run_score.webp",
+      "label": "Task single run score",
+      "folder": "tasks",
+      "path": "/assets/tasks/task_single_run_score.webp",
+      "hash": "18f7a7b561cb",
+      "size": 158238
+    },
+    {
+      "fileName": "tasks/task_skins.webp",
+      "label": "Task skins",
+      "folder": "tasks",
+      "path": "/assets/tasks/task_skins.webp",
+      "hash": "7f34ba200f32",
+      "size": 167732
+    },
+    {
+      "fileName": "tasks/task_special.webp",
+      "label": "Task special",
+      "folder": "tasks",
+      "path": "/assets/tasks/task_special.webp",
+      "hash": "066742038e84",
+      "size": 148328
+    },
+    {
+      "fileName": "tasks/task_time.webp",
+      "label": "Task time",
+      "folder": "tasks",
+      "path": "/assets/tasks/task_time.webp",
+      "hash": "bf4e51b3e0f2",
+      "size": 144460
+    },
+    {
+      "fileName": "tasks/task_zefir.webp",
+      "label": "Task zefir",
+      "folder": "tasks",
+      "path": "/assets/tasks/task_zefir.webp",
+      "hash": "ee87a80f5132",
+      "size": 126740
     },
     {
       "fileName": "ui/background_referals.webp",

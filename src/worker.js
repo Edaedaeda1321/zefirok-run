@@ -17328,18 +17328,23 @@ function gameTaskParams(row) {
 }
 
 const GAME_TASK_ART_FALLBACK = Object.freeze({
-  default:"/assets/ui/icon_quest_game.webp",
-  series:"/assets/season-pass/quest.webp",
-  runs:"/assets/achievements/badges/runs-10.webp",
-  score:"/assets/achievements/badges/total-score-5000.webp",
-  singleScore:"/assets/achievements/badges/best-score-5000.webp",
-  zefir:"/assets/achievements/badges/run-zefir-25.webp",
-  coffee:"/assets/achievements/badges/run-coffee-25.webp",
-  records:"/assets/achievements/series/icon_recordsmen.webp",
-  case:"/assets/achievements/badges/case-open-1.webp",
-  level:"/assets/achievements/badges/level-10.webp",
-  skin:"/assets/optimized/v0.79.5/skinDefaultPortrait.webp",
-  shop:"/assets/optimized/v0.79.5/shopMascot.webp"
+  default:"/assets/tasks/task_special.webp",
+  event:"/assets/tasks/task_event.webp",
+  series:"/assets/tasks/task_series.webp",
+  seriesFinal:"/assets/tasks/task_series_final.webp",
+  runs:"/assets/tasks/task_runs.webp",
+  score:"/assets/tasks/task_score.webp",
+  singleScore:"/assets/tasks/task_single_run_score.webp",
+  zefir:"/assets/tasks/task_zefir.webp",
+  coffee:"/assets/tasks/task_coffee.webp",
+  time:"/assets/tasks/task_time.webp",
+  records:"/assets/tasks/task_record.webp",
+  case:"/assets/tasks/task_cases.webp",
+  skin:"/assets/tasks/task_skins.webp",
+  boosters:"/assets/tasks/task_boosters.webp",
+  noBoosters:"/assets/tasks/task_no_boosters.webp",
+  level:"/assets/tasks/task_level.webp",
+  special:"/assets/tasks/task_special.webp"
 });
 
 function gameTaskArtOverrideUrl(value) {
@@ -17352,37 +17357,23 @@ function gameTaskArtOverrideUrl(value) {
   return text;
 }
 
-function gameTaskCaseArt(caseType) {
-  return ({
-    small:"/assets/cases/standart_closed.webp",
-    sweet:"/assets/cases/Bronze_close.webp",
-    gold:"/assets/cases/gold_closed.webp",
-    mythic:"/assets/cases/Mifik_case_closed.webp",
-    legendary:"/assets/cases/legendary_closed.webp",
-    alex:"/assets/cases/alex/alex_case_close.webp"
-  })[String(caseType || "")] || GAME_TASK_ART_FALLBACK.case;
-}
-
 function gameTaskAutoArtUrl(row, series = false) {
   if(series)return GAME_TASK_ART_FALLBACK.series;
+  if(String(row?.task_mode || "one_time")==="event")return GAME_TASK_ART_FALLBACK.event;
   const type=String(row?.trigger_type || "");
-  const params=gameTaskParams(row);
-  if(type==="runs_with_skin"){
-    const skinId=String(params.skinId || "");
-    return SKINS[skinId]?`/assets/skins/shop/${skinId}.webp`:GAME_TASK_ART_FALLBACK.skin;
-  }
-  if(type==="runs_with_booster")return String(runBoosterDefinition(params.boosterType)?.imageUrl || GAME_TASK_ART_FALLBACK.default);
-  if(type==="open_specific_case")return gameTaskCaseArt(params.caseType);
-  if(["opened_cases","case_purchases"].includes(type))return GAME_TASK_ART_FALLBACK.case;
-  if(["accepted_runs","single_run_duration","play_time","runs_without_boosters"].includes(type))return GAME_TASK_ART_FALLBACK.runs;
+  if(type==="accepted_runs")return GAME_TASK_ART_FALLBACK.runs;
   if(type==="total_score")return GAME_TASK_ART_FALLBACK.score;
   if(type==="single_run_score")return GAME_TASK_ART_FALLBACK.singleScore;
   if(type==="collect_zefir")return GAME_TASK_ART_FALLBACK.zefir;
   if(type==="collect_coffee")return GAME_TASK_ART_FALLBACK.coffee;
+  if(["single_run_duration","play_time"].includes(type))return GAME_TASK_ART_FALLBACK.time;
   if(["best_score","new_records"].includes(type))return GAME_TASK_ART_FALLBACK.records;
+  if(["opened_cases","case_purchases","open_specific_case"].includes(type))return GAME_TASK_ART_FALLBACK.case;
+  if(["runs_with_skin","skin_purchases"].includes(type))return GAME_TASK_ART_FALLBACK.skin;
+  if(type==="runs_with_booster")return GAME_TASK_ART_FALLBACK.boosters;
+  if(type==="runs_without_boosters")return GAME_TASK_ART_FALLBACK.noBoosters;
   if(type==="level_reached")return GAME_TASK_ART_FALLBACK.level;
-  if(["skin_purchases"].includes(type))return GAME_TASK_ART_FALLBACK.skin;
-  if(["shop_purchases","physical_purchases"].includes(type))return GAME_TASK_ART_FALLBACK.shop;
+  if(["new_player_delay","promo_activations","shop_purchases","physical_purchases"].includes(type))return GAME_TASK_ART_FALLBACK.special;
   return GAME_TASK_ART_FALLBACK.default;
 }
 
@@ -17704,11 +17695,12 @@ async function gameTaskView(env, row, telegramId, now, series = false, context =
   const target = series ? Number(progress.total || 0) : Number(progress.target || 1);
   const value = series ? Number(progress.completed || 0) : Number(progress.value || 0);
   const art=gameTaskArtMeta(row,series);
+  const artUrl=series && complete && art.artMode==="auto" ? GAME_TASK_ART_FALLBACK.seriesFinal : art.artUrl;
   return {
     kind, key, cycleKey,
     title:String(row.title || "Задание"),
     description:String(row.task_description || row.description || ""),
-    artUrl:art.artUrl, artMode:art.artMode,
+    artUrl, artMode:art.artMode,
     mode:series ? "series" : String(row.task_mode || "one_time"),
     triggerType:series ? "" : String(row.trigger_type || ""),
     seriesMode:series ? String(row.completion_mode || "ordered") : undefined,

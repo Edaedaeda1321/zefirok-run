@@ -32636,6 +32636,12 @@ html &gt; body.zefirok-game-expanded{height:var(--zefirok-visible-height,100dvh)
 #zefirok-maltipoo-runner .gt-task.is-series-card .gt-task-art img{height:116px;width:min(72%,205px)}
 #zefirok-maltipoo-runner .gt-task.is-ready .gt-task-art{border-color:rgba(222,177,77,.57);background:radial-gradient(circle at 80% 20%,rgba(255,255,255,.92),transparent 29%),linear-gradient(145deg,#fff8e7,#ffefbb)}
 #zefirok-maltipoo-runner .gt-task.is-urgent .gt-task-art{border-color:rgba(224,143,144,.46);background:linear-gradient(145deg,#fff3f2,#ffe9ec)}
+#zefirok-maltipoo-runner .gt-task-art.is-category-art{aspect-ratio:16/9;min-height:0;display:block;background:#fff2f6;box-shadow:inset 0 0 0 1px rgba(255,255,255,.35)}
+#zefirok-maltipoo-runner .gt-task-art.is-category-art:before{z-index:2;background:linear-gradient(180deg,rgba(255,255,255,.02) 54%,rgba(92,45,63,.07) 100%)}
+#zefirok-maltipoo-runner .gt-task-art.is-category-art img{position:absolute;z-index:1;inset:0;width:100%;height:100%;object-fit:cover;object-position:center;filter:none;transform:scale(1.001)}
+#zefirok-maltipoo-runner .gt-task.is-series-card .gt-task-art.is-category-art{min-height:0}
+#zefirok-maltipoo-runner .gt-task.is-series-card .gt-task-art.is-category-art img{width:100%;height:100%;object-fit:cover}
+#zefirok-maltipoo-runner .gt-task.is-ready .gt-task-art.is-category-art{box-shadow:inset 0 0 0 1px rgba(255,241,188,.42),0 5px 15px rgba(172,117,34,.07)}
 #zefirok-maltipoo-runner .gt-task-head{display:grid;grid-template-columns:39px minmax(0,1fr) auto;align-items:start;gap:9px}
 #zefirok-maltipoo-runner .gt-task-icon{width:39px;height:39px;display:grid;place-items:center;border-radius:13px;background:#ffeaf1;font-size:20px}
 #zefirok-maltipoo-runner .gt-task.is-ready .gt-task-icon,#zefirok-maltipoo-runner .gt-task.is-pending .gt-task-icon{background:#fff0c6}
@@ -32731,6 +32737,7 @@ html &gt; body.zefirok-game-expanded{height:var(--zefirok-visible-height,100dvh)
 #zefirok-maltipoo-runner .gt-history-task{display:grid;grid-template-columns:52px minmax(0,1fr) auto;align-items:center;gap:9px;padding:8px;border:1px solid rgba(225,207,213,.72);border-radius:14px;background:rgba(255,255,255,.72);box-shadow:0 4px 10px rgba(91,61,71,.035);animation:gtHistoryItemIn .22s ease both}
 #zefirok-maltipoo-runner .gt-history-art{width:52px;height:45px;display:grid;place-items:center;overflow:hidden;border-radius:11px;background:linear-gradient(145deg,#fff7fa,#f7eff2)}
 #zefirok-maltipoo-runner .gt-history-art img{display:block;width:44px;height:39px;object-fit:contain;filter:saturate(.72) opacity(.82)}
+#zefirok-maltipoo-runner .gt-history-art.is-category-art img{width:100%;height:100%;object-fit:cover}
 #zefirok-maltipoo-runner .gt-history-copy{min-width:0;display:grid;gap:2px}
 #zefirok-maltipoo-runner .gt-history-copy strong{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#725863;font-size:9px;font-weight:900}
 #zefirok-maltipoo-runner .gt-history-copy span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#a18b93;font-size:7px;font-weight:750}
@@ -32776,10 +32783,10 @@ html &gt; body.zefirok-game-expanded{height:var(--zefirok-visible-height,100dvh)
   #zefirok-maltipoo-runner .gt-task{padding:11px;border-radius:18px}
   #zefirok-maltipoo-runner .gt-task-head{grid-template-columns:36px minmax(0,1fr) auto;gap:8px}
   #zefirok-maltipoo-runner .gt-task-icon{width:36px;height:36px}
-  #zefirok-maltipoo-runner .gt-task-art{min-height:108px}
-  #zefirok-maltipoo-runner .gt-task-art img{height:96px;width:min(72%,176px)}
-  #zefirok-maltipoo-runner .gt-task.is-series-card .gt-task-art{min-height:120px}
-  #zefirok-maltipoo-runner .gt-task.is-series-card .gt-task-art img{height:106px}
+  #zefirok-maltipoo-runner .gt-task-art:not(.is-category-art){min-height:108px}
+  #zefirok-maltipoo-runner .gt-task-art:not(.is-category-art) img{height:96px;width:min(72%,176px)}
+  #zefirok-maltipoo-runner .gt-task.is-series-card .gt-task-art:not(.is-category-art){min-height:120px}
+  #zefirok-maltipoo-runner .gt-task.is-series-card .gt-task-art:not(.is-category-art) img{height:106px}
   #zefirok-maltipoo-runner .gt-task-badge{max-width:106px;padding:5px 6px;font-size:6.5px}
   #zefirok-maltipoo-runner .gt-filter{padding-inline:10px}
   #zefirok-maltipoo-runner .gt-series-node{flex-basis:48px;min-width:48px}
@@ -32789,7 +32796,7 @@ html &gt; body.zefirok-game-expanded{height:var(--zefirok-visible-height,100dvh)
   #zefirok-maltipoo-runner .gt-history-check{width:32px;height:32px}
   #zefirok-maltipoo-runner .gt-history-task{grid-template-columns:48px minmax(0,1fr) auto;padding:7px}
   #zefirok-maltipoo-runner .gt-history-art{width:48px;height:42px}
-  #zefirok-maltipoo-runner .gt-history-art img{width:41px;height:36px}
+  #zefirok-maltipoo-runner .gt-history-art:not(.is-category-art) img{width:41px;height:36px}
   #zefirok-maltipoo-runner .gt-history-done{padding-inline:6px;font-size:6.5px}
 }
 @media(prefers-reduced-motion:reduce){
@@ -33062,7 +33069,8 @@ html &gt; body.zefirok-game-expanded{height:var(--zefirok-visible-height,100dvh)
 
   function taskArtMarkup(task){
     const src=String(task?.artUrl||&#x27;/assets/ui/icon_quest_game.webp&#x27;);
-    return `&lt;div class=&quot;gt-task-art&quot;&gt;&lt;img src=&quot;${esc(src)}&quot; alt=&quot;&quot; loading=&quot;lazy&quot; decoding=&quot;async&quot; onerror=&quot;this.onerror=null;this.src=&#x27;/assets/ui/icon_quest_game.webp&#x27;&quot;&gt;&lt;/div&gt;`;
+    const categoryArt=src.startsWith(&#x27;/assets/tasks/&#x27;);
+    return `&lt;div class=&quot;gt-task-art${categoryArt?&#x27; is-category-art&#x27;:&#x27;&#x27;}&quot;&gt;&lt;img src=&quot;${esc(src)}&quot; alt=&quot;&quot; loading=&quot;lazy&quot; decoding=&quot;async&quot; onerror=&quot;this.onerror=null;this.src=&#x27;/assets/ui/icon_quest_game.webp&#x27;&quot;&gt;&lt;/div&gt;`;
   }
 
   function taskActionMarkup(task,index){
@@ -33125,8 +33133,9 @@ html &gt; body.zefirok-game-expanded{height:var(--zefirok-visible-height,100dvh)
 
   function claimedTaskMarkup(task){
     const src=String(task?.artUrl||&#x27;/assets/ui/icon_quest_game.webp&#x27;);
+    const categoryArt=src.startsWith(&#x27;/assets/tasks/&#x27;);
     const context=[taskKindLabel(task),task?.rewardLabel?`🎁 ${task.rewardLabel}`:&#x27;&#x27;].filter(Boolean).join(&#x27; · &#x27;);
-    return `&lt;article class=&quot;gt-history-task&quot;&gt;&lt;span class=&quot;gt-history-art&quot;&gt;&lt;img src=&quot;${esc(src)}&quot; alt=&quot;&quot; loading=&quot;lazy&quot; decoding=&quot;async&quot; onerror=&quot;this.onerror=null;this.src=&#x27;/assets/ui/icon_quest_game.webp&#x27;&quot;&gt;&lt;/span&gt;&lt;span class=&quot;gt-history-copy&quot;&gt;&lt;strong&gt;${esc(task.title||&#x27;Задание&#x27;)}&lt;/strong&gt;&lt;span&gt;${esc(context||&#x27;Награда получена&#x27;)}&lt;/span&gt;&lt;/span&gt;&lt;span class=&quot;gt-history-done&quot;&gt;✓ Получено&lt;/span&gt;&lt;/article&gt;`;
+    return `&lt;article class=&quot;gt-history-task&quot;&gt;&lt;span class=&quot;gt-history-art${categoryArt?&#x27; is-category-art&#x27;:&#x27;&#x27;}&quot;&gt;&lt;img src=&quot;${esc(src)}&quot; alt=&quot;&quot; loading=&quot;lazy&quot; decoding=&quot;async&quot; onerror=&quot;this.onerror=null;this.src=&#x27;/assets/ui/icon_quest_game.webp&#x27;&quot;&gt;&lt;/span&gt;&lt;span class=&quot;gt-history-copy&quot;&gt;&lt;strong&gt;${esc(task.title||&#x27;Задание&#x27;)}&lt;/strong&gt;&lt;span&gt;${esc(context||&#x27;Награда получена&#x27;)}&lt;/span&gt;&lt;/span&gt;&lt;span class=&quot;gt-history-done&quot;&gt;✓ Получено&lt;/span&gt;&lt;/article&gt;`;
   }
 
   function claimedHistoryMarkup(){
