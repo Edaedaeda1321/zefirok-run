@@ -1,7 +1,7 @@
 (()=>{
   'use strict';
-  if(window.__ZEFIROK_GAME_TASKS_UI_V8__)return;
-  window.__ZEFIROK_GAME_TASKS_UI_V8__=true;
+  if(window.__ZEFIROK_GAME_TASKS_UI_V9__)return;
+  window.__ZEFIROK_GAME_TASKS_UI_V9__=true;
 
   const root=document.querySelector('#zefirok-maltipoo-runner');
   const screen=root?.querySelector('[data-screen="tasks"]');
@@ -11,7 +11,7 @@
   const API_STATE='/api/tasks/state';
   const API_CLAIM='/api/tasks/claim';
   const CACHE_MS=15000;
-  const REQUEST_TIMEOUT_MS=6500;
+  const REQUEST_TIMEOUT_MS=12000;
   const FILTERS=new Set(['all','daily','event']);
   let payload=null,filter='all',loading=false,inflight=null,lastFreshAt=0,serverOffsetMs=0,claimingKey='',toastTimer=0,timerTick=0;
 

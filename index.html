@@ -32613,11 +32613,11 @@ html &gt; body.zefirok-game-expanded{height:var(--zefirok-visible-height,100dvh)
 }
 
 &lt;/style&gt;
-&lt;script id=&quot;zefirok-game-tasks-inline-runtime-v8&quot;&gt;
+&lt;script id=&quot;zefirok-game-tasks-inline-runtime-v9&quot;&gt;
 (()=&gt;{
   &#x27;use strict&#x27;;
-  if(window.__ZEFIROK_GAME_TASKS_UI_V8__)return;
-  window.__ZEFIROK_GAME_TASKS_UI_V8__=true;
+  if(window.__ZEFIROK_GAME_TASKS_UI_V9__)return;
+  window.__ZEFIROK_GAME_TASKS_UI_V9__=true;
 
   const root=document.querySelector(&#x27;#zefirok-maltipoo-runner&#x27;);
   const screen=root?.querySelector(&#x27;[data-screen=&quot;tasks&quot;]&#x27;);
@@ -32627,7 +32627,7 @@ html &gt; body.zefirok-game-expanded{height:var(--zefirok-visible-height,100dvh)
   const API_STATE=&#x27;/api/tasks/state&#x27;;
   const API_CLAIM=&#x27;/api/tasks/claim&#x27;;
   const CACHE_MS=15000;
-  const REQUEST_TIMEOUT_MS=6500;
+  const REQUEST_TIMEOUT_MS=12000;
   const FILTERS=new Set([&#x27;all&#x27;,&#x27;daily&#x27;,&#x27;event&#x27;]);
   let payload=null,filter=&#x27;all&#x27;,loading=false,inflight=null,lastFreshAt=0,serverOffsetMs=0,claimingKey=&#x27;&#x27;,toastTimer=0,timerTick=0;
 

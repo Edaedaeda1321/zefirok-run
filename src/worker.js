@@ -17317,23 +17317,104 @@ function gameTaskWindowOpen(row, now, series = false) {
   return Number(row.enabled) === 1 && (!startsAt || startsAt <= now) && (!endsAt || endsAt > now);
 }
 
-async function gameTaskView(env, row, telegramId, now, series = false) {
+function gameTaskReceiptMapKey(kind, key, cycleKey) {
+  return `${String(kind)}\u0000${String(key)}\u0000${String(cycleKey)}`;
+}
+
+async function gameTaskStateContext(env, telegramId, taskRows, seriesRows, profile) {
+  const taskKeys = [...new Set((taskRows || []).map((row) => String(row.chain_key || '')).filter(Boolean))];
+  const seriesKeys = [...new Set((seriesRows || []).map((row) => String(row.series_key || '')).filter(Boolean))];
+  const placeholders = (values) => values.map(() => '?').join(',');
+  const empty = Promise.resolve({ results: [] });
+  const taskClaimsPromise = taskKeys.length
+    ? env.DB.prepare(`SELECT claim_key,status,reward_json FROM player_task_claims WHERE telegram_id=? AND chain_key IN (${placeholders(taskKeys)})`).bind(String(telegramId), ...taskKeys).all()
+    : empty;
+  const seriesClaimsPromise = seriesKeys.length
+    ? env.DB.prepare(`SELECT claim_key,status FROM player_task_series_claims WHERE telegram_id=? AND series_key IN (${placeholders(seriesKeys)})`).bind(String(telegramId), ...seriesKeys).all()
+    : empty;
+  const receiptParts = [];
+  const receiptBinds = [String(telegramId)];
+  if (taskKeys.length) {
+    receiptParts.push(`(kind='task' AND task_key IN (${placeholders(taskKeys)}))`);
+    receiptBinds.push(...taskKeys);
+  }
+  if (seriesKeys.length) {
+    receiptParts.push(`(kind='series' AND task_key IN (${placeholders(seriesKeys)}))`);
+    receiptBinds.push(...seriesKeys);
+  }
+  const receiptsPromise = receiptParts.length
+    ? env.DB.prepare(`SELECT kind,task_key,cycle_key,completed_at,read_at,reward_json FROM player_game_tasks WHERE telegram_id=? AND (${receiptParts.join(' OR ')})`).bind(...receiptBinds).all()
+    : empty;
+  const executionsPromise = taskKeys.length
+    ? env.DB.prepare(`SELECT DISTINCT chain_key FROM automation_chain_executions WHERE telegram_id=? AND status='completed' AND chain_key IN (${placeholders(taskKeys)})`).bind(String(telegramId), ...taskKeys).all()
+    : empty;
+  const [taskClaims, seriesClaims, receipts, executions] = await Promise.all([
+    taskClaimsPromise, seriesClaimsPromise, receiptsPromise, executionsPromise
+  ]);
+  return {
+    profile: profile || {},
+    progressCache: new Map(),
+    taskClaims: new Map((taskClaims.results || []).map((row) => [String(row.claim_key), row])),
+    seriesClaims: new Map((seriesClaims.results || []).map((row) => [String(row.claim_key), row])),
+    receipts: new Map((receipts.results || []).map((row) => [gameTaskReceiptMapKey(row.kind,row.task_key,row.cycle_key), row])),
+    completedExecutions: new Set((executions.results || []).map((row) => String(row.chain_key)))
+  };
+}
+
+async function gameTaskProgressCached(env, row, telegramId, now, context = null) {
+  if (!context) return await v71TaskProgress(env,row,telegramId,now);
+  const target = Math.max(1, Number(row.trigger_value || 1));
+  const cycle = v71TaskCycle(row, now);
+  const start = Math.max(0, Number(cycle.startsAt || 0));
+  const triggerType = String(row.trigger_type || '');
+  let value = 0;
+  if (triggerType === 'best_score') {
+    value = Number(context.profile?.best_score || 0);
+  } else if (triggerType === 'level_reached') {
+    value = caseProfileLevel(Number(context.profile?.profile_xp || 0));
+  } else if (triggerType === 'new_player_delay') {
+    value = context.profile?.created_at ? Math.max(0, now - Number(context.profile.created_at)) : 0;
+  } else {
+    const cacheKey = `${triggerType}:${start}`;
+    let pending = context.progressCache.get(cacheKey);
+    if (!pending) {
+      pending = v71TaskProgress(env,{ ...row, trigger_value:1 },telegramId,now).then((progress) => Math.max(0,Number(progress?.value || 0)));
+      context.progressCache.set(cacheKey,pending);
+    }
+    value = await pending;
+  }
+  return { value:Math.max(0,value), target, completed:value >= target, ...cycle };
+}
+
+async function gameTaskView(env, row, telegramId, now, series = false, context = null) {
   const kind = series ? "series" : "task";
   const key = String(series ? row.series_key : row.chain_key);
-  const progress = series
-    ? await v77PlayerSeriesState(env, row, telegramId, now)
-    : await v71TaskProgress(env, row, telegramId, now);
-  const cycleKey = String(progress.cycleKey || "once");
+  const baseCycle = series ? { cycleKey:"once", startsAt:0, endsAt:now } : v71TaskCycle(row,now);
+  const cycleKey = String(baseCycle.cycleKey || "once");
   const claimKey = `${key}:${telegramId}:${cycleKey}`;
   const claimTable = series ? "player_task_series_claims" : "player_task_claims";
-  const [claim, receipt] = await Promise.all([
-    env.DB.prepare(`SELECT * FROM ${claimTable} WHERE claim_key=? LIMIT 1`).bind(claimKey).first(),
-    env.DB.prepare(`SELECT * FROM player_game_tasks WHERE telegram_id=? AND kind=? AND task_key=? AND cycle_key=? LIMIT 1`).bind(telegramId,kind,key,cycleKey).first()
-  ]);
+  let claim = null;
+  let receipt = null;
+  if (context) {
+    claim = (series ? context.seriesClaims : context.taskClaims).get(claimKey) || null;
+    receipt = context.receipts.get(gameTaskReceiptMapKey(kind,key,cycleKey)) || null;
+  } else {
+    [claim, receipt] = await Promise.all([
+      env.DB.prepare(`SELECT * FROM ${claimTable} WHERE claim_key=? LIMIT 1`).bind(claimKey).first(),
+      env.DB.prepare(`SELECT * FROM player_game_tasks WHERE telegram_id=? AND kind=? AND task_key=? AND cycle_key=? LIMIT 1`).bind(telegramId,kind,key,cycleKey).first()
+    ]);
+  }
   let claimed = String(claim?.status || "") === "claimed";
   if (!claimed && !series && String(row.task_mode || "one_time") === "one_time") {
-    claimed = Boolean(await env.DB.prepare(`SELECT 1 AS done FROM automation_chain_executions WHERE chain_key=? AND telegram_id=? AND status='completed' LIMIT 1`).bind(key,telegramId).first());
+    claimed = context
+      ? context.completedExecutions.has(key)
+      : Boolean(await env.DB.prepare(`SELECT 1 AS done FROM automation_chain_executions WHERE chain_key=? AND telegram_id=? AND status='completed' LIMIT 1`).bind(key,telegramId).first());
   }
+  const progress = series
+    ? await v77PlayerSeriesState(env,row,telegramId,now,context)
+    : claimed
+      ? { value:Math.max(1,Number(row.trigger_value || 1)), target:Math.max(1,Number(row.trigger_value || 1)), completed:true, ...baseCycle }
+      : await gameTaskProgressCached(env,row,telegramId,now,context);
   const reward = receipt?.reward_json
     ? safeJson(receipt.reward_json, {})
     : claim && !series
@@ -17357,17 +17438,19 @@ async function gameTaskView(env, row, telegramId, now, series = false) {
 }
 
 async function gameTasksState(env, telegramId) {
-  await Promise.all([ensureV67Schema(env),ensureV77Schema(env)]);
+  // Production migrations own this schema. Avoid runtime DDL on the latency-sensitive read path.
   const now = Math.floor(Date.now() / 1000);
   const [taskRows,seriesRows,profile] = await Promise.all([
     env.DB.prepare(`SELECT * FROM automation_chains WHERE enabled=1 AND show_as_task=1 AND action_type='reward' AND (task_starts_at=0 OR task_starts_at<=?) AND (task_ends_at=0 OR task_ends_at>?) ORDER BY task_sort,chain_key LIMIT 80`).bind(now,now).all(),
     env.DB.prepare(`SELECT * FROM task_series WHERE enabled=1 AND (starts_at=0 OR starts_at<=?) AND (ends_at=0 OR ends_at>?) ORDER BY sort_order,series_key LIMIT 20`).bind(now,now).all(),
-    env.DB.prepare(`SELECT profile_xp,revision FROM admin_profile_state WHERE telegram_id=? LIMIT 1`).bind(telegramId).first()
+    env.DB.prepare(`SELECT profile_xp,revision,best_score,created_at FROM admin_profile_state WHERE telegram_id=? LIMIT 1`).bind(telegramId).first()
   ]);
   const supportedTasks = (taskRows.results || []).filter((row) => v71TaskTriggerSupported(row.trigger_type));
+  const visibleSeries = seriesRows.results || [];
+  const context = await gameTaskStateContext(env,telegramId,supportedTasks,visibleSeries,profile);
   const tasks = await Promise.all([
-    ...supportedTasks.map((row) => gameTaskView(env,row,telegramId,now,false)),
-    ...(seriesRows.results || []).map((row) => gameTaskView(env,row,telegramId,now,true))
+    ...supportedTasks.map((row) => gameTaskView(env,row,telegramId,now,false,context)),
+    ...visibleSeries.map((row) => gameTaskView(env,row,telegramId,now,true,context))
   ]);
 
   // A reward whose first response was lost remains visible after midnight,
@@ -17386,8 +17469,9 @@ async function gameTasksState(env, telegramId) {
   }
 
   const notices = tasks.filter((task) => task.complete && !task.claimed);
-  if (notices.length) {
-    await env.DB.batch(notices.map((task) => env.DB.prepare(`INSERT OR IGNORE INTO player_game_tasks(telegram_id,kind,task_key,cycle_key,completed_at) VALUES(?,?,?,?,?)`).bind(telegramId,task.kind,task.key,task.cycleKey,now)));
+  const newNotices = notices.filter((task) => !context.receipts.has(gameTaskReceiptMapKey(task.kind,task.key,task.cycleKey)));
+  if (newNotices.length) {
+    await env.DB.batch(newNotices.map((task) => env.DB.prepare(`INSERT OR IGNORE INTO player_game_tasks(telegram_id,kind,task_key,cycle_key,completed_at) VALUES(?,?,?,?,?)`).bind(telegramId,task.kind,task.key,task.cycleKey,now)));
   }
   const xp = Math.max(0,Number(profile?.profile_xp || 0));
   const level = caseProfileLevel(xp);
@@ -17463,7 +17547,8 @@ async function gameTasksApi(request, env, action) {
     requireBotToken(env);
     const auth = await validateTelegramInitData(String(body.initData || ""),env);
     const telegramId = String(auth.user.id);
-    await Promise.all([ensureV67Schema(env),ensureV77Schema(env)]);
+    // State is a hot read path and production migrations already guarantee these tables.
+    if (action !== "state") await Promise.all([ensureV67Schema(env),ensureV77Schema(env)]);
     if (action === "read") {
       const notices = Array.isArray(body.notices) ? body.notices.slice(0,100) : [];
       if (notices.length) await env.DB.batch(notices.map((notice) => env.DB.prepare(`UPDATE player_game_tasks SET read_at=? WHERE telegram_id=? AND kind=? AND task_key=? AND cycle_key=?`).bind(Math.floor(Date.now()/1000),telegramId,String(notice.kind||""),String(notice.key||""),String(notice.cycleKey||""))));
@@ -39597,10 +39682,10 @@ async function showV77SeriesDetails(chatId,user,key,env){
   await sendTelegramMessage(env,chatId,`<b>🧩 ${escapeHtml(row.title)}</b>\n\nСтатус: <b>${Number(row.enabled)?"включена":"выключена"}</b>\nПорядок: <b>${row.completion_mode==="ordered"?"строго по порядку":"в любом порядке"}</b>\nФинальная награда: <b>${escapeHtml(safeRewardDescription(safeJson(row.final_reward_json,{}))||"нет")}</b>\n\n<b>Этапы</b>\n${lines.join("\n")||"Этапов нет."}`,{inline_keyboard:[[{text:Number(row.enabled)?"⏸ Выключить":"▶️ Включить",callback_data:`v77_series_toggle:${row.series_key}`}],[{text:"⬅️ Серии",callback_data:"v77_series"}]]});
 }
 
-async function v77PlayerSeriesState(env,series,telegramId,now=Math.floor(Date.now()/1000)){
+async function v77PlayerSeriesState(env,series,telegramId,now=Math.floor(Date.now()/1000),context=null){
   const steps=(await env.DB.prepare(`SELECT x.step_order,c.* FROM task_series_steps x JOIN automation_chains c ON c.chain_key=x.chain_key WHERE x.series_key=? ORDER BY x.step_order`).bind(series.series_key).all()).results||[];
   let completed=0; let current=null; const details=[];
-  for(const step of steps){const p=await v71TaskProgress(env,step,String(telegramId),now);details.push({step,progress:p});if(p.completed){if(!current)completed+=1;}else if(!current){current={step,progress:p};if(series.completion_mode==="ordered")break;}}
+  for(const step of steps){const p=await gameTaskProgressCached(env,step,String(telegramId),now,context);details.push({step,progress:p});if(p.completed){if(!current)completed+=1;}else if(!current){current={step,progress:p};if(series.completion_mode==="ordered")break;}}
   if(series.completion_mode!=="ordered")completed=details.filter(x=>x.progress.completed).length;
   return {steps,details,completed,total:steps.length,current,done:steps.length>0&&completed>=steps.length,cycleKey:"once"};
 }
