@@ -17193,7 +17193,8 @@ function v76IsPurchaseTrigger(triggerType) {
 }
 
 function v76IsCustomCountTrigger(triggerType) {
-  return String(triggerType || "") === "accepted_runs" || v76IsPurchaseTrigger(triggerType);
+  const definition = gameTaskTriggerDefinition(triggerType);
+  return Boolean(definition?.customValue) || v76IsPurchaseTrigger(triggerType);
 }
 
 function v76PurchaseFilterSql(triggerType, alias = "s") {
@@ -17215,24 +17216,77 @@ function v76RuPlural(value, one, few, many) {
   return many;
 }
 
+// Single source of truth for player-facing task trigger capabilities.
+// Generic automation-only triggers (inactive_days / season_ending) intentionally live outside it.
+const GAME_TASK_TRIGGER_REGISTRY = Object.freeze({
+  new_player_delay: Object.freeze({ label:"После регистрации", repeatable:false, progressFormat:"duration", source:"profile", customValue:true, presets:Object.freeze([["10 минут",600],["1 час",3600],["24 часа",86400]]) }),
+  accepted_runs: Object.freeze({ label:"Зачтённые забеги", repeatable:true, progressFormat:"number", source:"leaderboard", customValue:true, presets:Object.freeze([["3 забега",3],["5 забегов",5],["10 забегов",10],["25 забегов",25],["50 забегов",50],["100 забегов",100]]) }),
+  total_score: Object.freeze({ label:"Сумма очков", repeatable:true, progressFormat:"number", source:"leaderboard", customValue:true, presets:Object.freeze([["5 000",5000],["10 000",10000],["25 000",25000],["50 000",50000]]) }),
+  opened_cases: Object.freeze({ label:"Открытые кейсы", repeatable:true, progressFormat:"number", source:"cases", customValue:true, presets:Object.freeze([["1 кейс",1],["3 кейса",3],["5 кейсов",5],["10 кейсов",10]]) }),
+  best_score: Object.freeze({ label:"Рекорд", repeatable:false, progressFormat:"number", source:"profile", customValue:true, presets:Object.freeze([["1 000",1000],["2 500",2500],["5 000",5000],["10 000",10000]]) }),
+  promo_activations: Object.freeze({ label:"Активации промокодов", repeatable:true, progressFormat:"number", source:"promo", customValue:true, presets:Object.freeze([["1 промокод",1],["2 промокода",2],["3 промокода",3],["5 промокодов",5]]) }),
+  level_reached: Object.freeze({ label:"Уровень", repeatable:false, progressFormat:"number", source:"profile", customValue:true, presets:Object.freeze([["5 уровень",5],["10 уровень",10],["20 уровень",20],["30 уровень",30]]) }),
+  shop_purchases: Object.freeze({ label:"Покупки в магазине", repeatable:true, progressFormat:"number", source:"shop", customValue:true, presets:Object.freeze([["1 покупка",1],["3 покупки",3],["5 покупок",5],["10 покупок",10]]) }),
+  skin_purchases: Object.freeze({ label:"Покупки образов", repeatable:true, progressFormat:"number", source:"shop", customValue:true, presets:Object.freeze([["1 образ",1],["2 образа",2],["3 образа",3],["5 образов",5]]) }),
+  physical_purchases: Object.freeze({ label:"Покупки физических наград", repeatable:true, progressFormat:"number", source:"shop", customValue:true, presets:Object.freeze([["1 награда",1],["2 награды",2],["3 награды",3],["5 наград",5]]) }),
+  case_purchases: Object.freeze({ label:"Покупки кейсов", repeatable:true, progressFormat:"number", source:"shop", customValue:true, presets:Object.freeze([["1 кейс",1],["3 кейса",3],["5 кейсов",5],["10 кейсов",10]]) }),
+
+  // Stage 1 gameplay goals. All values come from the server-authored run ledger and
+  // only count finished runs that meet the authoritative minimum run duration.
+  single_run_score: Object.freeze({ label:"Очки за один забег", repeatable:true, progressFormat:"number", source:"run_ledger", metric:"singleRunScore", customValue:true, presets:Object.freeze([["1 000 очков",1000],["2 000 очков",2000],["5 000 очков",5000],["10 000 очков",10000]]) }),
+  collect_zefir: Object.freeze({ label:"Собрать зефир", repeatable:true, progressFormat:"number", source:"run_ledger", metric:"zefir", customValue:true, presets:Object.freeze([["10 зефирок",10],["30 зефирок",30],["50 зефирок",50],["100 зефирок",100]]) }),
+  collect_coffee: Object.freeze({ label:"Собрать кофе", repeatable:true, progressFormat:"number", source:"run_ledger", metric:"coffee", customValue:true, presets:Object.freeze([["3 кофе",3],["5 кофе",5],["10 кофе",10],["20 кофе",20]]) }),
+  single_run_duration: Object.freeze({ label:"Время одного забега", repeatable:true, progressFormat:"duration", source:"run_ledger", metric:"singleRunDuration", customValue:true, presets:Object.freeze([["30 секунд",30],["60 секунд",60],["90 секунд",90],["120 секунд",120]]) }),
+  play_time: Object.freeze({ label:"Время в забегах", repeatable:true, progressFormat:"duration", source:"run_ledger", metric:"playTime", customValue:true, presets:Object.freeze([["5 минут",300],["10 минут",600],["20 минут",1200],["30 минут",1800]]) }),
+  new_records: Object.freeze({ label:"Новые рекорды", repeatable:true, progressFormat:"number", source:"run_ledger", metric:"newRecords", customValue:true, presets:Object.freeze([["1 рекорд",1],["2 рекорда",2],["3 рекорда",3],["5 рекордов",5]]) })
+});
+
+function gameTaskTriggerDefinition(triggerType) {
+  return GAME_TASK_TRIGGER_REGISTRY[String(triggerType || "")] || null;
+}
+
+function gameTaskTriggerRepeatable(triggerType) {
+  return Boolean(gameTaskTriggerDefinition(triggerType)?.repeatable);
+}
+
+function gameTaskTriggerProgressFormat(triggerType) {
+  return String(gameTaskTriggerDefinition(triggerType)?.progressFormat || "number");
+}
+
+function gameTaskTriggerCatalog() {
+  return Object.entries(GAME_TASK_TRIGGER_REGISTRY).map(([type, definition]) => ({
+    type,
+    label:String(definition.label || type),
+    repeatable:Boolean(definition.repeatable),
+    progressFormat:String(definition.progressFormat || "number"),
+    presets:(definition.presets || []).map(([label,value]) => ({label:String(label),value:Number(value)}))
+  }));
+}
+
+function gameTaskParams(row) {
+  const parsed = safeJson(row?.task_params_json || "{}", {});
+  return parsed && typeof parsed === "object" && !Array.isArray(parsed) ? parsed : {};
+}
+
+function normalizeGameTaskParamsJson(value) {
+  if (value == null || value === "") return "{}";
+  const parsed = typeof value === "string" ? safeJson(value, null) : value;
+  if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) throw new ApiError(400,"Параметры задания должны быть JSON-объектом.");
+  const serialized = JSON.stringify(parsed);
+  if (serialized.length > 4000) throw new ApiError(400,"Параметры задания слишком большие.");
+  return serialized;
+}
+
 function v76AutomationTriggerOptions(triggerType) {
-  if (triggerType === "new_player_delay") return [["10 минут",600],["1 час",3600],["24 часа",86400]];
   if (triggerType === "inactive_days") return [["1 день",1],["3 дня",3],["7 дней",7],["14 дней",14]];
-  if (triggerType === "accepted_runs") return [["3 забега",3],["5 забегов",5],["10 забегов",10],["25 забегов",25],["50 забегов",50],["100 забегов",100]];
-  if (triggerType === "shop_purchases") return [["1 покупка",1],["3 покупки",3],["5 покупок",5],["10 покупок",10]];
-  if (triggerType === "skin_purchases") return [["1 образ",1],["2 образа",2],["3 образа",3],["5 образов",5]];
-  if (triggerType === "physical_purchases") return [["1 награда",1],["2 награды",2],["3 награды",3],["5 наград",5]];
-  if (triggerType === "case_purchases") return [["1 кейс",1],["3 кейса",3],["5 кейсов",5],["10 кейсов",10]];
-  if (triggerType === "total_score") return [["5 000",5000],["10 000",10000],["25 000",25000],["50 000",50000]];
-  if (triggerType === "opened_cases") return [["1 кейс",1],["3 кейса",3],["5 кейсов",5],["10 кейсов",10]];
-  if (triggerType === "best_score") return [["1 000",1000],["2 500",2500],["5 000",5000],["10 000",10000]];
-  if (triggerType === "promo_activations") return [["1 промокод",1],["2 промокода",2],["3 промокода",3],["5 промокодов",5]];
-  if (triggerType === "level_reached") return [["5 уровень",5],["10 уровень",10],["20 уровень",20],["30 уровень",30]];
-  return [["6 часов",21600],["12 часов",43200],["24 часа",86400],["48 часов",172800]];
+  if (triggerType === "season_ending") return [["6 часов",21600],["12 часов",43200],["24 часа",86400],["48 часов",172800]];
+  const definition = gameTaskTriggerDefinition(triggerType);
+  if (definition?.presets?.length) return definition.presets.map(([label,value]) => [label,value]);
+  return [["1",1],["3",3],["5",5],["10",10]];
 }
 
 function v71TaskTriggerSupported(triggerType) {
-  return new Set(["new_player_delay", "accepted_runs", "total_score", "opened_cases", "best_score", "promo_activations", "level_reached", ...V76_PURCHASE_TRIGGER_TYPES]).has(String(triggerType || ""));
+  return Boolean(gameTaskTriggerDefinition(triggerType));
 }
 
 function v71TaskCycle(row, now = Math.floor(Date.now() / 1000)) {
@@ -17248,35 +17302,69 @@ function v71TaskCycle(row, now = Math.floor(Date.now() / 1000)) {
   return { cycleKey: "once", startsAt: 0, endsAt: now };
 }
 
+async function gameTaskRunLedgerMetrics(env, telegramId, start, now) {
+  // Do not key gameplay tasks off accepted_rating: that flag also depends on the
+  // rating season/maintenance state. Task progress should survive rating downtime
+  // and season transitions while still counting only server-qualified finished runs.
+  const minRunMs = positiveInt(env.LEADERBOARD_MIN_RUN_SECONDS, DEFAULT_LEADERBOARD_MIN_RUN_SECONDS) * 1000;
+  const result = await env.DB.prepare(`SELECT
+      COALESCE(MAX(raw_score),0) AS single_run_score,
+      COALESCE(SUM(raw_treats),0) AS zefir,
+      COALESCE(SUM(raw_coffee),0) AS coffee,
+      COALESCE(MAX(duration_ms),0) AS single_run_duration_ms,
+      COALESCE(SUM(duration_ms),0) AS play_time_ms,
+      COALESCE(SUM(new_record),0) AS new_records
+    FROM player_economy_run_ledger
+    WHERE telegram_id=? AND duration_ms>=? AND created_at>=? AND created_at<=?`).bind(String(telegramId),minRunMs,Math.max(0,Number(start)||0),Math.max(0,Number(now)||0)).first();
+  return {
+    singleRunScore:Math.max(0,Number(result?.single_run_score || 0)),
+    zefir:Math.max(0,Number(result?.zefir || 0)),
+    coffee:Math.max(0,Number(result?.coffee || 0)),
+    singleRunDuration:Math.max(0,Math.floor(Number(result?.single_run_duration_ms || 0) / 1000)),
+    playTime:Math.max(0,Math.floor(Number(result?.play_time_ms || 0) / 1000)),
+    newRecords:Math.max(0,Number(result?.new_records || 0))
+  };
+}
+
+function gameTaskRunMetricValue(definition, metrics) {
+  const key = String(definition?.metric || "");
+  const value = metrics && Object.prototype.hasOwnProperty.call(metrics,key) ? Number(metrics[key]) : 0;
+  return Math.max(0,Number.isFinite(value) ? value : 0);
+}
+
 async function v71TaskProgress(env, row, telegramId, now = Math.floor(Date.now() / 1000)) {
   const target = Math.max(1, Number(row.trigger_value || 1));
   const cycle = v71TaskCycle(row, now);
   const start = Math.max(0, Number(cycle.startsAt || 0));
+  const triggerType = String(row.trigger_type || "");
+  const definition = gameTaskTriggerDefinition(triggerType);
   let value = 0;
-  if (row.trigger_type === "accepted_runs") {
+  if (definition?.source === "run_ledger") {
+    value = gameTaskRunMetricValue(definition, await gameTaskRunLedgerMetrics(env,telegramId,start,now));
+  } else if (triggerType === "accepted_runs") {
     const result = await env.DB.prepare(`SELECT COUNT(*) AS value FROM leaderboard_runs WHERE telegram_id=? AND accepted=1 AND created_at>=? AND created_at<=?`).bind(String(telegramId),start,now).first();
     value = Number(result?.value || 0);
-  } else if (row.trigger_type === "total_score") {
+  } else if (triggerType === "total_score") {
     const result = await env.DB.prepare(`SELECT COALESCE(SUM(score),0) AS value FROM leaderboard_runs WHERE telegram_id=? AND accepted=1 AND created_at>=? AND created_at<=?`).bind(String(telegramId),start,now).first();
     value = Number(result?.value || 0);
-  } else if (row.trigger_type === "opened_cases") {
+  } else if (triggerType === "opened_cases") {
     const result = await env.DB.prepare(`SELECT ((SELECT COALESCE(SUM(case_count),0) FROM level_case_openings WHERE telegram_id=? AND opened_at>=? AND opened_at<=?)+(SELECT COUNT(*) FROM granted_cases WHERE telegram_id=? AND status='opened' AND opened_at>=? AND opened_at<=?)) AS value`).bind(String(telegramId),start,now,String(telegramId),start,now).first();
     value = Number(result?.value || 0);
-  } else if (row.trigger_type === "best_score") {
+  } else if (triggerType === "best_score") {
     const result = await env.DB.prepare(`SELECT best_score AS value FROM admin_profile_state WHERE telegram_id=? LIMIT 1`).bind(String(telegramId)).first();
     value = Number(result?.value || 0);
-  } else if (row.trigger_type === "promo_activations") {
+  } else if (triggerType === "promo_activations") {
     await ensureV57OperationsSchema(env);
     const result = await env.DB.prepare(`SELECT COUNT(*) AS value FROM promo_redemptions WHERE telegram_id=? AND status<>'failed' AND created_at>=? AND created_at<=?`).bind(String(telegramId),start,now).first();
     value = Number(result?.value || 0);
-  } else if (row.trigger_type === "level_reached") {
+  } else if (triggerType === "level_reached") {
     const result = await env.DB.prepare(`SELECT profile_xp FROM admin_profile_state WHERE telegram_id=? LIMIT 1`).bind(String(telegramId)).first();
     value = caseProfileLevel(Number(result?.profile_xp || 0));
-  } else if (row.trigger_type === "new_player_delay") {
+  } else if (triggerType === "new_player_delay") {
     const result = await env.DB.prepare(`SELECT created_at FROM admin_profile_state WHERE telegram_id=? LIMIT 1`).bind(String(telegramId)).first();
     value = result?.created_at ? Math.max(0, now - Number(result.created_at)) : 0;
-  } else if (v76IsPurchaseTrigger(row.trigger_type)) {
-    const result = await env.DB.prepare(`SELECT COUNT(*) AS value FROM shop_stock_consumptions s WHERE s.telegram_id=? AND s.created_at>=? AND s.created_at<=? AND ${v76PurchaseFilterSql(row.trigger_type, "s")}`).bind(String(telegramId),start,now).first();
+  } else if (v76IsPurchaseTrigger(triggerType)) {
+    const result = await env.DB.prepare(`SELECT COUNT(*) AS value FROM shop_stock_consumptions s WHERE s.telegram_id=? AND s.created_at>=? AND s.created_at<=? AND ${v76PurchaseFilterSql(triggerType, "s")}`).bind(String(telegramId),start,now).first();
     value = Number(result?.value || 0);
   }
   return { value: Math.max(0, value), target, completed: value >= target, ...cycle };
@@ -17359,6 +17447,7 @@ async function gameTaskProgressCached(env, row, telegramId, now, context = null)
   const cycle = v71TaskCycle(row, now);
   const start = Math.max(0, Number(cycle.startsAt || 0));
   const triggerType = String(row.trigger_type || '');
+  const definition = gameTaskTriggerDefinition(triggerType);
   let value = 0;
   if (triggerType === 'best_score') {
     value = Number(context.profile?.best_score || 0);
@@ -17366,6 +17455,14 @@ async function gameTaskProgressCached(env, row, telegramId, now, context = null)
     value = caseProfileLevel(Number(context.profile?.profile_xp || 0));
   } else if (triggerType === 'new_player_delay') {
     value = context.profile?.created_at ? Math.max(0, now - Number(context.profile.created_at)) : 0;
+  } else if (definition?.source === 'run_ledger') {
+    const cacheKey = `run_ledger:${start}`;
+    let pending = context.progressCache.get(cacheKey);
+    if (!pending) {
+      pending = gameTaskRunLedgerMetrics(env,telegramId,start,now);
+      context.progressCache.set(cacheKey,pending);
+    }
+    value = gameTaskRunMetricValue(definition,await pending);
   } else {
     const cacheKey = `${triggerType}:${start}`;
     let pending = context.progressCache.get(cacheKey);
@@ -17420,7 +17517,7 @@ async function gameTaskView(env, row, telegramId, now, series = false, context =
     title:String(row.title || "Задание"),
     description:String(row.task_description || row.description || ""),
     mode:series ? "series" : String(row.task_mode || "one_time"),
-    progress:value, target, complete, claimed,
+    progress:value, target, progressFormat:gameTaskTriggerProgressFormat(row.trigger_type), complete, claimed,
     pending:Boolean(claim && !claimed),
     reward, rewardLabel:gameTaskRewardLabel(reward),
     endsAt:Number(series ? row.ends_at : row.task_ends_at) || (row.task_mode === "daily" ? Number(progress.startsAt || 0) + V67_DAY : 0),
@@ -38315,7 +38412,7 @@ async function startV74AutomationEditCustomValue(query,env){
 async function selectV74AutomationEditReward(query,rewardKey,env){const workflow=await getStaffWorkflow(query.from.id,env);if(!workflow||workflow.flow_type!=="automation_edit"||workflow.step!=="reward_pick"){await answerCallback(env,query.id,"Редактирование устарело.",true);return;}const row=await env.DB.prepare(`SELECT title FROM automation_chains WHERE chain_key=? LIMIT 1`).bind(workflow.data.chainKey).first();const action=v67AutomationRewardPreset(rewardKey,row?.title||"Автоматическая награда");if(!action){await answerCallback(env,query.id,"Награда не найдена.",true);return;}await showV74AutomationEditPreview(query,{...workflow.data,changes:{action_json:JSON.stringify(action)}},env);}
 async function handleV74AutomationEditMessage(message,workflow,env){const text=String(message.text||"").trim();if(workflow.step==="title_input"){if(text.length<3||text.length>80){await sendTelegramMessage(env,message.chat.id,"Название должно содержать от 3 до 80 символов.");return true;}await showV74AutomationEditPreview({from:message.from,message,id:""},{...workflow.data,changes:{title:text}},env,false);return true;}if(workflow.step==="message_input"){if(text.length<3||text.length>1500){await sendTelegramMessage(env,message.chat.id,"Сообщение должно содержать от 3 до 1500 символов.");return true;}await showV74AutomationEditPreview({from:message.from,message,id:""},{...workflow.data,changes:{action_json:JSON.stringify({text:escapeHtml(text)})}},env,false);return true;}if(workflow.step==="custom_runs"){const normalized=text.replace(/[ _.,]/g,"");const value=Number(normalized);if(!/^\d{1,7}$/.test(normalized)||value<1||value>1000000||!v76IsCustomCountTrigger(workflow.data.editTriggerType)){await sendTelegramMessage(env,message.chat.id,"Введите целое число от 1 до 1 000 000.");return true;}await showV74AutomationEditPreview({from:message.from,message,id:""},{...workflow.data,changes:{trigger_type:workflow.data.editTriggerType,trigger_value:value}},env,false);return true;}await sendTelegramMessage(env,message.chat.id,"Продолжите кнопками или отправьте <code>/cancel</code>.");return true;}
 async function showV74AutomationEditPreview(query,data,env,answer=true){const chatId=query.message?.chat?.id;const row=await env.DB.prepare(`SELECT * FROM automation_chains WHERE chain_key=? LIMIT 1`).bind(data.chainKey).first();if(!row)return;const next={...row,...data.changes};await setStaffWorkflow(query.from.id,chatId,"automation_edit","confirm",{chainKey:data.chainKey,changes:data.changes},env);if(answer&&query.id)await answerCallback(env,query.id,"Проверьте изменение.");const action=safeJson(next.action_json,{});await sendTelegramMessage(env,chatId,`<b>✅ Подтвердите изменение</b>\n\nНазвание: <b>${escapeHtml(next.title)}</b>\nУсловие: <b>${escapeHtml(v67AutomationTriggerLabel(next.trigger_type,next.trigger_value))}</b>\nДействие: <b>${escapeHtml(next.action_type==="reward"?safeRewardDescription(action):String(action.text||"").replace(/<[^>]+>/g,"").slice(0,300))}</b>\n\nСтатус включения сохранится. Изменение затронет только будущие выполнения.`,{inline_keyboard:[[{text:"✅ Сохранить",callback_data:"v74_auto_edit_save"}],[{text:"❌ Отменить",callback_data:"v74_auto_edit_cancel"}]]});}
-async function saveV74AutomationEdit(query,env,runtime={}){const chatId=query.message?.chat?.id;const workflow=await getStaffWorkflow(query.from.id,env);const access=await getTeamAccess(query.from,env);if(!workflow||workflow.flow_type!=="automation_edit"||workflow.step!=="confirm"||!access.authorized||!v67AutomationAccess(access)){await answerCallback(env,query.id,"Изменение устарело.",true);return;}await ensureV67Schema(env);const key=String(workflow.data.chainKey);const old=await env.DB.prepare(`SELECT * FROM automation_chains WHERE chain_key=? LIMIT 1`).bind(key).first();if(!old){await answerCallback(env,query.id,"Цепочка не найдена.",true);return;}const c=workflow.data.changes||{};if(Object.prototype.hasOwnProperty.call(c,"action_json")){const allowed=old.action_type==="reward"?Boolean(access.owner||access.permissions?.grantRewards):Boolean(access.owner||access.permissions?.massBroadcasts||access.permissions?.manageSeasons);if(!allowed){await answerCallback(env,query.id,"Нет права изменять действие этой автоматизации.",true);return;}}const nextTitle=String(c.title??old.title).slice(0,80);const nextTrigger=String(c.trigger_type??old.trigger_type);const nextValue=Math.max(1,Math.floor(Number(c.trigger_value??old.trigger_value)||1));let nextAction=String(c.action_json??old.action_json);if(!Object.prototype.hasOwnProperty.call(c,"action_json")&&old.action_type==="reward"&&nextTitle!==old.title){const action=safeJson(old.action_json,{});action.reason=nextTitle;nextAction=JSON.stringify(action);}const taskSupported=old.action_type==="reward"&&v71TaskTriggerSupported(nextTrigger);const nextShowAsTask=taskSupported?Number(old.show_as_task||0):0;const repeatableTriggers=new Set(["accepted_runs","total_score","opened_cases","promo_activations",...V76_PURCHASE_TRIGGER_TYPES]);const nextTaskMode=nextShowAsTask&&String(old.task_mode||"one_time")!=="one_time"&&!repeatableTriggers.has(nextTrigger)?"one_time":String(old.task_mode||"one_time");const now=Math.floor(Date.now()/1000);await env.DB.prepare(`UPDATE automation_chains SET title=?,trigger_type=?,trigger_value=?,action_json=?,show_as_task=?,task_mode=?,task_description=CASE WHEN task_description='' OR task_description=? THEN ? ELSE task_description END,updated_at=?,updated_by=? WHERE chain_key=?`).bind(nextTitle,nextTrigger,nextValue,nextAction,nextShowAsTask,nextTaskMode,old.title,nextTitle,now,String(query.from.id),key).run();const fresh=await env.DB.prepare(`SELECT * FROM automation_chains WHERE chain_key=? LIMIT 1`).bind(key).first();const auditTask=Promise.all([recordV67SettingChange(env,query.from,"automation",key,"edit",{title:old.title,triggerType:old.trigger_type,triggerValue:old.trigger_value,action:safeJson(old.action_json,{}),showAsTask:Boolean(old.show_as_task),taskMode:old.task_mode},{title:fresh.title,triggerType:fresh.trigger_type,triggerValue:fresh.trigger_value,action:safeJson(fresh.action_json,{}),showAsTask:Boolean(fresh.show_as_task),taskMode:fresh.task_mode}),logStaffAction(env,query.from,access,"automation_edit",null,"automation",null,null,{chainKey:key,changes:Object.keys(c)})]);const auditBackground=runWorkerBackground(runtime,auditTask,"automation edit audit");if(!auditBackground)await auditTask;await clearStaffWorkflow(query.from.id,env);await answerCallback(env,query.id,"Автоматизация обновлена.");await showV67AutomationDetails(chatId,query.from,key,env);}
+async function saveV74AutomationEdit(query,env,runtime={}){const chatId=query.message?.chat?.id;const workflow=await getStaffWorkflow(query.from.id,env);const access=await getTeamAccess(query.from,env);if(!workflow||workflow.flow_type!=="automation_edit"||workflow.step!=="confirm"||!access.authorized||!v67AutomationAccess(access)){await answerCallback(env,query.id,"Изменение устарело.",true);return;}await ensureV67Schema(env);const key=String(workflow.data.chainKey);const old=await env.DB.prepare(`SELECT * FROM automation_chains WHERE chain_key=? LIMIT 1`).bind(key).first();if(!old){await answerCallback(env,query.id,"Цепочка не найдена.",true);return;}const c=workflow.data.changes||{};if(Object.prototype.hasOwnProperty.call(c,"action_json")){const allowed=old.action_type==="reward"?Boolean(access.owner||access.permissions?.grantRewards):Boolean(access.owner||access.permissions?.massBroadcasts||access.permissions?.manageSeasons);if(!allowed){await answerCallback(env,query.id,"Нет права изменять действие этой автоматизации.",true);return;}}const nextTitle=String(c.title??old.title).slice(0,80);const nextTrigger=String(c.trigger_type??old.trigger_type);const nextValue=Math.max(1,Math.floor(Number(c.trigger_value??old.trigger_value)||1));let nextAction=String(c.action_json??old.action_json);if(!Object.prototype.hasOwnProperty.call(c,"action_json")&&old.action_type==="reward"&&nextTitle!==old.title){const action=safeJson(old.action_json,{});action.reason=nextTitle;nextAction=JSON.stringify(action);}const taskSupported=old.action_type==="reward"&&v71TaskTriggerSupported(nextTrigger);const nextShowAsTask=taskSupported?Number(old.show_as_task||0):0;const nextTaskMode=nextShowAsTask&&String(old.task_mode||"one_time")!=="one_time"&&!gameTaskTriggerRepeatable(nextTrigger)?"one_time":String(old.task_mode||"one_time");const now=Math.floor(Date.now()/1000);await env.DB.prepare(`UPDATE automation_chains SET title=?,trigger_type=?,trigger_value=?,action_json=?,show_as_task=?,task_mode=?,task_description=CASE WHEN task_description='' OR task_description=? THEN ? ELSE task_description END,updated_at=?,updated_by=? WHERE chain_key=?`).bind(nextTitle,nextTrigger,nextValue,nextAction,nextShowAsTask,nextTaskMode,old.title,nextTitle,now,String(query.from.id),key).run();const fresh=await env.DB.prepare(`SELECT * FROM automation_chains WHERE chain_key=? LIMIT 1`).bind(key).first();const auditTask=Promise.all([recordV67SettingChange(env,query.from,"automation",key,"edit",{title:old.title,triggerType:old.trigger_type,triggerValue:old.trigger_value,action:safeJson(old.action_json,{}),showAsTask:Boolean(old.show_as_task),taskMode:old.task_mode},{title:fresh.title,triggerType:fresh.trigger_type,triggerValue:fresh.trigger_value,action:safeJson(fresh.action_json,{}),showAsTask:Boolean(fresh.show_as_task),taskMode:fresh.task_mode}),logStaffAction(env,query.from,access,"automation_edit",null,"automation",null,null,{chainKey:key,changes:Object.keys(c)})]);const auditBackground=runWorkerBackground(runtime,auditTask,"automation edit audit");if(!auditBackground)await auditTask;await clearStaffWorkflow(query.from.id,env);await answerCallback(env,query.id,"Автоматизация обновлена.");await showV67AutomationDetails(chatId,query.from,key,env);}
 // =============================================================
 
 const V67_AUTOMATION_PRESETS = Object.freeze([
@@ -38402,6 +38499,7 @@ async function ensureV67Schema(env) {
           show_as_task INTEGER NOT NULL DEFAULT 0,
           task_mode TEXT NOT NULL DEFAULT 'one_time',
           task_description TEXT NOT NULL DEFAULT '',
+          task_params_json TEXT NOT NULL DEFAULT '{}',
           task_starts_at INTEGER NOT NULL DEFAULT 0,
           task_ends_at INTEGER NOT NULL DEFAULT 0,
           task_sort INTEGER NOT NULL DEFAULT 100,
@@ -38517,6 +38615,7 @@ async function ensureV67Schema(env) {
         ["show_as_task", "INTEGER NOT NULL DEFAULT 0"],
         ["task_mode", "TEXT NOT NULL DEFAULT 'one_time'"],
         ["task_description", "TEXT NOT NULL DEFAULT ''"],
+        ["task_params_json", "TEXT NOT NULL DEFAULT '{}'"],
         ["task_starts_at", "INTEGER NOT NULL DEFAULT 0"],
         ["task_ends_at", "INTEGER NOT NULL DEFAULT 0"],
         ["task_sort", "INTEGER NOT NULL DEFAULT 100"]
@@ -38638,6 +38737,12 @@ function v67AutomationTriggerLabel(triggerType, triggerValue) {
   if (triggerType === "best_score") return `достичь рекорда ${Number(triggerValue).toLocaleString("ru-RU")}`;
   if (triggerType === "promo_activations") return `активировать ${Number(triggerValue)} промокодов`;
   if (triggerType === "level_reached") return `достичь ${Number(triggerValue)} уровня`;
+  if (triggerType === "single_run_score") return `набрать ${Number(triggerValue).toLocaleString("ru-RU")} очков за один забег`;
+  if (triggerType === "collect_zefir") return `собрать ${Number(triggerValue)} ${v76RuPlural(triggerValue, "зефирку", "зефирки", "зефирок")}`;
+  if (triggerType === "collect_coffee") return `собрать ${Number(triggerValue)} ${v76RuPlural(triggerValue, "кофе", "кофе", "кофе")}`;
+  if (triggerType === "single_run_duration") return `продержаться ${botRuntimeDurationLabel(triggerValue)} за один забег`;
+  if (triggerType === "play_time") return `провести в забегах ${botRuntimeDurationLabel(triggerValue)}`;
+  if (triggerType === "new_records") return `установить ${Number(triggerValue)} ${v76RuPlural(triggerValue, "новый рекорд", "новых рекорда", "новых рекордов")}`;
   if (triggerType === "season_ending") return `за ${Math.round(Number(triggerValue) / 3600)} ч. до конца сезона`;
   if (triggerType === "shop_purchases") return `совершить ${Number(triggerValue)} ${v76RuPlural(triggerValue, "покупку", "покупки", "покупок")} в магазине`;
   if (triggerType === "skin_purchases") return `купить ${Number(triggerValue)} ${v76RuPlural(triggerValue, "образ", "образа", "образов")}`;
@@ -38880,8 +38985,7 @@ async function selectV71TaskMode(query, mode, env) {
     await answerCallback(env, query.id, "Неизвестный тип задания.", true);
     return;
   }
-  const repeatableTriggers = new Set(["accepted_runs", "total_score", "opened_cases", "promo_activations", ...V76_PURCHASE_TRIGGER_TYPES]);
-  if (mode !== "one_time" && !repeatableTriggers.has(String(workflow.data?.triggerType || ""))) {
+  if (mode !== "one_time" && !gameTaskTriggerRepeatable(String(workflow.data?.triggerType || ""))) {
     await answerCallback(env, query.id, "Для этого условия доступно только одноразовое задание.", true);
     return;
   }
@@ -39891,8 +39995,29 @@ async function showV77TaskAnalyticsDetails(chatId,user,key,env){const access=awa
 
 async function showV77Economy(chatId,user,env){const access=await requireV77OperationsAccess(chatId,user,env);if(!access)return;const since=Math.floor(Date.now()/1000)-7*V67_DAY;const [balances,rewards,purchases,cases,queue]=await Promise.all([env.DB.prepare(`SELECT COUNT(*) AS players,SUM(wallet) AS points,SUM(treats) AS treats,SUM(coffee) AS coffee,SUM(pending_wallet) AS ppoints,SUM(pending_treats) AS ptreats,SUM(pending_coffee) AS pcoffee FROM admin_profile_state`).first(),env.DB.prepare(`SELECT reward_kind,SUM(amount) AS amount,COUNT(*) AS operations FROM reward_delivery_queue WHERE status='delivered' AND updated_at>=? GROUP BY reward_kind`).bind(since).all(),env.DB.prepare(`SELECT category,COUNT(*) AS operations FROM shop_stock_consumptions WHERE created_at>=? GROUP BY category`).bind(since).all(),env.DB.prepare(`SELECT case_type,COUNT(*) AS amount FROM granted_cases WHERE status IN ('available','pending') GROUP BY case_type`).all(),env.DB.prepare(`SELECT SUM(CASE WHEN status='pending' OR (status='failed' AND attempts<5) THEN 1 ELSE 0 END) AS pending,SUM(CASE WHEN status='failed' AND attempts>=5 THEN 1 ELSE 0 END) AS failed FROM reward_delivery_queue`).first()]);const rewardLines=(rewards.results||[]).map(r=>`• ${escapeHtml(r.reward_kind)}: <b>${Number(r.amount||0).toLocaleString("ru-RU")}</b> · ${Number(r.operations||0)} операций`);const purchaseLines=(purchases.results||[]).map(r=>`• ${escapeHtml(r.category)}: <b>${Number(r.operations||0)}</b> покупок`);const caseLines=(cases.results||[]).map(r=>`• ${escapeHtml(r.case_type)}: <b>${Number(r.amount||0)}</b>`);const warning=Number(queue?.failed||0)>0?"\n\n🔴 Есть ошибки доставки наград.":Number(balances?.ppoints||0)+Number(balances?.ptreats||0)+Number(balances?.pcoffee||0)>0?"\n\n🟡 Есть ожидающие начисления в профилях.":"";await sendTelegramMessage(env,chatId,`<b>💰 Экономика+</b>\n\nИгроков: <b>${Number(balances?.players||0)}</b>\nБаланс очков: <b>${Number(balances?.points||0).toLocaleString("ru-RU")}</b>\nЗефир: <b>${Number(balances?.treats||0).toLocaleString("ru-RU")}</b>\nКофе: <b>${Number(balances?.coffee||0).toLocaleString("ru-RU")}</b>\nОжидает начисления: ${Number(balances?.ppoints||0)} очков, ${Number(balances?.ptreats||0)} зефира, ${Number(balances?.pcoffee||0)} кофе\n\n<b>Выдано за 7 дней</b>\n${rewardLines.join("\n")||"Нет выдач."}\n\n<b>Покупки за 7 дней</b>\n${purchaseLines.join("\n")||"Нет покупок."}\n\n<b>Неоткрытые выданные кейсы</b>\n${caseLines.join("\n")||"Нет."}\n\nОчередь наград: ${Number(queue?.pending||0)} · ошибок ${Number(queue?.failed||0)}${warning}\n\n<i>Историческая сумма расходов по валютам пока недоступна: старые операции магазина не сохраняли цену на момент покупки.</i>`,{inline_keyboard:[[{text:"🔄 Обновить",callback_data:"v77_economy"}],[{text:"⬅️ Центр",callback_data:"v77_home"}]]});}
 
-function v77ConflictList(row,allRows=[]){const issues=[];const action=safeJson(row.action_json,{});if(Number(row.trigger_value||0)<=0)issues.push({severity:"critical",text:"нулевое значение условия"});if(row.action_type==="reward"){if(!action.kind||Number(action.amount||0)<=0)issues.push({severity:"critical",text:"награда не настроена"});if(action.kind==="case"&&!new Set(["small","sweet","gold","mythic","legendary"]).has(String(action.id)))issues.push({severity:"critical",text:"неизвестный тип кейса"});}if(Number(row.show_as_task)&&!v71TaskTriggerSupported(row.trigger_type))issues.push({severity:"critical",text:"условие нельзя показать как задание"});if(Number(row.task_starts_at||0)&&Number(row.task_ends_at||0)&&Number(row.task_starts_at)>=Number(row.task_ends_at))issues.push({severity:"critical",text:"дата начала позже даты окончания"});for(const other of allRows){if(other.chain_key===row.chain_key||!Number(other.enabled)||!Number(row.enabled))continue;if(other.trigger_type===row.trigger_type&&Number(other.trigger_value)===Number(row.trigger_value)&&other.action_type===row.action_type&&String(other.action_json)===String(row.action_json)) {issues.push({severity:"warning",text:`дублирует «${other.title}»`});break;}}return issues;}
-async function showV77Conflicts(chatId,user,env){const access=await requireV77OperationsAccess(chatId,user,env);if(!access)return;const rows=(await env.DB.prepare(`SELECT * FROM automation_chains ORDER BY enabled DESC,updated_at DESC`).all()).results||[];const lines=[];let critical=0,warning=0;for(const row of rows){const issues=v77ConflictList(row,rows);if(!issues.length)continue;critical+=issues.filter(i=>i.severity==="critical").length;warning+=issues.filter(i=>i.severity==="warning").length;lines.push(`<b>${escapeHtml(row.title)}</b>\n${issues.map(i=>`${i.severity==="critical"?"🔴":"🟡"} ${escapeHtml(i.text)}`).join("\n")}`);}await sendTelegramMessage(env,chatId,`<b>⚠️ Проверка конфликтов</b>\n\nКритических: <b>${critical}</b> · предупреждений: <b>${warning}</b>\n\n${lines.join("\n\n")||"🟢 Конфликтов не обнаружено."}`,{inline_keyboard:[[{text:"🔄 Проверить снова",callback_data:"v77_conflicts"}],[{text:"⬅️ Центр",callback_data:"v77_home"}]]});}
+function v77ConflictList(row,allRows=[]){
+  const issues=[];
+  const action=safeJson(row.action_json,{});
+  if(Number(row.trigger_value||0)<=0)issues.push({severity:"critical",text:"нулевое значение условия"});
+  if(row.action_type==="reward"){
+    if(!action.kind||Number(action.amount||0)<=0)issues.push({severity:"critical",text:"награда не настроена"});
+    if(action.kind==="case"&&!new Set(["small","sweet","gold","mythic","legendary"]).has(String(action.id)))issues.push({severity:"critical",text:"неизвестный тип кейса"});
+  }
+  if(Number(row.show_as_task)){
+    if(!v71TaskTriggerSupported(row.trigger_type))issues.push({severity:"critical",text:"условие нельзя показать как задание"});
+    if(String(row.task_mode||"one_time")!=="one_time"&&!gameTaskTriggerRepeatable(row.trigger_type))issues.push({severity:"critical",text:"для условия доступно только одноразовое задание"});
+    const rawParams=String(row.task_params_json||"{}");
+    const parsedParams=safeJson(rawParams,null);
+    if(!parsedParams||Array.isArray(parsedParams))issues.push({severity:"critical",text:"параметры задания повреждены"});
+  }
+  if(Number(row.task_starts_at||0)&&Number(row.task_ends_at||0)&&Number(row.task_starts_at)>=Number(row.task_ends_at))issues.push({severity:"critical",text:"дата начала позже даты окончания"});
+  for(const other of allRows){
+    if(other.chain_key===row.chain_key||!Number(other.enabled)||!Number(row.enabled))continue;
+    const sameParams=String(other.task_params_json||"{}")===(String(row.task_params_json||"{}"));
+    if(other.trigger_type===row.trigger_type&&Number(other.trigger_value)===Number(row.trigger_value)&&other.action_type===row.action_type&&String(other.action_json)===String(row.action_json)&&sameParams){issues.push({severity:"warning",text:`дублирует «${other.title}»`});break;}
+  }
+  return issues;
+}
 
 async function showV77Bulk(chatId,user,env){const access=await requireV77OperationsAccess(chatId,user,env);if(!access)return;let workflow=await getStaffWorkflow(user.id,env);if(!workflow||workflow.flow_type!=="v77_bulk"){await setStaffWorkflow(user.id,chatId,"v77_bulk","select",{selected:[]},env);workflow=await getStaffWorkflow(user.id,env);}const rows=(await env.DB.prepare(`SELECT chain_key,title,enabled,show_as_task,action_type FROM automation_chains ORDER BY enabled DESC,updated_at DESC LIMIT 16`).all()).results||[];const selected=new Set(workflow.data.selected||[]);const buttons=rows.map(r=>[{text:`${selected.has(r.chain_key)?"☑️":"⬜"} ${Number(r.enabled)?"🟢":"⚫"} ${String(r.title).slice(0,30)}`,callback_data:`v77_bulk_pick:${r.chain_key}`}]);buttons.push([{text:`▶️ Включить · ${selected.size}`,callback_data:"v77_bulk_apply:enable"},{text:"⏸ Выключить",callback_data:"v77_bulk_apply:disable"}],[{text:"📋 Показать задания",callback_data:"v77_bulk_apply:show"},{text:"🙈 Скрыть задания",callback_data:"v77_bulk_apply:hide"}],[{text:"🎁 Заменить награду",callback_data:"v77_bulk_reward"}],[{text:"🧹 Сбросить выбор",callback_data:"v77_bulk_clear"}],[{text:"⬅️ Центр",callback_data:"v77_home"}]);await sendTelegramMessage(env,chatId,`<b>🧰 Массовые действия</b>\n\nВыбрано: <b>${selected.size}</b>. Действия применяются только после отдельного подтверждения.`,{inline_keyboard:buttons});}
 async function v77BulkConfirm(query,action,env){const workflow=await getStaffWorkflow(query.from.id,env);const selected=workflow?.flow_type==="v77_bulk"?(workflow.data.selected||[]):[];if(!selected.length){await answerCallback(env,query.id,"Сначала выберите элементы.",true);return;}await updateStaffWorkflow(query.from.id,{step:"confirm",data:{...workflow.data,action}},env);await answerCallback(env,query.id,"Подтвердите действие.");await sendTelegramMessage(env,query.message.chat.id,`<b>Подтверждение</b>\n\nБудет изменено: <b>${selected.length}</b> автоматизаций.\nДействие: <b>${escapeHtml(action)}</b>`,{inline_keyboard:[[{text:"✅ Применить",callback_data:"v77_bulk_confirm"}],[{text:"❌ Отмена",callback_data:"v77_bulk"}]]});}
@@ -42064,9 +42189,9 @@ const OWNER_V8_AUTOMATION_TRIGGERS = Object.freeze(new Set([
   "new_player_delay","inactive_days","accepted_runs","total_score","opened_cases","best_score",
   "promo_activations","level_reached","season_ending",...V76_PURCHASE_TRIGGER_TYPES
 ]));
-const OWNER_V8_TASK_REPEATABLE_TRIGGERS = Object.freeze(new Set([
-  "accepted_runs","total_score","opened_cases","promo_activations",...V76_PURCHASE_TRIGGER_TYPES
-]));
+const OWNER_V8_TASK_REPEATABLE_TRIGGERS = Object.freeze(new Set(
+  Object.keys(GAME_TASK_TRIGGER_REGISTRY).filter((triggerType) => gameTaskTriggerRepeatable(triggerType))
+));
 
 function ownerV8AutomationTriggerValue(triggerType, rawValue) {
   const type=String(triggerType||"");
@@ -42132,7 +42257,7 @@ function ownerV8AutomationView(row, allRows=[]) {
     triggerType:String(row.trigger_type||""),triggerValue:Number(row.trigger_value||0),triggerLabel:v67AutomationTriggerLabel(row.trigger_type,row.trigger_value),
     actionType:String(row.action_type||""),action,actionLabel:String(row.action_type)==="reward"?safeRewardDescription(action):String(row.action_type)==="mail"?`💌 ${String(action.title||row.title||"Письмо")}`:ownerV8AutomationPlainMessage(action.text).slice(0,180),messageText:String(row.action_type)==="message"?ownerV8AutomationPlainMessage(action.text):"",
     mailTitle:String(row.action_type)==="mail"?String(action.title||""):"",mailPreview:String(row.action_type)==="mail"?String(action.preview||""):"",mailText:String(row.action_type)==="mail"?String(action.text||""):"",mailImageUrl:String(row.action_type)==="mail"?String(action.imageUrl||""):"",mailReward:String(row.action_type)==="mail"?retentionV2Reward(action.reward):{kind:"none"},
-    showAsTask:Boolean(row.show_as_task),taskMode:String(row.task_mode||"one_time"),taskDescription:String(row.task_description||""),
+    showAsTask:Boolean(row.show_as_task),taskMode:String(row.task_mode||"one_time"),taskDescription:String(row.task_description||""),taskParams:gameTaskParams(row),
     taskStartsAt:Number(row.task_starts_at||0),taskEndsAt:Number(row.task_ends_at||0),taskSort:Number(row.task_sort||100),
     cooldownSeconds:Number(row.cooldown_seconds||0),lastRunAt:Number(row.last_run_at||0),updatedAt:Number(row.updated_at||0),updatedBy:String(row.updated_by||""),
     executions7d:Number(row.executions_7d||0),completed7d:Number(row.completed_7d||0),failed7d:Number(row.failed_7d||0),lastExecutionAt:Number(row.last_execution_at||0),
@@ -42171,7 +42296,7 @@ async function ownerPanelV8Automations(env, ctx) {
     env.DB.prepare(`SELECT job_key,enabled,interval_seconds,last_success_at,next_run_at,last_status,last_duration_ms,last_error FROM server_cron_jobs WHERE job_key='automations-five-minutes' LIMIT 1`).first().catch(()=>null)
   ]);
   const conflicts=automations.reduce((acc,row)=>acc+row.issues.length,0);
-  return {ok:true,summary:{total:automations.length,active:automations.filter(x=>x.enabled&&!x.showAsTask).length,tasks:automations.filter(x=>x.showAsTask).length,activeTasks:automations.filter(x=>x.showAsTask&&x.enabled).length,executions7d:automations.reduce((a,x)=>a+x.executions7d,0),failures7d:automations.reduce((a,x)=>a+x.failed7d,0),conflicts},cron:cron?{enabled:Boolean(cron.enabled),interval:Number(cron.interval_seconds||300),lastRunAt:Number(cron.last_success_at||0),nextRunAt:Number(cron.next_run_at||0),status:String(cron.last_status||""),duration:Number(cron.last_duration_ms||0),error:String(cron.last_error||"")}:null,
+  return {ok:true,summary:{total:automations.length,active:automations.filter(x=>x.enabled&&!x.showAsTask).length,tasks:automations.filter(x=>x.showAsTask).length,activeTasks:automations.filter(x=>x.showAsTask&&x.enabled).length,executions7d:automations.reduce((a,x)=>a+x.executions7d,0),failures7d:automations.reduce((a,x)=>a+x.failed7d,0),conflicts},cron:cron?{enabled:Boolean(cron.enabled),interval:Number(cron.interval_seconds||300),lastRunAt:Number(cron.last_success_at||0),nextRunAt:Number(cron.next_run_at||0),status:String(cron.last_status||""),duration:Number(cron.last_duration_ms||0),error:String(cron.last_error||"")}:null,taskTypes:gameTaskTriggerCatalog(),
     automations,recentExecutions:(executionRows.results||[]).map(r=>({id:Number(r.id),chainKey:String(r.chain_key||""),title:String(r.title||r.chain_key||""),telegramId:String(r.telegram_id||""),playerName:String(r.player_name||r.telegram_id||""),status:String(r.status||""),details:ownerV8SafeJson(r.details_json,{}),createdAt:Number(r.created_at||0),updatedAt:Number(r.updated_at||0)})),recentClaims:(claimRows.results||[]).map(r=>({claimKey:String(r.claim_key||""),chainKey:String(r.chain_key||""),title:String(r.title||r.chain_key||""),telegramId:String(r.telegram_id||""),playerName:String(r.player_name||r.telegram_id||""),cycleKey:String(r.cycle_key||""),status:String(r.status||""),createdAt:Number(r.created_at||0),claimedAt:Number(r.claimed_at||0)}))};
 }
 
@@ -42183,16 +42308,20 @@ async function ownerPanelV8SaveAutomation(env, ctx) {
   if(key&&!old)throw new ApiError(404,"Автоматизация не найдена.");
   const title=String(body.title||"").trim().slice(0,80);if(title.length<3)throw new ApiError(400,"Название должно содержать минимум 3 символа.");
   const description=String(body.description||"").trim().slice(0,500);
-  const triggerType=String(body.triggerType||"").trim();if(!OWNER_V8_AUTOMATION_TRIGGERS.has(triggerType))throw new ApiError(400,"Неизвестное условие запуска.");
+  const showAsTask=Boolean(body.showAsTask);
+  const triggerType=String(body.triggerType||"").trim();
+  if(!OWNER_V8_AUTOMATION_TRIGGERS.has(triggerType)&&!(showAsTask&&v71TaskTriggerSupported(triggerType)))throw new ApiError(400,"Неизвестное условие запуска.");
   const triggerValue=ownerV8AutomationTriggerValue(triggerType,body.triggerValue);
   const {actionType,action}=ownerV8AutomationAction(body,title,old);
-  const showAsTask=Boolean(body.showAsTask);
   if(showAsTask&&actionType!=="reward")throw new ApiError(400,"Задание может выдавать награду, но не отправлять автоматическое сообщение.");
   if(showAsTask&&!v71TaskTriggerSupported(triggerType))throw new ApiError(400,"Это условие нельзя показывать игроку как задание.");
   let taskMode=showAsTask?String(body.taskMode||"one_time"):"one_time";
   if(!["one_time","daily","event"].includes(taskMode))taskMode="one_time";
   if(showAsTask&&taskMode!=="one_time"&&!OWNER_V8_TASK_REPEATABLE_TRIGGERS.has(triggerType))throw new ApiError(400,"Для этого условия доступно только одноразовое задание.");
   const taskDescription=showAsTask?String(body.taskDescription||description||title).trim().slice(0,300):"";
+  const taskParamsJson=showAsTask
+    ? normalizeGameTaskParamsJson(Object.prototype.hasOwnProperty.call(body,"taskParams")?body.taskParams:(old?.task_params_json||"{}"))
+    : "{}";
   const taskStartsAt=showAsTask?ownerPanelInteger(body.taskStartsAt||0,0,4102444800):0;
   const taskEndsAt=showAsTask?ownerPanelInteger(body.taskEndsAt||0,0,4102444800):0;
   if(taskStartsAt==null||taskEndsAt==null)throw new ApiError(400,"Некорректные даты задания.");
@@ -42202,17 +42331,17 @@ async function ownerPanelV8SaveAutomation(env, ctx) {
   if(!key&&triggerType==="inactive_days"&&cooldownSeconds===0)cooldownSeconds=7*V67_DAY;
   const now=Math.floor(Date.now()/1000);let chainKey=key;
   if(old){
-    await env.DB.prepare(`UPDATE automation_chains SET title=?,description=?,trigger_type=?,trigger_value=?,action_type=?,action_json=?,show_as_task=?,task_mode=?,task_description=?,task_starts_at=?,task_ends_at=?,task_sort=?,cooldown_seconds=?,updated_at=?,updated_by=? WHERE chain_key=?`).bind(title,description,triggerType,triggerValue,actionType,JSON.stringify(action),showAsTask?1:0,taskMode,taskDescription,taskStartsAt,taskEndsAt,taskSort,cooldownSeconds,now,String(ctx.user.id),key).run();
+    await env.DB.prepare(`UPDATE automation_chains SET title=?,description=?,trigger_type=?,trigger_value=?,action_type=?,action_json=?,show_as_task=?,task_mode=?,task_description=?,task_params_json=?,task_starts_at=?,task_ends_at=?,task_sort=?,cooldown_seconds=?,updated_at=?,updated_by=? WHERE chain_key=?`).bind(title,description,triggerType,triggerValue,actionType,JSON.stringify(action),showAsTask?1:0,taskMode,taskDescription,taskParamsJson,taskStartsAt,taskEndsAt,taskSort,cooldownSeconds,now,String(ctx.user.id),key).run();
     const fresh=await env.DB.prepare(`SELECT * FROM automation_chains WHERE chain_key=? LIMIT 1`).bind(key).first();
     const issues=v77ConflictList(fresh,(await env.DB.prepare(`SELECT * FROM automation_chains`).all()).results||[]);
     if(issues.some(x=>x.severity==="critical")){
       await env.DB.prepare(`UPDATE automation_chains SET enabled=0,updated_at=?,updated_by=? WHERE chain_key=?`).bind(now,String(ctx.user.id),key).run();
     }
-    await Promise.all([recordV67SettingChange(env,ctx.user,"automation",key,"web_edit",{title:old.title,triggerType:old.trigger_type,triggerValue:old.trigger_value,actionType:old.action_type,action:ownerV8SafeJson(old.action_json,{}),showAsTask:Boolean(old.show_as_task),taskMode:old.task_mode},{title,triggerType,triggerValue,actionType,action,showAsTask,taskMode,taskStartsAt,taskEndsAt,taskSort}),logStaffAction(env,ctx.user,ctx.access,"owner_panel_automation_edit",null,"automation",null,null,{chainKey:key,showAsTask,triggerType,triggerValue,actionType})]);
+    await Promise.all([recordV67SettingChange(env,ctx.user,"automation",key,"web_edit",{title:old.title,triggerType:old.trigger_type,triggerValue:old.trigger_value,actionType:old.action_type,action:ownerV8SafeJson(old.action_json,{}),showAsTask:Boolean(old.show_as_task),taskMode:old.task_mode,taskParams:gameTaskParams(old)},{title,triggerType,triggerValue,actionType,action,showAsTask,taskMode,taskParams:safeJson(taskParamsJson,{}),taskStartsAt,taskEndsAt,taskSort}),logStaffAction(env,ctx.user,ctx.access,"owner_panel_automation_edit",null,"automation",null,null,{chainKey:key,showAsTask,triggerType,triggerValue,actionType})]);
   }else{
     chainKey=`custom_web_${now.toString(36)}_${crypto.randomUUID().slice(0,6)}`;
-    await env.DB.prepare(`INSERT INTO automation_chains(chain_key,title,description,enabled,trigger_type,trigger_value,action_type,action_json,show_as_task,task_mode,task_description,task_starts_at,task_ends_at,task_sort,cooldown_seconds,last_run_at,updated_at,updated_by) VALUES(?,?,?,0,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`).bind(chainKey,title,description,triggerType,triggerValue,actionType,JSON.stringify(action),showAsTask?1:0,taskMode,taskDescription,taskStartsAt,taskEndsAt,taskSort,cooldownSeconds,0,now,String(ctx.user.id)).run();
-    await Promise.all([recordV67SettingChange(env,ctx.user,"automation",chainKey,"web_create",{}, {title,triggerType,triggerValue,actionType,action,showAsTask,taskMode,taskStartsAt,taskEndsAt,taskSort}),logStaffAction(env,ctx.user,ctx.access,"owner_panel_automation_create",null,"automation",null,null,{chainKey,showAsTask,triggerType,triggerValue,actionType})]);
+    await env.DB.prepare(`INSERT INTO automation_chains(chain_key,title,description,enabled,trigger_type,trigger_value,action_type,action_json,show_as_task,task_mode,task_description,task_params_json,task_starts_at,task_ends_at,task_sort,cooldown_seconds,last_run_at,updated_at,updated_by) VALUES(?,?,?,0,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`).bind(chainKey,title,description,triggerType,triggerValue,actionType,JSON.stringify(action),showAsTask?1:0,taskMode,taskDescription,taskParamsJson,taskStartsAt,taskEndsAt,taskSort,cooldownSeconds,0,now,String(ctx.user.id)).run();
+    await Promise.all([recordV67SettingChange(env,ctx.user,"automation",chainKey,"web_create",{}, {title,triggerType,triggerValue,actionType,action,showAsTask,taskMode,taskParams:safeJson(taskParamsJson,{}),taskStartsAt,taskEndsAt,taskSort}),logStaffAction(env,ctx.user,ctx.access,"owner_panel_automation_create",null,"automation",null,null,{chainKey,showAsTask,triggerType,triggerValue,actionType})]);
   }
   v77CalendarCache={html:"",expiresAt:0};
   return {ok:true,chainKey,created:!old};

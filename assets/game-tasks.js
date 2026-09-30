@@ -34,6 +34,15 @@
   function taskIcon(task){if(task?.kind==='series')return '🎯';if(isDaily(task))return '🔥';return '✨';}
   function taskTag(task){if(task?.kind==='series')return 'Цепочка';if(isDaily(task))return 'Сегодня';return 'Событие';}
   function fmt(n){try{return whole(n).toLocaleString('ru-RU');}catch{return String(whole(n));}}
+  function taskProgressValue(task,value){
+    const amount=whole(value);
+    if(String(task?.progressFormat||'')!=='duration')return fmt(amount);
+    if(amount<60)return `${amount} сек`;
+    const hours=Math.floor(amount/3600),minutes=Math.floor((amount%3600)/60),seconds=amount%60;
+    if(hours)return `${hours} ч${minutes?` ${minutes} мин`:''}`;
+    if(minutes)return `${minutes} мин${seconds?` ${seconds} сек`:''}`;
+    return `${seconds} сек`;
+  }
   function plural(n,one,two,five){const value=Math.abs(whole(n))%100;const tail=value%10;if(value>10&&value<20)return five;if(tail===1)return one;if(tail>=2&&tail<=4)return two;return five;}
 
   function timeLeft(endsAt){
@@ -133,7 +142,7 @@
     const task=nearestTask();
     if(!task)return '';
     const ready=isReady(task),pending=Boolean(task?.pending)&&!task?.claimed,left=Math.max(0,whole(task.target)-whole(task.progress));
-    const status=pending?'Проверить выдачу':ready?'Забрать':left?`Осталось ${fmt(left)}`:'Проверить';
+    const status=pending?'Проверить выдачу':ready?'Забрать':left?`Осталось ${taskProgressValue(task,left)}`:'Проверить';
     const extra=timeLeft(task.endsAt);
     return `<section class="gt-next${ready?' is-ready':''}" aria-label="Ближайшая цель"><span class="gt-next-icon">${ready?'🎁':'🐾'}</span><span class="gt-next-copy"><small>${ready?'Награда готова':'Ближайшая цель'}</small><strong>${esc(task.title||'Задание')}</strong><span>${esc(ready?(task.rewardLabel||'Можно получить награду'):(extra?`До конца: ${extra}`:(task.description||'Продолжай играть')))}</span></span><span class="gt-next-status">${esc(status)}</span></section>`;
   }
@@ -150,7 +159,7 @@
     else action='<span class="gt-state">В процессе</span>';
     const steps=list(task.steps).slice(0,6);
     const series=steps.length?`<div class="gt-series" aria-label="Этапы цепочки">${steps.map(step=>`<span>${esc(step.title||'Этап')}</span>`).join('')}</div>`:'';
-    return `<article class="gt-task${ready?' is-ready':''}${claimed?' is-claimed':''}"><div class="gt-task-head"><span class="gt-task-icon" aria-hidden="true">${taskIcon(task)}</span><span class="gt-task-title"><strong>${esc(task.title||'Задание')}</strong><span>${esc(task.description||'Выполни условие и забери награду.')}</span></span><span class="gt-task-tag">${taskTag(task)}</span></div><div class="gt-progress-meta"><span>${claimed?'Выполнено':ready?'Цель выполнена':`Прогресс ${fmt(Math.min(progress,target))} / ${fmt(target)}`}</span><b>${ready||claimed?'100%':`${Math.round(pct)}%`}</b></div><div class="gt-progress-track" role="progressbar" aria-valuemin="0" aria-valuemax="${target}" aria-valuenow="${Math.min(progress,target)}"><span class="gt-progress-fill" style="width:${ready||claimed?100:pct.toFixed(1)}%"></span></div>${series}<div class="gt-task-foot"><span class="gt-reward"><span>${end?`⏱ ${esc(end)} · `:''}Награда</span><b>${esc(task.rewardLabel||'Награда задания')}</b></span>${action}</div></article>`;
+    return `<article class="gt-task${ready?' is-ready':''}${claimed?' is-claimed':''}"><div class="gt-task-head"><span class="gt-task-icon" aria-hidden="true">${taskIcon(task)}</span><span class="gt-task-title"><strong>${esc(task.title||'Задание')}</strong><span>${esc(task.description||'Выполни условие и забери награду.')}</span></span><span class="gt-task-tag">${taskTag(task)}</span></div><div class="gt-progress-meta"><span>${claimed?'Выполнено':ready?'Цель выполнена':`Прогресс ${taskProgressValue(task,Math.min(progress,target))} / ${taskProgressValue(task,target)}`}</span><b>${ready||claimed?'100%':`${Math.round(pct)}%`}</b></div><div class="gt-progress-track" role="progressbar" aria-valuemin="0" aria-valuemax="${target}" aria-valuenow="${Math.min(progress,target)}"><span class="gt-progress-fill" style="width:${ready||claimed?100:pct.toFixed(1)}%"></span></div>${series}<div class="gt-task-foot"><span class="gt-reward"><span>${end?`⏱ ${esc(end)} · `:''}Награда</span><b>${esc(task.rewardLabel||'Награда задания')}</b></span>${action}</div></article>`;
   }
 
   function filtersMarkup(){

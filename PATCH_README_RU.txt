@@ -1,80 +1,76 @@
-СЛАДКИЙ ЗАБЕГ — ФИНАЛЬНЫЙ ПАТЧ ПЕРЕНОСА ЗАДАНИЙ В ИГРУ
+СЛАДКИЙ ЗАБЕГ — GAME TASK TYPES, ЭТАП 1
 Дата: 2026-09-30
 
-Этот патч кумулятивный: он включает предыдущие исправления Task Hub
-(recovery зависших claim, игровую аналитику просмотра заданий и read/unread)
-и финальную зачистку старой player-side реализации заданий в Telegram-боте.
+Что добавлено
+=============
 
-ИЗМЕНЁННЫЕ ФАЙЛЫ
-- src/worker.js
-- assets/game-tasks.js
-- assets/game-tasks.css
-- index.html
+1. Единый server-side registry типов игровых заданий.
+   Он хранит свойства player-facing trigger'ов в одном месте: название,
+   повторяемость, формат прогресса и пресеты для админки.
 
-ЧТО СДЕЛАНО В ФИНАЛЬНОЙ ЗАЧИСТКЕ
-1. Удалён старый Telegram UI событийных заданий:
-   - showPlayerTasks()
-   - showPlayerSeasonTasks()
-   - botSeasonTaskStatus()
-   - связанный formatter v71TaskProgressText()
+2. Шесть новых типов заданий:
+   - single_run_score      — набрать N очков за один забег;
+   - collect_zefir         — собрать N зефирок суммарно;
+   - collect_coffee        — собрать N кофе суммарно;
+   - single_run_duration   — продержаться N секунд за один забег;
+   - play_time             — провести N секунд суммарно в забегах;
+   - new_records           — установить N новых рекордов.
 
-2. Удалён старый Telegram claim обычного задания:
-   - claimPlayerTask()
+3. Прогресс новых типов считается только на сервере по
+   player_economy_run_ledger.
+   Для одного окна задания используется один агрегирующий D1-запрос,
+   результат переиспользуется между новыми типами заданий.
 
-3. Удалена старая player-side Telegram реализация серий:
-   - v77AppendPlayerSeries()
-   - claimV77Series()
+4. Для зачёта gameplay-прогресса используются серверно завершённые забеги,
+   прошедшие минимальную длительность LEADERBOARD_MIN_RUN_SECONDS.
+   Прогресс специально не зависит от accepted_rating, поэтому задания не
+   перестают считаться во время обслуживания рейтинга или смены сезона.
 
-4. Удалён старый bot-only writer аналитики:
-   - v77TrackTaskExposure()
-   Аналитика теперь записывается из /api/tasks/state игрового Task Hub.
+5. Добавлено поле automation_chains.task_params_json.
+   Сейчас шесть базовых типов не требуют дополнительных параметров.
+   Поле является фундаментом для следующего расширения: конкретные скины,
+   бустеры, типы кейсов и другие фильтры без добавления отдельных колонок.
 
-5. Сохранена совместимость со старыми сообщениями Telegram.
-   Старые callback-кнопки:
-   - tasks_hub
-   - tasks_season
-   - tasks_events
-   - tasks_refresh
-   - tasks_page:...
-   - task_claim:...
-   - v77_series_claim:...
-   больше ничего не считают и не выдают. Они только открывают новый Task Hub.
+6. Owner-панель умеет создавать и редактировать новые типы заданий.
+   Новые gameplay trigger'ы доступны только когда запись является заданием,
+   и не превращаются в обычную cron-автоматизацию.
 
-6. v77PlayerSeriesState() оставлен намеренно — его использует новая игровая
-   server-authoritative система серий заданий.
+7. В игровом Task Hub длительность отображается человекочитаемо
+   (секунды / минуты / часы), а не как сырое число.
 
-7. Админская система создания/редактирования заданий и серий не удалялась.
-   automation_chains, task_series и связанные production-таблицы остаются.
+Важно
+=====
 
-8. Никакая критическая выдача не перенесена на клиент.
-   Получение наград остаётся через /api/tasks/claim и reward delivery queue.
+Патч НЕ создаёт и НЕ включает новые задания автоматически.
+Он только добавляет production-возможности. Конкретные задания можно
+создавать после деплоя через Owner-панель.
 
-MIGRATION
-Новая migration не требуется.
+Патч содержит migration:
+  migrations/0104_game_task_types_stage1.sql
 
-УСТАНОВКА
-Скачать ZIP в папку Downloads и выполнить из КОРНЯ проекта:
+Migration обязательна перед production deploy нового Worker.
 
-unzip -o "$HOME/Downloads/sweet-run-task-transfer-final-20260930.zip" -d .
+Установка
+=========
 
-После установки:
+Находясь в корне проекта, после скачивания ZIP в папку Downloads:
 
-git status
-git diff --check
-git add -A
-git commit -m "Finish moving player tasks into game"
-git push origin main
-./update.sh
+  unzip -o "$HOME/Downloads/sweet-run-task-types-stage1-20260930.zip" -d .
 
-ПРОВЕРКИ ПАТЧА
-- node --check src/worker.js: OK
-- strict Worker module syntax: OK
-- operation system checks: OK (424)
-- migration history: OK (102 files)
-- assets/game-tasks.js syntax: OK
-- index srcdoc integrity: OK
-- diff whitespace check: OK
+Проверить изменения:
 
-Полный npm run check:fast в исходной ZIP-сборке не запускается из-за отсутствующего
-.github/workflows/production-gate.yml в самой переданной сборке. Это ограничение
-исходного архива, не ошибка данного патча.
+  git status
+  git diff --check
+
+Применить D1 migration в production:
+
+  npx --yes wrangler@4.131.1 d1 migrations apply zefirok-rewards --remote
+
+Затем сохранить изменения в Git и выполнить штатный deploy:
+
+  git add -A
+  git commit -m "Add gameplay task types stage 1"
+  git push origin main
+  ./update.sh
+
+Не использовать npx wrangler deploy как обычный production-flow проекта.

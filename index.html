@@ -32652,6 +32652,15 @@ html &gt; body.zefirok-game-expanded{height:var(--zefirok-visible-height,100dvh)
   function taskIcon(task){if(task?.kind===&#x27;series&#x27;)return &#x27;🎯&#x27;;if(isDaily(task))return &#x27;🔥&#x27;;return &#x27;✨&#x27;;}
   function taskTag(task){if(task?.kind===&#x27;series&#x27;)return &#x27;Цепочка&#x27;;if(isDaily(task))return &#x27;Сегодня&#x27;;return &#x27;Событие&#x27;;}
   function fmt(n){try{return whole(n).toLocaleString(&#x27;ru-RU&#x27;);}catch{return String(whole(n));}}
+  function taskProgressValue(task,value){
+    const amount=whole(value);
+    if(String(task?.progressFormat||&#x27;&#x27;)!==&#x27;duration&#x27;)return fmt(amount);
+    if(amount&lt;60)return `${amount} сек`;
+    const hours=Math.floor(amount/3600),minutes=Math.floor((amount%3600)/60),seconds=amount%60;
+    if(hours)return `${hours} ч${minutes?` ${minutes} мин`:&#x27;&#x27;}`;
+    if(minutes)return `${minutes} мин${seconds?` ${seconds} сек`:&#x27;&#x27;}`;
+    return `${seconds} сек`;
+  }
   function plural(n,one,two,five){const value=Math.abs(whole(n))%100;const tail=value%10;if(value&gt;10&amp;&amp;value&lt;20)return five;if(tail===1)return one;if(tail&gt;=2&amp;&amp;tail&lt;=4)return two;return five;}
 
   function timeLeft(endsAt){
@@ -32751,7 +32760,7 @@ html &gt; body.zefirok-game-expanded{height:var(--zefirok-visible-height,100dvh)
     const task=nearestTask();
     if(!task)return &#x27;&#x27;;
     const ready=isReady(task),pending=Boolean(task?.pending)&amp;&amp;!task?.claimed,left=Math.max(0,whole(task.target)-whole(task.progress));
-    const status=pending?&#x27;Проверить выдачу&#x27;:ready?&#x27;Забрать&#x27;:left?`Осталось ${fmt(left)}`:&#x27;Проверить&#x27;;
+    const status=pending?&#x27;Проверить выдачу&#x27;:ready?&#x27;Забрать&#x27;:left?`Осталось ${taskProgressValue(task,left)}`:&#x27;Проверить&#x27;;
     const extra=timeLeft(task.endsAt);
     return `&lt;section class=&quot;gt-next${ready?&#x27; is-ready&#x27;:&#x27;&#x27;}&quot; aria-label=&quot;Ближайшая цель&quot;&gt;&lt;span class=&quot;gt-next-icon&quot;&gt;${ready?&#x27;🎁&#x27;:&#x27;🐾&#x27;}&lt;/span&gt;&lt;span class=&quot;gt-next-copy&quot;&gt;&lt;small&gt;${ready?&#x27;Награда готова&#x27;:&#x27;Ближайшая цель&#x27;}&lt;/small&gt;&lt;strong&gt;${esc(task.title||&#x27;Задание&#x27;)}&lt;/strong&gt;&lt;span&gt;${esc(ready?(task.rewardLabel||&#x27;Можно получить награду&#x27;):(extra?`До конца: ${extra}`:(task.description||&#x27;Продолжай играть&#x27;)))}&lt;/span&gt;&lt;/span&gt;&lt;span class=&quot;gt-next-status&quot;&gt;${esc(status)}&lt;/span&gt;&lt;/section&gt;`;
   }
@@ -32768,7 +32777,7 @@ html &gt; body.zefirok-game-expanded{height:var(--zefirok-visible-height,100dvh)
     else action=&#x27;&lt;span class=&quot;gt-state&quot;&gt;В процессе&lt;/span&gt;&#x27;;
     const steps=list(task.steps).slice(0,6);
     const series=steps.length?`&lt;div class=&quot;gt-series&quot; aria-label=&quot;Этапы цепочки&quot;&gt;${steps.map(step=&gt;`&lt;span&gt;${esc(step.title||&#x27;Этап&#x27;)}&lt;/span&gt;`).join(&#x27;&#x27;)}&lt;/div&gt;`:&#x27;&#x27;;
-    return `&lt;article class=&quot;gt-task${ready?&#x27; is-ready&#x27;:&#x27;&#x27;}${claimed?&#x27; is-claimed&#x27;:&#x27;&#x27;}&quot;&gt;&lt;div class=&quot;gt-task-head&quot;&gt;&lt;span class=&quot;gt-task-icon&quot; aria-hidden=&quot;true&quot;&gt;${taskIcon(task)}&lt;/span&gt;&lt;span class=&quot;gt-task-title&quot;&gt;&lt;strong&gt;${esc(task.title||&#x27;Задание&#x27;)}&lt;/strong&gt;&lt;span&gt;${esc(task.description||&#x27;Выполни условие и забери награду.&#x27;)}&lt;/span&gt;&lt;/span&gt;&lt;span class=&quot;gt-task-tag&quot;&gt;${taskTag(task)}&lt;/span&gt;&lt;/div&gt;&lt;div class=&quot;gt-progress-meta&quot;&gt;&lt;span&gt;${claimed?&#x27;Выполнено&#x27;:ready?&#x27;Цель выполнена&#x27;:`Прогресс ${fmt(Math.min(progress,target))} / ${fmt(target)}`}&lt;/span&gt;&lt;b&gt;${ready||claimed?&#x27;100%&#x27;:`${Math.round(pct)}%`}&lt;/b&gt;&lt;/div&gt;&lt;div class=&quot;gt-progress-track&quot; role=&quot;progressbar&quot; aria-valuemin=&quot;0&quot; aria-valuemax=&quot;${target}&quot; aria-valuenow=&quot;${Math.min(progress,target)}&quot;&gt;&lt;span class=&quot;gt-progress-fill&quot; style=&quot;width:${ready||claimed?100:pct.toFixed(1)}%&quot;&gt;&lt;/span&gt;&lt;/div&gt;${series}&lt;div class=&quot;gt-task-foot&quot;&gt;&lt;span class=&quot;gt-reward&quot;&gt;&lt;span&gt;${end?`⏱ ${esc(end)} · `:&#x27;&#x27;}Награда&lt;/span&gt;&lt;b&gt;${esc(task.rewardLabel||&#x27;Награда задания&#x27;)}&lt;/b&gt;&lt;/span&gt;${action}&lt;/div&gt;&lt;/article&gt;`;
+    return `&lt;article class=&quot;gt-task${ready?&#x27; is-ready&#x27;:&#x27;&#x27;}${claimed?&#x27; is-claimed&#x27;:&#x27;&#x27;}&quot;&gt;&lt;div class=&quot;gt-task-head&quot;&gt;&lt;span class=&quot;gt-task-icon&quot; aria-hidden=&quot;true&quot;&gt;${taskIcon(task)}&lt;/span&gt;&lt;span class=&quot;gt-task-title&quot;&gt;&lt;strong&gt;${esc(task.title||&#x27;Задание&#x27;)}&lt;/strong&gt;&lt;span&gt;${esc(task.description||&#x27;Выполни условие и забери награду.&#x27;)}&lt;/span&gt;&lt;/span&gt;&lt;span class=&quot;gt-task-tag&quot;&gt;${taskTag(task)}&lt;/span&gt;&lt;/div&gt;&lt;div class=&quot;gt-progress-meta&quot;&gt;&lt;span&gt;${claimed?&#x27;Выполнено&#x27;:ready?&#x27;Цель выполнена&#x27;:`Прогресс ${taskProgressValue(task,Math.min(progress,target))} / ${taskProgressValue(task,target)}`}&lt;/span&gt;&lt;b&gt;${ready||claimed?&#x27;100%&#x27;:`${Math.round(pct)}%`}&lt;/b&gt;&lt;/div&gt;&lt;div class=&quot;gt-progress-track&quot; role=&quot;progressbar&quot; aria-valuemin=&quot;0&quot; aria-valuemax=&quot;${target}&quot; aria-valuenow=&quot;${Math.min(progress,target)}&quot;&gt;&lt;span class=&quot;gt-progress-fill&quot; style=&quot;width:${ready||claimed?100:pct.toFixed(1)}%&quot;&gt;&lt;/span&gt;&lt;/div&gt;${series}&lt;div class=&quot;gt-task-foot&quot;&gt;&lt;span class=&quot;gt-reward&quot;&gt;&lt;span&gt;${end?`⏱ ${esc(end)} · `:&#x27;&#x27;}Награда&lt;/span&gt;&lt;b&gt;${esc(task.rewardLabel||&#x27;Награда задания&#x27;)}&lt;/b&gt;&lt;/span&gt;${action}&lt;/div&gt;&lt;/article&gt;`;
   }
 
   function filtersMarkup(){
