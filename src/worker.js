@@ -17282,14 +17282,6 @@ async function v71TaskProgress(env, row, telegramId, now = Math.floor(Date.now()
   return { value: Math.max(0, value), target, completed: value >= target, ...cycle };
 }
 
-function v71TaskProgressText(row, progress) {
-  if (row.trigger_type === "new_player_delay") {
-    const left = Math.max(0, progress.target - progress.value);
-    return progress.completed ? "условие выполнено" : `осталось примерно ${Math.max(1, Math.ceil(left / 60))} мин.`;
-  }
-  return `${Math.min(progress.value, progress.target).toLocaleString("ru-RU")} / ${progress.target.toLocaleString("ru-RU")}`;
-}
-
 function gameTaskProfileXp(row, reward, series = false) {
   if (reward.kind === "profile_xp") return 0;
   if (Number.isFinite(Number(reward.profileXp))) return Math.max(0, Math.min(50, Math.floor(Number(reward.profileXp))));
@@ -17705,198 +17697,11 @@ async function showPlayerTasksHub(chatId, user, env) {
   ] });
 }
 
-function botSeasonTaskStatus(task) {
-  if (task.claimed) return "✅ Получено";
-  if (task.locked) return "🔒 Нужен премиум";
-  if (task.complete) return "🎁 Можно забрать";
-  return "⏳ В процессе";
-}
-
-async function showPlayerSeasonTasks(chatId, user, env) {
-  try {
-    await ensureSeasonPassSchema(env);
-    const telegramId = String(user?.id || "");
-    const [flag, forcedClosure, season] = await Promise.all([
-      getFeatureFlag(env, "battle_pass"),
-      getSeasonPassForcedClosure(env),
-      loadSeasonPassSeason(env)
-    ]);
-    if (forcedClosure || !season) {
-      await sendTelegramMessage(env, chatId, `<b>🎟 Сезонные задания</b>
-
-Сезонный пропуск сейчас недоступен. Когда новый сезон будет открыт, ежедневные и недельные задания появятся здесь автоматически.`, { inline_keyboard: [[{ text: "✨ Событийные задания", callback_data: "tasks_events" }], [{ text: "⬅️ Все задания", callback_data: "tasks_hub" }], [{ text: "🏠 Главное меню", callback_data: "menu:home" }]] });
-      return;
-    }
-    const mode = String(flag?.mode || "all");
-    if (mode !== "all") {
-      const access = await battlePassAudienceAccess(env, telegramId, flag);
-      if (!access.allowed) {
-        await sendTelegramMessage(env, chatId, `<b>🎟 Сезонные задания</b>
-
-Сезонный пропуск пока недоступен для этого аккаунта.`, { inline_keyboard: [[{ text: "⬅️ Все задания", callback_data: "tasks_hub" }], [{ text: "🏠 Главное меню", callback_data: "menu:home" }]] });
-        return;
-      }
-    }
-    const capabilities = seasonPassCapabilities(season);
-    if (season.status !== "active" || !capabilities.canClaimTasks) {
-      const statusText = season.status === "scheduled" ? "Сезон ещё не начался." : "Получение сезонных заданий сейчас закрыто.";
-      await sendTelegramMessage(env, chatId, `<b>🎟 ${escapeHtml(String(season.title || "Сезонный пропуск"))}</b>
-
-${statusText}
-
-Откройте пропуск, чтобы увидеть актуальные даты и состояние сезона.`, { inline_keyboard: [[{ text: "🎟 Открыть пропуск", web_app: { url: configuredSeasonPassTasksUrl(env) } }], [{ text: "✨ Событийные задания", callback_data: "tasks_events" }], [{ text: "⬅️ Все задания", callback_data: "tasks_hub" }]] });
-      return;
-    }
-    const player = await env.DB.prepare(`SELECT * FROM season_pass_players WHERE season_id=? AND telegram_id=? LIMIT 1`).bind(String(season.id), telegramId).first();
-    const payload = await buildSeasonPassTasksPayload(env, season, telegramId, player?.premium_tier || "none");
-    let xpMultiplier = 1;
-    if (player) {
-      try {
-        xpMultiplier = await seasonPassHasXpX2(env, season, telegramId, player) ? 2 : seasonPassTaskXpMultiplierForPlayer(season, player);
-      } catch { xpMultiplier = seasonPassTaskXpMultiplierForPlayer(season, player); }
-    }
-    const priority = (task) => task.complete && !task.claimed && !task.locked ? 0 : !task.claimed && !task.locked ? 1 : task.locked ? 2 : 3;
-    const periodRank = (task) => task.period === "daily" ? 0 : 1;
-    const ordered = [...payload.tasks].sort((a, b) => priority(a) - priority(b) || periodRank(a) - periodRank(b) || String(a.title).localeCompare(String(b.title), "ru"));
-    const visible = ordered.slice(0, 10);
-    const lines = visible.map((task) => {
-      const period = task.period === "weekly" ? "Недельное" : "Ежедневное";
-      const progress = `${Math.min(Number(task.progress || 0), Number(task.target || 1)).toLocaleString("ru-RU")} / ${Number(task.target || 1).toLocaleString("ru-RU")}`;
-      const xp = Math.max(1, Number(task.xp || 1)) * Math.max(1, Number(xpMultiplier || 1));
-      return `${botSeasonTaskStatus(task)} <b>${escapeHtml(task.title)}</b>
-${period}${task.premium ? " · Элит" : ""} · ${escapeHtml(progress)} · <b>+${xp.toLocaleString("ru-RU")} XP</b>`;
-    });
-    const hidden = Math.max(0, payload.tasks.length - visible.length);
-    const claimable = Number(payload.claimableCount || 0);
-    await sendTelegramMessage(env, chatId, `<b>🎟 ${escapeHtml(String(season.title || "Сезонный пропуск"))} · задания</b>
-
-${lines.join("\n\n") || "Активных сезонных заданий сейчас нет."}${hidden ? `
-
-<i>Ещё ${hidden.toLocaleString("ru-RU")} заданий доступны внутри сезонного пропуска.</i>` : ""}
-
-Готово к получению: <b>${claimable.toLocaleString("ru-RU")}</b>. Награды за сезонные задания забираются в самом пропуске, чтобы статус и XP синхронизировались с игрой.`, { inline_keyboard: [
-      [{ text: claimable > 0 ? `🎁 Забрать в пропуске · ${claimable}` : "🎟 Открыть все задания", web_app: { url: configuredSeasonPassTasksUrl(env) } }],
-      [{ text: "✨ Событийные задания", callback_data: "tasks_events" }],
-      [{ text: "⬅️ Все задания", callback_data: "tasks_hub" }, { text: "🏠 Главное меню", callback_data: "menu:home" }]
-    ] });
-  } catch (error) {
-    console.error("showPlayerSeasonTasks failed", error);
-    await sendTelegramMessage(env, chatId, `<b>🎟 Сезонные задания</b>
-
-Не удалось загрузить сезонные задания. Попробуйте ещё раз или откройте сезонный пропуск.`, { inline_keyboard: [[{ text: "🔄 Обновить", callback_data: "tasks_season" }], [{ text: "🎟 Открыть пропуск", web_app: { url: configuredSeasonPassTasksUrl(env) } }], [{ text: "⬅️ Все задания", callback_data: "tasks_hub" }]] });
-  }
-}
-
-async function showPlayerTasks(chatId, user, env, requestedPage = 0) {
-  await ensureV67Schema(env);
-  const now = Math.floor(Date.now() / 1000);
-  const profile = await env.DB.prepare(`SELECT telegram_id FROM admin_profile_state WHERE telegram_id=? LIMIT 1`).bind(String(user.id)).first();
-  if (!profile) {
-    await sendTelegramMessage(env, chatId, `<b>✨ Событийные задания</b>\n\nСначала один раз откройте игру, чтобы создать игровой профиль. После этого задания и прогресс появятся здесь.`, { inline_keyboard: [[{ text: "⬅️ Все задания", callback_data: "tasks_hub" }], [{ text: "🏠 Главное меню", callback_data: "menu:home" }]] });
-    return;
-  }
-  const allRows = (await env.DB.prepare(`SELECT * FROM automation_chains WHERE enabled=1 AND COALESCE(show_as_task,0)=1 AND action_type='reward' AND (task_starts_at=0 OR task_starts_at<=?) AND (task_ends_at=0 OR task_ends_at>?) ORDER BY task_sort ASC, updated_at DESC LIMIT 80`).bind(now,now).all()).results || [];
-  const rows = allRows.filter((row) => v71TaskTriggerSupported(row.trigger_type));
-  await ensureV77Schema(env);
-  const seriesCount = await env.DB.prepare(`SELECT COUNT(*) AS count FROM task_series WHERE enabled=1 AND (starts_at=0 OR starts_at<=?) AND (ends_at=0 OR ends_at>?)`).bind(now,now).first();
-  if (!rows.length && !Number(seriesCount?.count || 0)) {
-    await sendTelegramMessage(env, chatId, `<b>✨ Событийные задания</b>\n\nСейчас активных событийных заданий нет. Новые задания появятся здесь после публикации.`, { inline_keyboard: [[{ text: "🔄 Обновить", callback_data: "tasks_refresh" }], [{ text: "🎟 Сезонные задания", callback_data: "tasks_season" }], [{ text: "⬅️ Все задания", callback_data: "tasks_hub" }], [{ text: "🏠 Главное меню", callback_data: "menu:home" }]] });
-    return;
-  }
-  const pageSize = 6;
-  const pageCount = Math.max(1, Math.ceil(rows.length / pageSize));
-  const page = Math.max(0, Math.min(pageCount - 1, Math.floor(Number(requestedPage) || 0)));
-  const pageRows = rows.slice(page * pageSize, page * pageSize + pageSize);
-  const lines = [];
-  const buttons = [];
-  for (const row of pageRows) {
-    const progress = await v71TaskProgress(env, row, String(user.id), now);
-    await v77TrackTaskExposure(env, row, String(user.id), progress, now);
-    const claimKey = `${row.chain_key}:${user.id}:${progress.cycleKey}`;
-    const claim = await env.DB.prepare(`SELECT status FROM player_task_claims WHERE claim_key=? LIMIT 1`).bind(claimKey).first();
-    let alreadyCompleted = claim?.status === "claimed";
-    if (!alreadyCompleted && String(row.task_mode || "one_time") === "one_time") {
-      const execution = await env.DB.prepare(`SELECT 1 AS done FROM automation_chain_executions WHERE chain_key=? AND telegram_id=? AND status='completed' LIMIT 1`).bind(row.chain_key,String(user.id)).first();
-      alreadyCompleted = Boolean(execution?.done);
-    }
-    const reward = safeJson(row.action_json, {});
-    const status = alreadyCompleted ? "✅ Получено" : progress.completed ? "🎁 Награда готова" : "⏳ В процессе";
-    const description = String(row.task_description || row.description || v67AutomationTriggerLabel(row.trigger_type,row.trigger_value)).slice(0,180);
-    lines.push(`<b>${escapeHtml(row.title)}</b>\n${escapeHtml(description)}\nПрогресс: <b>${escapeHtml(v71TaskProgressText(row,progress))}</b>\nНаграда: <b>${escapeHtml(safeRewardDescription(reward))}</b>\n${status}`);
-    if (!alreadyCompleted && progress.completed) buttons.push([{ text: `🎁 Получить · ${String(row.title).slice(0,26)}`, callback_data: `task_claim:${row.chain_key}:${page}` }]);
-  }
-  if (page === 0) await v77AppendPlayerSeries(env, String(user.id), lines, buttons, now);
-  if (pageCount > 1) {
-    const nav = [];
-    if (page > 0) nav.push({ text: "← Назад", callback_data: `tasks_page:${page - 1}` });
-    nav.push({ text: `${page + 1}/${pageCount}`, callback_data: `tasks_page:${page}` });
-    if (page + 1 < pageCount) nav.push({ text: "Вперёд →", callback_data: `tasks_page:${page + 1}` });
-    buttons.push(nav);
-  }
-  buttons.push([{ text: "🔄 Обновить", callback_data: `tasks_refresh:${page}` }, { text: "🎟 Сезонные", callback_data: "tasks_season" }]);
-  buttons.push([{ text: "⬅️ Все задания", callback_data: "tasks_hub" }, { text: "🏠 Главное меню", callback_data: "menu:home" }]);
-  const pageLabel = pageCount > 1 ? ` · страница ${page + 1}/${pageCount}` : "";
-  await sendTelegramMessage(env, chatId, `<b>✨ Событийные задания${pageLabel}</b>\n\n${lines.join("\n\n") || "Нет доступных заданий."}\n\nПрогресс обновляется по данным сервера.`, { inline_keyboard: buttons });
-}
-
-async function claimPlayerTask(query, chainKey, env, requestedPage = 0) {
-  const chatId = query.message?.chat?.id;
-  await ensureV67Schema(env);
-  const now = Math.floor(Date.now() / 1000);
-  const row = await env.DB.prepare(`SELECT * FROM automation_chains WHERE chain_key=? AND enabled=1 AND COALESCE(show_as_task,0)=1 AND action_type='reward' LIMIT 1`).bind(String(chainKey)).first();
-  if (!row || !v71TaskTriggerSupported(row.trigger_type)) {
-    await answerCallback(env, query.id, "Задание уже недоступно.", true);
-    return;
-  }
-  const progress = await v71TaskProgress(env, row, String(query.from.id), now);
-  if (!progress.completed) {
-    await answerCallback(env, query.id, "Задание ещё не выполнено.", true);
-    await showPlayerTasks(chatId, query.from, env, requestedPage);
-    return;
-  }
-  if (String(row.task_mode || "one_time") === "one_time") {
-    const execution = await env.DB.prepare(`SELECT 1 AS done FROM automation_chain_executions WHERE chain_key=? AND telegram_id=? AND status='completed' LIMIT 1`).bind(row.chain_key,String(query.from.id)).first();
-    if (execution?.done) {
-      await answerCallback(env, query.id, "Эта награда уже была получена.", true);
-      await showPlayerTasks(chatId, query.from, env, requestedPage);
-      return;
-    }
-  }
-  const claimKey = `${row.chain_key}:${query.from.id}:${progress.cycleKey}`;
-  const reward = safeJson(row.action_json, {});
-  await env.DB.prepare(`INSERT OR IGNORE INTO player_task_claims(claim_key,chain_key,telegram_id,cycle_key,status,queue_id,reward_json,created_at,updated_at,claimed_at) VALUES(?,?,?,?, 'pending',0,?,?,?,0)`).bind(claimKey,row.chain_key,String(query.from.id),progress.cycleKey,JSON.stringify(reward),now,now).run();
-  let claim = await env.DB.prepare(`SELECT * FROM player_task_claims WHERE claim_key=? LIMIT 1`).bind(claimKey).first();
-  if (claim?.status === "claimed") {
-    await answerCallback(env, query.id, "Награда уже получена.", true);
-    await showPlayerTasks(chatId, query.from, env, requestedPage);
-    return;
-  }
-  let queueId = Number(claim?.queue_id || 0);
-  if (!queueId) {
-    queueId = await enqueueRewardDelivery(env,String(query.from.id),"task",claimKey,reward,String(reward.reason || row.title),"");
-    if (!queueId) {
-      const existing = await env.DB.prepare(`SELECT id FROM reward_delivery_queue WHERE source_type='task' AND source_id=? AND telegram_id=? AND reward_kind=? AND reward_id=? LIMIT 1`).bind(claimKey,String(query.from.id),String(reward.kind||""),String(reward.id||"")).first();
-      queueId = Number(existing?.id || 0);
-    }
-    await env.DB.prepare(`UPDATE player_task_claims SET queue_id=?,updated_at=? WHERE claim_key=?`).bind(queueId,now,claimKey).run();
-  }
-  await processRewardDeliveryQueue(env,10);
-  const queue = queueId ? await env.DB.prepare(`SELECT status,last_error FROM reward_delivery_queue WHERE id=? LIMIT 1`).bind(queueId).first() : null;
-  if (queue?.status === "delivered") {
-    await env.DB.prepare(`UPDATE player_task_claims SET status='claimed',claimed_at=?,updated_at=? WHERE claim_key=?`).bind(now,now,claimKey).run();
-    await answerCallback(env, query.id, "Награда получена!");
-  } else {
-    await env.DB.prepare(`UPDATE player_task_claims SET status='pending',updated_at=? WHERE claim_key=?`).bind(now,claimKey).run();
-    await answerCallback(env, query.id, queue?.last_error ? "Награда в очереди доставки. Попробуйте обновить позже." : "Награда обрабатывается.", true);
-  }
-  await showPlayerTasks(chatId, query.from, env, requestedPage);
-}
-
 async function handlePlayerTaskCallback(query, env) {
   const data = String(query.data || "");
   const chatId = query.message?.chat?.id;
   if (!chatId) return false;
-  if (/^(tasks_(hub|season|events|refresh|page)(:|$)|task_claim:)/.test(data)) {
+  if (/^(tasks_(hub|season|events|refresh|page)(:|$)|task_claim:|v77_series_claim:)/.test(data)) {
     await answerCallback(env,query.id,"Задания перенесены в игру");
     await showPlayerTasksHub(chatId,query.from,env);
     return true;
@@ -39828,26 +39633,6 @@ async function v77PlayerSeriesState(env,series,telegramId,now=Math.floor(Date.no
   return {steps,details,completed,total:steps.length,current,done:steps.length>0&&completed>=steps.length,cycleKey:"once"};
 }
 
-async function v77AppendPlayerSeries(env,telegramId,lines,buttons,now=Math.floor(Date.now()/1000)){
-  await ensureV77Schema(env);
-  const seriesRows=(await env.DB.prepare(`SELECT * FROM task_series WHERE enabled=1 AND (starts_at=0 OR starts_at<=?) AND (ends_at=0 OR ends_at>?) ORDER BY sort_order,updated_at DESC LIMIT 8`).bind(now,now).all()).results||[];
-  for(const series of seriesRows){const state=await v77PlayerSeriesState(env,series,telegramId,now);const claimKey=`${series.series_key}:${telegramId}:${state.cycleKey}`;const claim=await env.DB.prepare(`SELECT status FROM player_task_series_claims WHERE claim_key=? LIMIT 1`).bind(claimKey).first();const reward=safeJson(series.final_reward_json,{});const status=claim?.status==="claimed"?"✅ Финальная награда получена":state.done?"🎁 Финальная награда готова":`⏳ Этапов выполнено: ${state.completed}/${state.total}`;const current=state.current?`\nСейчас: <b>${escapeHtml(state.current.step.title)}</b> · ${escapeHtml(v71TaskProgressText(state.current.step,state.current.progress))}`:"";lines.push(`<b>🧩 ${escapeHtml(series.title)}</b>\n${status}${current}\nФинал: <b>${escapeHtml(safeRewardDescription(reward)||"без награды")}</b>`);if(state.done&&claim?.status!=="claimed"&&reward?.kind)buttons.push([{text:`🎁 Финал · ${String(series.title).slice(0,26)}`,callback_data:`v77_series_claim:${series.series_key}`}]);}
-  return seriesRows.length;
-}
-
-async function claimV77Series(query,key,env){
-  const chatId=query.message?.chat?.id;await ensureV77Schema(env);const now=Math.floor(Date.now()/1000);const series=await env.DB.prepare(`SELECT * FROM task_series WHERE series_key=? AND enabled=1 LIMIT 1`).bind(String(key)).first();if(!series){await answerCallback(env,query.id,"Серия недоступна.",true);return;}
-  const state=await v77PlayerSeriesState(env,series,String(query.from.id),now);if(!state.done){await answerCallback(env,query.id,"Не все этапы выполнены.",true);return;}
-  const reward=safeJson(series.final_reward_json,{});if(!reward?.kind){await answerCallback(env,query.id,"Финальная награда не настроена.",true);return;}
-  const claimKey=`${series.series_key}:${query.from.id}:${state.cycleKey}`;await env.DB.prepare(`INSERT OR IGNORE INTO player_task_series_claims(claim_key,series_key,telegram_id,cycle_key,status,queue_id,created_at,updated_at,claimed_at) VALUES(?,?,?,?, 'pending',0,?,?,0)`).bind(claimKey,series.series_key,String(query.from.id),state.cycleKey,now,now).run();let claim=await env.DB.prepare(`SELECT * FROM player_task_series_claims WHERE claim_key=?`).bind(claimKey).first();if(claim?.status==="claimed"){await answerCallback(env,query.id,"Награда уже получена.",true);return;}
-  let queueId=Number(claim?.queue_id||0);if(!queueId){queueId=await enqueueRewardDelivery(env,String(query.from.id),"task_series",claimKey,reward,String(reward.reason||series.title),"");await env.DB.prepare(`UPDATE player_task_series_claims SET queue_id=?,updated_at=? WHERE claim_key=?`).bind(queueId,now,claimKey).run();}
-  await processRewardDeliveryQueue(env,10);const queue=queueId?await env.DB.prepare(`SELECT status,last_error FROM reward_delivery_queue WHERE id=?`).bind(queueId).first():null;if(queue?.status==="delivered"){await env.DB.prepare(`UPDATE player_task_series_claims SET status='claimed',claimed_at=?,updated_at=? WHERE claim_key=?`).bind(now,now,claimKey).run();await answerCallback(env,query.id,"Финальная награда получена!");}else await answerCallback(env,query.id,"Награда находится в очереди доставки.",true);await showPlayerTasks(chatId,query.from,env);
-}
-
-async function v77TrackTaskExposure(env,row,telegramId,progress,now=Math.floor(Date.now()/1000)){
-  await ensureV77Schema(env);await env.DB.prepare(`INSERT INTO task_exposure_log(chain_key,telegram_id,cycle_key,first_seen_at,last_seen_at,progress_value,target_value,completed_at) VALUES(?,?,?,?,?,?,?,?) ON CONFLICT(chain_key,telegram_id,cycle_key) DO UPDATE SET last_seen_at=excluded.last_seen_at,progress_value=excluded.progress_value,target_value=excluded.target_value,completed_at=CASE WHEN task_exposure_log.completed_at>0 THEN task_exposure_log.completed_at ELSE excluded.completed_at END`).bind(row.chain_key,String(telegramId),progress.cycleKey,now,now,Number(progress.value||0),Number(progress.target||1),progress.completed?now:0).run();
-}
-
 const V77_CALENDAR_CACHE_TTL_MS=60*1000;
 let v77CalendarCache={html:"",expiresAt:0};
 async function showV77Calendar(chatId,user,env){
@@ -40175,7 +39960,6 @@ async function handleV77Callback(query,env){const data=String(query.data||"");co
   if(data==="v77_series_tasks_done"){const w=await getStaffWorkflow(query.from.id,env);if(!w||w.flow_type!=="v77_series_create"||(w.data.selected||[]).length<2){await answerCallback(env,query.id,"Выберите минимум два задания.",true);return true;}await updateStaffWorkflow(query.from.id,{step:"reward",data:w.data},env);await answerCallback(env,query.id,"Выберите финальную награду.");await sendTelegramMessage(env,chatId,"<b>Финальная награда серии</b>",{inline_keyboard:[[{text:"📦 Обычный",callback_data:"v77_series_reward:case_small"},{text:"🥈 Серебряный",callback_data:"v77_series_reward:case_sweet"}],[{text:"🥇 Золотой",callback_data:"v77_series_reward:case_gold"},{text:"🔮 Мифический",callback_data:"v77_series_reward:case_mythic"},{text:"💎 Легендарный",callback_data:"v77_series_reward:case_legendary"}],[{text:"⭐ 500",callback_data:"v77_series_reward:points_500"},{text:"☕ 50",callback_data:"v77_series_reward:coffee_50"}],[{text:"❌ Отменить",callback_data:"v77_series_cancel"}]]});return true;}
   const reward=data.match(/^v77_series_reward:(case_small|case_sweet|case_gold|case_mythic|case_legendary|points_500|coffee_50)$/);if(reward){const w=await getStaffWorkflow(query.from.id,env);if(!w||w.flow_type!=="v77_series_create")return true;const now=Math.floor(Date.now()/1000),key=`series_${now.toString(36)}_${String(query.from.id).slice(-6)}`;const action=v67AutomationRewardPreset(reward[1],`Финал серии «${w.data.title}»`);await env.DB.prepare(`INSERT INTO task_series(series_key,title,description,enabled,completion_mode,final_reward_json,task_mode,starts_at,ends_at,sort_order,created_at,updated_at,updated_by) VALUES(?,?,?,0,?,?,'one_time',0,0,100,?,?,?)`).bind(key,w.data.title,"",w.data.mode||"ordered",JSON.stringify(action),now,now,String(query.from.id)).run();await env.DB.batch((w.data.selected||[]).map((chainKey,index)=>env.DB.prepare(`INSERT INTO task_series_steps(series_key,step_order,chain_key) VALUES(?,?,?)`).bind(key,index+1,chainKey)));await clearStaffWorkflow(query.from.id,env);await answerCallback(env,query.id,"Серия создана и выключена.");await showV77SeriesDetails(chatId,query.from,key,env);return true;}
   const seriesOpen=data.match(/^v77_series_open:([a-z0-9_]+)$/);if(seriesOpen){await answerCallback(env,query.id,"Открываю серию.");await showV77SeriesDetails(chatId,query.from,seriesOpen[1],env);return true;}const seriesToggle=data.match(/^v77_series_toggle:([a-z0-9_]+)$/);if(seriesToggle){const access=await requireV77OperationsAccess(chatId,query.from,env);if(!access)return true;const row=await env.DB.prepare(`SELECT * FROM task_series WHERE series_key=?`).bind(seriesToggle[1]).first();const broken=await env.DB.prepare(`SELECT COUNT(*) AS count FROM task_series_steps x LEFT JOIN automation_chains c ON c.chain_key=x.chain_key WHERE x.series_key=? AND (c.chain_key IS NULL OR c.enabled=0 OR c.show_as_task=0)`).bind(seriesToggle[1]).first();if(!Number(row?.enabled)&&Number(broken?.count||0)>0){await answerCallback(env,query.id,"Нельзя включить: этапы выключены или скрыты.",true);return true;}await env.DB.prepare(`UPDATE task_series SET enabled=?,updated_at=?,updated_by=? WHERE series_key=?`).bind(Number(row.enabled)?0:1,Math.floor(Date.now()/1000),String(query.from.id),seriesToggle[1]).run();await answerCallback(env,query.id,Number(row.enabled)?"Серия выключена.":"Серия включена.");await showV77SeriesDetails(chatId,query.from,seriesToggle[1],env);return true;}
-  const seriesClaim=data.match(/^v77_series_claim:([a-z0-9_]+)$/);if(seriesClaim){await answerCallback(env,query.id,"Задания перенесены в игру");await showPlayerTasksHub(chatId,query.from,env);return true;}
   if(data==="v77_calendar"){await answerCallback(env,query.id,"Календарь обновлён.");await showV77Calendar(chatId,query.from,env);return true;}
   const feedback=data.match(/^v77_feedback:(new|important|bug|resolved|spam|all):(\d+)$/);if(feedback){await answerCallback(env,query.id,"Отзывы обновлены.");await showV77Feedback(chatId,query.from,feedback[1],Number(feedback[2]),env);return true;}const fbSet=data.match(/^v77_fb_set:([^:]+):(\d{4,20}):(important|bug|resolved|spam)$/);if(fbSet){const access=await requireV77OperationsAccess(chatId,query.from,env);if(!access)return true;const now=Math.floor(Date.now()/1000);await env.DB.prepare(`INSERT INTO poll_comment_moderation(poll_id,telegram_id,status,tag,note,updated_at,updated_by) VALUES(?,?,?,'','',?,?) ON CONFLICT(poll_id,telegram_id) DO UPDATE SET status=excluded.status,updated_at=excluded.updated_at,updated_by=excluded.updated_by`).bind(fbSet[1],fbSet[2],fbSet[3],now,String(query.from.id)).run();await answerCallback(env,query.id,"Статус обновлён.");await showV77Feedback(chatId,query.from,"new",0,env);return true;}
   if(data==="v77_notify"){await answerCallback(env,query.id,"Настройки обновлены.");await showV77NotificationPolicy(chatId,query.from,env);return true;}if(data==="v77_notify_pause"){const access=await requireV77OperationsAccess(chatId,query.from,env);if(!access)return true;const p=await env.DB.prepare(`SELECT paused FROM player_notification_policy WHERE id=1`).first();await env.DB.prepare(`UPDATE player_notification_policy SET paused=?,updated_at=?,updated_by=? WHERE id=1`).bind(Number(p.paused)?0:1,Math.floor(Date.now()/1000),String(query.from.id)).run();await answerCallback(env,query.id,Number(p.paused)?"Уведомления возобновлены.":"Уведомления приостановлены.");await showV77NotificationPolicy(chatId,query.from,env);return true;}const nMax=data.match(/^v77_notify_max:(1|3|5)$/);if(nMax){await env.DB.prepare(`UPDATE player_notification_policy SET max_per_day=?,updated_at=?,updated_by=? WHERE id=1`).bind(Number(nMax[1]),Math.floor(Date.now()/1000),String(query.from.id)).run();await answerCallback(env,query.id,"Лимит изменён.");await showV77NotificationPolicy(chatId,query.from,env);return true;}const nGap=data.match(/^v77_notify_gap:(900|3600|10800)$/);if(nGap){await env.DB.prepare(`UPDATE player_notification_policy SET min_gap_seconds=?,updated_at=?,updated_by=? WHERE id=1`).bind(Number(nGap[1]),Math.floor(Date.now()/1000),String(query.from.id)).run();await answerCallback(env,query.id,"Интервал изменён.");await showV77NotificationPolicy(chatId,query.from,env);return true;}if(data==="v77_notify_process"){await processV77NotificationQueue(env,20);await answerCallback(env,query.id,"Очередь обработана.");await showV77NotificationPolicy(chatId,query.from,env);return true;}
