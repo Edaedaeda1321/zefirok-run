@@ -17645,12 +17645,30 @@ async function gameTaskView(env, row, telegramId, now, series = false, context =
     description:String(row.task_description || row.description || ""),
     mode:series ? "series" : String(row.task_mode || "one_time"),
     triggerType:series ? "" : String(row.trigger_type || ""),
+    seriesMode:series ? String(row.completion_mode || "ordered") : undefined,
     progress:value, target, progressFormat:gameTaskTriggerProgressFormat(row.trigger_type), complete, claimed,
     pending:Boolean(claim && !claimed),
     reward, rewardLabel:gameTaskRewardLabel(reward),
     endsAt:Number(series ? row.ends_at : row.task_ends_at) || (row.task_mode === "daily" ? Number(progress.startsAt || 0) + V67_DAY : 0),
     unread:complete && !claimed && !Number(receipt?.read_at || 0),
-    steps:series ? progress.steps.map((step) => ({ key:String(step.chain_key), title:String(step.title || "Этап") })) : undefined
+    steps:series ? progress.steps.map((step) => {
+      const stepKey=String(step.chain_key || "");
+      const detail=Array.isArray(progress.details) ? progress.details.find((item)=>String(item?.step?.chain_key || "")===stepKey) : null;
+      const stepProgress=detail?.progress || null;
+      const currentKey=String(progress.current?.step?.chain_key || "");
+      const done=Boolean(stepProgress?.completed);
+      const current=!complete && currentKey===stepKey;
+      const locked=String(row.completion_mode || "ordered")==="ordered" && !done && !current && !stepProgress;
+      return {
+        key:stepKey,
+        title:String(step.title || "Этап"),
+        done,current,locked,
+        progress:Math.max(0,Number(stepProgress?.value || 0)),
+        target:Math.max(1,Number(stepProgress?.target || step.trigger_value || 1)),
+        triggerType:String(step.trigger_type || ""),
+        progressFormat:gameTaskTriggerProgressFormat(step.trigger_type)
+      };
+    }) : undefined
   };
 }
 

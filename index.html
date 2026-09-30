@@ -11987,7 +11987,7 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
 #zefirok-maltipoo-runner .tasks-entry__badge[hidden]{display:none!important}
 #zefirok-maltipoo-runner .tasks-entry.has-ready{border-color:rgba(226,126,165,.68);background:linear-gradient(145deg,#fff8fb 0%,#ffe5ef 54%,#ffdae8 100%)}
 &lt;/style&gt;
-&lt;button class=&quot;tasks-entry&quot; data-tasks-open type=&quot;button&quot; aria-label=&quot;Открыть задания&quot;&gt;&lt;span class=&quot;tasks-entry__icon&quot; aria-hidden=&quot;true&quot;&gt;&lt;img src=&quot;/assets/ui/icon_quest_game.webp&quot; alt=&quot;&quot;&gt;&lt;/span&gt;&lt;span class=&quot;tasks-entry__copy&quot;&gt;&lt;strong&gt;Задания&lt;/strong&gt;&lt;small data-tasks-summary&gt;Цели, награды и XP профиля&lt;/small&gt;&lt;/span&gt;&lt;span class=&quot;tasks-entry__chevron&quot; aria-hidden=&quot;true&quot;&gt;›&lt;/span&gt;&lt;b class=&quot;tasks-entry__badge&quot; data-tasks-badge hidden&gt;0&lt;/b&gt;&lt;/button&gt;
+&lt;button class=&quot;tasks-entry&quot; data-tasks-open type=&quot;button&quot; aria-label=&quot;Открыть задания&quot;&gt;&lt;span class=&quot;tasks-entry__icon&quot; aria-hidden=&quot;true&quot;&gt;&lt;img src=&quot;/assets/ui/icon_quest_game.webp&quot; alt=&quot;&quot;&gt;&lt;/span&gt;&lt;span class=&quot;tasks-entry__copy&quot;&gt;&lt;span class=&quot;tasks-entry__title-row&quot;&gt;&lt;strong&gt;Задания&lt;/strong&gt;&lt;em class=&quot;tasks-entry__new&quot; data-tasks-new hidden&gt;НОВОЕ ✨&lt;/em&gt;&lt;/span&gt;&lt;small data-tasks-summary&gt;Цели, награды и XP профиля&lt;/small&gt;&lt;/span&gt;&lt;span class=&quot;tasks-entry__chevron&quot; aria-hidden=&quot;true&quot;&gt;›&lt;/span&gt;&lt;b class=&quot;tasks-entry__badge&quot; data-tasks-badge hidden&gt;0&lt;/b&gt;&lt;/button&gt;
 &lt;div class=&quot;stage&quot; data-stage=&quot;&quot;&gt;
 &lt;button aria-label=&quot;Развернуть игру на весь экран&quot; aria-pressed=&quot;false&quot; class=&quot;game-expand-toggle&quot; data-game-expand-toggle title=&quot;На весь экран&quot; type=&quot;button&quot;&gt;
 &lt;svg aria-hidden=&quot;true&quot; class=&quot;game-expand-icon game-expand-icon--expand&quot; viewBox=&quot;0 0 24 24&quot;&gt;&lt;path d=&quot;M8 3H3v5M16 3h5v5M8 21H3v-5M16 21h5v-5&quot;/&gt;&lt;/svg&gt;
@@ -32494,7 +32494,7 @@ html &gt; body.zefirok-game-expanded{height:var(--zefirok-visible-height,100dvh)
   scheduleMaybe(700);
 })();
 &lt;/script&gt;
-&lt;style id=&quot;zefirok-game-tasks-inline-style-v11&quot;&gt;
+&lt;style id=&quot;zefirok-game-tasks-inline-style-v12&quot;&gt;
 /* Sweet Run task hub UI. Client presentation only; task state/rewards stay server-authoritative. */
 #zefirok-maltipoo-runner [data-screen=&quot;tasks&quot;]{
   --gt-ink:#603d4a;
@@ -32513,38 +32513,45 @@ html &gt; body.zefirok-game-expanded{height:var(--zefirok-visible-height,100dvh)
 }
 #zefirok-maltipoo-runner [data-screen=&quot;tasks&quot;] button{font:inherit;-webkit-tap-highlight-color:transparent}
 #zefirok-maltipoo-runner .tasks-entry{
-  position:relative;width:100%;min-height:70px;margin:8px 0 12px;padding:12px 54px 12px 14px;
+  position:relative;isolation:isolate;overflow:visible;width:100%;min-height:72px;margin:8px 0 12px;padding:12px 56px 12px 14px;
   display:grid;grid-template-columns:52px minmax(0,1fr);align-items:center;gap:12px;
   border:1px solid rgba(233,180,198,.72);border-radius:22px;
   background:linear-gradient(145deg,#fff8fb 0%,#fff1f6 100%);color:#6b4050;text-align:left;
   box-shadow:0 8px 20px rgba(123,69,89,.08);cursor:pointer;
-  transition:transform .14s ease,box-shadow .14s ease,opacity .14s ease,border-color .14s ease;
+  transition:transform .14s ease,box-shadow .18s ease,opacity .14s ease,border-color .18s ease,background .18s ease;
 }
+#zefirok-maltipoo-runner .tasks-entry:before{content:&quot;✦&quot;;position:absolute;z-index:-1;right:42px;top:7px;color:rgba(207,146,54,0);font-size:18px;transform:rotate(12deg) scale(.8);transition:.18s ease;pointer-events:none}
 #zefirok-maltipoo-runner .tasks-entry:active{transform:translateY(1px) scale(.995)}
 #zefirok-maltipoo-runner .tasks-entry[hidden]{display:none!important}
 #zefirok-maltipoo-runner .tasks-entry__icon{
   width:52px;height:52px;display:grid;place-items:center;border-radius:16px;
-  background:linear-gradient(145deg,#fff,#ffeaf2);box-shadow:inset 0 0 0 1px rgba(224,143,174,.18);overflow:hidden
+  background:linear-gradient(145deg,#fff,#ffeaf2);box-shadow:inset 0 0 0 1px rgba(224,143,174,.18);overflow:hidden;transition:box-shadow .18s ease,transform .18s ease
 }
 #zefirok-maltipoo-runner .tasks-entry__icon img{display:block;width:40px;height:40px;object-fit:contain}
 #zefirok-maltipoo-runner .tasks-entry__copy{display:grid;gap:4px;min-width:0}
+#zefirok-maltipoo-runner .tasks-entry__title-row{display:flex;align-items:center;gap:7px;min-width:0}
 #zefirok-maltipoo-runner .tasks-entry__copy strong{font-size:14px;line-height:1.1;font-weight:950;color:#7a3151}
+#zefirok-maltipoo-runner .tasks-entry__new{display:inline-flex;align-items:center;min-height:19px;padding:3px 7px;border-radius:999px;background:linear-gradient(145deg,#fff0c9,#f7d77c);color:#8d6118;font-size:7px;line-height:1;font-style:normal;font-weight:950;letter-spacing:.045em;white-space:nowrap;box-shadow:0 3px 8px rgba(177,121,29,.10)}
+#zefirok-maltipoo-runner .tasks-entry__new[hidden]{display:none!important}
 #zefirok-maltipoo-runner .tasks-entry__copy small{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#8f6b79;font-size:9px;line-height:1.25;font-weight:750}
 #zefirok-maltipoo-runner .tasks-entry__chevron{
   position:absolute;right:16px;top:50%;transform:translateY(-50%);
   color:#df6f9b;font-size:20px;font-weight:950;line-height:1
 }
 #zefirok-maltipoo-runner .tasks-entry__badge{
-  position:absolute;right:12px;top:-8px;min-width:26px;height:26px;padding:0 7px;box-sizing:border-box;
+  position:absolute;right:11px;top:-8px;min-width:27px;height:27px;padding:0 7px;box-sizing:border-box;
   display:grid;place-items:center;border:2px solid #fff;border-radius:999px;
-  background:linear-gradient(145deg,#f28db2,#dd5f91);color:#fff;font-size:11px;font-weight:950;
-  box-shadow:0 5px 12px rgba(172,65,107,.2)
+  background:linear-gradient(145deg,#f1cb63,#d79b2d);color:#664713;font-size:11px;font-weight:950;
+  box-shadow:0 5px 13px rgba(167,112,25,.22)
 }
 #zefirok-maltipoo-runner .tasks-entry__badge[hidden]{display:none!important}
-#zefirok-maltipoo-runner .tasks-entry.has-ready{border-color:rgba(226,126,165,.68);background:linear-gradient(145deg,#fff8fb 0%,#ffe5ef 54%,#ffdae8 100%)}
-#zefirok-maltipoo-runner .tasks-entry.has-unread .tasks-entry__icon{box-shadow:inset 0 0 0 1px rgba(224,143,174,.28),0 0 0 4px rgba(240,139,177,.10)}
-#zefirok-maltipoo-runner .tasks-entry.has-unread .tasks-entry__badge{animation:gtTaskBadgePulse 1.8s ease-in-out infinite}
-@keyframes gtTaskBadgePulse{0%,100%{transform:scale(1)}50%{transform:scale(1.09)}}
+#zefirok-maltipoo-runner .tasks-entry.has-ready{border-color:rgba(224,169,74,.58);background:radial-gradient(circle at 92% 7%,rgba(255,225,146,.38),transparent 32%),linear-gradient(145deg,#fff9fb 0%,#ffe9f1 58%,#fff2d7 100%);box-shadow:0 10px 24px rgba(144,84,70,.10)}
+#zefirok-maltipoo-runner .tasks-entry.has-ready:before{color:rgba(207,146,54,.48);transform:rotate(12deg) scale(1)}
+#zefirok-maltipoo-runner .tasks-entry.has-unread{border-color:rgba(219,108,151,.68);box-shadow:0 10px 26px rgba(177,72,116,.13),0 0 0 3px rgba(238,139,177,.07)}
+#zefirok-maltipoo-runner .tasks-entry.has-unread .tasks-entry__icon{box-shadow:inset 0 0 0 1px rgba(224,143,174,.30),0 0 0 4px rgba(240,139,177,.10);animation:gtTaskIconPulse 2.2s ease-in-out infinite}
+#zefirok-maltipoo-runner .tasks-entry.has-unread .tasks-entry__new{animation:gtTaskNewPulse 1.9s ease-in-out infinite}
+@keyframes gtTaskIconPulse{0%,100%{transform:scale(1)}50%{transform:scale(1.035)}}
+@keyframes gtTaskNewPulse{0%,100%{box-shadow:0 3px 8px rgba(177,121,29,.10)}50%{box-shadow:0 4px 12px rgba(177,121,29,.24)}}
 
 #zefirok-maltipoo-runner .gt-shell{display:grid;gap:11px}
 #zefirok-maltipoo-runner .gt-topbar{display:grid;grid-template-columns:40px minmax(0,1fr) 40px;align-items:center;gap:8px;padding:2px 1px 0}
@@ -32649,8 +32656,48 @@ html &gt; body.zefirok-game-expanded{height:var(--zefirok-visible-height,100dvh)
 #zefirok-maltipoo-runner .gt-state.is-ready{background:#fff0bf;color:#9f6814}
 #zefirok-maltipoo-runner .gt-state-action{border:0;cursor:pointer}
 #zefirok-maltipoo-runner .gt-state-action:disabled{opacity:.55;cursor:default}
-#zefirok-maltipoo-runner .gt-series{display:flex;gap:5px;overflow:hidden;flex-wrap:wrap}
-#zefirok-maltipoo-runner .gt-series span{max-width:100%;padding:5px 7px;border-radius:10px;background:#fff6f8;color:#95717e;font-size:7.5px;font-weight:800;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+/* Event tasks have their own identity while status priority stays in the main badge. */
+#zefirok-maltipoo-runner .gt-task.is-event-card{overflow:hidden;border-color:rgba(204,145,186,.48);background:radial-gradient(circle at 100% 0,rgba(255,225,173,.30),transparent 33%),radial-gradient(circle at 0 100%,rgba(245,211,239,.38),transparent 38%),linear-gradient(145deg,#fffafd,#fff6f4)}
+#zefirok-maltipoo-runner .gt-task.is-event-card:before{content:&quot;&quot;;position:absolute;left:0;top:0;bottom:0;width:4px;background:linear-gradient(180deg,#e78eaf,#d2a13d);opacity:.78}
+#zefirok-maltipoo-runner .gt-task.is-event-card.is-ready{border-color:rgba(218,166,63,.60);background:radial-gradient(circle at 100% 0,rgba(255,225,148,.38),transparent 36%),linear-gradient(145deg,#fff,#fff9ec)}
+#zefirok-maltipoo-runner .gt-task.is-event-card.is-urgent{border-color:rgba(219,118,120,.52);background:radial-gradient(circle at 100% 0,rgba(255,193,188,.30),transparent 34%),linear-gradient(145deg,#fff,#fff2f1)}
+#zefirok-maltipoo-runner .gt-event-strip{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:-1px 0 0}
+#zefirok-maltipoo-runner .gt-event-label{display:inline-flex;align-items:center;gap:4px;color:#a95679;font-size:7.5px;font-weight:950;text-transform:uppercase;letter-spacing:.055em}
+#zefirok-maltipoo-runner .gt-event-label:before{content:&quot;✦&quot;;color:#c89334;font-size:9px}
+#zefirok-maltipoo-runner .gt-event-time{display:inline-flex;align-items:center;gap:4px;padding:5px 7px;border-radius:999px;background:rgba(255,244,220,.90);color:#9a6b20;font-size:7.5px;font-weight:950;white-space:nowrap}
+#zefirok-maltipoo-runner .gt-event-time.is-urgent{background:#ffe4e0;color:#aa5054}
+#zefirok-maltipoo-runner .gt-task.is-event-card .gt-task-icon{background:linear-gradient(145deg,#fff0f6,#fff4dc)}
+#zefirok-maltipoo-runner .gt-task.is-event-card .gt-reward{padding:6px 8px;border-radius:11px;background:rgba(255,247,230,.72)}
+
+/* Series are progression cards, not ordinary task cards. */
+#zefirok-maltipoo-runner .gt-task.is-series-card{overflow:hidden;gap:10px;border-color:rgba(207,171,103,.54);background:radial-gradient(circle at 100% 0,rgba(255,224,145,.34),transparent 34%),radial-gradient(circle at 0 100%,rgba(247,219,231,.34),transparent 40%),linear-gradient(145deg,#fffdf9,#fff7f3);box-shadow:0 10px 24px rgba(123,84,45,.09)}
+#zefirok-maltipoo-runner .gt-task.is-series-card:before{content:&quot;&quot;;position:absolute;left:0;right:0;top:0;height:3px;background:linear-gradient(90deg,#e18baa,#e5b552,#d99a2d)}
+#zefirok-maltipoo-runner .gt-task.is-series-card.is-ready{border-color:rgba(211,154,43,.66);background:radial-gradient(circle at 100% 0,rgba(255,220,124,.42),transparent 36%),linear-gradient(145deg,#fff,#fff7df)}
+#zefirok-maltipoo-runner .gt-task.is-series-card.is-urgent{border-color:rgba(219,118,120,.52);background:radial-gradient(circle at 100% 0,rgba(255,194,187,.28),transparent 34%),linear-gradient(145deg,#fffdf9,#fff1ef)}
+#zefirok-maltipoo-runner .gt-series-strip{display:flex;align-items:center;justify-content:space-between;gap:8px}
+#zefirok-maltipoo-runner .gt-series-kicker{display:inline-flex;align-items:center;gap:5px;color:#9d6e23;font-size:7.5px;font-weight:950;text-transform:uppercase;letter-spacing:.055em}
+#zefirok-maltipoo-runner .gt-series-kicker:before{content:&quot;◆&quot;;color:#d29a34;font-size:8px}
+#zefirok-maltipoo-runner .gt-series-mode{padding:5px 7px;border-radius:999px;background:rgba(255,255,255,.72);color:#9b7882;font-size:7px;font-weight:900;white-space:nowrap}
+#zefirok-maltipoo-runner .gt-task.is-series-card .gt-task-icon{background:linear-gradient(145deg,#fff3ce,#ffe7ed)}
+#zefirok-maltipoo-runner .gt-series-road{display:flex;align-items:flex-start;gap:0;overflow-x:auto;overflow-y:hidden;padding:3px 1px 4px;scrollbar-width:none;-webkit-overflow-scrolling:touch}
+#zefirok-maltipoo-runner .gt-series-road::-webkit-scrollbar{display:none}
+#zefirok-maltipoo-runner .gt-series-node{position:relative;flex:1 0 52px;min-width:52px;display:grid;justify-items:center;gap:4px;text-align:center;color:#a99099}
+#zefirok-maltipoo-runner .gt-series-node:not(:last-child):after{content:&quot;&quot;;position:absolute;z-index:0;left:calc(50% + 13px);right:calc(-50% + 13px);top:12px;height:3px;border-radius:999px;background:#eadfe2}
+#zefirok-maltipoo-runner .gt-series-node.is-done:not(:last-child):after{background:linear-gradient(90deg,#e5ba4e,#e2a73a)}
+#zefirok-maltipoo-runner .gt-series-node i{position:relative;z-index:1;width:25px;height:25px;display:grid;place-items:center;border:2px solid #eadfe2;border-radius:999px;background:#fff;color:#a98b95;font-size:8px;line-height:1;font-style:normal;font-weight:950;box-sizing:border-box}
+#zefirok-maltipoo-runner .gt-series-node span{width:50px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#a1848e;font-size:6.8px;line-height:1.15;font-weight:800}
+#zefirok-maltipoo-runner .gt-series-node.is-done i{border-color:#e1ae3e;background:linear-gradient(145deg,#fff4c6,#f0c757);color:#7b5417}
+#zefirok-maltipoo-runner .gt-series-node.is-current i{border-color:#dc7da1;background:linear-gradient(145deg,#ffeaf2,#f5bfd2);color:#9d4167;box-shadow:0 0 0 4px rgba(225,119,158,.09)}
+#zefirok-maltipoo-runner .gt-series-node.is-current span{color:#9f4769;font-weight:950}
+#zefirok-maltipoo-runner .gt-series-node.is-locked{opacity:.58}
+#zefirok-maltipoo-runner .gt-series-current{display:grid;gap:3px;padding:9px 10px;border:1px solid rgba(226,194,205,.66);border-radius:14px;background:rgba(255,255,255,.72)}
+#zefirok-maltipoo-runner .gt-series-current small{color:#a17e8a;font-size:7.5px;font-weight:950;text-transform:uppercase;letter-spacing:.045em}
+#zefirok-maltipoo-runner .gt-series-current strong{color:#75485a;font-size:10px;line-height:1.25;font-weight:950}
+#zefirok-maltipoo-runner .gt-series-current span{color:#987b85;font-size:8px;line-height:1.3;font-weight:800}
+#zefirok-maltipoo-runner .gt-series-final{display:flex;align-items:center;justify-content:space-between;gap:9px;padding:9px 10px;border:1px solid rgba(221,176,83,.48);border-radius:14px;background:linear-gradient(145deg,rgba(255,250,235,.94),rgba(255,240,199,.82))}
+#zefirok-maltipoo-runner .gt-series-final span{color:#9a7944;font-size:7.5px;font-weight:900;text-transform:uppercase;letter-spacing:.04em}
+#zefirok-maltipoo-runner .gt-series-final b{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#8f611b;font-size:9px;font-weight:950;text-align:right}
+#zefirok-maltipoo-runner .gt-series-footer{display:flex;align-items:center;justify-content:flex-end;gap:8px}
 
 #zefirok-maltipoo-runner .gt-season{
   width:100%;display:grid;grid-template-columns:42px minmax(0,1fr) auto;align-items:center;gap:10px;padding:11px 12px;
@@ -32684,17 +32731,20 @@ html &gt; body.zefirok-game-expanded{height:var(--zefirok-visible-height,100dvh)
   #zefirok-maltipoo-runner .gt-task-icon{width:36px;height:36px}
   #zefirok-maltipoo-runner .gt-task-badge{max-width:106px;padding:5px 6px;font-size:6.5px}
   #zefirok-maltipoo-runner .gt-filter{padding-inline:10px}
+  #zefirok-maltipoo-runner .gt-series-node{flex-basis:48px;min-width:48px}
+  #zefirok-maltipoo-runner .gt-series-node span{width:46px;font-size:6.4px}
+  #zefirok-maltipoo-runner .tasks-entry__new{padding-inline:6px;font-size:6.5px}
 }
 @media(prefers-reduced-motion:reduce){
-  #zefirok-maltipoo-runner .gt-xp-fill,#zefirok-maltipoo-runner .gt-progress-fill,#zefirok-maltipoo-runner .gt-toast,#zefirok-maltipoo-runner .tasks-entry{transition:none!important}
-  #zefirok-maltipoo-runner .gt-skeleton&gt;i,#zefirok-maltipoo-runner .tasks-entry.has-unread .tasks-entry__badge{animation:none!important}
+  #zefirok-maltipoo-runner .gt-xp-fill,#zefirok-maltipoo-runner .gt-progress-fill,#zefirok-maltipoo-runner .gt-toast,#zefirok-maltipoo-runner .tasks-entry,#zefirok-maltipoo-runner .tasks-entry__icon{transition:none!important}
+  #zefirok-maltipoo-runner .gt-skeleton&gt;i,#zefirok-maltipoo-runner .tasks-entry.has-unread .tasks-entry__icon,#zefirok-maltipoo-runner .tasks-entry.has-unread .tasks-entry__new{animation:none!important}
 }
 &lt;/style&gt;
-&lt;script id=&quot;zefirok-game-tasks-inline-runtime-v11&quot;&gt;
+&lt;script id=&quot;zefirok-game-tasks-inline-runtime-v12&quot;&gt;
 (()=&gt;{
   &#x27;use strict&#x27;;
-  if(window.__ZEFIROK_GAME_TASKS_UI_V11__)return;
-  window.__ZEFIROK_GAME_TASKS_UI_V11__=true;
+  if(window.__ZEFIROK_GAME_TASKS_UI_V12__)return;
+  window.__ZEFIROK_GAME_TASKS_UI_V12__=true;
 
   const root=document.querySelector(&#x27;#zefirok-maltipoo-runner&#x27;);
   const screen=root?.querySelector(&#x27;[data-screen=&quot;tasks&quot;]&#x27;);
@@ -32728,7 +32778,8 @@ html &gt; body.zefirok-game-expanded{height:var(--zefirok-visible-height,100dvh)
   function isEvent(task){return !isSeries(task)&amp;&amp;String(task?.mode||&#x27;&#x27;)===&#x27;event&#x27;;}
   function taskKindLabel(task){if(isSeries(task))return &#x27;Цепочка&#x27;;if(isDaily(task))return &#x27;Ежедневное&#x27;;if(isEvent(task))return &#x27;Событие&#x27;;return &#x27;Одноразовое&#x27;;}
   function taskIcon(task){
-    if(isSeries(task))return &#x27;🎯&#x27;;
+    if(isSeries(task))return &#x27;🏆&#x27;;
+    if(isEvent(task))return &#x27;🎟️&#x27;;
     const type=String(task?.triggerType||&#x27;&#x27;);
     if(type===&#x27;collect_zefir&#x27;)return &#x27;🍥&#x27;;
     if(type===&#x27;collect_coffee&#x27;)return &#x27;☕&#x27;;
@@ -32763,11 +32814,13 @@ html &gt; body.zefirok-game-expanded{height:var(--zefirok-visible-height,100dvh)
     if(isReady(task))return {label:task?.unread?&#x27;ГОТОВО ✨&#x27;:&#x27;ГОТОВО 🎁&#x27;,className:&#x27;is-ready&#x27;,state:&#x27;ready&#x27;};
     if(claimed)return {label:&#x27;ПОЛУЧЕНО&#x27;,className:&#x27;is-claimed&#x27;,state:&#x27;claimed&#x27;};
     if(isUrgent(task))return {label:&#x27;СКОРО ЗАКОНЧИТСЯ&#x27;,className:&#x27;is-urgent&#x27;,state:&#x27;urgent&#x27;};
+    if(isSeries(task)){const done=Math.min(whole(task?.progress),Math.max(1,whole(task?.target))),goal=Math.max(1,whole(task?.target));return {label:String(task?.seriesMode||&#x27;ordered&#x27;)===&#x27;any&#x27;?`${done} / ${goal}`:`ЭТАП ${Math.min(done+1,goal)} / ${goal}`,className:&#x27;is-kind&#x27;,state:&#x27;kind&#x27;};}
+    if(isEvent(task))return {label:&#x27;АКТИВНО&#x27;,className:&#x27;is-kind&#x27;,state:&#x27;kind&#x27;};
     return {label:taskKindLabel(task).toUpperCase(),className:&#x27;is-kind&#x27;,state:&#x27;kind&#x27;};
   }
   function taskProgressText(task,progress,target){
     const current=Math.min(whole(progress),Math.max(1,whole(target))),goal=Math.max(1,whole(target));
-    if(isSeries(task))return `Этап ${current} из ${goal}`;
+    if(isSeries(task))return `Выполнено этапов: ${current} / ${goal}`;
     const type=String(task?.triggerType||&#x27;&#x27;);
     if(String(task?.progressFormat||&#x27;&#x27;)===&#x27;duration&#x27;){
       const value=goal&gt;=60?`${clockValue(current)} / ${clockValue(goal)}`:`${current} / ${goal} сек`;
@@ -32904,20 +32957,22 @@ html &gt; body.zefirok-game-expanded{height:var(--zefirok-visible-height,100dvh)
     entry.hidden=isRunning();
     const summary=entry.querySelector(&#x27;[data-tasks-summary]&#x27;);
     const badge=entry.querySelector(&#x27;[data-tasks-badge]&#x27;);
+    const fresh=entry.querySelector(&#x27;[data-tasks-new]&#x27;);
     const ready=payload?whole(payload.readyCount):whole(entryNotice.readyCount);
     const unread=payload?whole(payload.unreadCount):whole(entryNotice.unreadCount);
     const active=payload?whole(payload.activeCount):whole(entryNotice.activeCount);
     entry.classList.toggle(&#x27;has-ready&#x27;,ready&gt;0);
     entry.classList.toggle(&#x27;has-unread&#x27;,unread&gt;0);
     if(summary){
-      if(unread===1)summary.textContent=ready&gt;1?`Новое выполненное задание · ${ready} ${plural(ready,&#x27;награда готова&#x27;,&#x27;награды готовы&#x27;,&#x27;наград готово&#x27;)}`:&#x27;Новое выполненное задание · награда готова&#x27;;
-      else if(unread&gt;1)summary.textContent=`${unread} ${plural(unread,&#x27;новое задание&#x27;,&#x27;новых задания&#x27;,&#x27;новых заданий&#x27;)} · ${ready} ${plural(ready,&#x27;награда готова&#x27;,&#x27;награды готовы&#x27;,&#x27;наград готово&#x27;)}`;
-      else if(ready&gt;0&amp;&amp;active&gt;0)summary.textContent=`${active} ${plural(active,&#x27;активное задание&#x27;,&#x27;активных задания&#x27;,&#x27;активных заданий&#x27;)} · ${ready} ${plural(ready,&#x27;награда готова&#x27;,&#x27;награды готовы&#x27;,&#x27;наград готово&#x27;)}`;
-      else if(ready&gt;0)summary.textContent=`${ready} ${plural(ready,&#x27;награда готова&#x27;,&#x27;награды готовы&#x27;,&#x27;наград готово&#x27;)}`;
-      else if(active&gt;0)summary.textContent=`${active} ${plural(active,&#x27;активное задание&#x27;,&#x27;активных задания&#x27;,&#x27;активных заданий&#x27;)}`;
+      if(unread===1)summary.textContent=ready&gt;1?`Новое выполнение · ${ready} ${plural(ready,&#x27;награда ждёт&#x27;,&#x27;награды ждут&#x27;,&#x27;наград ждут&#x27;)}`:&#x27;Новое выполнение · награда ждёт тебя&#x27;;
+      else if(unread&gt;1)summary.textContent=`${unread} ${plural(unread,&#x27;новое выполнение&#x27;,&#x27;новых выполнения&#x27;,&#x27;новых выполнений&#x27;)} · ${ready} ${plural(ready,&#x27;награда ждёт&#x27;,&#x27;награды ждут&#x27;,&#x27;наград ждут&#x27;)}`;
+      else if(ready&gt;0)summary.textContent=`${ready} ${plural(ready,&#x27;награда ждёт тебя&#x27;,&#x27;награды ждут тебя&#x27;,&#x27;наград ждут тебя&#x27;)}`;
+      else if(active&gt;0)summary.textContent=`${active} ${plural(active,&#x27;активное задание&#x27;,&#x27;активных задания&#x27;,&#x27;активных заданий&#x27;)} · продолжай играть`;
       else summary.textContent=&#x27;Цели, награды и XP профиля&#x27;;
     }
+    if(fresh){fresh.hidden=unread&lt;=0;fresh.textContent=unread&gt;1?`НОВОЕ ${Math.min(9,unread)} ✨`:&#x27;НОВОЕ ✨&#x27;;}
     if(badge){badge.hidden=ready&lt;=0;badge.textContent=String(Math.min(99,ready));}
+    entry.setAttribute(&#x27;aria-label&#x27;,unread&gt;0?`Задания: ${unread} новых выполнений, ${ready} наград готово`:ready&gt;0?`Задания: ${ready} наград готово`:active&gt;0?`Задания: ${active} активных`:&#x27;Открыть задания&#x27;);
   }
 
   function skeleton(){
@@ -32941,21 +32996,61 @@ html &gt; body.zefirok-game-expanded{height:var(--zefirok-visible-height,100dvh)
     return `&lt;section class=&quot;gt-next${ready?&#x27; is-ready&#x27;:&#x27;&#x27;}&quot; aria-label=&quot;Ближайшая цель&quot;&gt;&lt;span class=&quot;gt-next-icon&quot;&gt;${ready?&#x27;🎁&#x27;:&#x27;🐾&#x27;}&lt;/span&gt;&lt;span class=&quot;gt-next-copy&quot;&gt;&lt;small&gt;${ready?&#x27;Награда готова&#x27;:&#x27;Ближайшая цель&#x27;}&lt;/small&gt;&lt;strong&gt;${esc(task.title||&#x27;Задание&#x27;)}&lt;/strong&gt;&lt;span&gt;${esc(ready?(task.rewardLabel||&#x27;Можно получить награду&#x27;):(extra?`До конца: ${extra}`:(task.description||&#x27;Продолжай играть&#x27;)))}&lt;/span&gt;&lt;/span&gt;&lt;span class=&quot;gt-next-status&quot;&gt;${esc(status)}&lt;/span&gt;&lt;/section&gt;`;
   }
 
-  function taskMarkup(task,index){
+  function taskActionMarkup(task,index){
+    const ready=isReady(task),claimed=Boolean(task?.claimed),pending=Boolean(task?.pending)&amp;&amp;!claimed,currentClaim=claimingKey===taskId(task);
+    if(ready&amp;&amp;!pending&amp;&amp;!claimed)return `&lt;button class=&quot;gt-claim&quot; data-gt-claim=&quot;${index}&quot; type=&quot;button&quot;${currentClaim?&#x27; disabled&#x27;:&#x27;&#x27;}&gt;${currentClaim?&#x27;Получаем…&#x27;:&#x27;🎁 Получить&#x27;}&lt;/button&gt;`;
+    if(pending)return `&lt;button class=&quot;gt-state is-ready gt-state-action&quot; data-gt-claim=&quot;${index}&quot; type=&quot;button&quot;${currentClaim?&#x27; disabled&#x27;:&#x27;&#x27;}&gt;${currentClaim?&#x27;Проверяем…&#x27;:&#x27;Проверить выдачу&#x27;}&lt;/button&gt;`;
+    if(claimed)return &#x27;&lt;span class=&quot;gt-state&quot;&gt;✓ Получено&lt;/span&gt;&#x27;;
+    return &#x27;&lt;span class=&quot;gt-state&quot;&gt;В процессе&lt;/span&gt;&#x27;;
+  }
+
+  function taskClasses(task,extra=&#x27;&#x27;){
+    const ready=isReady(task),claimed=Boolean(task?.claimed),pending=Boolean(task?.pending)&amp;&amp;!claimed,urgent=isUrgent(task);
+    return [&#x27;gt-task&#x27;,ready?&#x27;is-ready&#x27;:&#x27;&#x27;,pending?&#x27;is-pending&#x27;:&#x27;&#x27;,urgent?&#x27;is-urgent&#x27;:&#x27;&#x27;,claimed?&#x27;is-claimed&#x27;:&#x27;&#x27;,extra].filter(Boolean).join(&#x27; &#x27;);
+  }
+
+  function standardTaskMarkup(task,index){
     const progress=whole(task.progress),target=Math.max(1,whole(task.target)),pct=Math.max(0,Math.min(100,(progress/target)*100));
-    const ready=isReady(task),claimed=Boolean(task.claimed),pending=Boolean(task.pending)&amp;&amp;!claimed,urgent=isUrgent(task);
-    const currentClaim=claimingKey===taskId(task),badge=taskBadge(task),end=timeLeft(task.endsAt);
-    let action=&#x27;&#x27;;
-    if(ready&amp;&amp;!pending&amp;&amp;!claimed)action=`&lt;button class=&quot;gt-claim&quot; data-gt-claim=&quot;${index}&quot; type=&quot;button&quot;${currentClaim?&#x27; disabled&#x27;:&#x27;&#x27;}&gt;${currentClaim?&#x27;Получаем…&#x27;:&#x27;🎁 Получить&#x27;}&lt;/button&gt;`;
-    else if(pending)action=`&lt;button class=&quot;gt-state is-ready gt-state-action&quot; data-gt-claim=&quot;${index}&quot; type=&quot;button&quot;${currentClaim?&#x27; disabled&#x27;:&#x27;&#x27;}&gt;${currentClaim?&#x27;Проверяем…&#x27;:&#x27;Проверить выдачу&#x27;}&lt;/button&gt;`;
-    else if(claimed)action=&#x27;&lt;span class=&quot;gt-state&quot;&gt;✓ Получено&lt;/span&gt;&#x27;;
-    else action=&#x27;&lt;span class=&quot;gt-state&quot;&gt;В процессе&lt;/span&gt;&#x27;;
-    const steps=list(task.steps).slice(0,6);
-    const series=steps.length?`&lt;div class=&quot;gt-series&quot; aria-label=&quot;Этапы цепочки&quot;&gt;${steps.map(step=&gt;`&lt;span&gt;${esc(step.title||&#x27;Этап&#x27;)}&lt;/span&gt;`).join(&#x27;&#x27;)}&lt;/div&gt;`:&#x27;&#x27;;
-    const classes=[&#x27;gt-task&#x27;,ready?&#x27;is-ready&#x27;:&#x27;&#x27;,pending?&#x27;is-pending&#x27;:&#x27;&#x27;,urgent?&#x27;is-urgent&#x27;:&#x27;&#x27;,claimed?&#x27;is-claimed&#x27;:&#x27;&#x27;].filter(Boolean).join(&#x27; &#x27;);
+    const ready=isReady(task),claimed=Boolean(task.claimed),badge=taskBadge(task),end=timeLeft(task.endsAt),action=taskActionMarkup(task,index);
     const context=[taskKindLabel(task),end?`⏱ ${end}`:&#x27;&#x27;].filter(Boolean).map(value=&gt;`&lt;span&gt;${esc(value)}&lt;/span&gt;`).join(&#x27;&lt;i&gt;·&lt;/i&gt;&#x27;);
     const progressText=taskProgressText(task,progress,target);
-    return `&lt;article class=&quot;${classes}&quot;&gt;&lt;div class=&quot;gt-task-head&quot;&gt;&lt;span class=&quot;gt-task-icon&quot; aria-hidden=&quot;true&quot;&gt;${taskIcon(task)}&lt;/span&gt;&lt;span class=&quot;gt-task-title&quot;&gt;&lt;strong&gt;${esc(task.title||&#x27;Задание&#x27;)}&lt;/strong&gt;&lt;span class=&quot;gt-task-description&quot;&gt;${esc(task.description||&#x27;Выполни условие и забери награду.&#x27;)}&lt;/span&gt;&lt;span class=&quot;gt-task-context&quot;&gt;${context}&lt;/span&gt;&lt;/span&gt;&lt;span class=&quot;gt-task-badge ${badge.className}&quot;&gt;${esc(badge.label)}&lt;/span&gt;&lt;/div&gt;&lt;div class=&quot;gt-progress-meta&quot;&gt;&lt;span&gt;${esc(progressText)}&lt;/span&gt;&lt;b&gt;${ready||claimed?&#x27;100%&#x27;:`${Math.round(pct)}%`}&lt;/b&gt;&lt;/div&gt;&lt;div class=&quot;gt-progress-track&quot; role=&quot;progressbar&quot; aria-valuemin=&quot;0&quot; aria-valuemax=&quot;${target}&quot; aria-valuenow=&quot;${Math.min(progress,target)}&quot;&gt;&lt;span class=&quot;gt-progress-fill&quot; style=&quot;width:${ready||claimed?100:pct.toFixed(1)}%&quot;&gt;&lt;/span&gt;&lt;/div&gt;${series}&lt;div class=&quot;gt-task-foot&quot;&gt;&lt;span class=&quot;gt-reward&quot;&gt;&lt;span&gt;Награда&lt;/span&gt;&lt;b&gt;${esc(task.rewardLabel||&#x27;Награда задания&#x27;)}&lt;/b&gt;&lt;/span&gt;${action}&lt;/div&gt;&lt;/article&gt;`;
+    return `&lt;article class=&quot;${taskClasses(task)}&quot;&gt;&lt;div class=&quot;gt-task-head&quot;&gt;&lt;span class=&quot;gt-task-icon&quot; aria-hidden=&quot;true&quot;&gt;${taskIcon(task)}&lt;/span&gt;&lt;span class=&quot;gt-task-title&quot;&gt;&lt;strong&gt;${esc(task.title||&#x27;Задание&#x27;)}&lt;/strong&gt;&lt;span class=&quot;gt-task-description&quot;&gt;${esc(task.description||&#x27;Выполни условие и забери награду.&#x27;)}&lt;/span&gt;&lt;span class=&quot;gt-task-context&quot;&gt;${context}&lt;/span&gt;&lt;/span&gt;&lt;span class=&quot;gt-task-badge ${badge.className}&quot;&gt;${esc(badge.label)}&lt;/span&gt;&lt;/div&gt;&lt;div class=&quot;gt-progress-meta&quot;&gt;&lt;span&gt;${esc(progressText)}&lt;/span&gt;&lt;b&gt;${ready||claimed?&#x27;100%&#x27;:`${Math.round(pct)}%`}&lt;/b&gt;&lt;/div&gt;&lt;div class=&quot;gt-progress-track&quot; role=&quot;progressbar&quot; aria-valuemin=&quot;0&quot; aria-valuemax=&quot;${target}&quot; aria-valuenow=&quot;${Math.min(progress,target)}&quot;&gt;&lt;span class=&quot;gt-progress-fill&quot; style=&quot;width:${ready||claimed?100:pct.toFixed(1)}%&quot;&gt;&lt;/span&gt;&lt;/div&gt;&lt;div class=&quot;gt-task-foot&quot;&gt;&lt;span class=&quot;gt-reward&quot;&gt;&lt;span&gt;Награда&lt;/span&gt;&lt;b&gt;${esc(task.rewardLabel||&#x27;Награда задания&#x27;)}&lt;/b&gt;&lt;/span&gt;${action}&lt;/div&gt;&lt;/article&gt;`;
+  }
+
+  function eventTaskMarkup(task,index){
+    const progress=whole(task.progress),target=Math.max(1,whole(task.target)),pct=Math.max(0,Math.min(100,(progress/target)*100));
+    const ready=isReady(task),claimed=Boolean(task.claimed),urgent=isUrgent(task),badge=taskBadge(task),end=timeLeft(task.endsAt),action=taskActionMarkup(task,index);
+    const timer=end?`&lt;span class=&quot;gt-event-time${urgent?&#x27; is-urgent&#x27;:&#x27;&#x27;}&quot;&gt;⏳ ${esc(end)}&lt;/span&gt;`:&#x27;&lt;span class=&quot;gt-event-time&quot;&gt;Активно&lt;/span&gt;&#x27;;
+    return `&lt;article class=&quot;${taskClasses(task,&#x27;is-event-card&#x27;)}&quot;&gt;&lt;div class=&quot;gt-event-strip&quot;&gt;&lt;span class=&quot;gt-event-label&quot;&gt;Событийное задание&lt;/span&gt;${timer}&lt;/div&gt;&lt;div class=&quot;gt-task-head&quot;&gt;&lt;span class=&quot;gt-task-icon&quot; aria-hidden=&quot;true&quot;&gt;${taskIcon(task)}&lt;/span&gt;&lt;span class=&quot;gt-task-title&quot;&gt;&lt;strong&gt;${esc(task.title||&#x27;Событийное задание&#x27;)}&lt;/strong&gt;&lt;span class=&quot;gt-task-description&quot;&gt;${esc(task.description||&#x27;Выполни цель до окончания события.&#x27;)}&lt;/span&gt;&lt;/span&gt;&lt;span class=&quot;gt-task-badge ${badge.className}&quot;&gt;${esc(badge.label)}&lt;/span&gt;&lt;/div&gt;&lt;div class=&quot;gt-progress-meta&quot;&gt;&lt;span&gt;${esc(taskProgressText(task,progress,target))}&lt;/span&gt;&lt;b&gt;${ready||claimed?&#x27;100%&#x27;:`${Math.round(pct)}%`}&lt;/b&gt;&lt;/div&gt;&lt;div class=&quot;gt-progress-track&quot; role=&quot;progressbar&quot; aria-valuemin=&quot;0&quot; aria-valuemax=&quot;${target}&quot; aria-valuenow=&quot;${Math.min(progress,target)}&quot;&gt;&lt;span class=&quot;gt-progress-fill&quot; style=&quot;width:${ready||claimed?100:pct.toFixed(1)}%&quot;&gt;&lt;/span&gt;&lt;/div&gt;&lt;div class=&quot;gt-task-foot&quot;&gt;&lt;span class=&quot;gt-reward&quot;&gt;&lt;span&gt;Награда события&lt;/span&gt;&lt;b&gt;${esc(task.rewardLabel||&#x27;Награда задания&#x27;)}&lt;/b&gt;&lt;/span&gt;${action}&lt;/div&gt;&lt;/article&gt;`;
+  }
+
+  function seriesStepText(step){
+    if(!step)return &#x27;&#x27;;
+    if(step.done)return &#x27;Выполнено&#x27;;
+    if(step.locked)return &#x27;Откроется после предыдущего этапа&#x27;;
+    return taskProgressText({...step,kind:&#x27;task&#x27;,mode:&#x27;one_time&#x27;},whole(step.progress),Math.max(1,whole(step.target)));
+  }
+
+  function seriesTaskMarkup(task,index){
+    const progress=whole(task.progress),target=Math.max(1,whole(task.target)),pct=Math.max(0,Math.min(100,(progress/target)*100));
+    const ready=isReady(task),claimed=Boolean(task.claimed),badge=taskBadge(task),action=taskActionMarkup(task,index),steps=list(task.steps);
+    const mode=String(task?.seriesMode||&#x27;ordered&#x27;)===&#x27;any&#x27;?&#x27;В любом порядке&#x27;:&#x27;По порядку&#x27;,end=timeLeft(task.endsAt);
+    const modeLabel=end?`${mode} · ⏳ ${end}`:mode;
+    const current=steps.find(step=&gt;step?.current)||steps.find(step=&gt;!step?.done&amp;&amp;!step?.locked)||steps.find(step=&gt;!step?.done)||null;
+    const nodes=steps.length?`&lt;div class=&quot;gt-series-road&quot; aria-label=&quot;Этапы цепочки&quot;&gt;${steps.map((step,stepIndex)=&gt;{const cls=[&#x27;gt-series-node&#x27;,step?.done?&#x27;is-done&#x27;:&#x27;&#x27;,step?.current?&#x27;is-current&#x27;:&#x27;&#x27;,step?.locked?&#x27;is-locked&#x27;:&#x27;&#x27;].filter(Boolean).join(&#x27; &#x27;);const mark=step?.done?&#x27;✓&#x27;:String(stepIndex+1);return `&lt;span class=&quot;${cls}&quot; title=&quot;${esc(step?.title||`Этап ${stepIndex+1}`)}&quot;&gt;&lt;i&gt;${esc(mark)}&lt;/i&gt;&lt;span&gt;${esc(step?.title||`Этап ${stepIndex+1}`)}&lt;/span&gt;&lt;/span&gt;`;}).join(&#x27;&#x27;)}&lt;/div&gt;`:&#x27;&#x27;;
+    let currentBlock=&#x27;&#x27;;
+    if(Boolean(task?.pending)&amp;&amp;!claimed)currentBlock=&#x27;&lt;div class=&quot;gt-series-current&quot;&gt;&lt;small&gt;Все этапы выполнены&lt;/small&gt;&lt;strong&gt;Проверяем финальную награду&lt;/strong&gt;&lt;span&gt;Выдача уже запущена и безопасно проверяется повторно.&lt;/span&gt;&lt;/div&gt;&#x27;;
+    else if(ready)currentBlock=&#x27;&lt;div class=&quot;gt-series-current&quot;&gt;&lt;small&gt;Все этапы выполнены&lt;/small&gt;&lt;strong&gt;Финальная награда готова&lt;/strong&gt;&lt;span&gt;Забери её, чтобы завершить цепочку.&lt;/span&gt;&lt;/div&gt;&#x27;;
+    else if(claimed)currentBlock=&#x27;&lt;div class=&quot;gt-series-current&quot;&gt;&lt;small&gt;Цепочка завершена&lt;/small&gt;&lt;strong&gt;Все этапы пройдены&lt;/strong&gt;&lt;span&gt;Финальная награда уже получена.&lt;/span&gt;&lt;/div&gt;&#x27;;
+    else if(current)currentBlock=`&lt;div class=&quot;gt-series-current&quot;&gt;&lt;small&gt;${String(task?.seriesMode||&#x27;ordered&#x27;)===&#x27;any&#x27;?&#x27;Доступный этап&#x27;:&#x27;Текущий этап&#x27;}&lt;/small&gt;&lt;strong&gt;${esc(current.title||&#x27;Следующий этап&#x27;)}&lt;/strong&gt;&lt;span&gt;${esc(seriesStepText(current))}&lt;/span&gt;&lt;/div&gt;`;
+    else currentBlock=&#x27;&lt;div class=&quot;gt-series-current&quot;&gt;&lt;small&gt;Прогресс цепочки&lt;/small&gt;&lt;strong&gt;Продолжай выполнять этапы&lt;/strong&gt;&lt;span&gt;Следующий этап появится после обновления прогресса.&lt;/span&gt;&lt;/div&gt;&#x27;;
+    return `&lt;article class=&quot;${taskClasses(task,&#x27;is-series-card&#x27;)}&quot;&gt;&lt;div class=&quot;gt-series-strip&quot;&gt;&lt;span class=&quot;gt-series-kicker&quot;&gt;Цепочка · ${Math.min(progress,target)} / ${target}&lt;/span&gt;&lt;span class=&quot;gt-series-mode&quot;&gt;${esc(modeLabel)}&lt;/span&gt;&lt;/div&gt;&lt;div class=&quot;gt-task-head&quot;&gt;&lt;span class=&quot;gt-task-icon&quot; aria-hidden=&quot;true&quot;&gt;${taskIcon(task)}&lt;/span&gt;&lt;span class=&quot;gt-task-title&quot;&gt;&lt;strong&gt;${esc(task.title||&#x27;Цепочка заданий&#x27;)}&lt;/strong&gt;&lt;span class=&quot;gt-task-description&quot;&gt;${esc(task.description||&#x27;Пройди все этапы и получи финальную награду.&#x27;)}&lt;/span&gt;&lt;/span&gt;&lt;span class=&quot;gt-task-badge ${badge.className}&quot;&gt;${esc(badge.label)}&lt;/span&gt;&lt;/div&gt;&lt;div class=&quot;gt-progress-meta&quot;&gt;&lt;span&gt;${esc(taskProgressText(task,progress,target))}&lt;/span&gt;&lt;b&gt;${ready||claimed?&#x27;100%&#x27;:`${Math.round(pct)}%`}&lt;/b&gt;&lt;/div&gt;&lt;div class=&quot;gt-progress-track&quot; role=&quot;progressbar&quot; aria-valuemin=&quot;0&quot; aria-valuemax=&quot;${target}&quot; aria-valuenow=&quot;${Math.min(progress,target)}&quot;&gt;&lt;span class=&quot;gt-progress-fill&quot; style=&quot;width:${ready||claimed?100:pct.toFixed(1)}%&quot;&gt;&lt;/span&gt;&lt;/div&gt;${nodes}${currentBlock}&lt;div class=&quot;gt-series-final&quot;&gt;&lt;span&gt;Финальная награда&lt;/span&gt;&lt;b&gt;${esc(task.rewardLabel||&#x27;Награда цепочки&#x27;)}&lt;/b&gt;&lt;/div&gt;&lt;div class=&quot;gt-series-footer&quot;&gt;${action}&lt;/div&gt;&lt;/article&gt;`;
+  }
+
+  function taskMarkup(task,index){
+    if(isSeries(task))return seriesTaskMarkup(task,index);
+    if(isEvent(task))return eventTaskMarkup(task,index);
+    return standardTaskMarkup(task,index);
   }
 
   function filtersMarkup(){
