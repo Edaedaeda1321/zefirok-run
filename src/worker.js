@@ -17644,6 +17644,7 @@ async function gameTaskView(env, row, telegramId, now, series = false, context =
     title:String(row.title || "Задание"),
     description:String(row.task_description || row.description || ""),
     mode:series ? "series" : String(row.task_mode || "one_time"),
+    triggerType:series ? "" : String(row.trigger_type || ""),
     progress:value, target, progressFormat:gameTaskTriggerProgressFormat(row.trigger_type), complete, claimed,
     pending:Boolean(claim && !claimed),
     reward, rewardLabel:gameTaskRewardLabel(reward),
