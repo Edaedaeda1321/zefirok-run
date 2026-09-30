@@ -32439,40 +32439,60 @@ html &gt; body.zefirok-game-expanded{height:var(--zefirok-visible-height,100dvh)
   scheduleMaybe(700);
 })();
 &lt;/script&gt;
-&lt;script id=&quot;zefirok-game-tasks-loader-v4&quot;&gt;
+&lt;script id=&quot;zefirok-game-tasks-loader-v7&quot;&gt;
 (()=&gt;{
-  if(window.__ZEFIROK_GAME_TASKS_LOADER_V4__)return;
-  window.__ZEFIROK_GAME_TASKS_LOADER_V4__=true;
-  let assetsPromise=null;
-  const loadCss=()=&gt;new Promise(resolve=&gt;{
-    if(document.querySelector(&#x27;link[data-zefirok-game-tasks-css]&#x27;)){resolve();return;}
-    const link=document.createElement(&#x27;link&#x27;);
-    link.rel=&#x27;stylesheet&#x27;;link.href=&#x27;/assets/game-tasks.css?v=4&#x27;;link.dataset.zefirokGameTasksCss=&#x27;1&#x27;;
-    link.onload=resolve;link.onerror=resolve;(document.head||document.documentElement).append(link);
-  });
-  const loadJs=()=&gt;new Promise((resolve,reject)=&gt;{
-    if(window.zefirokOpenGameTasks){resolve();return;}
-    const existing=document.querySelector(&#x27;script[data-zefirok-game-tasks-js]&#x27;);
-    if(existing){existing.addEventListener(&#x27;load&#x27;,resolve,{once:true});existing.addEventListener(&#x27;error&#x27;,reject,{once:true});return;}
-    const script=document.createElement(&#x27;script&#x27;);
-    script.src=&#x27;/assets/game-tasks.js?v=4&#x27;;script.async=true;script.dataset.zefirokGameTasksJs=&#x27;1&#x27;;
-    script.onload=resolve;script.onerror=()=&gt;reject(new Error(&#x27;tasks-ui-load-failed&#x27;));(document.body||document.documentElement).append(script);
-  });
-  const load=()=&gt;assetsPromise||(assetsPromise=Promise.all([loadCss(),loadJs()]).catch(error=&gt;{assetsPromise=null;throw error;}));
-  const intercept=event=&gt;{
-    if(window.zefirokOpenGameTasks)return;
-    event.preventDefault();event.stopImmediatePropagation();
-    void load().then(()=&gt;window.zefirokOpenGameTasks?.()).catch(()=&gt;{});
+  if(window.__ZEFIROK_GAME_TASKS_LOADER_V7__)return;
+  window.__ZEFIROK_GAME_TASKS_LOADER_V7__=true;
+  const root=document.querySelector(&#x27;#zefirok-maltipoo-runner&#x27;);
+  const entry=root?.querySelector(&#x27;[data-tasks-open]&#x27;);
+  const screen=root?.querySelector(&#x27;[data-screen=&quot;tasks&quot;]&#x27;);
+  if(!root||!entry||!screen)return;
+  let loading=null;
+  const showScreen=()=&gt;{
+    try{window.zefirokTaskHost?.open?.();}catch{}
+    if(screen.hidden)root.querySelectorAll(&#x27;.screen&#x27;).forEach(node=&gt;{node.hidden=node!==screen;});
+    if(!screen.firstElementChild)screen.innerHTML=&#x27;&lt;div style=&quot;min-height:250px;display:grid;place-items:center;padding:28px;text-align:center;color:#8d6c79&quot;&gt;&lt;div&gt;&lt;img src=&quot;/assets/ui/icon_quest_game.webp&quot; alt=&quot;&quot; style=&quot;width:64px;height:64px;object-fit:contain&quot;&gt;&lt;strong style=&quot;display:block;margin-top:8px;font-size:17px;color:#684350&quot;&gt;Задания&lt;/strong&gt;&lt;span style=&quot;display:block;margin-top:7px;font-size:12px&quot;&gt;Загружаем задания…&lt;/span&gt;&lt;/div&gt;&lt;/div&gt;&#x27;;
   };
-  document.querySelector(&#x27;[data-tasks-open]&#x27;)?.addEventListener(&#x27;click&#x27;,intercept,true);
+  const loadCss=()=&gt;{
+    if(document.querySelector(&#x27;link[data-zefirok-game-tasks-css=&quot;7&quot;]&#x27;))return;
+    const link=document.createElement(&#x27;link&#x27;);
+    link.rel=&#x27;stylesheet&#x27;;link.href=&#x27;/assets/game-tasks.css?v=7&#x27;;link.dataset.zefirokGameTasksCss=&#x27;7&#x27;;
+    (document.head||document.documentElement).append(link);
+  };
+  const loadJs=()=&gt;new Promise((resolve,reject)=&gt;{
+    if(typeof window.zefirokOpenGameTasks===&#x27;function&#x27;&amp;&amp;window.__ZEFIROK_GAME_TASKS_UI_V7__){resolve();return;}
+    const existing=document.querySelector(&#x27;script[data-zefirok-game-tasks-js=&quot;7&quot;]&#x27;);
+    if(existing){
+      if(existing.dataset.loaded===&#x27;1&#x27;){resolve();return;}
+      existing.addEventListener(&#x27;load&#x27;,resolve,{once:true});
+      existing.addEventListener(&#x27;error&#x27;,reject,{once:true});
+      return;
+    }
+    const script=document.createElement(&#x27;script&#x27;);
+    script.src=&#x27;/assets/game-tasks.js?v=7&#x27;;script.async=true;script.dataset.zefirokGameTasksJs=&#x27;7&#x27;;
+    script.onload=()=&gt;{script.dataset.loaded=&#x27;1&#x27;;resolve();};
+    script.onerror=()=&gt;reject(new Error(&#x27;tasks-ui-load-failed&#x27;));
+    (document.body||document.documentElement).append(script);
+  });
+  const open=()=&gt;{
+    if(typeof window.zefirokOpenGameTasks===&#x27;function&#x27;&amp;&amp;window.__ZEFIROK_GAME_TASKS_UI_V7__){window.zefirokOpenGameTasks();return Promise.resolve();}
+    showScreen();loadCss();
+    if(loading)return loading;
+    loading=loadJs().then(()=&gt;{
+      if(typeof window.zefirokOpenGameTasks!==&#x27;function&#x27;)throw new Error(&#x27;tasks-ui-opener-missing&#x27;);
+      window.zefirokOpenGameTasks();
+    }).catch(()=&gt;{
+      showScreen();
+      screen.innerHTML=&#x27;&lt;div style=&quot;min-height:250px;display:grid;place-items:center;padding:28px;text-align:center;color:#8d6c79&quot;&gt;&lt;div&gt;&lt;img src=&quot;/assets/ui/icon_quest_game.webp&quot; alt=&quot;&quot; style=&quot;width:64px;height:64px;object-fit:contain&quot;&gt;&lt;strong style=&quot;display:block;margin-top:8px;font-size:17px;color:#684350&quot;&gt;Задания&lt;/strong&gt;&lt;span style=&quot;display:block;margin-top:7px;font-size:12px&quot;&gt;Не удалось загрузить раздел. Закрой и снова открой игру.&lt;/span&gt;&lt;/div&gt;&lt;/div&gt;&#x27;;
+    }).finally(()=&gt;{loading=null;});
+    return loading;
+  };
+  entry.addEventListener(&#x27;click&#x27;,event=&gt;{event.preventDefault();event.stopImmediatePropagation();void open();},true);
   try{
     const params=new URLSearchParams(location.search);
     const start=String(window.Telegram?.WebApp?.initDataUnsafe?.start_param||params.get(&#x27;startapp&#x27;)||params.get(&#x27;screen&#x27;)||&#x27;&#x27;).toLowerCase();
-    if(start===&#x27;tasks&#x27;||start===&#x27;task&#x27;)void load().then(()=&gt;window.zefirokOpenGameTasks?.()).catch(()=&gt;{});
+    if(start===&#x27;tasks&#x27;||start===&#x27;task&#x27;)window.setTimeout(()=&gt;void open(),0);
   }catch{}
-  const warm=()=&gt;void load().catch(()=&gt;{});
-  if(document.readyState===&#x27;complete&#x27;)window.setTimeout(warm,900);
-  else window.addEventListener(&#x27;load&#x27;,()=&gt;window.setTimeout(warm,700),{once:true});
 })();
 &lt;/script&gt;
 &lt;/body&gt;

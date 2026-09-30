@@ -1,7 +1,7 @@
 (()=>{
   'use strict';
-  if(window.__ZEFIROK_GAME_TASKS_UI_V2__)return;
-  window.__ZEFIROK_GAME_TASKS_UI_V2__=true;
+  if(window.__ZEFIROK_GAME_TASKS_UI_V7__)return;
+  window.__ZEFIROK_GAME_TASKS_UI_V7__=true;
 
   const root=document.querySelector('#zefirok-maltipoo-runner');
   const screen=root?.querySelector('[data-screen="tasks"]');
@@ -187,14 +187,22 @@
 
   function open(){
     if(isRunning())return;
-    try{host().open?.();}catch{}
-    screen.innerHTML=skeleton();
-    if(screen.hidden){
+    if(!payload)screen.innerHTML=skeleton();
+    let switched=false;
+    try{const fn=host().open;if(typeof fn==='function'){fn();switched=true;}}catch{}
+    if(!switched||screen.hidden){
       root.querySelectorAll('.screen').forEach(node=>{node.hidden=node!==screen;});
     }
-    window.setTimeout(()=>{void load(false);screen.querySelector('[data-gt-back]')?.focus({preventScroll:true});},0);
+    window.requestAnimationFrame(()=>{void load(false);screen.querySelector('[data-gt-back]')?.focus({preventScroll:true});});
   }
-  function back(){try{host().back?.();}catch{};}
+  function back(){
+    let switched=false;
+    try{const fn=host().back;if(typeof fn==='function'){fn();switched=true;}}catch{}
+    if(!switched){
+      const game=root.querySelector('[data-screen="game"]');
+      root.querySelectorAll('.screen').forEach(node=>{node.hidden=node!==game;});
+    }
+  }
 
   entry.addEventListener('click',event=>{event.preventDefault();open();});
   screen.addEventListener('click',event=>{
