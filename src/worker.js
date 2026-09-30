@@ -17200,6 +17200,7 @@ async function handleMenuCallback(query, env) {
 const V71_TASK_MODES = Object.freeze({
   one_time: "одноразовое",
   daily: "ежедневное",
+  weekly: "еженедельное",
   event: "событийное"
 });
 
@@ -17243,6 +17244,8 @@ const GAME_TASK_TRIGGER_REGISTRY = Object.freeze({
   new_player_delay: Object.freeze({ label:"После регистрации", repeatable:false, progressFormat:"duration", source:"profile", customValue:true, presets:Object.freeze([["10 минут",600],["1 час",3600],["24 часа",86400]]) }),
   accepted_runs: Object.freeze({ label:"Зачтённые забеги", repeatable:true, progressFormat:"number", source:"leaderboard", customValue:true, presets:Object.freeze([["3 забега",3],["5 забегов",5],["10 забегов",10],["25 забегов",25],["50 забегов",50],["100 забегов",100]]) }),
   total_score: Object.freeze({ label:"Сумма очков", repeatable:true, progressFormat:"number", source:"leaderboard", customValue:true, presets:Object.freeze([["5 000",5000],["10 000",10000],["25 000",25000],["50 000",50000]]) }),
+  completed_runs: Object.freeze({ label:"Завершённые забеги", repeatable:true, progressFormat:"number", source:"run_ledger", metric:"completedRuns", customValue:true, presets:Object.freeze([["1 забег",1],["3 забега",3],["5 забегов",5],["10 забегов",10],["25 забегов",25],["50 забегов",50],["100 забегов",100]]) }),
+  total_run_score: Object.freeze({ label:"Очки во всех забегах", repeatable:true, progressFormat:"number", source:"run_ledger", metric:"totalScore", customValue:true, presets:Object.freeze([["2 000 очков",2000],["5 000 очков",5000],["15 000 очков",15000],["30 000 очков",30000],["50 000 очков",50000]]) }),
   opened_cases: Object.freeze({ label:"Открытые кейсы", repeatable:true, progressFormat:"number", source:"cases", customValue:true, presets:Object.freeze([["1 кейс",1],["3 кейса",3],["5 кейсов",5],["10 кейсов",10]]) }),
   best_score: Object.freeze({ label:"Рекорд", repeatable:false, progressFormat:"number", source:"profile", customValue:true, presets:Object.freeze([["1 000",1000],["2 500",2500],["5 000",5000],["10 000",10000]]) }),
   promo_activations: Object.freeze({ label:"Активации промокодов", repeatable:true, progressFormat:"number", source:"promo", customValue:true, presets:Object.freeze([["1 промокод",1],["2 промокода",2],["3 промокода",3],["5 промокодов",5]]) }),
@@ -17361,8 +17364,8 @@ function gameTaskAutoArtUrl(row, series = false) {
   if(series)return GAME_TASK_ART_FALLBACK.series;
   if(String(row?.task_mode || "one_time")==="event")return GAME_TASK_ART_FALLBACK.event;
   const type=String(row?.trigger_type || "");
-  if(type==="accepted_runs")return GAME_TASK_ART_FALLBACK.runs;
-  if(type==="total_score")return GAME_TASK_ART_FALLBACK.score;
+  if(["accepted_runs","completed_runs"].includes(type))return GAME_TASK_ART_FALLBACK.runs;
+  if(["total_score","total_run_score"].includes(type))return GAME_TASK_ART_FALLBACK.score;
   if(type==="single_run_score")return GAME_TASK_ART_FALLBACK.singleScore;
   if(type==="collect_zefir")return GAME_TASK_ART_FALLBACK.zefir;
   if(type==="collect_coffee")return GAME_TASK_ART_FALLBACK.coffee;
@@ -17410,6 +17413,17 @@ function v71TaskCycle(row, now = Math.floor(Date.now() / 1000)) {
     const shifted = new Date((now + 3 * 3600) * 1000).toISOString().slice(0, 10);
     return { cycleKey: `day:${shifted}`, startsAt: Math.floor((now + 3 * 3600) / V67_DAY) * V67_DAY - 3 * 3600, endsAt: now };
   }
+  if (mode === "weekly") {
+    const moscowOffset=3*3600;
+    const shiftedNow=now+moscowOffset;
+    const dayStart=Math.floor(shiftedNow/V67_DAY)*V67_DAY;
+    const weekday=new Date(shiftedNow*1000).getUTCDay();
+    const daysSinceMonday=(weekday+6)%7;
+    const shiftedWeekStart=dayStart-daysSinceMonday*V67_DAY;
+    const startsAt=shiftedWeekStart-moscowOffset;
+    const monday=new Date(shiftedWeekStart*1000).toISOString().slice(0,10);
+    return { cycleKey:`week:${monday}`, startsAt, endsAt:now };
+  }
   if (mode === "event") {
     const startsAt = Math.max(0, Number(row.task_starts_at || 0));
     return { cycleKey: `event:${startsAt || row.chain_key}`, startsAt, endsAt: now };
@@ -17423,6 +17437,8 @@ async function gameTaskRunLedgerMetrics(env, telegramId, start, now) {
   // and season transitions while still counting only server-qualified finished runs.
   const minRunMs = positiveInt(env.LEADERBOARD_MIN_RUN_SECONDS, DEFAULT_LEADERBOARD_MIN_RUN_SECONDS) * 1000;
   const result = await env.DB.prepare(`SELECT
+      COUNT(*) AS completed_runs,
+      COALESCE(SUM(raw_score),0) AS total_score,
       COALESCE(MAX(raw_score),0) AS single_run_score,
       COALESCE(SUM(raw_treats),0) AS zefir,
       COALESCE(SUM(raw_coffee),0) AS coffee,
@@ -17432,6 +17448,8 @@ async function gameTaskRunLedgerMetrics(env, telegramId, start, now) {
     FROM player_economy_run_ledger
     WHERE telegram_id=? AND duration_ms>=? AND created_at>=? AND created_at<=?`).bind(String(telegramId),minRunMs,Math.max(0,Number(start)||0),Math.max(0,Number(now)||0)).first();
   return {
+    completedRuns:Math.max(0,Number(result?.completed_runs || 0)),
+    totalScore:Math.max(0,Number(result?.total_score || 0)),
     singleRunScore:Math.max(0,Number(result?.single_run_score || 0)),
     zefir:Math.max(0,Number(result?.zefir || 0)),
     coffee:Math.max(0,Number(result?.coffee || 0)),
@@ -17542,11 +17560,13 @@ async function v71TaskProgress(env, row, telegramId, now = Math.floor(Date.now()
 }
 
 function gameTaskProfileXp(row, reward, series = false) {
+  if (Number.isFinite(Number(reward.profileXp))) return Math.max(0, Math.min(500, Math.floor(Number(reward.profileXp))));
   if (reward.kind === "profile_xp") return 0;
-  if (Number.isFinite(Number(reward.profileXp))) return Math.max(0, Math.min(50, Math.floor(Number(reward.profileXp))));
   if (series) return 30;
-  if (String(row.task_mode || "") !== "daily") return 15;
-  return row.trigger_type === "accepted_runs" && Number(row.trigger_value || 0) <= 3 ? 8 : 5;
+  const mode=String(row.task_mode || "");
+  if (mode === "weekly") return 25;
+  if (mode !== "daily") return 15;
+  return ["accepted_runs","completed_runs"].includes(String(row.trigger_type||"")) && Number(row.trigger_value || 0) <= 3 ? 8 : 5;
 }
 
 function gameTaskReward(row, series = false) {
@@ -17707,7 +17727,7 @@ async function gameTaskView(env, row, telegramId, now, series = false, context =
     progress:value, target, progressFormat:gameTaskTriggerProgressFormat(row.trigger_type), complete, claimed,
     pending:Boolean(claim && !claimed),
     reward, rewardLabel:gameTaskRewardLabel(reward),
-    endsAt:Number(series ? row.ends_at : row.task_ends_at) || (row.task_mode === "daily" ? Number(progress.startsAt || 0) + V67_DAY : 0),
+    endsAt:Number(series ? row.ends_at : row.task_ends_at) || (row.task_mode === "daily" ? Number(progress.startsAt || 0) + V67_DAY : row.task_mode === "weekly" ? Number(progress.startsAt || 0) + 7*V67_DAY : 0),
     unread:complete && !claimed && !Number(receipt?.read_at || 0),
     steps:series ? progress.steps.map((step) => {
       const stepKey=String(step.chain_key || "");
@@ -17960,7 +17980,7 @@ async function readGameTaskNoticeState(env, telegramId) {
 }
 
 const GAME_TASK_RUN_NOTICE_TRIGGERS = Object.freeze(new Set([
-  "accepted_runs","total_score","best_score","level_reached",
+  "accepted_runs","total_score","completed_runs","total_run_score","best_score","level_reached",
   "single_run_score","collect_zefir","collect_coffee","single_run_duration","play_time","new_records",
   "runs_with_skin","runs_with_booster","runs_without_boosters"
 ]));
@@ -18030,7 +18050,8 @@ async function gameTaskRunCompletionNotice(env, telegramId, input = {}) {
   const runLedgerCache=new Map(),ratingCache=new Map(),filteredRunCache=new Map();
   const runLedgerBefore=async(start)=>{
     const key=String(start);if(runLedgerCache.has(key))return await runLedgerCache.get(key);
-    const pending=env.DB.prepare(`SELECT COALESCE(MAX(raw_score),0) AS single_run_score,COALESCE(SUM(raw_treats),0) AS zefir,
+    const pending=env.DB.prepare(`SELECT COUNT(*) AS completed_runs,COALESCE(SUM(raw_score),0) AS total_score,
+      COALESCE(MAX(raw_score),0) AS single_run_score,COALESCE(SUM(raw_treats),0) AS zefir,
       COALESCE(SUM(raw_coffee),0) AS coffee,COALESCE(MAX(duration_ms),0) AS single_run_duration_ms,
       COALESCE(SUM(duration_ms),0) AS play_time_ms,COALESCE(SUM(new_record),0) AS new_records
       FROM player_economy_run_ledger WHERE telegram_id=? AND run_id<>? AND duration_ms>=? AND created_at>=? AND created_at<=?`).bind(playerId,runId,minRunMs,start,now).first();
@@ -18081,7 +18102,11 @@ async function gameTaskRunCompletionNotice(env, telegramId, input = {}) {
       }
       if(definition?.source!=="run_ledger")continue;
       const metrics=await runLedgerBefore(start);
-      if(triggerType==="single_run_score"){
+      if(triggerType==="completed_runs"){
+        before=Math.max(0,Number(metrics?.completed_runs||0));after=before+(currentCounts?1:0);
+      }else if(triggerType==="total_run_score"){
+        before=Math.max(0,Number(metrics?.total_score||0));after=before+(currentCounts?score:0);
+      }else if(triggerType==="single_run_score"){
         before=Math.max(0,Number(metrics?.single_run_score||0));after=Math.max(before,currentCounts?score:0);
       }else if(triggerType==="collect_zefir"){
         before=Math.max(0,Number(metrics?.zefir||0));after=before+(currentCounts?runTreats:0);
@@ -38930,16 +38955,36 @@ const V67_AUTOMATION_PRESETS = Object.freeze([
 ]);
 
 const V98_BOT_TASK_PRESETS = Object.freeze([
-  { key:"bot_daily_runs_3", title:"Три забега за день", description:"Заверши 3 принятых сервером забега за текущий день.", triggerType:"accepted_runs", triggerValue:3, taskMode:"daily", reward:{kind:"points",amount:150,reason:"Три забега за день"}, sort:210 },
-  { key:"bot_daily_runs_7", title:"Семь забегов за день", description:"Заверши 7 принятых сервером забегов за текущий день.", triggerType:"accepted_runs", triggerValue:7, taskMode:"daily", reward:{kind:"treats",amount:35,reason:"Семь забегов за день"}, sort:220 },
-  { key:"bot_daily_score_5000", title:"Пять тысяч очков", description:"Набери суммарно 5 000 очков в зачтённых забегах за день.", triggerType:"total_score", triggerValue:5000, taskMode:"daily", reward:{kind:"points",amount:200,reason:"Пять тысяч очков"}, sort:230 },
-  { key:"bot_daily_score_15000", title:"Пятнадцать тысяч очков", description:"Набери суммарно 15 000 очков в зачтённых забегах за день.", triggerType:"total_score", triggerValue:15000, taskMode:"daily", reward:{kind:"coffee",amount:20,reason:"Пятнадцать тысяч очков"}, sort:240 },
-  { key:"bot_daily_case_1", title:"Открой кейс", description:"Открой любой кейс сегодня.", triggerType:"opened_cases", triggerValue:1, taskMode:"daily", reward:{kind:"treats",amount:25,reason:"Открой кейс"}, sort:250 },
-  { key:"bot_daily_case_3", title:"Три кейса за день", description:"Открой 3 кейса любого качества за текущий день.", triggerType:"opened_cases", triggerValue:3, taskMode:"daily", reward:{kind:"points",amount:300,reason:"Три кейса за день"}, sort:260 },
-  { key:"bot_milestone_best_10000", title:"Рекорд 10 000", description:"Один раз достигни личного рекорда 10 000 очков.", triggerType:"best_score", triggerValue:10000, taskMode:"one_time", reward:{kind:"case",id:"small",amount:1,reason:"Рекорд 10 000"}, sort:270 },
-  { key:"bot_milestone_level_10", title:"Десятый уровень", description:"Один раз достигни 10 уровня профиля.", triggerType:"level_reached", triggerValue:10, taskMode:"one_time", reward:{kind:"points",amount:500,reason:"Десятый уровень"}, sort:280 },
-  { key:"bot_milestone_level_20", title:"Двадцатый уровень", description:"Один раз достигни 20 уровня профиля.", triggerType:"level_reached", triggerValue:20, taskMode:"one_time", reward:{kind:"case",id:"sweet",amount:1,reason:"Двадцатый уровень"}, sort:290 },
-  { key:"bot_milestone_promo_1", title:"Первый промокод", description:"Активируй хотя бы один действующий промокод.", triggerType:"promo_activations", triggerValue:1, taskMode:"one_time", reward:{kind:"coffee",amount:30,reason:"Первый промокод"}, sort:300 }
+  { key:"task_daily_runs_3", title:"Утренняя пробежка", description:"Заверши 3 забега сегодня.", triggerType:"completed_runs", triggerValue:3, taskMode:"daily", reward:{"kind":"points","amount":500,"profileXp":10,"reason":"Утренняя пробежка"}, sort:100 },
+  { key:"task_daily_zefir_30", title:"Сладкий урожай", description:"Собери 30 зефирок за сегодняшние забеги.", triggerType:"collect_zefir", triggerValue:30, taskMode:"daily", reward:{"kind":"coffee","amount":15,"profileXp":10,"reason":"Сладкий урожай"}, sort:110 },
+  { key:"task_daily_coffee_5", title:"Кофе с собой", description:"Собери 5 чашек кофе за сегодняшние забеги.", triggerType:"collect_coffee", triggerValue:5, taskMode:"daily", reward:{"kind":"zefir","amount":15,"profileXp":10,"reason":"Кофе с собой"}, sort:120 },
+  { key:"task_daily_score_2000", title:"Отличный забег", description:"Набери 2 000 очков за один забег сегодня.", triggerType:"single_run_score", triggerValue:2000, taskMode:"daily", reward:{"kind":"booster","id":"shield","amount":1,"profileXp":15,"reason":"Отличный забег"}, sort:130 },
+  { key:"task_daily_case_1", title:"Открываем подарки", description:"Открой любой кейс сегодня.", triggerType:"opened_cases", triggerValue:1, taskMode:"daily", reward:{"kind":"points","amount":300,"profileXp":10,"reason":"Открываем подарки"}, sort:140 },
+  { key:"task_daily_no_booster_1", title:"Без помощи", description:"Заверши 1 забег без бустеров сегодня.", triggerType:"runs_without_boosters", triggerValue:1, taskMode:"daily", reward:{"kind":"booster","id":"second_chance","amount":1,"profileXp":15,"reason":"Без помощи"}, sort:150 },
+  { key:"task_daily_play_600", title:"Десять минут с Зеффи", description:"Проведи суммарно 10 минут в завершённых забегах сегодня.", triggerType:"play_time", triggerValue:600, taskMode:"daily", reward:{"kind":"booster","id":"pause","amount":1,"profileXp":15,"reason":"Десять минут с Зеффи"}, sort:160 },
+  { key:"task_weekly_runs_25", title:"Неделя на дорожке", description:"Заверши 25 забегов за текущую неделю.", triggerType:"completed_runs", triggerValue:25, taskMode:"weekly", reward:{"kind":"case","id":"small","amount":1,"profileXp":40,"reason":"Неделя на дорожке"}, sort:200 },
+  { key:"task_weekly_score_30000", title:"Большой счёт", description:"Набери суммарно 30 000 очков в завершённых забегах за неделю.", triggerType:"total_run_score", triggerValue:30000, taskMode:"weekly", reward:{"kind":"case","id":"sweet","amount":1,"profileXp":40,"reason":"Большой счёт"}, sort:210 },
+  { key:"task_weekly_zefir_150", title:"Сладкий запас", description:"Собери 150 зефирок за текущую неделю.", triggerType:"collect_zefir", triggerValue:150, taskMode:"weekly", reward:{"kind":"booster","id":"treats","amount":2,"profileXp":35,"reason":"Сладкий запас"}, sort:220 },
+  { key:"task_weekly_coffee_30", title:"Кофейная неделя", description:"Собери 30 чашек кофе за текущую неделю.", triggerType:"collect_coffee", triggerValue:30, taskMode:"weekly", reward:{"kind":"booster","id":"coffee","amount":2,"profileXp":35,"reason":"Кофейная неделя"}, sort:230 },
+  { key:"task_weekly_cases_5", title:"Мастер кейсов", description:"Открой 5 кейсов за текущую неделю.", triggerType:"opened_cases", triggerValue:5, taskMode:"weekly", reward:{"kind":"points","amount":2500,"profileXp":40,"reason":"Мастер кейсов"}, sort:240 },
+  { key:"task_weekly_records_3", title:"Рекордсмен недели", description:"Установи 3 новых личных рекорда за текущую неделю.", triggerType:"new_records", triggerValue:3, taskMode:"weekly", reward:{"kind":"case","id":"gold","amount":1,"profileXp":50,"reason":"Рекордсмен недели"}, sort:250 },
+  { key:"task_once_first_run", title:"Первый шаг", description:"Заверши свой первый забег.", triggerType:"completed_runs", triggerValue:1, taskMode:"one_time", reward:{"kind":"points","amount":250,"profileXp":5,"reason":"Первый шаг"}, sort:400 },
+  { key:"task_once_runs_10", title:"Разогрелись", description:"Заверши 10 забегов.", triggerType:"completed_runs", triggerValue:10, taskMode:"one_time", reward:{"kind":"booster","id":"points","amount":1,"profileXp":15,"reason":"Разогрелись"}, sort:410 },
+  { key:"task_once_runs_50", title:"Опытный бегун", description:"Заверши 50 забегов.", triggerType:"completed_runs", triggerValue:50, taskMode:"one_time", reward:{"kind":"case","id":"sweet","amount":1,"profileXp":40,"reason":"Опытный бегун"}, sort:420 },
+  { key:"task_once_runs_100", title:"Сладкий марафонец", description:"Заверши 100 забегов.", triggerType:"completed_runs", triggerValue:100, taskMode:"one_time", reward:{"kind":"case","id":"gold","amount":1,"profileXp":75,"reason":"Сладкий марафонец"}, sort:430 },
+  { key:"task_once_zefir_10", title:"Первый сладкий запас", description:"Собери 10 зефирок в завершённых забегах.", triggerType:"collect_zefir", triggerValue:10, taskMode:"one_time", reward:{"kind":"points","amount":250,"profileXp":5,"reason":"Первый сладкий запас"}, sort:440 },
+  { key:"task_once_coffee_3", title:"Кофейная остановка", description:"Собери 3 чашки кофе в завершённых забегах.", triggerType:"collect_coffee", triggerValue:3, taskMode:"one_time", reward:{"kind":"zefir","amount":10,"profileXp":5,"reason":"Кофейная остановка"}, sort:450 },
+  { key:"task_once_case_1", title:"Первый кейс", description:"Открой свой первый кейс.", triggerType:"opened_cases", triggerValue:1, taskMode:"one_time", reward:{"kind":"points","amount":500,"profileXp":10,"reason":"Первый кейс"}, sort:460 },
+  { key:"task_once_score_1500", title:"Хорошее начало", description:"Набери 1 500 очков за один забег.", triggerType:"single_run_score", triggerValue:1500, taskMode:"one_time", reward:{"kind":"booster","id":"points","amount":1,"profileXp":10,"reason":"Хорошее начало"}, sort:470 },
+  { key:"task_once_play_1800", title:"Долгий путь", description:"Проведи суммарно 30 минут в завершённых забегах.", triggerType:"play_time", triggerValue:1800, taskMode:"one_time", reward:{"kind":"booster","id":"pause","amount":2,"profileXp":25,"reason":"Долгий путь"}, sort:480 },
+  { key:"task_once_no_booster_5", title:"Чистое мастерство", description:"Заверши 5 забегов без бустеров.", triggerType:"runs_without_boosters", triggerValue:5, taskMode:"one_time", reward:{"kind":"booster","id":"shield","amount":1,"profileXp":25,"reason":"Чистое мастерство"}, sort:490 },
+  { key:"task_once_records_2", title:"Охотник за рекордами", description:"Установи 2 новых личных рекорда.", triggerType:"new_records", triggerValue:2, taskMode:"one_time", reward:{"kind":"points","amount":1500,"profileXp":25,"reason":"Охотник за рекордами"}, sort:500 },
+  { key:"task_once_score_5000", title:"Новая высота", description:"Набери 5 000 очков за один забег.", triggerType:"single_run_score", triggerValue:5000, taskMode:"one_time", reward:{"kind":"case","id":"sweet","amount":1,"profileXp":35,"reason":"Новая высота"}, sort:510 },
+  { key:"task_once_cases_10", title:"Коллекционер", description:"Открой 10 кейсов.", triggerType:"opened_cases", triggerValue:10, taskMode:"one_time", reward:{"kind":"booster","id":"second_chance","amount":2,"profileXp":30,"reason":"Коллекционер"}, sort:520 },
+  { key:"task_once_level_10", title:"Растём", description:"Достигни 10 уровня профиля.", triggerType:"level_reached", triggerValue:10, taskMode:"one_time", reward:{"kind":"points","amount":1000,"profileXp":30,"reason":"Растём"}, sort:530 },
+  { key:"task_once_level_20", title:"Уверенный игрок", description:"Достигни 20 уровня профиля.", triggerType:"level_reached", triggerValue:20, taskMode:"one_time", reward:{"kind":"case","id":"sweet","amount":1,"profileXp":45,"reason":"Уверенный игрок"}, sort:540 },
+  { key:"task_once_level_35", title:"Профи", description:"Достигни 35 уровня профиля.", triggerType:"level_reached", triggerValue:35, taskMode:"one_time", reward:{"kind":"case","id":"gold","amount":1,"profileXp":75,"reason":"Профи"}, sort:550 },
+  { key:"task_once_level_50", title:"Ветеран сезона", description:"Достигни 50 уровня профиля.", triggerType:"level_reached", triggerValue:50, taskMode:"one_time", reward:{"kind":"case","id":"gold","amount":1,"profileXp":120,"reason":"Ветеран сезона"}, sort:560 }
 ]);
 
 
@@ -39195,7 +39240,9 @@ function v67AutomationTriggerLabel(triggerType, triggerValue) {
   if (triggerType === "new_player_delay") return `через ${triggerValue >= V67_DAY ? `${Math.round(triggerValue / V67_DAY)} дн.` : triggerValue >= 3600 ? `${Math.round(triggerValue / 3600)} ч.` : `${Math.round(triggerValue / 60)} мин.`} после регистрации`;
   if (triggerType === "inactive_days") return `нет активности ${Number(triggerValue)} дн.`;
   if (triggerType === "accepted_runs") return `${Number(triggerValue)} зачтённых забегов`;
+  if (triggerType === "completed_runs") return `${Number(triggerValue)} завершённых ${v76RuPlural(triggerValue, "забег", "забега", "забегов")}`;
   if (triggerType === "total_score") return `набрать суммарно ${Number(triggerValue).toLocaleString("ru-RU")} очков`;
+  if (triggerType === "total_run_score") return `набрать ${Number(triggerValue).toLocaleString("ru-RU")} очков во всех завершённых забегах`;
   if (triggerType === "opened_cases") return `открыть ${Number(triggerValue)} кейсов`;
   if (triggerType === "best_score") return `достичь рекорда ${Number(triggerValue).toLocaleString("ru-RU")}`;
   if (triggerType === "promo_activations") return `активировать ${Number(triggerValue)} промокодов`;
@@ -39432,6 +39479,7 @@ async function selectV71TaskVisibility(query, visible, env) {
   await sendTelegramMessage(env, chatId, `<b>📋 Тип задания</b>\n\nОдноразовое можно выполнить один раз. Ежедневное сбрасывается в 00:00 по Москве. Событийное считает прогресс с момента публикации до отключения.`, { inline_keyboard: [
     [{ text: "1️⃣ Одноразовое", callback_data: "v71_task_mode:one_time" }],
     [{ text: "📅 Ежедневное", callback_data: "v71_task_mode:daily" }],
+    [{ text: "🗓 Еженедельное", callback_data: "v71_task_mode:weekly" }],
     [{ text: "🎉 Событийное", callback_data: "v71_task_mode:event" }],
     [{ text: "❌ Отменить", callback_data: "v67_auto_new_cancel" }]
   ] });
@@ -40189,7 +40237,7 @@ async function showV77SeriesDetails(chatId,user,key,env){
   const row=await env.DB.prepare(`SELECT * FROM task_series WHERE series_key=? LIMIT 1`).bind(String(key)).first();if(!row)return sendTelegramMessage(env,chatId,"Серия не найдена.");
   const steps=(await env.DB.prepare(`SELECT x.step_order,c.title,c.enabled,c.show_as_task FROM task_series_steps x LEFT JOIN automation_chains c ON c.chain_key=x.chain_key WHERE x.series_key=? ORDER BY x.step_order`).bind(row.series_key).all()).results||[];
   const lines=steps.map(s=>`${s.step_order}. ${s.title?escapeHtml(s.title):"⚠️ удалённое задание"}${!Number(s.enabled)?" · выключено":""}${!Number(s.show_as_task)?" · скрыто":""}`);
-  await sendTelegramMessage(env,chatId,`<b>🧩 ${escapeHtml(row.title)}</b>\n\nСтатус: <b>${Number(row.enabled)?"включена":"выключена"}</b>\nПорядок: <b>${row.completion_mode==="ordered"?"строго по порядку":"в любом порядке"}</b>\nФинальная награда: <b>${escapeHtml(safeRewardDescription(safeJson(row.final_reward_json,{}))||"нет")}</b>\n\n<b>Этапы</b>\n${lines.join("\n")||"Этапов нет."}`,{inline_keyboard:[[{text:Number(row.enabled)?"⏸ Выключить":"▶️ Включить",callback_data:`v77_series_toggle:${row.series_key}`}],[{text:"⬅️ Серии",callback_data:"v77_series"}]]});
+  await sendTelegramMessage(env,chatId,`<b>🧩 ${escapeHtml(row.title)}</b>\n\nСтатус: <b>${Number(row.enabled)?"включена":"выключена"}</b>\nПорядок: <b>${row.completion_mode==="ordered"?"строго по порядку":"в любом порядке"}</b>\nФинальная награда: <b>${escapeHtml(gameTaskRewardLabel(gameTaskReward(row,true))||"нет")}</b>\n\n<b>Этапы</b>\n${lines.join("\n")||"Этапов нет."}`,{inline_keyboard:[[{text:Number(row.enabled)?"⏸ Выключить":"▶️ Включить",callback_data:`v77_series_toggle:${row.series_key}`}],[{text:"⬅️ Серии",callback_data:"v77_series"}]]});
 }
 
 async function v77PlayerSeriesState(env,series,telegramId,now=Math.floor(Date.now()/1000),context=null){
@@ -40678,7 +40726,7 @@ async function handleV67Callback(query,env){
   const autoNewAction=data.match(/^v67_auto_new_action:(message|reward)$/);if(autoNewAction){await selectV67AutomationAction(query,autoNewAction[1],env);return true;}
   const autoNewReward=data.match(/^v67_auto_new_reward:(case_small|case_sweet|case_gold|case_mythic|case_legendary|points_500|points_1000|coffee_50|treats_100|profile_xp_8|profile_xp_15|profile_xp_30)$/);if(autoNewReward){await selectV67AutomationReward(query,autoNewReward[1],env);return true;}
   const taskVisibility=data.match(/^v71_task_visibility:(on|off)$/);if(taskVisibility){await selectV71TaskVisibility(query,taskVisibility[1]==="on",env);return true;}
-  const taskMode=data.match(/^v71_task_mode:(one_time|daily|event)$/);if(taskMode){await selectV71TaskMode(query,taskMode[1],env);return true;}
+  const taskMode=data.match(/^v71_task_mode:(one_time|daily|weekly|event)$/);if(taskMode){await selectV71TaskMode(query,taskMode[1],env);return true;}
   const auto=data.match(/^v67_auto:([a-z0-9_]+)$/);if(auto){await answerCallback(env,query.id,"Открываю цепочку.");await showV67AutomationDetails(chatId,query.from,auto[1],env);return true;}
   const autoToggle=data.match(/^v67_auto_toggle:([a-z0-9_]+)$/);if(autoToggle){await toggleV67Automation(query,autoToggle[1],env);return true;}
   const taskToggle=data.match(/^v71_task_toggle:([a-z0-9_]+)$/);if(taskToggle){await toggleV71TaskVisibility(query,taskToggle[1],env);return true;}
@@ -42783,6 +42831,12 @@ function ownerV8AutomationReward(body, title) {
     if(amount>20)throw new ApiError(400,"За одно задание можно выдать не более 20 кейсов.");
     return {kind:"case",id,amount,reason:String(title||"Автоматическая награда").slice(0,300)};
   }
+  if(kind==="booster"){
+    const booster=runBoosterDefinition(body?.rewardId||"points");
+    if(!booster)throw new ApiError(400,"Неизвестный бустер.");
+    if(amount>20)throw new ApiError(400,"За одно задание можно выдать не более 20 бустеров.");
+    return {kind:"booster",id:booster.id,amount,reason:String(title||"Автоматическая награда").slice(0,300)};
+  }
   if(!["points","zefir","coffee","profile_xp"].includes(kind))throw new ApiError(400,"Неизвестный тип награды.");
   if(kind==="profile_xp"&&amount>50)throw new ApiError(400,"За задание можно выдать не более 50 XP профиля.");
   return {kind,amount,reason:String(title||"Автоматическая награда").slice(0,300)};
@@ -42826,7 +42880,7 @@ function ownerV8AutomationView(row, allRows=[]) {
     triggerType:String(row.trigger_type||""),triggerValue:Number(row.trigger_value||0),triggerLabel:v67AutomationTriggerLabel(row.trigger_type,row.trigger_value),
     actionType:String(row.action_type||""),action,actionLabel:String(row.action_type)==="reward"?safeRewardDescription(action):String(row.action_type)==="mail"?`💌 ${String(action.title||row.title||"Письмо")}`:ownerV8AutomationPlainMessage(action.text).slice(0,180),messageText:String(row.action_type)==="message"?ownerV8AutomationPlainMessage(action.text):"",
     mailTitle:String(row.action_type)==="mail"?String(action.title||""):"",mailPreview:String(row.action_type)==="mail"?String(action.preview||""):"",mailText:String(row.action_type)==="mail"?String(action.text||""):"",mailImageUrl:String(row.action_type)==="mail"?String(action.imageUrl||""):"",mailReward:String(row.action_type)==="mail"?retentionV2Reward(action.reward):{kind:"none"},
-    showAsTask:Boolean(row.show_as_task),taskMode:String(row.task_mode||"one_time"),taskDescription:String(row.task_description||""),taskParams:gameTaskParams(row),
+    showAsTask:Boolean(row.show_as_task),taskMode:String(row.task_mode||"one_time"),taskDescription:String(row.task_description||""),taskParams:gameTaskParams(row),taskProfileXp:gameTaskProfileXp(row,action,false),
     taskArtUrl:gameTaskArtOverrideUrl(row.task_art_url),taskArtEffectiveUrl:gameTaskArtMeta(row,false).artUrl,taskArtMode:gameTaskArtMeta(row,false).artMode,
     taskStartsAt:Number(row.task_starts_at||0),taskEndsAt:Number(row.task_ends_at||0),taskSort:Number(row.task_sort||100),
     cooldownSeconds:Number(row.cooldown_seconds||0),lastRunAt:Number(row.last_run_at||0),updatedAt:Number(row.updated_at||0),updatedBy:String(row.updated_by||""),
@@ -42867,7 +42921,7 @@ async function ownerPanelV8Automations(env, ctx) {
     env.DB.prepare(`SELECT s.*,(SELECT COUNT(*) FROM task_series_steps x WHERE x.series_key=s.series_key) AS step_count FROM task_series s ORDER BY s.enabled DESC,s.sort_order,s.updated_at DESC,s.series_key`).all()
   ]);
   const conflicts=automations.reduce((acc,row)=>acc+row.issues.length,0);
-  const taskSeries=(seriesRows.results||[]).map((row)=>{const art=gameTaskArtMeta(row,true);return {key:String(row.series_key||""),title:String(row.title||"Цепочка заданий"),description:String(row.description||""),enabled:Boolean(row.enabled),completionMode:String(row.completion_mode||"ordered"),steps:Number(row.step_count||0),artUrl:gameTaskArtOverrideUrl(row.art_url),artEffectiveUrl:art.artUrl,artMode:art.artMode,updatedAt:Number(row.updated_at||0)};});
+  const taskSeries=(seriesRows.results||[]).map((row)=>{const art=gameTaskArtMeta(row,true),reward=gameTaskReward(row,true);return {key:String(row.series_key||""),title:String(row.title||"Цепочка заданий"),description:String(row.description||""),enabled:Boolean(row.enabled),completionMode:String(row.completion_mode||"ordered"),steps:Number(row.step_count||0),rewardLabel:gameTaskRewardLabel(reward),profileXp:Number(reward.profileXp||0),artUrl:gameTaskArtOverrideUrl(row.art_url),artEffectiveUrl:art.artUrl,artMode:art.artMode,updatedAt:Number(row.updated_at||0)};});
   return {ok:true,summary:{total:automations.length,active:automations.filter(x=>x.enabled&&!x.showAsTask).length,tasks:automations.filter(x=>x.showAsTask).length,activeTasks:automations.filter(x=>x.showAsTask&&x.enabled).length,executions7d:automations.reduce((a,x)=>a+x.executions7d,0),failures7d:automations.reduce((a,x)=>a+x.failed7d,0),conflicts},cron:cron?{enabled:Boolean(cron.enabled),interval:Number(cron.interval_seconds||300),lastRunAt:Number(cron.last_success_at||0),nextRunAt:Number(cron.next_run_at||0),status:String(cron.last_status||""),duration:Number(cron.last_duration_ms||0),error:String(cron.last_error||"")}:null,taskTypes:gameTaskTriggerCatalog(),taskSeries,
     automations,recentExecutions:(executionRows.results||[]).map(r=>({id:Number(r.id),chainKey:String(r.chain_key||""),title:String(r.title||r.chain_key||""),telegramId:String(r.telegram_id||""),playerName:String(r.player_name||r.telegram_id||""),status:String(r.status||""),details:ownerV8SafeJson(r.details_json,{}),createdAt:Number(r.created_at||0),updatedAt:Number(r.updated_at||0)})),recentClaims:(claimRows.results||[]).map(r=>({claimKey:String(r.claim_key||""),chainKey:String(r.chain_key||""),title:String(r.title||r.chain_key||""),telegramId:String(r.telegram_id||""),playerName:String(r.player_name||r.telegram_id||""),cycleKey:String(r.cycle_key||""),status:String(r.status||""),createdAt:Number(r.created_at||0),claimedAt:Number(r.claimed_at||0)}))};
 }
@@ -42888,8 +42942,15 @@ async function ownerPanelV8SaveAutomation(env, ctx) {
   if(showAsTask&&actionType!=="reward")throw new ApiError(400,"Задание может выдавать награду, но не отправлять автоматическое сообщение.");
   if(showAsTask&&!v71TaskTriggerSupported(triggerType))throw new ApiError(400,"Это условие нельзя показывать игроку как задание.");
   let taskMode=showAsTask?String(body.taskMode||"one_time"):"one_time";
-  if(!["one_time","daily","event"].includes(taskMode))taskMode="one_time";
+  if(!["one_time","daily","weekly","event"].includes(taskMode))taskMode="one_time";
   if(showAsTask&&taskMode!=="one_time"&&!OWNER_V8_TASK_REPEATABLE_TRIGGERS.has(triggerType))throw new ApiError(400,"Для этого условия доступно только одноразовое задание.");
+  if(showAsTask){
+    const oldAction=old?ownerV8SafeJson(old.action_json,{}):{};
+    const fallbackXp=Number.isFinite(Number(action.profileXp))?Number(action.profileXp):old?gameTaskProfileXp(old,oldAction,false):(taskMode==="daily"?10:taskMode==="weekly"?35:15);
+    const taskProfileXp=ownerPanelInteger(Object.prototype.hasOwnProperty.call(body,"taskProfileXp")?body.taskProfileXp:fallbackXp,1,500);
+    if(taskProfileXp==null)throw new ApiError(400,"XP профиля за задание должен быть от 1 до 500.");
+    action.profileXp=taskProfileXp;
+  }
   const taskDescription=showAsTask?String(body.taskDescription||description||title).trim().slice(0,300):"";
   const rawTaskArtUrl=showAsTask?String(body.taskArtUrl||"").trim():"";
   const taskArtUrl=showAsTask?gameTaskArtOverrideUrl(rawTaskArtUrl):"";

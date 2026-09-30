@@ -1,7 +1,7 @@
 (()=>{
   'use strict';
-  if(window.__ZEFIROK_GAME_TASKS_UI_V14__)return;
-  window.__ZEFIROK_GAME_TASKS_UI_V14__=true;
+  if(window.__ZEFIROK_GAME_TASKS_UI_V15__)return;
+  window.__ZEFIROK_GAME_TASKS_UI_V15__=true;
 
   const root=document.querySelector('#zefirok-maltipoo-runner');
   const screen=root?.querySelector('[data-screen="tasks"]');
@@ -13,7 +13,7 @@
   const API_READ='/api/tasks/read';
   const CACHE_MS=15000;
   const REQUEST_TIMEOUT_MS=12000;
-  const FILTERS=new Set(['all','daily','event','series','ready']);
+  const FILTERS=new Set(['all','daily','weekly','event','series','ready']);
   let payload=null,filter='all',loading=false,inflight=null,readInflight=null,readQueued=false,lastFreshAt=0,serverOffsetMs=0,claimingKey='',claimSuccessKey='',claimedOpen=false,toastTimer=0,timerTick=0;
   let entryNotice={readyCount:0,unreadCount:0,activeCount:0};
 
@@ -32,16 +32,18 @@
   function isReady(task){return Boolean(task?.complete&&!task?.claimed);}
   function isSeries(task){return String(task?.kind||'')==='series'||String(task?.mode||'')==='series';}
   function isDaily(task){return !isSeries(task)&&String(task?.mode||'')==='daily';}
+  function isWeekly(task){return !isSeries(task)&&String(task?.mode||'')==='weekly';}
   function isEvent(task){return !isSeries(task)&&String(task?.mode||'')==='event';}
-  function taskKindLabel(task){if(isSeries(task))return 'Цепочка';if(isDaily(task))return 'Ежедневное';if(isEvent(task))return 'Событие';return 'Одноразовое';}
+  function taskKindLabel(task){if(isSeries(task))return 'Цепочка';if(isDaily(task))return 'Ежедневное';if(isWeekly(task))return 'Еженедельное';if(isEvent(task))return 'Событие';return 'Одноразовое';}
   function taskIcon(task){
     if(isSeries(task))return '🏆';
     if(isEvent(task))return '🎟️';
+    if(isWeekly(task))return '🗓️';
     const type=String(task?.triggerType||'');
     if(type==='collect_zefir')return '🍥';
     if(type==='collect_coffee')return '☕';
     if(['opened_cases','case_purchases','open_specific_case'].includes(type))return '🎁';
-    if(['single_run_score','total_score','best_score'].includes(type))return '⭐';
+    if(['single_run_score','total_score','total_run_score','best_score'].includes(type))return '⭐';
     if(['new_records'].includes(type))return '🏆';
     if(['single_run_duration','play_time'].includes(type))return '⏱';
     if(['runs_with_booster'].includes(type))return '⚡';
@@ -87,9 +89,9 @@
     }
     if(type==='single_run_score')return `Лучший забег: ${fmt(current)} / ${fmt(goal)} очков`;
     if(type==='best_score')return `Личный рекорд: ${fmt(current)} / ${fmt(goal)} очков`;
-    if(type==='total_score')return `${fmt(current)} / ${fmt(goal)} очков`;
+    if(['total_score','total_run_score'].includes(type))return `${fmt(current)} / ${fmt(goal)} очков`;
     if(type==='level_reached')return `Уровень ${fmt(current)} / ${fmt(goal)}`;
-    if(['accepted_runs','runs_with_skin','runs_with_booster','runs_without_boosters'].includes(type))return `${fmt(current)} / ${fmt(goal)} ${plural(goal,'забег','забега','забегов')}`;
+    if(['accepted_runs','completed_runs','runs_with_skin','runs_with_booster','runs_without_boosters'].includes(type))return `${fmt(current)} / ${fmt(goal)} ${plural(goal,'забег','забега','забегов')}`;
     if(['opened_cases','case_purchases','open_specific_case'].includes(type))return `${fmt(current)} / ${fmt(goal)} ${plural(goal,'кейс','кейса','кейсов')}`;
     if(type==='collect_zefir')return `${fmt(current)} / ${fmt(goal)} зефирок`;
     if(type==='collect_coffee')return `${fmt(current)} / ${fmt(goal)} кофе`;
@@ -151,6 +153,7 @@
 
   function matchesFilter(task){
     if(filter==='daily')return isDaily(task);
+    if(filter==='weekly')return isWeekly(task);
     if(filter==='event')return isEvent(task);
     if(filter==='series')return isSeries(task);
     if(filter==='ready')return isReady(task);
@@ -341,9 +344,9 @@
 
   function filtersMarkup(){
     const tasks=list(payload?.tasks).filter(task=>!task?.claimed);
-    const counts={all:tasks.length,daily:tasks.filter(isDaily).length,event:tasks.filter(isEvent).length,series:tasks.filter(isSeries).length,ready:tasks.filter(isReady).length};
+    const counts={all:tasks.length,daily:tasks.filter(isDaily).length,weekly:tasks.filter(isWeekly).length,event:tasks.filter(isEvent).length,series:tasks.filter(isSeries).length,ready:tasks.filter(isReady).length};
     const chip=(key,label,count,extra='')=>`<button class="gt-filter${extra}" data-gt-filter="${key}" role="tab" aria-selected="${filter===key}" type="button">${label}<span class="gt-filter-count">${count}</span></button>`;
-    return `<div class="gt-filter-row" role="tablist" aria-label="Фильтры заданий">${chip('all','Все',counts.all)}${chip('daily','Ежедневные',counts.daily)}${chip('event','События',counts.event)}${chip('series','Цепочки',counts.series)}${counts.ready?chip('ready','🎁 Готово',counts.ready,' is-ready-filter'):''}</div>`;
+    return `<div class="gt-filter-row" role="tablist" aria-label="Фильтры заданий">${chip('all','Все',counts.all)}${chip('daily','Ежедневные',counts.daily)}${chip('weekly','Еженедельные',counts.weekly)}${chip('event','События',counts.event)}${chip('series','Цепочки',counts.series)}${counts.ready?chip('ready','🎁 Готово',counts.ready,' is-ready-filter'):''}</div>`;
   }
 
   function seasonMarkup(){
