@@ -1,106 +1,46 @@
-СЛАДКИЙ ЗАБЕГ — TASK HUB ART / STAGE 6
-Дата: 2026-09-30
+Сладкий Забег — Task Hub UI: архив полученных заданий + анимации
+Дата: 2026-10-01
 
-Что сделано
-===========
-1. Картинка теперь есть у каждой карточки задания в Task Hub:
-   - обычные задания;
-   - ежедневные;
-   - событийные;
-   - цепочки.
+Что изменено
+1. Полученные награды больше не занимают основной список заданий.
+   - В активных фильтрах остаются только незакрытые задания и готовые награды.
+   - Задание со статусом «Готово» НЕ прячется: оно исчезает из основного списка только после фактической выдачи награды.
 
-2. Для старых и новых заданий действует автоматический fallback-art по типу цели.
-   Ничего вручную назначать для существующих заданий не обязательно.
+2. Внизу раздела «Все» появился закрытый по умолчанию accordion:
+   «Полученные задания · N».
+   - Открывается/закрывается без API-запросов.
+   - Внутри компактные карточки: мини-арт, название, тип/награда, «✓ Получено».
+   - Состояние раскрытия сохраняется при обычном перерисовывании Task Hub в текущей сессии.
 
-3. Автоматический каталог использует уже существующие production-assets проекта:
-   - забеги -> achievement runs art;
-   - общий score -> total score art;
-   - score за один забег -> best score art;
-   - зефир -> zefir achievement art;
-   - кофе -> coffee achievement art;
-   - рекорды -> records art;
-   - кейсы -> case art;
-   - уровень -> level art;
-   - покупки/магазин -> shop art;
-   - конкретный skin -> реальный shop portrait выбранного skin;
-   - конкретный booster -> реальный booster art;
-   - конкретный case -> реальный closed-case art;
-   - цепочки -> season-pass quest art;
-   - неизвестный тип -> icon_quest_game.
+3. Карточка профиля теперь отдельно показывает количество уже полученных заданий.
 
-4. В Control Center / Автоматизации / Задания добавлен выбор картинки:
-   - «Выбрать» открывает существующий Project Asset Picker;
-   - «Авто» возвращает автоматический art;
-   - в списке заданий показывается фактический art и режим «свой / авто».
+4. Анимации:
+   - мягкое появление карточек;
+   - плавное проявление прогресс-бара;
+   - shimmer на кнопке получения награды;
+   - «✓ Получено» + золотой spark при успешном claim;
+   - после успешного claim карточка плавно уходит из активного списка, затем появляется в скрытом архиве;
+   - плавное раскрытие/закрытие архива;
+   - лёгкая анимация текущего/закрытого этапа цепочки;
+   - мягкий акцент таймера срочного события.
 
-5. В Control Center добавлена вкладка «Цепочки»:
-   - показывает все task_series;
-   - позволяет назначить отдельный art цепочки;
-   - позволяет вернуть авто-art.
+5. prefers-reduced-motion полностью отключает новые декоративные анимации.
 
-6. API /api/tasks/state отдаёт готовые поля artUrl + artMode.
-   Клиент не вычисляет критическое состояние и не делает дополнительных API-запросов ради картинок.
+Архитектура
+- Backend и схема D1 не менялись.
+- Server-authoritative claim остаётся без изменений.
+- Новых API-запросов нет.
+- Новой migration нет.
+- Встроенная версия Task Hub в index.html синхронизирована с assets/game-tasks.js и assets/game-tasks.css.
+- Runtime UI поднят с V13 до V14 для безопасного обновления кэша/inline runtime.
 
-7. Картинки загружаются lazy + async decoding. При повреждённом пути используется безопасный icon_quest_game.
+Установка из корня проекта после скачивания ZIP в Downloads:
+unzip -o "$HOME/Downloads/sweet-run-task-history-animations-20261001.zip" -d .
 
-База данных
-===========
-Добавлена migration:
-  migrations/0107_game_task_art.sql
-
-Она добавляет:
-  automation_chains.task_art_url
-  task_series.art_url
-
-Пустое значение означает «Авто». Старые задания автоматически совместимы.
-
-Также обновлён integration snapshot scripts/fixtures/d1_pre_0087_snapshot.sql,
-чтобы D1 replay видел реальную pre-0087 таблицу task_series перед ALTER TABLE 0107.
-
-Изменённые файлы
-================
-index.html
-owner.html
-src/worker.js
-assets/game-tasks.css
-assets/game-tasks.js
-migrations/0107_game_task_art.sql
-scripts/migration-history.lock.json
-scripts/fixtures/d1_pre_0087_snapshot.sql
-PATCH_README_RU.txt
-
-Установка
-=========
-Из корня проекта после скачивания ZIP в Downloads:
-
-unzip -o "$HOME/Downloads/sweet-run-task-art-stage6-20260930.zip" -d .
-
-Применить D1 migration:
-
-npx --yes wrangler@4.131.1 d1 migrations apply zefirok-rewards --remote
-
-Затем:
-
+Дальше:
 git status
 git diff --check
 git add -A
-git commit -m "Add artwork to game tasks"
+git commit -m "Hide claimed tasks and add task hub animations"
 git push origin main
 ./update.sh
-
-Проверки перед упаковкой
-========================
-PASS: node --check src/worker.js
-PASS: node --check assets/game-tasks.js
-PASS: strict Worker module syntax
-PASS: index srcdoc integrity
-PASS: migration history (106 migrations / 106 checksums)
-PASS: schema contract static
-PASS: operation system (424 checks)
-PASS: P1 read paths
-PASS: production asset references
-PASS: SQLite replay pre-0087 snapshot -> migrations 0087..0107
-
-Полный локальный Wrangler D1 integration в рабочем окружении ChatGPT упёрся в timeout.
-D1 migration отдельно проверена последовательным SQLite replay до 0107 включительно.
-Некоторые deploy/P2 checks требуют отсутствующий в переданной рабочей копии .assetsignore.
