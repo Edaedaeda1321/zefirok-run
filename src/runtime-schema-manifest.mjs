@@ -110,6 +110,7 @@ export const RUNTIME_SCHEMA_REQUIRED_TABLES = Object.freeze([
   'player_economy_meta',
   'player_economy_run_ledger',
   'player_game_presence',
+  'player_game_tasks',
   'player_gift_inbox',
   'player_legacy_migration_audit',
   'player_mail_metadata',
