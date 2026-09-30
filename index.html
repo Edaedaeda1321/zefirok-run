@@ -32439,61 +32439,418 @@ html &gt; body.zefirok-game-expanded{height:var(--zefirok-visible-height,100dvh)
   scheduleMaybe(700);
 })();
 &lt;/script&gt;
-&lt;script id=&quot;zefirok-game-tasks-loader-v7&quot;&gt;
+&lt;style id=&quot;zefirok-game-tasks-inline-style-v8&quot;&gt;
+/* Sweet Run task hub UI. Client presentation only; task state/rewards stay server-authoritative. */
+#zefirok-maltipoo-runner [data-screen=&quot;tasks&quot;]{
+  --gt-ink:#603d4a;
+  --gt-muted:#957783;
+  --gt-pink:#df6f9b;
+  --gt-pink-strong:#ca4f80;
+  --gt-pink-soft:#ffe8f0;
+  --gt-cream:#fff9f5;
+  --gt-gold:#c68a25;
+  --gt-gold-soft:#fff2c9;
+  --gt-line:rgba(225,181,197,.58);
+  --gt-shadow:0 12px 30px rgba(105,58,74,.10);
+  color:var(--gt-ink);
+  padding:1px 0 26px;
+  overflow-x:hidden;
+}
+#zefirok-maltipoo-runner [data-screen=&quot;tasks&quot;] button{font:inherit;-webkit-tap-highlight-color:transparent}
+#zefirok-maltipoo-runner .tasks-entry{
+  position:relative;width:100%;min-height:70px;margin:8px 0 12px;padding:12px 54px 12px 14px;
+  display:grid;grid-template-columns:52px minmax(0,1fr);align-items:center;gap:12px;
+  border:1px solid rgba(233,180,198,.72);border-radius:22px;
+  background:linear-gradient(145deg,#fff8fb 0%,#fff1f6 100%);color:#6b4050;text-align:left;
+  box-shadow:0 8px 20px rgba(123,69,89,.08);cursor:pointer;
+  transition:transform .14s ease,box-shadow .14s ease,opacity .14s ease,border-color .14s ease;
+}
+#zefirok-maltipoo-runner .tasks-entry:active{transform:translateY(1px) scale(.995)}
+#zefirok-maltipoo-runner .tasks-entry[hidden]{display:none!important}
+#zefirok-maltipoo-runner .tasks-entry__icon{
+  width:52px;height:52px;display:grid;place-items:center;border-radius:16px;
+  background:linear-gradient(145deg,#fff,#ffeaf2);box-shadow:inset 0 0 0 1px rgba(224,143,174,.18);overflow:hidden
+}
+#zefirok-maltipoo-runner .tasks-entry__icon img{display:block;width:40px;height:40px;object-fit:contain}
+#zefirok-maltipoo-runner .tasks-entry__copy{display:grid;gap:4px;min-width:0}
+#zefirok-maltipoo-runner .tasks-entry__copy strong{font-size:14px;line-height:1.1;font-weight:950;color:#7a3151}
+#zefirok-maltipoo-runner .tasks-entry__copy small{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#8f6b79;font-size:9px;line-height:1.25;font-weight:750}
+#zefirok-maltipoo-runner .tasks-entry__chevron{
+  position:absolute;right:16px;top:50%;transform:translateY(-50%);
+  color:#df6f9b;font-size:20px;font-weight:950;line-height:1
+}
+#zefirok-maltipoo-runner .tasks-entry__badge{
+  position:absolute;right:12px;top:-8px;min-width:26px;height:26px;padding:0 7px;box-sizing:border-box;
+  display:grid;place-items:center;border:2px solid #fff;border-radius:999px;
+  background:linear-gradient(145deg,#f28db2,#dd5f91);color:#fff;font-size:11px;font-weight:950;
+  box-shadow:0 5px 12px rgba(172,65,107,.2)
+}
+#zefirok-maltipoo-runner .tasks-entry__badge[hidden]{display:none!important}
+#zefirok-maltipoo-runner .tasks-entry.has-ready{border-color:rgba(226,126,165,.68);background:linear-gradient(145deg,#fff8fb 0%,#ffe5ef 54%,#ffdae8 100%)}
+
+#zefirok-maltipoo-runner .gt-shell{display:grid;gap:11px}
+#zefirok-maltipoo-runner .gt-topbar{display:grid;grid-template-columns:40px minmax(0,1fr) 40px;align-items:center;gap:8px;padding:2px 1px 0}
+#zefirok-maltipoo-runner .gt-icon-button{
+  width:40px;height:40px;display:grid;place-items:center;border:1px solid var(--gt-line);border-radius:14px;
+  background:rgba(255,255,255,.92);color:#a5486d;font-size:20px;font-weight:950;box-shadow:0 6px 16px rgba(107,62,78,.07);cursor:pointer
+}
+#zefirok-maltipoo-runner .gt-heading{min-width:0;text-align:center}
+#zefirok-maltipoo-runner .gt-heading strong{display:block;font-size:20px;line-height:1.08;font-weight:950;color:#6b3650}
+#zefirok-maltipoo-runner .gt-heading span{display:block;margin-top:3px;color:var(--gt-muted);font-size:9px;font-weight:750}
+#zefirok-maltipoo-runner .gt-refresh svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+#zefirok-maltipoo-runner .gt-refresh.is-busy svg{animation:gtSpin .8s linear infinite}
+@keyframes gtSpin{to{transform:rotate(360deg)}}
+
+#zefirok-maltipoo-runner .gt-profile-card{
+  position:relative;overflow:hidden;display:grid;gap:10px;padding:14px;
+  border:1px solid rgba(223,173,191,.64);border-radius:23px;
+  background:radial-gradient(circle at 88% -8%,rgba(255,214,228,.72),transparent 39%),linear-gradient(145deg,#fff,#fff4f8 67%,#fff8f2);
+  box-shadow:var(--gt-shadow)
+}
+#zefirok-maltipoo-runner .gt-profile-card:after{content:&quot;✦&quot;;position:absolute;right:13px;top:8px;color:rgba(215,157,67,.34);font-size:25px;transform:rotate(12deg);pointer-events:none}
+#zefirok-maltipoo-runner .gt-profile-top{display:flex;align-items:flex-start;justify-content:space-between;gap:10px}
+#zefirok-maltipoo-runner .gt-level-label{display:block;color:var(--gt-muted);font-size:9px;font-weight:850;text-transform:uppercase;letter-spacing:.05em}
+#zefirok-maltipoo-runner .gt-level{display:flex;align-items:baseline;gap:6px;margin-top:2px}
+#zefirok-maltipoo-runner .gt-level strong{color:#6e3851;font-size:30px;line-height:1;font-weight:950}
+#zefirok-maltipoo-runner .gt-level span{color:#b8587d;font-size:11px;font-weight:900}
+#zefirok-maltipoo-runner .gt-profile-xp-total{padding:7px 10px;border:1px solid rgba(225,181,197,.5);border-radius:999px;background:rgba(255,255,255,.72);color:#a64f70;font-size:10px;font-weight:900;white-space:nowrap}
+#zefirok-maltipoo-runner .gt-xp-track{height:13px;overflow:hidden;border:1px solid rgba(219,160,182,.52);border-radius:999px;background:#f0e6e9;box-shadow:inset 0 1px 3px rgba(92,56,70,.08)}
+#zefirok-maltipoo-runner .gt-xp-fill{display:block;width:0;height:100%;border-radius:inherit;background:linear-gradient(90deg,#f5a0bf,#dc6594 75%,#c94b7e);transition:width .28s ease}
+#zefirok-maltipoo-runner .gt-xp-caption{display:flex;justify-content:space-between;gap:10px;color:#8d737c;font-size:9px;font-weight:750}
+#zefirok-maltipoo-runner .gt-xp-caption span:last-child{text-align:right}
+
+#zefirok-maltipoo-runner .gt-overview{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px}
+#zefirok-maltipoo-runner .gt-overview-item{display:grid;gap:2px;padding:9px 8px;border:1px solid rgba(231,204,195,.72);border-radius:15px;background:rgba(255,255,255,.78);text-align:center}
+#zefirok-maltipoo-runner .gt-overview-item b{color:#b34e76;font-size:16px;line-height:1;font-weight:950}
+#zefirok-maltipoo-runner .gt-overview-item span{color:#967c84;font-size:8px;font-weight:800}
+#zefirok-maltipoo-runner .gt-overview-item.is-ready{border-color:rgba(224,158,64,.46);background:linear-gradient(145deg,#fffaf0,#fff0cc)}
+#zefirok-maltipoo-runner .gt-overview-item.is-ready b{color:#ae751d}
+
+#zefirok-maltipoo-runner .gt-next{
+  display:grid;grid-template-columns:40px minmax(0,1fr) auto;align-items:center;gap:9px;padding:10px 11px;
+  border:1px solid rgba(226,190,177,.68);border-radius:18px;background:linear-gradient(145deg,#fffdfa,#fff7f1);box-shadow:0 7px 18px rgba(104,66,52,.06)
+}
+#zefirok-maltipoo-runner .gt-next-icon{width:40px;height:40px;display:grid;place-items:center;border-radius:13px;background:#fff0d4;font-size:20px}
+#zefirok-maltipoo-runner .gt-next-copy{min-width:0;display:grid;gap:2px}
+#zefirok-maltipoo-runner .gt-next-copy small{color:#a17c64;font-size:8px;font-weight:900;text-transform:uppercase;letter-spacing:.05em}
+#zefirok-maltipoo-runner .gt-next-copy strong{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#765046;font-size:11px;font-weight:950}
+#zefirok-maltipoo-runner .gt-next-copy span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#9a7b72;font-size:8px;font-weight:750}
+#zefirok-maltipoo-runner .gt-next-status{padding:6px 8px;border-radius:999px;background:#ffe4ee;color:#b44b73;font-size:8px;font-weight:950;white-space:nowrap}
+#zefirok-maltipoo-runner .gt-next.is-ready .gt-next-status{background:#fff0bd;color:#a46c16}
+
+#zefirok-maltipoo-runner .gt-filter-row{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}
+#zefirok-maltipoo-runner .gt-filter{
+  min-height:34px;padding:6px 8px;border:1px solid rgba(228,192,205,.7);border-radius:12px;background:rgba(255,255,255,.74);color:#99717f;font-size:9px;font-weight:900;cursor:pointer
+}
+#zefirok-maltipoo-runner .gt-filter[aria-selected=&quot;true&quot;]{border-color:rgba(216,100,143,.56);background:linear-gradient(180deg,#ffe9f1,#f8ccdc);color:#a33f67;box-shadow:0 5px 12px rgba(164,68,104,.08)}
+
+#zefirok-maltipoo-runner .gt-list{display:grid;gap:9px}
+#zefirok-maltipoo-runner .gt-task{
+  position:relative;display:grid;gap:9px;padding:12px;border:1px solid rgba(225,190,200,.68);border-radius:20px;
+  background:rgba(255,255,255,.92);box-shadow:0 8px 20px rgba(98,57,71,.07)
+}
+#zefirok-maltipoo-runner .gt-task.is-ready{border-color:rgba(224,174,79,.62);background:radial-gradient(circle at 100% 0,rgba(255,225,148,.34),transparent 35%),linear-gradient(145deg,#fff,#fffaf0)}
+#zefirok-maltipoo-runner .gt-task.is-claimed{opacity:.68;box-shadow:none}
+#zefirok-maltipoo-runner .gt-task-head{display:grid;grid-template-columns:39px minmax(0,1fr) auto;align-items:start;gap:9px}
+#zefirok-maltipoo-runner .gt-task-icon{width:39px;height:39px;display:grid;place-items:center;border-radius:13px;background:#ffeaf1;font-size:20px}
+#zefirok-maltipoo-runner .gt-task.is-ready .gt-task-icon{background:#fff0c6}
+#zefirok-maltipoo-runner .gt-task-title{min-width:0;display:grid;gap:2px}
+#zefirok-maltipoo-runner .gt-task-title strong{color:#6f4051;font-size:12px;line-height:1.2;font-weight:950}
+#zefirok-maltipoo-runner .gt-task-title span{color:#9a7e87;font-size:8.5px;line-height:1.35;font-weight:700}
+#zefirok-maltipoo-runner .gt-task-tag{padding:5px 7px;border-radius:999px;background:#f9edf1;color:#9d6076;font-size:7px;font-weight:950;white-space:nowrap;text-transform:uppercase;letter-spacing:.04em}
+#zefirok-maltipoo-runner .gt-task.is-ready .gt-task-tag{background:#fff0c9;color:#a36b16}
+#zefirok-maltipoo-runner .gt-progress-meta{display:flex;align-items:center;justify-content:space-between;gap:10px;color:#8b717a;font-size:8.5px;font-weight:800}
+#zefirok-maltipoo-runner .gt-progress-meta b{color:#a64d70;font-size:9px;font-weight:950}
+#zefirok-maltipoo-runner .gt-progress-track{height:9px;overflow:hidden;border-radius:999px;background:#f1e8eb;box-shadow:inset 0 1px 2px rgba(92,57,69,.08)}
+#zefirok-maltipoo-runner .gt-progress-fill{display:block;height:100%;border-radius:inherit;background:linear-gradient(90deg,#f4a0bc,#dc6994);transition:width .25s ease}
+#zefirok-maltipoo-runner .gt-task.is-ready .gt-progress-fill{background:linear-gradient(90deg,#f0c353,#d99a2d)}
+#zefirok-maltipoo-runner .gt-task-foot{display:flex;align-items:center;justify-content:space-between;gap:8px}
+#zefirok-maltipoo-runner .gt-reward{min-width:0;display:grid;gap:1px;color:#8a6d77;font-size:8px;font-weight:750}
+#zefirok-maltipoo-runner .gt-reward b{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#a94f72;font-size:9px;font-weight:950}
+#zefirok-maltipoo-runner .gt-claim{
+  flex:0 0 auto;min-height:35px;padding:8px 12px;border:0;border-radius:12px;background:linear-gradient(145deg,#ed8caf,#d45b8b);color:#fff;font-size:9px;font-weight:950;box-shadow:0 7px 16px rgba(183,76,117,.19);cursor:pointer
+}
+#zefirok-maltipoo-runner .gt-claim:disabled{opacity:.55;box-shadow:none;cursor:default}
+#zefirok-maltipoo-runner .gt-state{flex:0 0 auto;padding:6px 8px;border-radius:999px;background:#f4edf0;color:#927a83;font-size:8px;font-weight:900;white-space:nowrap}
+#zefirok-maltipoo-runner .gt-state.is-ready{background:#fff0bf;color:#9f6814}
+#zefirok-maltipoo-runner .gt-series{display:flex;gap:5px;overflow:hidden;flex-wrap:wrap}
+#zefirok-maltipoo-runner .gt-series span{max-width:100%;padding:5px 7px;border-radius:10px;background:#fff6f8;color:#95717e;font-size:7.5px;font-weight:800;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+#zefirok-maltipoo-runner .gt-season{
+  width:100%;display:grid;grid-template-columns:42px minmax(0,1fr) auto;align-items:center;gap:10px;padding:11px 12px;
+  border:1px solid rgba(165,137,205,.40);border-radius:19px;background:radial-gradient(circle at 90% 0,rgba(230,209,255,.58),transparent 40%),linear-gradient(145deg,#fff,#f9f2ff);color:#684b78;text-align:left;box-shadow:0 8px 20px rgba(89,63,111,.07);cursor:pointer
+}
+#zefirok-maltipoo-runner .gt-season-icon{width:42px;height:42px;display:grid;place-items:center;border-radius:14px;background:#f5e9ff;font-size:22px}
+#zefirok-maltipoo-runner .gt-season-copy{min-width:0;display:grid;gap:2px}
+#zefirok-maltipoo-runner .gt-season-copy strong{font-size:11px;font-weight:950}
+#zefirok-maltipoo-runner .gt-season-copy span{color:#927ca0;font-size:8px;font-weight:750}
+#zefirok-maltipoo-runner .gt-season-badge{min-width:27px;height:27px;padding:0 8px;display:grid;place-items:center;border-radius:999px;background:#fff;color:#8b60a2;font-size:9px;font-weight:950}
+
+#zefirok-maltipoo-runner .gt-empty,#zefirok-maltipoo-runner .gt-error{
+  display:grid;justify-items:center;gap:7px;padding:24px 18px;border:1px dashed rgba(221,179,195,.72);border-radius:20px;background:rgba(255,255,255,.66);text-align:center
+}
+#zefirok-maltipoo-runner .gt-empty-icon{font-size:29px}
+#zefirok-maltipoo-runner .gt-empty strong,#zefirok-maltipoo-runner .gt-error strong{color:#74495a;font-size:12px;font-weight:950}
+#zefirok-maltipoo-runner .gt-empty span,#zefirok-maltipoo-runner .gt-error span{max-width:280px;color:#9a7d87;font-size:9px;line-height:1.4;font-weight:750}
+#zefirok-maltipoo-runner .gt-retry{min-height:34px;margin-top:3px;padding:7px 12px;border:1px solid rgba(218,101,143,.43);border-radius:12px;background:#ffe9f1;color:#a54569;font-size:9px;font-weight:950;cursor:pointer}
+
+#zefirok-maltipoo-runner .gt-skeleton{display:grid;gap:9px}
+#zefirok-maltipoo-runner .gt-skeleton&gt;i{display:block;height:104px;border-radius:20px;background:linear-gradient(100deg,#f6edf0 20%,#fff 40%,#f6edf0 60%);background-size:200% 100%;animation:gtShimmer 1.2s ease-in-out infinite}
+@keyframes gtShimmer{to{background-position:-200% 0}}
+#zefirok-maltipoo-runner .gt-toast{position:fixed;left:50%;bottom:max(22px,env(safe-area-inset-bottom));z-index:80;max-width:min(360px,calc(100% - 28px));padding:10px 13px;border-radius:14px;background:rgba(94,54,69,.94);color:#fff;font-size:10px;font-weight:850;line-height:1.35;text-align:center;box-shadow:0 12px 30px rgba(61,32,43,.28);transform:translate(-50%,18px);opacity:0;pointer-events:none;transition:.2s ease}
+#zefirok-maltipoo-runner .gt-toast.show{transform:translate(-50%,0);opacity:1}
+
+@media(max-width:390px){
+  #zefirok-maltipoo-runner .gt-profile-card{padding:12px;border-radius:20px}
+  #zefirok-maltipoo-runner .gt-level strong{font-size:27px}
+  #zefirok-maltipoo-runner .gt-task{padding:11px;border-radius:18px}
+  #zefirok-maltipoo-runner .gt-task-head{grid-template-columns:36px minmax(0,1fr) auto;gap:8px}
+  #zefirok-maltipoo-runner .gt-task-icon{width:36px;height:36px}
+}
+@media(prefers-reduced-motion:reduce){
+  #zefirok-maltipoo-runner .gt-xp-fill,#zefirok-maltipoo-runner .gt-progress-fill,#zefirok-maltipoo-runner .gt-toast,#zefirok-maltipoo-runner .tasks-entry{transition:none!important}
+  #zefirok-maltipoo-runner .gt-skeleton&gt;i{animation:none!important}
+}
+
+&lt;/style&gt;
+&lt;script id=&quot;zefirok-game-tasks-inline-runtime-v8&quot;&gt;
 (()=&gt;{
-  if(window.__ZEFIROK_GAME_TASKS_LOADER_V7__)return;
-  window.__ZEFIROK_GAME_TASKS_LOADER_V7__=true;
+  &#x27;use strict&#x27;;
+  if(window.__ZEFIROK_GAME_TASKS_UI_V8__)return;
+  window.__ZEFIROK_GAME_TASKS_UI_V8__=true;
+
   const root=document.querySelector(&#x27;#zefirok-maltipoo-runner&#x27;);
-  const entry=root?.querySelector(&#x27;[data-tasks-open]&#x27;);
   const screen=root?.querySelector(&#x27;[data-screen=&quot;tasks&quot;]&#x27;);
-  if(!root||!entry||!screen)return;
-  let loading=null;
-  const showScreen=()=&gt;{
-    try{window.zefirokTaskHost?.open?.();}catch{}
-    if(screen.hidden)root.querySelectorAll(&#x27;.screen&#x27;).forEach(node=&gt;{node.hidden=node!==screen;});
-    if(!screen.firstElementChild)screen.innerHTML=&#x27;&lt;div style=&quot;min-height:250px;display:grid;place-items:center;padding:28px;text-align:center;color:#8d6c79&quot;&gt;&lt;div&gt;&lt;img src=&quot;/assets/ui/icon_quest_game.webp&quot; alt=&quot;&quot; style=&quot;width:64px;height:64px;object-fit:contain&quot;&gt;&lt;strong style=&quot;display:block;margin-top:8px;font-size:17px;color:#684350&quot;&gt;Задания&lt;/strong&gt;&lt;span style=&quot;display:block;margin-top:7px;font-size:12px&quot;&gt;Загружаем задания…&lt;/span&gt;&lt;/div&gt;&lt;/div&gt;&#x27;;
-  };
-  const loadCss=()=&gt;{
-    if(document.querySelector(&#x27;link[data-zefirok-game-tasks-css=&quot;7&quot;]&#x27;))return;
-    const link=document.createElement(&#x27;link&#x27;);
-    link.rel=&#x27;stylesheet&#x27;;link.href=&#x27;/assets/game-tasks.css?v=7&#x27;;link.dataset.zefirokGameTasksCss=&#x27;7&#x27;;
-    (document.head||document.documentElement).append(link);
-  };
-  const loadJs=()=&gt;new Promise((resolve,reject)=&gt;{
-    if(typeof window.zefirokOpenGameTasks===&#x27;function&#x27;&amp;&amp;window.__ZEFIROK_GAME_TASKS_UI_V7__){resolve();return;}
-    const existing=document.querySelector(&#x27;script[data-zefirok-game-tasks-js=&quot;7&quot;]&#x27;);
-    if(existing){
-      if(existing.dataset.loaded===&#x27;1&#x27;){resolve();return;}
-      existing.addEventListener(&#x27;load&#x27;,resolve,{once:true});
-      existing.addEventListener(&#x27;error&#x27;,reject,{once:true});
-      return;
+  const entry=root?.querySelector(&#x27;[data-tasks-open]&#x27;);
+  if(!root||!screen||!entry)return;
+
+  const API_STATE=&#x27;/api/tasks/state&#x27;;
+  const API_CLAIM=&#x27;/api/tasks/claim&#x27;;
+  const CACHE_MS=15000;
+  const REQUEST_TIMEOUT_MS=6500;
+  const FILTERS=new Set([&#x27;all&#x27;,&#x27;daily&#x27;,&#x27;event&#x27;]);
+  let payload=null,filter=&#x27;all&#x27;,loading=false,inflight=null,lastFreshAt=0,serverOffsetMs=0,claimingKey=&#x27;&#x27;,toastTimer=0,timerTick=0;
+
+  const host=()=&gt;window.zefirokTaskHost||{};
+  const auth=()=&gt;String(host().auth?.()||window.Telegram?.WebApp?.initData||&#x27;&#x27;);
+  const esc=value=&gt;String(value??&#x27;&#x27;).replace(/[&amp;&lt;&gt;&quot;&#x27;]/g,ch=&gt;({&#x27;&amp;&#x27;:&#x27;&amp;amp;&#x27;,&#x27;&lt;&#x27;:&#x27;&amp;lt;&#x27;,&#x27;&gt;&#x27;:&#x27;&amp;gt;&#x27;,&#x27;&quot;&#x27;:&#x27;&amp;quot;&#x27;,&quot;&#x27;&quot;:&#x27;&amp;#39;&#x27;}[ch]));
+  const num=value=&gt;Number.isFinite(Number(value))?Number(value):0;
+  const whole=value=&gt;Math.max(0,Math.floor(num(value)));
+  const list=value=&gt;Array.isArray(value)?value:[];
+  const nowServerMs=()=&gt;Date.now()+serverOffsetMs;
+  const requestId=()=&gt;`tasks-ui:${Date.now().toString(36)}:${Math.random().toString(36).slice(2,9)}`;
+
+  function isRunning(){try{return Boolean(host().running?.());}catch{return false;}}
+  function taskId(task){return `${String(task?.kind||&#x27;task&#x27;)}:${String(task?.key||&#x27;&#x27;)}:${String(task?.cycleKey||&#x27;&#x27;)}`;}
+  function taskRatio(task){const target=Math.max(1,whole(task?.target));return Math.max(0,Math.min(1,whole(task?.progress)/target));}
+  function isReady(task){return Boolean(task?.complete&amp;&amp;!task?.claimed);}
+  function isDaily(task){return String(task?.mode||&#x27;&#x27;)===&#x27;daily&#x27;;}
+  function taskGroup(task){return isDaily(task)?&#x27;daily&#x27;:&#x27;event&#x27;;}
+  function taskIcon(task){if(task?.kind===&#x27;series&#x27;)return &#x27;🎯&#x27;;if(isDaily(task))return &#x27;🔥&#x27;;return &#x27;✨&#x27;;}
+  function taskTag(task){if(task?.kind===&#x27;series&#x27;)return &#x27;Цепочка&#x27;;if(isDaily(task))return &#x27;Сегодня&#x27;;return &#x27;Событие&#x27;;}
+  function fmt(n){try{return whole(n).toLocaleString(&#x27;ru-RU&#x27;);}catch{return String(whole(n));}}
+  function plural(n,one,two,five){const value=Math.abs(whole(n))%100;const tail=value%10;if(value&gt;10&amp;&amp;value&lt;20)return five;if(tail===1)return one;if(tail&gt;=2&amp;&amp;tail&lt;=4)return two;return five;}
+
+  function timeLeft(endsAt){
+    const seconds=Math.floor(num(endsAt)-nowServerMs()/1000);
+    if(!endsAt||seconds&lt;=0)return &#x27;&#x27;;
+    if(seconds&lt;3600)return `${Math.max(1,Math.ceil(seconds/60))} мин`;
+    if(seconds&lt;86400){const hours=Math.floor(seconds/3600),mins=Math.floor((seconds%3600)/60);return mins?`${hours} ч ${mins} мин`:`${hours} ч`;}
+    const days=Math.floor(seconds/86400),hours=Math.floor((seconds%86400)/3600);return hours?`${days} д ${hours} ч`:`${days} д`;
+  }
+
+  function filteredTasks(){
+    const tasks=list(payload?.tasks);
+    if(filter===&#x27;daily&#x27;)return tasks.filter(isDaily);
+    if(filter===&#x27;event&#x27;)return tasks.filter(task=&gt;!isDaily(task));
+    return tasks;
+  }
+
+  function nearestTask(){
+    const tasks=list(payload?.tasks).filter(task=&gt;!task?.claimed);
+    const ready=tasks.find(isReady);if(ready)return ready;
+    return tasks.sort((a,b)=&gt;taskRatio(b)-taskRatio(a))[0]||null;
+  }
+
+  function toast(text){
+    let node=screen.querySelector(&#x27;.gt-toast&#x27;);
+    if(!node){node=document.createElement(&#x27;div&#x27;);node.className=&#x27;gt-toast&#x27;;node.setAttribute(&#x27;role&#x27;,&#x27;status&#x27;);screen.append(node);}
+    node.textContent=String(text||&#x27;&#x27;);node.classList.add(&#x27;show&#x27;);clearTimeout(toastTimer);toastTimer=setTimeout(()=&gt;node.classList.remove(&#x27;show&#x27;),2600);
+  }
+
+  async function post(path,body={}){
+    const initData=auth();
+    if(!initData)throw new Error(&#x27;Открой «Сладкий Забег» через Telegram, чтобы загрузить задания.&#x27;);
+    const controller=new AbortController();
+    const timer=setTimeout(()=&gt;controller.abort(),REQUEST_TIMEOUT_MS);
+    try{
+      const response=await fetch(path,{method:&#x27;POST&#x27;,headers:{&#x27;Content-Type&#x27;:&#x27;application/json&#x27;},body:JSON.stringify({initData,requestId:requestId(),...body}),cache:&#x27;no-store&#x27;,credentials:&#x27;same-origin&#x27;,signal:controller.signal});
+      let data=null;try{data=await response.json();}catch{}
+      if(!response.ok||data?.ok===false)throw new Error(String(data?.error||`Ошибка ${response.status}`));
+      return data||{};
+    }catch(error){
+      if(error?.name===&#x27;AbortError&#x27;)throw new Error(&#x27;Сервер отвечает слишком долго. Повтори проверку — награда не потеряется.&#x27;);
+      throw error;
+    }finally{clearTimeout(timer);}
+  }
+
+  function updateEntry(){
+    entry.hidden=isRunning();
+    const summary=entry.querySelector(&#x27;[data-tasks-summary]&#x27;);
+    const badge=entry.querySelector(&#x27;[data-tasks-badge]&#x27;);
+    const ready=whole(payload?.readyCount),active=whole(payload?.activeCount);
+    entry.classList.toggle(&#x27;has-ready&#x27;,ready&gt;0);
+    if(summary){
+      if(ready&gt;0&amp;&amp;active&gt;0)summary.textContent=`${active} ${plural(active,&#x27;активное задание&#x27;,&#x27;активных задания&#x27;,&#x27;активных заданий&#x27;)} · ${ready} ${plural(ready,&#x27;награда готова&#x27;,&#x27;награды готовы&#x27;,&#x27;наград готово&#x27;)}`;
+      else if(ready&gt;0)summary.textContent=`${ready} ${plural(ready,&#x27;награда готова&#x27;,&#x27;награды готовы&#x27;,&#x27;наград готово&#x27;)}`;
+      else if(active&gt;0)summary.textContent=`${active} ${plural(active,&#x27;активное задание&#x27;,&#x27;активных задания&#x27;,&#x27;активных заданий&#x27;)}`;
+      else summary.textContent=&#x27;Цели, награды и XP профиля&#x27;;
     }
-    const script=document.createElement(&#x27;script&#x27;);
-    script.src=&#x27;/assets/game-tasks.js?v=7&#x27;;script.async=true;script.dataset.zefirokGameTasksJs=&#x27;7&#x27;;
-    script.onload=()=&gt;{script.dataset.loaded=&#x27;1&#x27;;resolve();};
-    script.onerror=()=&gt;reject(new Error(&#x27;tasks-ui-load-failed&#x27;));
-    (document.body||document.documentElement).append(script);
+    if(badge){badge.hidden=ready&lt;=0;badge.textContent=String(Math.min(99,ready));}
+  }
+
+  function skeleton(){
+    return `&lt;div class=&quot;gt-shell&quot;&gt;&lt;div class=&quot;gt-topbar&quot;&gt;&lt;button class=&quot;gt-icon-button&quot; data-gt-back type=&quot;button&quot; aria-label=&quot;Назад&quot;&gt;‹&lt;/button&gt;&lt;div class=&quot;gt-heading&quot;&gt;&lt;strong&gt;Задания&lt;/strong&gt;&lt;span&gt;Цели и прогресс профиля&lt;/span&gt;&lt;/div&gt;&lt;button class=&quot;gt-icon-button gt-refresh is-busy&quot; type=&quot;button&quot; aria-label=&quot;Обновляем задания&quot; disabled&gt;&lt;svg viewBox=&quot;0 0 24 24&quot;&gt;&lt;path d=&quot;M20 11a8 8 0 1 0-2.3 5.7M20 4v7h-7&quot;/&gt;&lt;/svg&gt;&lt;/button&gt;&lt;/div&gt;&lt;div class=&quot;gt-skeleton&quot; aria-label=&quot;Загружаем задания&quot;&gt;&lt;i&gt;&lt;/i&gt;&lt;i&gt;&lt;/i&gt;&lt;i&gt;&lt;/i&gt;&lt;/div&gt;&lt;/div&gt;`;
+  }
+
+  function profileMarkup(){
+    const p=payload?.profile||{};
+    const level=Math.max(1,whole(p.level)||1),xp=whole(p.xp),needed=whole(p.needed),progress=whole(p.progress);
+    const pct=needed?Math.max(0,Math.min(100,(progress/needed)*100)):100;
+    const ready=whole(payload?.readyCount),active=whole(payload?.activeCount);
+    return `&lt;section class=&quot;gt-profile-card&quot; aria-label=&quot;Прогресс профиля&quot;&gt;&lt;div class=&quot;gt-profile-top&quot;&gt;&lt;div&gt;&lt;span class=&quot;gt-level-label&quot;&gt;Уровень профиля&lt;/span&gt;&lt;div class=&quot;gt-level&quot;&gt;&lt;strong&gt;${level}&lt;/strong&gt;&lt;span&gt;${needed?&#x27;уровень&#x27;:&#x27;максимум&#x27;}&lt;/span&gt;&lt;/div&gt;&lt;/div&gt;&lt;span class=&quot;gt-profile-xp-total&quot;&gt;⭐ ${fmt(xp)} XP&lt;/span&gt;&lt;/div&gt;&lt;div class=&quot;gt-xp-track&quot; role=&quot;progressbar&quot; aria-valuemin=&quot;0&quot; aria-valuemax=&quot;${needed||1}&quot; aria-valuenow=&quot;${needed?Math.min(progress,needed):1}&quot;&gt;&lt;span class=&quot;gt-xp-fill&quot; style=&quot;width:${pct.toFixed(1)}%&quot;&gt;&lt;/span&gt;&lt;/div&gt;&lt;div class=&quot;gt-xp-caption&quot;&gt;&lt;span&gt;${needed?`${fmt(progress)} / ${fmt(needed)} XP`:&#x27;Максимальный уровень&#x27;}&lt;/span&gt;&lt;span&gt;${needed?`До следующего: ${fmt(Math.max(0,needed-progress))} XP`:&#x27;Прогресс продолжается&#x27;}&lt;/span&gt;&lt;/div&gt;&lt;div class=&quot;gt-overview&quot;&gt;&lt;div class=&quot;gt-overview-item${ready?&#x27; is-ready&#x27;:&#x27;&#x27;}&quot;&gt;&lt;b&gt;${ready}&lt;/b&gt;&lt;span&gt;готово&lt;/span&gt;&lt;/div&gt;&lt;div class=&quot;gt-overview-item&quot;&gt;&lt;b&gt;${active}&lt;/b&gt;&lt;span&gt;активно&lt;/span&gt;&lt;/div&gt;&lt;div class=&quot;gt-overview-item&quot;&gt;&lt;b&gt;${list(payload?.tasks).length}&lt;/b&gt;&lt;span&gt;всего&lt;/span&gt;&lt;/div&gt;&lt;/div&gt;&lt;/section&gt;`;
+  }
+
+  function nextMarkup(){
+    const task=nearestTask();
+    if(!task)return &#x27;&#x27;;
+    const ready=isReady(task),left=Math.max(0,whole(task.target)-whole(task.progress));
+    const status=ready?&#x27;Забрать&#x27;:left?`Осталось ${fmt(left)}`:&#x27;Проверить&#x27;;
+    const extra=timeLeft(task.endsAt);
+    return `&lt;section class=&quot;gt-next${ready?&#x27; is-ready&#x27;:&#x27;&#x27;}&quot; aria-label=&quot;Ближайшая цель&quot;&gt;&lt;span class=&quot;gt-next-icon&quot;&gt;${ready?&#x27;🎁&#x27;:&#x27;🐾&#x27;}&lt;/span&gt;&lt;span class=&quot;gt-next-copy&quot;&gt;&lt;small&gt;${ready?&#x27;Награда готова&#x27;:&#x27;Ближайшая цель&#x27;}&lt;/small&gt;&lt;strong&gt;${esc(task.title||&#x27;Задание&#x27;)}&lt;/strong&gt;&lt;span&gt;${esc(ready?(task.rewardLabel||&#x27;Можно получить награду&#x27;):(extra?`До конца: ${extra}`:(task.description||&#x27;Продолжай играть&#x27;)))}&lt;/span&gt;&lt;/span&gt;&lt;span class=&quot;gt-next-status&quot;&gt;${esc(status)}&lt;/span&gt;&lt;/section&gt;`;
+  }
+
+  function taskMarkup(task,index){
+    const progress=whole(task.progress),target=Math.max(1,whole(task.target)),pct=Math.max(0,Math.min(100,(progress/target)*100));
+    const ready=isReady(task),claimed=Boolean(task.claimed),pending=Boolean(task.pending)&amp;&amp;!claimed;
+    const currentClaim=claimingKey===taskId(task);
+    const end=timeLeft(task.endsAt);
+    let action=&#x27;&#x27;;
+    if(ready&amp;&amp;!pending&amp;&amp;!claimed)action=`&lt;button class=&quot;gt-claim&quot; data-gt-claim=&quot;${index}&quot; type=&quot;button&quot;${currentClaim?&#x27; disabled&#x27;:&#x27;&#x27;}&gt;${currentClaim?&#x27;Получаем…&#x27;:&#x27;🎁 Получить&#x27;}&lt;/button&gt;`;
+    else if(pending)action=&#x27;&lt;span class=&quot;gt-state is-ready&quot;&gt;Проверяем выдачу&lt;/span&gt;&#x27;;
+    else if(claimed)action=&#x27;&lt;span class=&quot;gt-state&quot;&gt;✓ Получено&lt;/span&gt;&#x27;;
+    else action=&#x27;&lt;span class=&quot;gt-state&quot;&gt;В процессе&lt;/span&gt;&#x27;;
+    const steps=list(task.steps).slice(0,6);
+    const series=steps.length?`&lt;div class=&quot;gt-series&quot; aria-label=&quot;Этапы цепочки&quot;&gt;${steps.map(step=&gt;`&lt;span&gt;${esc(step.title||&#x27;Этап&#x27;)}&lt;/span&gt;`).join(&#x27;&#x27;)}&lt;/div&gt;`:&#x27;&#x27;;
+    return `&lt;article class=&quot;gt-task${ready?&#x27; is-ready&#x27;:&#x27;&#x27;}${claimed?&#x27; is-claimed&#x27;:&#x27;&#x27;}&quot;&gt;&lt;div class=&quot;gt-task-head&quot;&gt;&lt;span class=&quot;gt-task-icon&quot; aria-hidden=&quot;true&quot;&gt;${taskIcon(task)}&lt;/span&gt;&lt;span class=&quot;gt-task-title&quot;&gt;&lt;strong&gt;${esc(task.title||&#x27;Задание&#x27;)}&lt;/strong&gt;&lt;span&gt;${esc(task.description||&#x27;Выполни условие и забери награду.&#x27;)}&lt;/span&gt;&lt;/span&gt;&lt;span class=&quot;gt-task-tag&quot;&gt;${taskTag(task)}&lt;/span&gt;&lt;/div&gt;&lt;div class=&quot;gt-progress-meta&quot;&gt;&lt;span&gt;${claimed?&#x27;Выполнено&#x27;:ready?&#x27;Цель выполнена&#x27;:`Прогресс ${fmt(Math.min(progress,target))} / ${fmt(target)}`}&lt;/span&gt;&lt;b&gt;${ready||claimed?&#x27;100%&#x27;:`${Math.round(pct)}%`}&lt;/b&gt;&lt;/div&gt;&lt;div class=&quot;gt-progress-track&quot; role=&quot;progressbar&quot; aria-valuemin=&quot;0&quot; aria-valuemax=&quot;${target}&quot; aria-valuenow=&quot;${Math.min(progress,target)}&quot;&gt;&lt;span class=&quot;gt-progress-fill&quot; style=&quot;width:${ready||claimed?100:pct.toFixed(1)}%&quot;&gt;&lt;/span&gt;&lt;/div&gt;${series}&lt;div class=&quot;gt-task-foot&quot;&gt;&lt;span class=&quot;gt-reward&quot;&gt;&lt;span&gt;${end?`⏱ ${esc(end)} · `:&#x27;&#x27;}Награда&lt;/span&gt;&lt;b&gt;${esc(task.rewardLabel||&#x27;Награда задания&#x27;)}&lt;/b&gt;&lt;/span&gt;${action}&lt;/div&gt;&lt;/article&gt;`;
+  }
+
+  function filtersMarkup(){
+    const counts={all:list(payload?.tasks).length,daily:list(payload?.tasks).filter(isDaily).length,event:list(payload?.tasks).filter(t=&gt;!isDaily(t)).length};
+    return `&lt;div class=&quot;gt-filter-row&quot; role=&quot;tablist&quot; aria-label=&quot;Тип заданий&quot;&gt;&lt;button class=&quot;gt-filter&quot; data-gt-filter=&quot;all&quot; role=&quot;tab&quot; aria-selected=&quot;${filter===&#x27;all&#x27;}&quot; type=&quot;button&quot;&gt;Все · ${counts.all}&lt;/button&gt;&lt;button class=&quot;gt-filter&quot; data-gt-filter=&quot;daily&quot; role=&quot;tab&quot; aria-selected=&quot;${filter===&#x27;daily&#x27;}&quot; type=&quot;button&quot;&gt;Сегодня · ${counts.daily}&lt;/button&gt;&lt;button class=&quot;gt-filter&quot; data-gt-filter=&quot;event&quot; role=&quot;tab&quot; aria-selected=&quot;${filter===&#x27;event&#x27;}&quot; type=&quot;button&quot;&gt;События · ${counts.event}&lt;/button&gt;&lt;/div&gt;`;
+  }
+
+  function seasonMarkup(){
+    let ready=0;try{ready=whole(host().seasonReady?.());}catch{}
+    return `&lt;button class=&quot;gt-season&quot; data-gt-season type=&quot;button&quot;&gt;&lt;span class=&quot;gt-season-icon&quot;&gt;🌙&lt;/span&gt;&lt;span class=&quot;gt-season-copy&quot;&gt;&lt;strong&gt;Сезонные задания&lt;/strong&gt;&lt;span&gt;XP сезона и прогресс текущего пропуска&lt;/span&gt;&lt;/span&gt;&lt;span class=&quot;gt-season-badge&quot;&gt;${ready&gt;0?Math.min(99,ready):&#x27;›&#x27;}&lt;/span&gt;&lt;/button&gt;`;
+  }
+
+  function render(){
+    if(!payload){screen.innerHTML=skeleton();return;}
+    const tasks=filteredTasks();
+    const listMarkup=tasks.length?tasks.map((task,index)=&gt;taskMarkup(task,list(payload.tasks).indexOf(task))).join(&#x27;&#x27;):`&lt;div class=&quot;gt-empty&quot;&gt;&lt;span class=&quot;gt-empty-icon&quot;&gt;☕&lt;/span&gt;&lt;strong&gt;${filter===&#x27;all&#x27;?&#x27;Сейчас активных заданий нет&#x27;:&#x27;В этом разделе пока пусто&#x27;}&lt;/strong&gt;&lt;span&gt;${filter===&#x27;all&#x27;?&#x27;Загляни позже — новые цели появятся здесь автоматически.&#x27;:&#x27;Переключись на другой тип заданий.&#x27;}&lt;/span&gt;&lt;/div&gt;`;
+    screen.innerHTML=`&lt;div class=&quot;gt-shell&quot;&gt;&lt;div class=&quot;gt-topbar&quot;&gt;&lt;button class=&quot;gt-icon-button&quot; data-gt-back type=&quot;button&quot; aria-label=&quot;Назад&quot;&gt;‹&lt;/button&gt;&lt;div class=&quot;gt-heading&quot;&gt;&lt;strong&gt;Задания&lt;/strong&gt;&lt;span&gt;Играй, выполняй цели и развивай профиль&lt;/span&gt;&lt;/div&gt;&lt;button class=&quot;gt-icon-button gt-refresh${loading?&#x27; is-busy&#x27;:&#x27;&#x27;}&quot; data-gt-refresh type=&quot;button&quot; aria-label=&quot;Обновить задания&quot;${loading?&#x27; disabled&#x27;:&#x27;&#x27;}&gt;&lt;svg viewBox=&quot;0 0 24 24&quot;&gt;&lt;path d=&quot;M20 11a8 8 0 1 0-2.3 5.7M20 4v7h-7&quot;/&gt;&lt;/svg&gt;&lt;/button&gt;&lt;/div&gt;${profileMarkup()}${nextMarkup()}${filtersMarkup()}&lt;div class=&quot;gt-list&quot; aria-live=&quot;polite&quot;&gt;${listMarkup}&lt;/div&gt;${seasonMarkup()}&lt;/div&gt;&lt;div class=&quot;gt-toast&quot; role=&quot;status&quot;&gt;&lt;/div&gt;`;
+  }
+
+  function renderError(message){
+    screen.innerHTML=`&lt;div class=&quot;gt-shell&quot;&gt;&lt;div class=&quot;gt-topbar&quot;&gt;&lt;button class=&quot;gt-icon-button&quot; data-gt-back type=&quot;button&quot; aria-label=&quot;Назад&quot;&gt;‹&lt;/button&gt;&lt;div class=&quot;gt-heading&quot;&gt;&lt;strong&gt;Задания&lt;/strong&gt;&lt;span&gt;Цели и прогресс профиля&lt;/span&gt;&lt;/div&gt;&lt;span&gt;&lt;/span&gt;&lt;/div&gt;&lt;div class=&quot;gt-error&quot; role=&quot;alert&quot;&gt;&lt;span class=&quot;gt-empty-icon&quot;&gt;🍥&lt;/span&gt;&lt;strong&gt;Не удалось загрузить задания&lt;/strong&gt;&lt;span&gt;${esc(message||&#x27;Проверь соединение и попробуй ещё раз.&#x27;)}&lt;/span&gt;&lt;button class=&quot;gt-retry&quot; data-gt-retry type=&quot;button&quot;&gt;Повторить&lt;/button&gt;&lt;/div&gt;${seasonMarkup()}&lt;/div&gt;`;
+  }
+
+  async function load(force=false){
+    if(inflight)return inflight;
+    if(!force&amp;&amp;payload&amp;&amp;Date.now()-lastFreshAt&lt;CACHE_MS){render();return payload;}
+    loading=true;if(!payload)screen.innerHTML=skeleton();else render();
+    inflight=(async()=&gt;{
+      try{
+        const data=await post(API_STATE);
+        if(!Array.isArray(data.tasks))throw new Error(&#x27;Сервер вернул неполное состояние заданий.&#x27;);
+        payload=data;lastFreshAt=Date.now();serverOffsetMs=num(data.serverTime)?num(data.serverTime)*1000-Date.now():0;
+        updateEntry();render();return data;
+      }catch(error){
+        if(payload){render();toast(String(error?.message||&#x27;Не удалось обновить задания.&#x27;));return payload;}
+        renderError(String(error?.message||&#x27;Не удалось загрузить задания.&#x27;));return null;
+      }finally{loading=false;inflight=null;screen.querySelector(&#x27;.gt-refresh&#x27;)?.classList.remove(&#x27;is-busy&#x27;);}
+    })();
+    return inflight;
+  }
+
+  async function claim(task){
+    if(!task||claimingKey||task.claimed||!task.complete)return;
+    const id=taskId(task);claimingKey=id;render();
+    let notice=&#x27;&#x27;;
+    try{
+      await post(API_CLAIM,{kind:String(task.kind||&#x27;task&#x27;),key:String(task.key||&#x27;&#x27;),cycleKey:String(task.cycleKey||&#x27;&#x27;)});
+      try{await host().sync?.();}catch{}
+      await load(true);
+      notice=&#x27;Награда получена ✨&#x27;;
+    }catch(error){
+      try{await load(true);}catch{}
+      notice=String(error?.message||&#x27;Не удалось получить награду.&#x27;);
+    }finally{
+      claimingKey=&#x27;&#x27;;render();if(notice)toast(notice);
+    }
+  }
+
+  function open(){
+    if(isRunning())return;
+    if(!payload)screen.innerHTML=skeleton();
+    let switched=false;
+    try{const fn=host().open;if(typeof fn===&#x27;function&#x27;){fn();switched=true;}}catch{}
+    if(!switched||screen.hidden){
+      root.querySelectorAll(&#x27;.screen&#x27;).forEach(node=&gt;{node.hidden=node!==screen;});
+    }
+    window.requestAnimationFrame(()=&gt;{void load(false);screen.querySelector(&#x27;[data-gt-back]&#x27;)?.focus({preventScroll:true});});
+  }
+  function back(){
+    let switched=false;
+    try{const fn=host().back;if(typeof fn===&#x27;function&#x27;){fn();switched=true;}}catch{}
+    if(!switched){
+      const game=root.querySelector(&#x27;[data-screen=&quot;game&quot;]&#x27;);
+      root.querySelectorAll(&#x27;.screen&#x27;).forEach(node=&gt;{node.hidden=node!==game;});
+    }
+  }
+
+  entry.addEventListener(&#x27;click&#x27;,event=&gt;{event.preventDefault();open();});
+  screen.addEventListener(&#x27;click&#x27;,event=&gt;{
+    const target=event.target instanceof Element?event.target:null;if(!target)return;
+    if(target.closest(&#x27;[data-gt-back]&#x27;)){back();return;}
+    if(target.closest(&#x27;[data-gt-refresh],[data-gt-retry]&#x27;)){void load(true);return;}
+    const filterButton=target.closest(&#x27;[data-gt-filter]&#x27;);if(filterButton){const next=String(filterButton.dataset.gtFilter||&#x27;all&#x27;);if(FILTERS.has(next)){filter=next;render();}return;}
+    if(target.closest(&#x27;[data-gt-season]&#x27;)){try{host().season?.();}catch{}return;}
+    const claimButton=target.closest(&#x27;[data-gt-claim]&#x27;);if(claimButton){const index=Number(claimButton.dataset.gtClaim);void claim(list(payload?.tasks)[index]);}
   });
-  const open=()=&gt;{
-    if(typeof window.zefirokOpenGameTasks===&#x27;function&#x27;&amp;&amp;window.__ZEFIROK_GAME_TASKS_UI_V7__){window.zefirokOpenGameTasks();return Promise.resolve();}
-    showScreen();loadCss();
-    if(loading)return loading;
-    loading=loadJs().then(()=&gt;{
-      if(typeof window.zefirokOpenGameTasks!==&#x27;function&#x27;)throw new Error(&#x27;tasks-ui-opener-missing&#x27;);
-      window.zefirokOpenGameTasks();
-    }).catch(()=&gt;{
-      showScreen();
-      screen.innerHTML=&#x27;&lt;div style=&quot;min-height:250px;display:grid;place-items:center;padding:28px;text-align:center;color:#8d6c79&quot;&gt;&lt;div&gt;&lt;img src=&quot;/assets/ui/icon_quest_game.webp&quot; alt=&quot;&quot; style=&quot;width:64px;height:64px;object-fit:contain&quot;&gt;&lt;strong style=&quot;display:block;margin-top:8px;font-size:17px;color:#684350&quot;&gt;Задания&lt;/strong&gt;&lt;span style=&quot;display:block;margin-top:7px;font-size:12px&quot;&gt;Не удалось загрузить раздел. Закрой и снова открой игру.&lt;/span&gt;&lt;/div&gt;&lt;/div&gt;&#x27;;
-    }).finally(()=&gt;{loading=null;});
-    return loading;
-  };
-  entry.addEventListener(&#x27;click&#x27;,event=&gt;{event.preventDefault();event.stopImmediatePropagation();void open();},true);
+
+  window.addEventListener(&#x27;zefirok-tasks-ui&#x27;,updateEntry);
+  window.addEventListener(&#x27;zefirok-tasks-refresh&#x27;,()=&gt;{if(payload)void load(true);});
+  window.addEventListener(&#x27;focus&#x27;,()=&gt;{if(!screen.hidden&amp;&amp;payload&amp;&amp;Date.now()-lastFreshAt&gt;CACHE_MS)void load(true);});
+  document.addEventListener(&#x27;visibilitychange&#x27;,()=&gt;{if(!document.hidden&amp;&amp;!screen.hidden&amp;&amp;payload&amp;&amp;Date.now()-lastFreshAt&gt;CACHE_MS)void load(true);});
+
+  timerTick=window.setInterval(()=&gt;{if(!screen.hidden&amp;&amp;payload)render();},60000);
+  window.addEventListener(&#x27;pagehide&#x27;,()=&gt;{if(timerTick)clearInterval(timerTick);},{once:true});
+
+  updateEntry();
+
+  // Expose an imperative opener for the lazy loader and deep links.
+  window.zefirokOpenGameTasks=open;
+  window.zefirokTasksUiOpen=open;
+
+  // Deep links created by the Telegram bot should land directly in the task hub.
   try{
-    const params=new URLSearchParams(location.search);
-    const start=String(window.Telegram?.WebApp?.initDataUnsafe?.start_param||params.get(&#x27;startapp&#x27;)||params.get(&#x27;screen&#x27;)||&#x27;&#x27;).toLowerCase();
-    if(start===&#x27;tasks&#x27;||start===&#x27;task&#x27;)window.setTimeout(()=&gt;void open(),0);
+    const params=new URLSearchParams(location.search),start=String(window.Telegram?.WebApp?.initDataUnsafe?.start_param||params.get(&#x27;startapp&#x27;)||params.get(&#x27;screen&#x27;)||&#x27;&#x27;).toLowerCase();
+    if(start===&#x27;tasks&#x27;||start===&#x27;task&#x27;)window.setTimeout(open,0);
   }catch{}
 })();
+
 &lt;/script&gt;
 &lt;/body&gt;
 &lt;/html&gt;

@@ -1,7 +1,7 @@
 (()=>{
   'use strict';
-  if(window.__ZEFIROK_GAME_TASKS_UI_V7__)return;
-  window.__ZEFIROK_GAME_TASKS_UI_V7__=true;
+  if(window.__ZEFIROK_GAME_TASKS_UI_V8__)return;
+  window.__ZEFIROK_GAME_TASKS_UI_V8__=true;
 
   const root=document.querySelector('#zefirok-maltipoo-runner');
   const screen=root?.querySelector('[data-screen="tasks"]');
