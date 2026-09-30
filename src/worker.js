@@ -17510,6 +17510,48 @@ async function reconcilePendingGameTaskClaims(env, telegramId) {
   return finalized;
 }
 
+async function trackGameTaskExposures(env, telegramId, rows, views, now = Math.floor(Date.now() / 1000)) {
+  const playerId = String(telegramId || "").trim();
+  if (!playerId) return 0;
+  const records = [];
+  const sourceRows = Array.isArray(rows) ? rows : [];
+  const taskViews = Array.isArray(views) ? views : [];
+  for (let index = 0; index < Math.min(sourceRows.length, taskViews.length); index += 1) {
+    const row = sourceRows[index];
+    const view = taskViews[index];
+    const chainKey = String(row?.chain_key || "").trim();
+    const cycleKey = String(view?.cycleKey || "").trim();
+    if (!chainKey || !cycleKey || String(view?.kind || "task") !== "task") continue;
+    records.push({
+      chainKey,
+      cycleKey,
+      progress: Math.max(0, Math.floor(Number(view?.progress || 0))),
+      target: Math.max(1, Math.floor(Number(view?.target || 1))),
+      completedAt: view?.complete ? now : 0
+    });
+  }
+  if (!records.length) return 0;
+
+  // One compact D1 write per chunk instead of one request per task.
+  // Schema is owned by migration 0030; analytics must never block the task hub.
+  for (let offset = 0; offset < records.length; offset += 40) {
+    const chunk = records.slice(offset, offset + 40);
+    const values = chunk.map(() => "(?,?,?,?,?,?,?,?)").join(",");
+    const binds = [];
+    for (const record of chunk) {
+      binds.push(record.chainKey, playerId, record.cycleKey, now, now, record.progress, record.target, record.completedAt);
+    }
+    await env.DB.prepare(`INSERT INTO task_exposure_log(chain_key,telegram_id,cycle_key,first_seen_at,last_seen_at,progress_value,target_value,completed_at)
+      VALUES ${values}
+      ON CONFLICT(chain_key,telegram_id,cycle_key) DO UPDATE SET
+        last_seen_at=excluded.last_seen_at,
+        progress_value=excluded.progress_value,
+        target_value=excluded.target_value,
+        completed_at=CASE WHEN task_exposure_log.completed_at>0 THEN task_exposure_log.completed_at ELSE excluded.completed_at END`).bind(...binds).run();
+  }
+  return records.length;
+}
+
 async function gameTasksState(env, telegramId) {
   // Production migrations own this schema. Avoid runtime DDL on the latency-sensitive read path.
   // Pending claims are presentation state over the authoritative reward queue.
@@ -17526,10 +17568,13 @@ async function gameTasksState(env, telegramId) {
   const supportedTasks = (taskRows.results || []).filter((row) => v71TaskTriggerSupported(row.trigger_type));
   const visibleSeries = seriesRows.results || [];
   const context = await gameTaskStateContext(env,telegramId,supportedTasks,visibleSeries,profile);
-  const tasks = await Promise.all([
-    ...supportedTasks.map((row) => gameTaskView(env,row,telegramId,now,false,context)),
-    ...visibleSeries.map((row) => gameTaskView(env,row,telegramId,now,true,context))
+  const [taskViews,seriesViews] = await Promise.all([
+    Promise.all(supportedTasks.map((row) => gameTaskView(env,row,telegramId,now,false,context))),
+    Promise.all(visibleSeries.map((row) => gameTaskView(env,row,telegramId,now,true,context)))
   ]);
+  const tasks = [...taskViews,...seriesViews];
+  try { await trackGameTaskExposures(env,telegramId,supportedTasks,taskViews,now); }
+  catch (error) { console.error("game task exposure tracking failed",error); }
 
   // A reward whose first response was lost remains visible after midnight,
   // publication end, or an administrator disabling the task.
@@ -17625,11 +17670,21 @@ async function gameTasksApi(request, env, action) {
     requireBotToken(env);
     const auth = await validateTelegramInitData(String(body.initData || ""),env);
     const telegramId = String(auth.user.id);
-    // State is a hot read path and production migrations already guarantee these tables.
-    if (action !== "state") await Promise.all([ensureV67Schema(env),ensureV77Schema(env)]);
+    // State/read are hot paths and production migrations already guarantee their tables.
+    // Claim keeps the legacy runtime guards because it touches the broader reward/task schema.
+    if (action === "claim") await Promise.all([ensureV67Schema(env),ensureV77Schema(env)]);
     if (action === "read") {
       const notices = Array.isArray(body.notices) ? body.notices.slice(0,100) : [];
-      if (notices.length) await env.DB.batch(notices.map((notice) => env.DB.prepare(`UPDATE player_game_tasks SET read_at=? WHERE telegram_id=? AND kind=? AND task_key=? AND cycle_key=?`).bind(Math.floor(Date.now()/1000),telegramId,String(notice.kind||""),String(notice.key||""),String(notice.cycleKey||""))));
+      const now = Math.floor(Date.now()/1000);
+      const statements = [];
+      for (const notice of notices) {
+        const kind = String(notice?.kind || "");
+        const key = String(notice?.key || "").trim();
+        const cycleKey = String(notice?.cycleKey || "").trim();
+        if (!["task","series"].includes(kind) || !key || key.length > 120 || !cycleKey || cycleKey.length > 160) continue;
+        statements.push(env.DB.prepare(`UPDATE player_game_tasks SET read_at=CASE WHEN read_at>0 THEN read_at ELSE ? END WHERE telegram_id=? AND kind=? AND task_key=? AND cycle_key=? AND completed_at>0`).bind(now,telegramId,kind,key,cycleKey));
+      }
+      if (statements.length) await env.DB.batch(statements);
       return jsonResponse({ok:true});
     }
     const claim = action === "claim" ? await claimGameTask(env,telegramId,body) : {};

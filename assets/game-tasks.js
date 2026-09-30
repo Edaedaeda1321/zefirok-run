@@ -10,10 +10,11 @@
 
   const API_STATE='/api/tasks/state';
   const API_CLAIM='/api/tasks/claim';
+  const API_READ='/api/tasks/read';
   const CACHE_MS=15000;
   const REQUEST_TIMEOUT_MS=12000;
   const FILTERS=new Set(['all','daily','event']);
-  let payload=null,filter='all',loading=false,inflight=null,lastFreshAt=0,serverOffsetMs=0,claimingKey='',toastTimer=0,timerTick=0;
+  let payload=null,filter='all',loading=false,inflight=null,readInflight=null,readQueued=false,lastFreshAt=0,serverOffsetMs=0,claimingKey='',toastTimer=0,timerTick=0;
 
   const host=()=>window.zefirokTaskHost||{};
   const auth=()=>String(host().auth?.()||window.Telegram?.WebApp?.initData||'');
@@ -76,6 +77,29 @@
       if(error?.name==='AbortError')throw new Error('Сервер отвечает слишком долго. Повтори проверку — награда не потеряется.');
       throw error;
     }finally{clearTimeout(timer);}
+  }
+
+  async function markVisibleCompletedRead(){
+    if(screen.hidden||!payload)return null;
+    if(readInflight){readQueued=true;return readInflight;}
+    const tasks=filteredTasks().filter(task=>Boolean(task?.unread&&task?.complete&&!task?.claimed));
+    if(!tasks.length)return null;
+    const notices=tasks.map(task=>({kind:String(task?.kind||'task'),key:String(task?.key||''),cycleKey:String(task?.cycleKey||'')}));
+    const ids=new Set(tasks.map(taskId));
+    readInflight=(async()=>{
+      try{
+        await post(API_READ,{notices});
+        for(const task of list(payload?.tasks)){if(ids.has(taskId(task)))task.unread=false;}
+        return true;
+      }catch(error){
+        console.warn('game tasks read-state update failed',error);
+        return false;
+      }finally{
+        readInflight=null;
+        if(readQueued){readQueued=false;void markVisibleCompletedRead();}
+      }
+    })();
+    return readInflight;
   }
 
   function updateEntry(){
@@ -152,14 +176,14 @@
 
   async function load(force=false){
     if(inflight)return inflight;
-    if(!force&&payload&&Date.now()-lastFreshAt<CACHE_MS){render();return payload;}
+    if(!force&&payload&&Date.now()-lastFreshAt<CACHE_MS){render();void markVisibleCompletedRead();return payload;}
     loading=true;if(!payload)screen.innerHTML=skeleton();else render();
     inflight=(async()=>{
       try{
         const data=await post(API_STATE);
         if(!Array.isArray(data.tasks))throw new Error('Сервер вернул неполное состояние заданий.');
         payload=data;lastFreshAt=Date.now();serverOffsetMs=num(data.serverTime)?num(data.serverTime)*1000-Date.now():0;
-        updateEntry();render();return data;
+        updateEntry();render();void markVisibleCompletedRead();return data;
       }catch(error){
         if(payload){render();toast(String(error?.message||'Не удалось обновить задания.'));return payload;}
         renderError(String(error?.message||'Не удалось загрузить задания.'));return null;
@@ -209,7 +233,7 @@
     const target=event.target instanceof Element?event.target:null;if(!target)return;
     if(target.closest('[data-gt-back]')){back();return;}
     if(target.closest('[data-gt-refresh],[data-gt-retry]')){void load(true);return;}
-    const filterButton=target.closest('[data-gt-filter]');if(filterButton){const next=String(filterButton.dataset.gtFilter||'all');if(FILTERS.has(next)){filter=next;render();}return;}
+    const filterButton=target.closest('[data-gt-filter]');if(filterButton){const next=String(filterButton.dataset.gtFilter||'all');if(FILTERS.has(next)){filter=next;render();void markVisibleCompletedRead();}return;}
     if(target.closest('[data-gt-season]')){try{host().season?.();}catch{}return;}
     const claimButton=target.closest('[data-gt-claim]');if(claimButton){const index=Number(claimButton.dataset.gtClaim);void claim(list(payload?.tasks)[index]);}
   });

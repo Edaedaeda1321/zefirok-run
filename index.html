@@ -32628,10 +32628,11 @@ html &gt; body.zefirok-game-expanded{height:var(--zefirok-visible-height,100dvh)
 
   const API_STATE=&#x27;/api/tasks/state&#x27;;
   const API_CLAIM=&#x27;/api/tasks/claim&#x27;;
+  const API_READ=&#x27;/api/tasks/read&#x27;;
   const CACHE_MS=15000;
   const REQUEST_TIMEOUT_MS=12000;
   const FILTERS=new Set([&#x27;all&#x27;,&#x27;daily&#x27;,&#x27;event&#x27;]);
-  let payload=null,filter=&#x27;all&#x27;,loading=false,inflight=null,lastFreshAt=0,serverOffsetMs=0,claimingKey=&#x27;&#x27;,toastTimer=0,timerTick=0;
+  let payload=null,filter=&#x27;all&#x27;,loading=false,inflight=null,readInflight=null,readQueued=false,lastFreshAt=0,serverOffsetMs=0,claimingKey=&#x27;&#x27;,toastTimer=0,timerTick=0;
 
   const host=()=&gt;window.zefirokTaskHost||{};
   const auth=()=&gt;String(host().auth?.()||window.Telegram?.WebApp?.initData||&#x27;&#x27;);
@@ -32694,6 +32695,29 @@ html &gt; body.zefirok-game-expanded{height:var(--zefirok-visible-height,100dvh)
       if(error?.name===&#x27;AbortError&#x27;)throw new Error(&#x27;Сервер отвечает слишком долго. Повтори проверку — награда не потеряется.&#x27;);
       throw error;
     }finally{clearTimeout(timer);}
+  }
+
+  async function markVisibleCompletedRead(){
+    if(screen.hidden||!payload)return null;
+    if(readInflight){readQueued=true;return readInflight;}
+    const tasks=filteredTasks().filter(task=&gt;Boolean(task?.unread&amp;&amp;task?.complete&amp;&amp;!task?.claimed));
+    if(!tasks.length)return null;
+    const notices=tasks.map(task=&gt;({kind:String(task?.kind||&#x27;task&#x27;),key:String(task?.key||&#x27;&#x27;),cycleKey:String(task?.cycleKey||&#x27;&#x27;)}));
+    const ids=new Set(tasks.map(taskId));
+    readInflight=(async()=&gt;{
+      try{
+        await post(API_READ,{notices});
+        for(const task of list(payload?.tasks)){if(ids.has(taskId(task)))task.unread=false;}
+        return true;
+      }catch(error){
+        console.warn(&#x27;game tasks read-state update failed&#x27;,error);
+        return false;
+      }finally{
+        readInflight=null;
+        if(readQueued){readQueued=false;void markVisibleCompletedRead();}
+      }
+    })();
+    return readInflight;
   }
 
   function updateEntry(){
@@ -32770,14 +32794,14 @@ html &gt; body.zefirok-game-expanded{height:var(--zefirok-visible-height,100dvh)
 
   async function load(force=false){
     if(inflight)return inflight;
-    if(!force&amp;&amp;payload&amp;&amp;Date.now()-lastFreshAt&lt;CACHE_MS){render();return payload;}
+    if(!force&amp;&amp;payload&amp;&amp;Date.now()-lastFreshAt&lt;CACHE_MS){render();void markVisibleCompletedRead();return payload;}
     loading=true;if(!payload)screen.innerHTML=skeleton();else render();
     inflight=(async()=&gt;{
       try{
         const data=await post(API_STATE);
         if(!Array.isArray(data.tasks))throw new Error(&#x27;Сервер вернул неполное состояние заданий.&#x27;);
         payload=data;lastFreshAt=Date.now();serverOffsetMs=num(data.serverTime)?num(data.serverTime)*1000-Date.now():0;
-        updateEntry();render();return data;
+        updateEntry();render();void markVisibleCompletedRead();return data;
       }catch(error){
         if(payload){render();toast(String(error?.message||&#x27;Не удалось обновить задания.&#x27;));return payload;}
         renderError(String(error?.message||&#x27;Не удалось загрузить задания.&#x27;));return null;
@@ -32827,7 +32851,7 @@ html &gt; body.zefirok-game-expanded{height:var(--zefirok-visible-height,100dvh)
     const target=event.target instanceof Element?event.target:null;if(!target)return;
     if(target.closest(&#x27;[data-gt-back]&#x27;)){back();return;}
     if(target.closest(&#x27;[data-gt-refresh],[data-gt-retry]&#x27;)){void load(true);return;}
-    const filterButton=target.closest(&#x27;[data-gt-filter]&#x27;);if(filterButton){const next=String(filterButton.dataset.gtFilter||&#x27;all&#x27;);if(FILTERS.has(next)){filter=next;render();}return;}
+    const filterButton=target.closest(&#x27;[data-gt-filter]&#x27;);if(filterButton){const next=String(filterButton.dataset.gtFilter||&#x27;all&#x27;);if(FILTERS.has(next)){filter=next;render();void markVisibleCompletedRead();}return;}
     if(target.closest(&#x27;[data-gt-season]&#x27;)){try{host().season?.();}catch{}return;}
     const claimButton=target.closest(&#x27;[data-gt-claim]&#x27;);if(claimButton){const index=Number(claimButton.dataset.gtClaim);void claim(list(payload?.tasks)[index]);}
   });
@@ -32852,7 +32876,6 @@ html &gt; body.zefirok-game-expanded{height:var(--zefirok-visible-height,100dvh)
     if(start===&#x27;tasks&#x27;||start===&#x27;task&#x27;)window.setTimeout(open,0);
   }catch{}
 })();
-
 &lt;/script&gt;
 &lt;/body&gt;
 &lt;/html&gt;
