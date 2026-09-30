@@ -154,6 +154,30 @@ CREATE TABLE referral_weekly_progress(referrer_telegram_id TEXT, invitee_telegra
 CREATE TABLE referral_reward_choices(referrer_telegram_id TEXT);
 CREATE TABLE player_mail_metadata(telegram_id TEXT);
 CREATE TABLE player_gift_inbox(telegram_id TEXT);
+-- Player task configuration already exists in the real pre-0087 production schema.
+-- Keep the columns required by post-snapshot task migrations so integration replay
+-- can exercise ALTER TABLE changes against the same baseline as production.
+CREATE TABLE automation_chains(
+  chain_key TEXT PRIMARY KEY,
+  title TEXT NOT NULL,
+  description TEXT NOT NULL DEFAULT '',
+  enabled INTEGER NOT NULL DEFAULT 0,
+  trigger_type TEXT NOT NULL,
+  trigger_value INTEGER NOT NULL DEFAULT 0,
+  action_type TEXT NOT NULL,
+  action_json TEXT NOT NULL DEFAULT '{}',
+  cooldown_seconds INTEGER NOT NULL DEFAULT 0,
+  last_run_at INTEGER NOT NULL DEFAULT 0,
+  updated_at INTEGER NOT NULL,
+  updated_by TEXT NOT NULL DEFAULT '',
+  show_as_task INTEGER NOT NULL DEFAULT 0,
+  task_mode TEXT NOT NULL DEFAULT 'one_time',
+  task_description TEXT NOT NULL DEFAULT '',
+  task_starts_at INTEGER NOT NULL DEFAULT 0,
+  task_ends_at INTEGER NOT NULL DEFAULT 0,
+  task_sort INTEGER NOT NULL DEFAULT 100
+);
+
 CREATE TABLE player_task_claims(telegram_id TEXT);
 CREATE TABLE player_task_series_claims(telegram_id TEXT);
 CREATE TABLE newcomer_path_claims(telegram_id TEXT);
