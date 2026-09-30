@@ -11941,6 +11941,7 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
 &lt;span class=&quot;profile-tab__badge&quot; data-profile-tab-case-count hidden&gt;0&lt;/span&gt;
 &lt;/button&gt;
 &lt;/div&gt;
+&lt;section class=&quot;screen&quot; data-screen=&quot;tasks&quot; hidden&gt;&lt;/section&gt;
 &lt;section class=&quot;screen&quot; data-screen=&quot;game&quot;&gt;
 &lt;div aria-live=&quot;polite&quot; class=&quot;hud&quot;&gt;
 &lt;div class=&quot;stat&quot;&gt;&lt;img alt=&quot;&quot; class=&quot;stat-icon&quot; data-shop-img=&quot;iconScore&quot;/&gt;&lt;span&gt;Очки&lt;/span&gt;&lt;strong data-score=&quot;&quot;&gt;0&lt;/strong&gt;&lt;/div&gt;
@@ -11953,6 +11954,7 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
   &lt;div class=&quot;liveops-run-banner-icon&quot; aria-hidden=&quot;true&quot;&gt;⚡&lt;/div&gt;
   &lt;div class=&quot;liveops-run-banner-copy&quot;&gt;&lt;strong data-liveops-run-title&gt;LiveOps&lt;/strong&gt;&lt;span data-liveops-run-meta&gt;&lt;/span&gt;&lt;/div&gt;
 &lt;/div&gt;
+&lt;button class=&quot;tasks-entry&quot; data-tasks-open type=&quot;button&quot;&gt;&lt;span aria-hidden=&quot;true&quot;&gt;📋&lt;/span&gt;&lt;span&gt;&lt;strong&gt;Задания&lt;/strong&gt;&lt;small data-tasks-summary&gt;Цели, награды и XP профиля&lt;/small&gt;&lt;/span&gt;&lt;b data-tasks-badge&gt;›&lt;/b&gt;&lt;/button&gt;
 &lt;div class=&quot;stage&quot; data-stage=&quot;&quot;&gt;
 &lt;button aria-label=&quot;Развернуть игру на весь экран&quot; aria-pressed=&quot;false&quot; class=&quot;game-expand-toggle&quot; data-game-expand-toggle title=&quot;На весь экран&quot; type=&quot;button&quot;&gt;
 &lt;svg aria-hidden=&quot;true&quot; class=&quot;game-expand-icon game-expand-icon--expand&quot; viewBox=&quot;0 0 24 24&quot;&gt;&lt;path d=&quot;M8 3H3v5M16 3h5v5M8 21H3v-5M16 21h5v-5&quot;/&gt;&lt;/svg&gt;
@@ -12527,6 +12529,7 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
         &lt;span class=&quot;profile-xp-source&quot;&gt;&lt;strong data-profile-run-xp&gt;+4 XP&lt;/strong&gt;за зачтённый забег&lt;/span&gt;
         &lt;span class=&quot;profile-xp-source&quot;&gt;&lt;strong data-profile-purchase-xp&gt;+5 XP&lt;/strong&gt;за каждую успешную покупку&lt;/span&gt;
       &lt;/div&gt;
+      &lt;div class=&quot;profile-xp-way&quot;&gt;Как получать XP: 🎮 Забеги · 🛍 Покупки · 📋 Задания&lt;/div&gt;
       &lt;div class=&quot;profile-run-rule&quot; data-profile-run-rule&gt;Чтобы получить XP за забег, нужно продержаться минимум 12 секунд и набрать 150 очков.&lt;/div&gt;
       &lt;button class=&quot;profile-level-guide-link&quot; data-profile-level-guide type=&quot;button&quot;&gt;Посмотреть все уровни и звания&lt;/button&gt;
     &lt;/div&gt;
@@ -13416,6 +13419,7 @@ function piXpContent(){
  const multiplier=piBonusActive()?2:1;
  return `&lt;section class=&quot;zpi-xp-card&quot;&gt;${piImage(&#x27;/assets/season-pass/xp.webp&#x27;,&#x27;zpi-xp-art&#x27;)}&lt;h3&gt;${piEscape(PI_TEXT.run)}&lt;/h3&gt;&lt;b&gt;+${piNum(PROFILE_XP_PER_COMPLETED_RUN*multiplier)} XP&lt;/b&gt;&lt;p&gt;${piEscape(profileRunRequirementText(multiplier))}&lt;/p&gt;&lt;/section&gt;
  &lt;section class=&quot;zpi-xp-card&quot;&gt;&lt;h3&gt;${piEscape(PI_TEXT.purchase)}&lt;/h3&gt;&lt;b&gt;+${piNum(PROFILE_XP_PER_PURCHASE*multiplier)} XP&lt;/b&gt;&lt;p&gt;${piEscape(PI_TEXT.purchaseCopy)}&lt;/p&gt;&lt;/section&gt;
+ &lt;section class=&quot;zpi-xp-card&quot;&gt;&lt;h3&gt;📋 Задания&lt;/h3&gt;&lt;p&gt;Ежедневные и событийные цели дают XP профиля после получения награды. Точное количество указано в задании. XP сезона учитывается отдельно, а усилитель ×2 не умножает награду задания.&lt;/p&gt;&lt;/section&gt;
  ${piLink(CASE_SPECIAL_CATALOG.season_xp_x2.title,piBonusActive()?`${PI_TEXT.active} \u00b7 ${PI_TEXT.auto}`:PI_TEXT.notActive,&#x27;xp-bonus&#x27;,&#x27;&#x27;,&#x27;/assets/season-pass/xp_x2.webp&#x27;)}
  ${piNote(PI_TEXT.xpSeparate)}${piNote(PI_TEXT.xpServer)}`;
 }
@@ -19995,6 +19999,11 @@ function createTutorialDeck(layer, mount, options, words) {
       }
 
       function updateHud() {
+        const tasksUiRunning = Boolean(state.running);
+        if (updateHud.tasksUiRunning !== tasksUiRunning) {
+          updateHud.tasksUiRunning = tasksUiRunning;
+          window.dispatchEvent(new Event(&quot;zefirok-tasks-ui&quot;));
+        }
         updateFocusHud();
         if (state.running) {
           updateRunningHud(performance.now(), true);
@@ -21422,6 +21431,7 @@ function createTutorialDeck(layer, mount, options, words) {
             queuePlayerNetworkDiagnostic(path, &quot;NETWORK_SLOW&quot;, &quot;Сервер ответил быстрее, чем запрос дошёл до клиента&quot;, durationMs, deadlineMs, serverMs);
           }
           void flushPlayerNetworkDiagnostics();
+          if (response.ok &amp;&amp; /\/(submit|purchase|buy|open|redeem|claim|settle)(?:[-/]|$)/.test(String(path))) window.dispatchEvent(new Event(&quot;zefirok-tasks-refresh&quot;));
           return response;
         } catch (error) {
           const durationMs = Math.max(0, performance.now() - startedAt);
@@ -30390,6 +30400,15 @@ function createTutorialDeck(layer, mount, options, words) {
         clientPerformancePublishTimer = window.setInterval(publishClientPerformance, CLIENT_PERFORMANCE_PUBLISH_INTERVAL_MS);
       }
       window.parent.postMessage({ type: &quot;zefirok-game-expanded&quot;, expanded: false }, &quot;*&quot;);
+      window.zefirokTaskHost = {
+        auth: () =&gt; String(telegramProfile?.initData || &quot;&quot;),
+        running: () =&gt; Boolean(state.running),
+        open: () =&gt; switchScreen(&quot;tasks&quot;),
+        back: () =&gt; switchScreen(&quot;game&quot;),
+        season: () =&gt; window.parent.postMessage({ type:&quot;zefirok-open-battle-pass&quot;, view:&quot;tasks&quot; }, &quot;*&quot;),
+        seasonReady: () =&gt; Number(state.seasonPassAttentionCount || 0),
+        sync: () =&gt; syncGameStartupPackage(true)
+      };
       window.parent.postMessage({ type: &quot;zefirok-progress-ready&quot; }, &quot;*&quot;);
       window.parent.postMessage({ type: &quot;zefirok-telegram-profile-ready&quot; }, &quot;*&quot;);
     })();
@@ -32389,6 +32408,8 @@ html &gt; body.zefirok-game-expanded{height:var(--zefirok-visible-height,100dvh)
   scheduleMaybe(700);
 })();
 &lt;/script&gt;
+&lt;link rel=&quot;stylesheet&quot; href=&quot;/assets/game-tasks.css?v=1&quot;&gt;
+&lt;script src=&quot;/assets/game-tasks.js?v=1&quot;&gt;&lt;/script&gt;
 &lt;/body&gt;
 &lt;/html&gt;
 &lt;style id=&quot;zefirok-levels-boosters-info-v2&quot;&gt;
