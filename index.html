@@ -32573,6 +32573,8 @@ html &gt; body.zefirok-game-expanded{height:var(--zefirok-visible-height,100dvh)
 #zefirok-maltipoo-runner .gt-claim:disabled{opacity:.55;box-shadow:none;cursor:default}
 #zefirok-maltipoo-runner .gt-state{flex:0 0 auto;padding:6px 8px;border-radius:999px;background:#f4edf0;color:#927a83;font-size:8px;font-weight:900;white-space:nowrap}
 #zefirok-maltipoo-runner .gt-state.is-ready{background:#fff0bf;color:#9f6814}
+#zefirok-maltipoo-runner .gt-state-action{border:0;cursor:pointer}
+#zefirok-maltipoo-runner .gt-state-action:disabled{opacity:.55;cursor:default}
 #zefirok-maltipoo-runner .gt-series{display:flex;gap:5px;overflow:hidden;flex-wrap:wrap}
 #zefirok-maltipoo-runner .gt-series span{max-width:100%;padding:5px 7px;border-radius:10px;background:#fff6f8;color:#95717e;font-size:7.5px;font-weight:800;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 
@@ -32724,8 +32726,8 @@ html &gt; body.zefirok-game-expanded{height:var(--zefirok-visible-height,100dvh)
   function nextMarkup(){
     const task=nearestTask();
     if(!task)return &#x27;&#x27;;
-    const ready=isReady(task),left=Math.max(0,whole(task.target)-whole(task.progress));
-    const status=ready?&#x27;Забрать&#x27;:left?`Осталось ${fmt(left)}`:&#x27;Проверить&#x27;;
+    const ready=isReady(task),pending=Boolean(task?.pending)&amp;&amp;!task?.claimed,left=Math.max(0,whole(task.target)-whole(task.progress));
+    const status=pending?&#x27;Проверить выдачу&#x27;:ready?&#x27;Забрать&#x27;:left?`Осталось ${fmt(left)}`:&#x27;Проверить&#x27;;
     const extra=timeLeft(task.endsAt);
     return `&lt;section class=&quot;gt-next${ready?&#x27; is-ready&#x27;:&#x27;&#x27;}&quot; aria-label=&quot;Ближайшая цель&quot;&gt;&lt;span class=&quot;gt-next-icon&quot;&gt;${ready?&#x27;🎁&#x27;:&#x27;🐾&#x27;}&lt;/span&gt;&lt;span class=&quot;gt-next-copy&quot;&gt;&lt;small&gt;${ready?&#x27;Награда готова&#x27;:&#x27;Ближайшая цель&#x27;}&lt;/small&gt;&lt;strong&gt;${esc(task.title||&#x27;Задание&#x27;)}&lt;/strong&gt;&lt;span&gt;${esc(ready?(task.rewardLabel||&#x27;Можно получить награду&#x27;):(extra?`До конца: ${extra}`:(task.description||&#x27;Продолжай играть&#x27;)))}&lt;/span&gt;&lt;/span&gt;&lt;span class=&quot;gt-next-status&quot;&gt;${esc(status)}&lt;/span&gt;&lt;/section&gt;`;
   }
@@ -32737,7 +32739,7 @@ html &gt; body.zefirok-game-expanded{height:var(--zefirok-visible-height,100dvh)
     const end=timeLeft(task.endsAt);
     let action=&#x27;&#x27;;
     if(ready&amp;&amp;!pending&amp;&amp;!claimed)action=`&lt;button class=&quot;gt-claim&quot; data-gt-claim=&quot;${index}&quot; type=&quot;button&quot;${currentClaim?&#x27; disabled&#x27;:&#x27;&#x27;}&gt;${currentClaim?&#x27;Получаем…&#x27;:&#x27;🎁 Получить&#x27;}&lt;/button&gt;`;
-    else if(pending)action=&#x27;&lt;span class=&quot;gt-state is-ready&quot;&gt;Проверяем выдачу&lt;/span&gt;&#x27;;
+    else if(pending)action=`&lt;button class=&quot;gt-state is-ready gt-state-action&quot; data-gt-claim=&quot;${index}&quot; type=&quot;button&quot;${currentClaim?&#x27; disabled&#x27;:&#x27;&#x27;}&gt;${currentClaim?&#x27;Проверяем…&#x27;:&#x27;Проверить выдачу&#x27;}&lt;/button&gt;`;
     else if(claimed)action=&#x27;&lt;span class=&quot;gt-state&quot;&gt;✓ Получено&lt;/span&gt;&#x27;;
     else action=&#x27;&lt;span class=&quot;gt-state&quot;&gt;В процессе&lt;/span&gt;&#x27;;
     const steps=list(task.steps).slice(0,6);
@@ -32789,10 +32791,10 @@ html &gt; body.zefirok-game-expanded{height:var(--zefirok-visible-height,100dvh)
     const id=taskId(task);claimingKey=id;render();
     let notice=&#x27;&#x27;;
     try{
-      await post(API_CLAIM,{kind:String(task.kind||&#x27;task&#x27;),key:String(task.key||&#x27;&#x27;),cycleKey:String(task.cycleKey||&#x27;&#x27;)});
+      const result=await post(API_CLAIM,{kind:String(task.kind||&#x27;task&#x27;),key:String(task.key||&#x27;&#x27;),cycleKey:String(task.cycleKey||&#x27;&#x27;)});
       try{await host().sync?.();}catch{}
       await load(true);
-      notice=&#x27;Награда получена ✨&#x27;;
+      notice=result?.claimed?&#x27;Награда получена ✨&#x27;:result?.pending?String(result?.message||&#x27;Выдача ещё обрабатывается. Нажми «Проверить выдачу» чуть позже.&#x27;):&#x27;Состояние награды обновлено.&#x27;;
     }catch(error){
       try{await load(true);}catch{}
       notice=String(error?.message||&#x27;Не удалось получить награду.&#x27;);

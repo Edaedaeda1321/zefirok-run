@@ -1,8 +1,8 @@
 {
   "version": 2,
   "hashAlgorithm": "sha256",
-  "catalogHash": "f72be6a78d8f39ff",
-  "count": 550,
+  "catalogHash": "c06d4dec3c502a60",
+  "count": 551,
   "images": [
     {
       "fileName": "achievements/background_achivment_panel.webp",
@@ -4195,6 +4195,14 @@
       "path": "/assets/ui/icon_profile_button.webp",
       "hash": "61e694ea60e2",
       "size": 152350
+    },
+    {
+      "fileName": "ui/icon_quest_game.webp",
+      "label": "Icon quest game",
+      "folder": "ui",
+      "path": "/assets/ui/icon_quest_game.webp",
+      "hash": "23d7888518be",
+      "size": 259086
     },
     {
       "fileName": "ui/icon_referals.webp",

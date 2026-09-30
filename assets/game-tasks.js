@@ -108,8 +108,8 @@
   function nextMarkup(){
     const task=nearestTask();
     if(!task)return '';
-    const ready=isReady(task),left=Math.max(0,whole(task.target)-whole(task.progress));
-    const status=ready?'Забрать':left?`Осталось ${fmt(left)}`:'Проверить';
+    const ready=isReady(task),pending=Boolean(task?.pending)&&!task?.claimed,left=Math.max(0,whole(task.target)-whole(task.progress));
+    const status=pending?'Проверить выдачу':ready?'Забрать':left?`Осталось ${fmt(left)}`:'Проверить';
     const extra=timeLeft(task.endsAt);
     return `<section class="gt-next${ready?' is-ready':''}" aria-label="Ближайшая цель"><span class="gt-next-icon">${ready?'🎁':'🐾'}</span><span class="gt-next-copy"><small>${ready?'Награда готова':'Ближайшая цель'}</small><strong>${esc(task.title||'Задание')}</strong><span>${esc(ready?(task.rewardLabel||'Можно получить награду'):(extra?`До конца: ${extra}`:(task.description||'Продолжай играть')))}</span></span><span class="gt-next-status">${esc(status)}</span></section>`;
   }
@@ -121,7 +121,7 @@
     const end=timeLeft(task.endsAt);
     let action='';
     if(ready&&!pending&&!claimed)action=`<button class="gt-claim" data-gt-claim="${index}" type="button"${currentClaim?' disabled':''}>${currentClaim?'Получаем…':'🎁 Получить'}</button>`;
-    else if(pending)action='<span class="gt-state is-ready">Проверяем выдачу</span>';
+    else if(pending)action=`<button class="gt-state is-ready gt-state-action" data-gt-claim="${index}" type="button"${currentClaim?' disabled':''}>${currentClaim?'Проверяем…':'Проверить выдачу'}</button>`;
     else if(claimed)action='<span class="gt-state">✓ Получено</span>';
     else action='<span class="gt-state">В процессе</span>';
     const steps=list(task.steps).slice(0,6);
@@ -173,10 +173,10 @@
     const id=taskId(task);claimingKey=id;render();
     let notice='';
     try{
-      await post(API_CLAIM,{kind:String(task.kind||'task'),key:String(task.key||''),cycleKey:String(task.cycleKey||'')});
+      const result=await post(API_CLAIM,{kind:String(task.kind||'task'),key:String(task.key||''),cycleKey:String(task.cycleKey||'')});
       try{await host().sync?.();}catch{}
       await load(true);
-      notice='Награда получена ✨';
+      notice=result?.claimed?'Награда получена ✨':result?.pending?String(result?.message||'Выдача ещё обрабатывается. Нажми «Проверить выдачу» чуть позже.'):'Состояние награды обновлено.';
     }catch(error){
       try{await load(true);}catch{}
       notice=String(error?.message||'Не удалось получить награду.');

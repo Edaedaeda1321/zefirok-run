@@ -17437,8 +17437,86 @@ async function gameTaskView(env, row, telegramId, now, series = false, context =
   };
 }
 
+function gameTaskRewardOperationIds(telegramId, kind, claimKey, reward) {
+  const taskKind = kind === "series" ? "series" : "task";
+  const sourceType = taskKind === "series" ? "task_series" : "task";
+  const ids = [];
+  const rewardKind = String(reward?.kind || "").trim();
+  if (rewardKind && rewardKind !== "none") {
+    ids.push(rewardQueueOperationId(telegramId, sourceType, claimKey, reward));
+  }
+  const profileXp = Math.max(0, Math.floor(Number(reward?.profileXp || 0)));
+  if (profileXp > 0) {
+    ids.push(rewardQueueOperationId(telegramId, "game_task_xp", `${taskKind}:${claimKey}`, { kind:"profile_xp", amount:profileXp }));
+  }
+  return ids;
+}
+
+async function reconcilePendingGameTaskClaims(env, telegramId) {
+  const playerId = String(telegramId || "").trim();
+  if (!playerId) return 0;
+  const pending = (await env.DB.prepare(`SELECT 'task' AS kind,c.claim_key,c.chain_key AS task_key,c.cycle_key,
+      COALESCE(NULLIF(r.reward_json,''),NULLIF(c.reward_json,''),'') AS reward_json
+    FROM player_task_claims c
+    LEFT JOIN player_game_tasks r ON r.telegram_id=c.telegram_id AND r.kind='task' AND r.task_key=c.chain_key AND r.cycle_key=c.cycle_key
+    WHERE c.telegram_id=? AND c.status='pending'
+    UNION ALL
+    SELECT 'series' AS kind,c.claim_key,c.series_key AS task_key,c.cycle_key,COALESCE(NULLIF(r.reward_json,''),'') AS reward_json
+    FROM player_task_series_claims c
+    LEFT JOIN player_game_tasks r ON r.telegram_id=c.telegram_id AND r.kind='series' AND r.task_key=c.series_key AND r.cycle_key=c.cycle_key
+    WHERE c.telegram_id=? AND c.status='pending'
+    LIMIT 40`).bind(playerId,playerId).all()).results || [];
+  if (!pending.length) return 0;
+
+  const claims = [];
+  const operationIds = new Set();
+  for (const row of pending) {
+    const rawReward = String(row.reward_json || "").trim();
+    if (!rawReward) continue;
+    const reward = safeJson(rawReward, {});
+    const required = gameTaskRewardOperationIds(playerId,String(row.kind || "task"),String(row.claim_key || ""),reward);
+    claims.push({ ...row, required });
+    for (const operationId of required) operationIds.add(operationId);
+  }
+  if (!claims.length) return 0;
+
+  const delivered = new Set();
+  const ids = [...operationIds];
+  if (ids.length) {
+    const placeholders = ids.map(() => "?").join(",");
+    const [queueRows,archiveRows] = await Promise.all([
+      env.DB.prepare(`SELECT operation_id,status FROM reward_delivery_queue WHERE operation_id IN (${placeholders})`).bind(...ids).all(),
+      env.DB.prepare(`SELECT operation_id,final_status FROM reward_delivery_archive WHERE operation_id IN (${placeholders})`).bind(...ids).all()
+    ]);
+    for (const row of queueRows.results || []) {
+      if (["delivered","claimed"].includes(String(row.status || ""))) delivered.add(String(row.operation_id || ""));
+    }
+    for (const row of archiveRows.results || []) {
+      if (["delivered","claimed"].includes(String(row.final_status || ""))) delivered.add(String(row.operation_id || ""));
+    }
+  }
+
+  const now = Math.floor(Date.now() / 1000);
+  const statements = [];
+  let finalized = 0;
+  for (const claim of claims) {
+    if (!claim.required.every((operationId) => delivered.has(operationId))) continue;
+    const table = claim.kind === "series" ? "player_task_series_claims" : "player_task_claims";
+    statements.push(env.DB.prepare(`UPDATE ${table} SET status='claimed',claimed_at=CASE WHEN claimed_at>0 THEN claimed_at ELSE ? END,updated_at=? WHERE claim_key=? AND status='pending'`).bind(now,now,String(claim.claim_key)));
+    statements.push(env.DB.prepare(`UPDATE player_game_tasks SET read_at=CASE WHEN read_at>0 THEN read_at ELSE ? END WHERE telegram_id=? AND kind=? AND task_key=? AND cycle_key=?`).bind(now,playerId,String(claim.kind),String(claim.task_key),String(claim.cycle_key)));
+    finalized += 1;
+  }
+  if (statements.length) await env.DB.batch(statements);
+  return finalized;
+}
+
 async function gameTasksState(env, telegramId) {
   // Production migrations own this schema. Avoid runtime DDL on the latency-sensitive read path.
+  // Pending claims are presentation state over the authoritative reward queue.
+  // Reconcile only already-delivered operations here; unresolved rewards stay pending
+  // and can be retried through the claim endpoint without duplicating economic effects.
+  try { await reconcilePendingGameTaskClaims(env,telegramId); }
+  catch (error) { console.error("game task pending-claim reconciliation failed",error); }
   const now = Math.floor(Date.now() / 1000);
   const [taskRows,seriesRows,profile] = await Promise.all([
     env.DB.prepare(`SELECT * FROM automation_chains WHERE enabled=1 AND show_as_task=1 AND action_type='reward' AND (task_starts_at=0 OR task_starts_at<=?) AND (task_ends_at=0 OR task_ends_at>?) ORDER BY task_sort,chain_key LIMIT 80`).bind(now,now).all(),
@@ -28964,6 +29042,11 @@ async function deliverQueuedReward(env, row, leaseToken) {
       // maintainPlayerGiftInboxState will finish the presentation state later.
       console.error("gift inbox finalization after delivery failed", error);
     }
+  }
+
+  if (["task","task_series","game_task_xp"].includes(String(row.source_type || ""))) {
+    try { await reconcilePendingGameTaskClaims(env,telegramId); }
+    catch (error) { console.error("game task claim finalization after delivery failed",error); }
   }
 
   // Everything below is non-economic side effect. A notification/timeline

@@ -131,6 +131,8 @@
 #zefirok-maltipoo-runner .gt-claim:disabled{opacity:.55;box-shadow:none;cursor:default}
 #zefirok-maltipoo-runner .gt-state{flex:0 0 auto;padding:6px 8px;border-radius:999px;background:#f4edf0;color:#927a83;font-size:8px;font-weight:900;white-space:nowrap}
 #zefirok-maltipoo-runner .gt-state.is-ready{background:#fff0bf;color:#9f6814}
+#zefirok-maltipoo-runner .gt-state-action{border:0;cursor:pointer}
+#zefirok-maltipoo-runner .gt-state-action:disabled{opacity:.55;cursor:default}
 #zefirok-maltipoo-runner .gt-series{display:flex;gap:5px;overflow:hidden;flex-wrap:wrap}
 #zefirok-maltipoo-runner .gt-series span{max-width:100%;padding:5px 7px;border-radius:10px;background:#fff6f8;color:#95717e;font-size:7.5px;font-weight:800;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 
