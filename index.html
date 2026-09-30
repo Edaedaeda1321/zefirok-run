@@ -11953,41 +11953,39 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
   &lt;div class=&quot;liveops-run-banner-icon&quot; aria-hidden=&quot;true&quot;&gt;⚡&lt;/div&gt;
   &lt;div class=&quot;liveops-run-banner-copy&quot;&gt;&lt;strong data-liveops-run-title&gt;LiveOps&lt;/strong&gt;&lt;span data-liveops-run-meta&gt;&lt;/span&gt;&lt;/div&gt;
 &lt;/div&gt;
-&lt;style id=&quot;zefirok-task-entry-v3&quot;&gt;
+&lt;style id=&quot;zefirok-task-entry-v4&quot;&gt;
 #zefirok-maltipoo-runner .tasks-entry{
-  position:relative;width:100%;min-height:74px;margin:14px 0 16px;padding:12px 50px 12px 14px;
-  display:grid;grid-template-columns:52px minmax(0,1fr);align-items:center;gap:12px;box-sizing:border-box;
-  border:1px solid rgba(226,159,185,.56);border-radius:24px;
-  background:linear-gradient(145deg,#fff9fb 0%,#ffeaf2 58%,#ffe3ed 100%);color:#684251;text-align:left;
-  box-shadow:0 8px 22px rgba(124,66,88,.07),inset 0 1px rgba(255,255,255,.88);cursor:pointer;
-  transition:transform .14s ease,box-shadow .14s ease,opacity .14s ease;overflow:visible;
+  position:relative;width:100%;min-height:70px;margin:8px 0 12px;padding:12px 54px 12px 14px;
+  display:grid;grid-template-columns:52px minmax(0,1fr);align-items:center;gap:12px;
+  border:1px solid rgba(233,180,198,.72);border-radius:22px;
+  background:linear-gradient(145deg,#fff8fb 0%,#fff1f6 100%);color:#6b4050;text-align:left;
+  box-shadow:0 8px 20px rgba(123,69,89,.08);cursor:pointer;
+  transition:transform .14s ease,box-shadow .14s ease,opacity .14s ease,border-color .14s ease;
 }
 #zefirok-maltipoo-runner .tasks-entry:active{transform:translateY(1px) scale(.995)}
 #zefirok-maltipoo-runner .tasks-entry[hidden]{display:none!important}
-#zefirok-maltipoo-runner .tasks-entry:after{
-  content:&quot;\203A&quot;;position:absolute;right:18px;top:50%;transform:translateY(-52%);
-  color:#c44f7b;font-size:31px;line-height:1;font-weight:500;
+#zefirok-maltipoo-runner .tasks-entry__icon{
+  width:52px;height:52px;display:grid;place-items:center;border-radius:16px;
+  background:linear-gradient(145deg,#fff,#ffeaf2);box-shadow:inset 0 0 0 1px rgba(224,143,174,.18);overflow:hidden
 }
-#zefirok-maltipoo-runner .tasks-entry&gt;span:first-child{
-  width:52px;height:52px;display:grid;place-items:center;border-radius:17px;
-  background:linear-gradient(145deg,#fff1f6,#ffdbe8);font-size:30px;line-height:1;
-  box-shadow:inset 0 0 0 1px rgba(224,128,164,.18),0 5px 12px rgba(174,86,120,.08);
+#zefirok-maltipoo-runner .tasks-entry__icon img{display:block;width:40px;height:40px;object-fit:contain}
+#zefirok-maltipoo-runner .tasks-entry__copy{display:grid;gap:4px;min-width:0}
+#zefirok-maltipoo-runner .tasks-entry__copy strong{font-size:14px;line-height:1.1;font-weight:950;color:#7a3151}
+#zefirok-maltipoo-runner .tasks-entry__copy small{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#8f6b79;font-size:9px;line-height:1.25;font-weight:750}
+#zefirok-maltipoo-runner .tasks-entry__chevron{
+  position:absolute;right:16px;top:50%;transform:translateY(-50%);
+  color:#df6f9b;font-size:20px;font-weight:950;line-height:1
 }
-#zefirok-maltipoo-runner .tasks-entry&gt;span:nth-child(2){display:grid;gap:4px;min-width:0}
-#zefirok-maltipoo-runner .tasks-entry strong{font-size:16px;line-height:1.1;font-weight:950;color:#653b4b}
-#zefirok-maltipoo-runner .tasks-entry small{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#9a7b86;font-size:11px;line-height:1.2;font-weight:750}
-#zefirok-maltipoo-runner .tasks-entry:not(.is-loaded) small{font-size:0}
-#zefirok-maltipoo-runner .tasks-entry:not(.is-loaded) small:after{content:&quot;\0412\044b\043f\043e\043b\043d\044f\0439 \0446\0435\043b\0438 \0438 \043f\043e\043b\0443\0447\0430\0439 XP&quot;;font-size:11px}
-#zefirok-maltipoo-runner .tasks-entry b[data-tasks-badge]{
-  position:absolute;right:7px;top:-8px;min-width:27px;height:27px;padding:0 7px;box-sizing:border-box;
+#zefirok-maltipoo-runner .tasks-entry__badge{
+  position:absolute;right:12px;top:-8px;min-width:26px;height:26px;padding:0 7px;box-sizing:border-box;
   display:grid;place-items:center;border:2px solid #fff;border-radius:999px;
   background:linear-gradient(145deg,#f28db2,#dd5f91);color:#fff;font-size:11px;font-weight:950;
-  box-shadow:0 5px 12px rgba(172,65,107,.2);
+  box-shadow:0 5px 12px rgba(172,65,107,.2)
 }
-#zefirok-maltipoo-runner .tasks-entry b[data-tasks-badge][hidden]{display:none!important}
+#zefirok-maltipoo-runner .tasks-entry__badge[hidden]{display:none!important}
 #zefirok-maltipoo-runner .tasks-entry.has-ready{border-color:rgba(226,126,165,.68);background:linear-gradient(145deg,#fff8fb 0%,#ffe5ef 54%,#ffdae8 100%)}
 &lt;/style&gt;
-&lt;button class=&quot;tasks-entry&quot; data-tasks-open type=&quot;button&quot;&gt;&lt;span aria-hidden=&quot;true&quot;&gt;📋&lt;/span&gt;&lt;span&gt;&lt;strong&gt;Задания&lt;/strong&gt;&lt;small data-tasks-summary&gt;Цели, награды и XP профиля&lt;/small&gt;&lt;/span&gt;&lt;b data-tasks-badge&gt;›&lt;/b&gt;&lt;/button&gt;
+&lt;button class=&quot;tasks-entry&quot; data-tasks-open type=&quot;button&quot; aria-label=&quot;Открыть задания&quot;&gt;&lt;span class=&quot;tasks-entry__icon&quot; aria-hidden=&quot;true&quot;&gt;&lt;img src=&quot;/assets/ui/icon_quest_game.webp&quot; alt=&quot;&quot;&gt;&lt;/span&gt;&lt;span class=&quot;tasks-entry__copy&quot;&gt;&lt;strong&gt;Задания&lt;/strong&gt;&lt;small data-tasks-summary&gt;Цели, награды и XP профиля&lt;/small&gt;&lt;/span&gt;&lt;span class=&quot;tasks-entry__chevron&quot; aria-hidden=&quot;true&quot;&gt;›&lt;/span&gt;&lt;b class=&quot;tasks-entry__badge&quot; data-tasks-badge hidden&gt;0&lt;/b&gt;&lt;/button&gt;
 &lt;div class=&quot;stage&quot; data-stage=&quot;&quot;&gt;
 &lt;button aria-label=&quot;Развернуть игру на весь экран&quot; aria-pressed=&quot;false&quot; class=&quot;game-expand-toggle&quot; data-game-expand-toggle title=&quot;На весь экран&quot; type=&quot;button&quot;&gt;
 &lt;svg aria-hidden=&quot;true&quot; class=&quot;game-expand-icon game-expand-icon--expand&quot; viewBox=&quot;0 0 24 24&quot;&gt;&lt;path d=&quot;M8 3H3v5M16 3h5v5M8 21H3v-5M16 21h5v-5&quot;/&gt;&lt;/svg&gt;
@@ -32441,15 +32439,15 @@ html &gt; body.zefirok-game-expanded{height:var(--zefirok-visible-height,100dvh)
   scheduleMaybe(700);
 })();
 &lt;/script&gt;
-&lt;script id=&quot;zefirok-game-tasks-loader-v3&quot;&gt;
+&lt;script id=&quot;zefirok-game-tasks-loader-v4&quot;&gt;
 (()=&gt;{
-  if(window.__ZEFIROK_GAME_TASKS_LOADER_V3__)return;
-  window.__ZEFIROK_GAME_TASKS_LOADER_V3__=true;
+  if(window.__ZEFIROK_GAME_TASKS_LOADER_V4__)return;
+  window.__ZEFIROK_GAME_TASKS_LOADER_V4__=true;
   let assetsPromise=null;
   const loadCss=()=&gt;new Promise(resolve=&gt;{
     if(document.querySelector(&#x27;link[data-zefirok-game-tasks-css]&#x27;)){resolve();return;}
     const link=document.createElement(&#x27;link&#x27;);
-    link.rel=&#x27;stylesheet&#x27;;link.href=&#x27;/assets/game-tasks.css?v=3&#x27;;link.dataset.zefirokGameTasksCss=&#x27;1&#x27;;
+    link.rel=&#x27;stylesheet&#x27;;link.href=&#x27;/assets/game-tasks.css?v=4&#x27;;link.dataset.zefirokGameTasksCss=&#x27;1&#x27;;
     link.onload=resolve;link.onerror=resolve;(document.head||document.documentElement).append(link);
   });
   const loadJs=()=&gt;new Promise((resolve,reject)=&gt;{
@@ -32457,7 +32455,7 @@ html &gt; body.zefirok-game-expanded{height:var(--zefirok-visible-height,100dvh)
     const existing=document.querySelector(&#x27;script[data-zefirok-game-tasks-js]&#x27;);
     if(existing){existing.addEventListener(&#x27;load&#x27;,resolve,{once:true});existing.addEventListener(&#x27;error&#x27;,reject,{once:true});return;}
     const script=document.createElement(&#x27;script&#x27;);
-    script.src=&#x27;/assets/game-tasks.js?v=3&#x27;;script.async=true;script.dataset.zefirokGameTasksJs=&#x27;1&#x27;;
+    script.src=&#x27;/assets/game-tasks.js?v=4&#x27;;script.async=true;script.dataset.zefirokGameTasksJs=&#x27;1&#x27;;
     script.onload=resolve;script.onerror=()=&gt;reject(new Error(&#x27;tasks-ui-load-failed&#x27;));(document.body||document.documentElement).append(script);
   });
   const load=()=&gt;assetsPromise||(assetsPromise=Promise.all([loadCss(),loadJs()]).catch(error=&gt;{assetsPromise=null;throw error;}));
@@ -32473,8 +32471,8 @@ html &gt; body.zefirok-game-expanded{height:var(--zefirok-visible-height,100dvh)
     if(start===&#x27;tasks&#x27;||start===&#x27;task&#x27;)void load().then(()=&gt;window.zefirokOpenGameTasks?.()).catch(()=&gt;{});
   }catch{}
   const warm=()=&gt;void load().catch(()=&gt;{});
-  if(document.readyState===&#x27;complete&#x27;)window.setTimeout(warm,1200);
-  else window.addEventListener(&#x27;load&#x27;,()=&gt;window.setTimeout(warm,900),{once:true});
+  if(document.readyState===&#x27;complete&#x27;)window.setTimeout(warm,900);
+  else window.addEventListener(&#x27;load&#x27;,()=&gt;window.setTimeout(warm,700),{once:true});
 })();
 &lt;/script&gt;
 &lt;/body&gt;

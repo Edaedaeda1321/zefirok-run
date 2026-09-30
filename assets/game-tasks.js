@@ -1,7 +1,7 @@
 (()=>{
   'use strict';
-  if(window.__ZEFIROK_GAME_TASKS_UI_V3__)return;
-  window.__ZEFIROK_GAME_TASKS_UI_V3__=true;
+  if(window.__ZEFIROK_GAME_TASKS_UI_V2__)return;
+  window.__ZEFIROK_GAME_TASKS_UI_V2__=true;
 
   const root=document.querySelector('#zefirok-maltipoo-runner');
   const screen=root?.querySelector('[data-screen="tasks"]');
@@ -33,6 +33,7 @@
   function taskIcon(task){if(task?.kind==='series')return '🎯';if(isDaily(task))return '🔥';return '✨';}
   function taskTag(task){if(task?.kind==='series')return 'Цепочка';if(isDaily(task))return 'Сегодня';return 'Событие';}
   function fmt(n){try{return whole(n).toLocaleString('ru-RU');}catch{return String(whole(n));}}
+  function plural(n,one,two,five){const value=Math.abs(whole(n))%100;const tail=value%10;if(value>10&&value<20)return five;if(tail===1)return one;if(tail>=2&&tail<=4)return two;return five;}
 
   function timeLeft(endsAt){
     const seconds=Math.floor(num(endsAt)-nowServerMs()/1000);
@@ -83,12 +84,11 @@
     const badge=entry.querySelector('[data-tasks-badge]');
     const ready=whole(payload?.readyCount),active=whole(payload?.activeCount);
     entry.classList.toggle('has-ready',ready>0);
-    entry.classList.toggle('is-loaded',Boolean(payload));
     if(summary){
-      const activeText=active===1?'1 \u0430\u043a\u0442\u0438\u0432\u043d\u043e\u0435':`${active} \u0430\u043a\u0442\u0438\u0432\u043d\u044b\u0445`;
-      const rewardText=ready===1?'1 \u043d\u0430\u0433\u0440\u0430\u0434\u0430 \u0433\u043e\u0442\u043e\u0432\u0430':`${ready} \u043d\u0430\u0433\u0440\u0430\u0434\u044b \u0433\u043e\u0442\u043e\u0432\u044b`;
-      if(payload&&(active>0||ready>0))summary.textContent=ready>0?`${activeText} \u00b7 ${rewardText}`:activeText;
-      else summary.textContent='\u0412\u044b\u043f\u043e\u043b\u043d\u044f\u0439 \u0446\u0435\u043b\u0438 \u0438 \u043f\u043e\u043b\u0443\u0447\u0430\u0439 XP';
+      if(ready>0&&active>0)summary.textContent=`${active} ${plural(active,'активное задание','активных задания','активных заданий')} · ${ready} ${plural(ready,'награда готова','награды готовы','наград готово')}`;
+      else if(ready>0)summary.textContent=`${ready} ${plural(ready,'награда готова','награды готовы','наград готово')}`;
+      else if(active>0)summary.textContent=`${active} ${plural(active,'активное задание','активных задания','активных заданий')}`;
+      else summary.textContent='Цели, награды и XP профиля';
     }
     if(badge){badge.hidden=ready<=0;badge.textContent=String(Math.min(99,ready));}
   }
@@ -187,23 +187,14 @@
 
   function open(){
     if(isRunning())return;
-    if(!payload)screen.innerHTML=skeleton();
-    let switched=false;
-    try{const fn=host().open;if(typeof fn==='function'){fn();switched=true;}}catch{}
-    if(!switched||screen.hidden){
+    try{host().open?.();}catch{}
+    screen.innerHTML=skeleton();
+    if(screen.hidden){
       root.querySelectorAll('.screen').forEach(node=>{node.hidden=node!==screen;});
     }
-    window.requestAnimationFrame(()=>{void load(false);screen.querySelector('[data-gt-back]')?.focus({preventScroll:true});});
+    window.setTimeout(()=>{void load(false);screen.querySelector('[data-gt-back]')?.focus({preventScroll:true});},0);
   }
-  function back(){
-    let switched=false;
-    try{const fn=host().back;if(typeof fn==='function'){fn();switched=true;}}catch{}
-    if(!switched){
-      const game=root.querySelector('[data-screen="game"]');
-      root.querySelectorAll('.screen').forEach(node=>{node.hidden=node!==game;});
-    }
-  }
-  window.zefirokOpenGameTasks=open;
+  function back(){try{host().back?.();}catch{};}
 
   entry.addEventListener('click',event=>{event.preventDefault();open();});
   screen.addEventListener('click',event=>{
@@ -224,6 +215,10 @@
   window.addEventListener('pagehide',()=>{if(timerTick)clearInterval(timerTick);},{once:true});
 
   updateEntry();
+
+  // Expose an imperative opener for the lazy loader and deep links.
+  window.zefirokOpenGameTasks=open;
+  window.zefirokTasksUiOpen=open;
 
   // Deep links created by the Telegram bot should land directly in the task hub.
   try{
