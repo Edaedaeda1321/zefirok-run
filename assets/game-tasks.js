@@ -1,7 +1,7 @@
 (()=>{
   'use strict';
-  if(window.__ZEFIROK_GAME_TASKS_UI_V10__)return;
-  window.__ZEFIROK_GAME_TASKS_UI_V10__=true;
+  if(window.__ZEFIROK_GAME_TASKS_UI_V13__)return;
+  window.__ZEFIROK_GAME_TASKS_UI_V13__=true;
 
   const root=document.querySelector('#zefirok-maltipoo-runner');
   const screen=root?.querySelector('[data-screen="tasks"]');
@@ -13,7 +13,7 @@
   const API_READ='/api/tasks/read';
   const CACHE_MS=15000;
   const REQUEST_TIMEOUT_MS=12000;
-  const FILTERS=new Set(['all','daily','event']);
+  const FILTERS=new Set(['all','daily','event','series','ready']);
   let payload=null,filter='all',loading=false,inflight=null,readInflight=null,readQueued=false,lastFreshAt=0,serverOffsetMs=0,claimingKey='',toastTimer=0,timerTick=0;
   let entryNotice={readyCount:0,unreadCount:0,activeCount:0};
 
@@ -30,10 +30,25 @@
   function taskId(task){return `${String(task?.kind||'task')}:${String(task?.key||'')}:${String(task?.cycleKey||'')}`;}
   function taskRatio(task){const target=Math.max(1,whole(task?.target));return Math.max(0,Math.min(1,whole(task?.progress)/target));}
   function isReady(task){return Boolean(task?.complete&&!task?.claimed);}
-  function isDaily(task){return String(task?.mode||'')==='daily';}
-  function taskGroup(task){return isDaily(task)?'daily':'event';}
-  function taskIcon(task){if(task?.kind==='series')return '🎯';if(isDaily(task))return '🔥';return '✨';}
-  function taskTag(task){if(task?.kind==='series')return 'Цепочка';if(isDaily(task))return 'Сегодня';return 'Событие';}
+  function isSeries(task){return String(task?.kind||'')==='series'||String(task?.mode||'')==='series';}
+  function isDaily(task){return !isSeries(task)&&String(task?.mode||'')==='daily';}
+  function isEvent(task){return !isSeries(task)&&String(task?.mode||'')==='event';}
+  function taskKindLabel(task){if(isSeries(task))return 'Цепочка';if(isDaily(task))return 'Ежедневное';if(isEvent(task))return 'Событие';return 'Одноразовое';}
+  function taskIcon(task){
+    if(isSeries(task))return '🏆';
+    if(isEvent(task))return '🎟️';
+    const type=String(task?.triggerType||'');
+    if(type==='collect_zefir')return '🍥';
+    if(type==='collect_coffee')return '☕';
+    if(['opened_cases','case_purchases','open_specific_case'].includes(type))return '🎁';
+    if(['single_run_score','total_score','best_score'].includes(type))return '⭐';
+    if(['new_records'].includes(type))return '🏆';
+    if(['single_run_duration','play_time'].includes(type))return '⏱';
+    if(['runs_with_booster'].includes(type))return '⚡';
+    if(['runs_with_skin'].includes(type))return '🐾';
+    if(isDaily(task))return '🔥';
+    return '✨';
+  }
   function fmt(n){try{return whole(n).toLocaleString('ru-RU');}catch{return String(whole(n));}}
   function taskProgressValue(task,value){
     const amount=whole(value);
@@ -44,7 +59,65 @@
     if(minutes)return `${minutes} мин${seconds?` ${seconds} сек`:''}`;
     return `${seconds} сек`;
   }
+  function clockValue(value){
+    const total=whole(value),hours=Math.floor(total/3600),minutes=Math.floor((total%3600)/60),seconds=total%60;
+    return hours?`${hours}:${String(minutes).padStart(2,'0')}:${String(seconds).padStart(2,'0')}`:`${minutes}:${String(seconds).padStart(2,'0')}`;
+  }
   function plural(n,one,two,five){const value=Math.abs(whole(n))%100;const tail=value%10;if(value>10&&value<20)return five;if(tail===1)return one;if(tail>=2&&tail<=4)return two;return five;}
+  function isUrgent(task){const left=num(task?.endsAt)-nowServerMs()/1000;return !task?.claimed&&!task?.complete&&left>0&&left<=10800;}
+  function taskBadge(task){
+    const claimed=Boolean(task?.claimed),pending=Boolean(task?.pending)&&!claimed;
+    if(pending)return {label:'ПРОВЕРКА ВЫДАЧИ',className:'is-pending',state:'pending'};
+    if(isReady(task))return {label:task?.unread?'ГОТОВО ✨':'ГОТОВО 🎁',className:'is-ready',state:'ready'};
+    if(claimed)return {label:'ПОЛУЧЕНО',className:'is-claimed',state:'claimed'};
+    if(isUrgent(task))return {label:'СКОРО ЗАКОНЧИТСЯ',className:'is-urgent',state:'urgent'};
+    if(isSeries(task)){const done=Math.min(whole(task?.progress),Math.max(1,whole(task?.target))),goal=Math.max(1,whole(task?.target));return {label:String(task?.seriesMode||'ordered')==='any'?`${done} / ${goal}`:`ЭТАП ${Math.min(done+1,goal)} / ${goal}`,className:'is-kind',state:'kind'};}
+    if(isEvent(task))return {label:'АКТИВНО',className:'is-kind',state:'kind'};
+    return {label:taskKindLabel(task).toUpperCase(),className:'is-kind',state:'kind'};
+  }
+  function taskProgressText(task,progress,target){
+    const current=Math.min(whole(progress),Math.max(1,whole(target))),goal=Math.max(1,whole(target));
+    if(isSeries(task))return `Выполнено этапов: ${current} / ${goal}`;
+    const type=String(task?.triggerType||'');
+    if(String(task?.progressFormat||'')==='duration'){
+      const value=goal>=60?`${clockValue(current)} / ${clockValue(goal)}`:`${current} / ${goal} сек`;
+      if(type==='single_run_duration')return `Лучший забег: ${value}`;
+      if(type==='new_player_delay')return `Прошло: ${value}`;
+      return value;
+    }
+    if(type==='single_run_score')return `Лучший забег: ${fmt(current)} / ${fmt(goal)} очков`;
+    if(type==='best_score')return `Личный рекорд: ${fmt(current)} / ${fmt(goal)} очков`;
+    if(type==='total_score')return `${fmt(current)} / ${fmt(goal)} очков`;
+    if(type==='level_reached')return `Уровень ${fmt(current)} / ${fmt(goal)}`;
+    if(['accepted_runs','runs_with_skin','runs_with_booster','runs_without_boosters'].includes(type))return `${fmt(current)} / ${fmt(goal)} ${plural(goal,'забег','забега','забегов')}`;
+    if(['opened_cases','case_purchases','open_specific_case'].includes(type))return `${fmt(current)} / ${fmt(goal)} ${plural(goal,'кейс','кейса','кейсов')}`;
+    if(type==='collect_zefir')return `${fmt(current)} / ${fmt(goal)} зефирок`;
+    if(type==='collect_coffee')return `${fmt(current)} / ${fmt(goal)} кофе`;
+    if(type==='new_records')return `${fmt(current)} / ${fmt(goal)} ${plural(goal,'рекорд','рекорда','рекордов')}`;
+    if(type==='promo_activations')return `${fmt(current)} / ${fmt(goal)} ${plural(goal,'промокод','промокода','промокодов')}`;
+    if(type==='skin_purchases')return `${fmt(current)} / ${fmt(goal)} ${plural(goal,'образ','образа','образов')}`;
+    if(type==='shop_purchases')return `${fmt(current)} / ${fmt(goal)} ${plural(goal,'покупка','покупки','покупок')}`;
+    if(type==='physical_purchases')return `${fmt(current)} / ${fmt(goal)} ${plural(goal,'награда','награды','наград')}`;
+    return `${taskProgressValue(task,current)} / ${taskProgressValue(task,goal)}`;
+  }
+  function sortTasks(tasks){
+    const source=list(payload?.tasks),positions=new Map(source.map((task,index)=>[taskId(task),index]));
+    const bucket=task=>{
+      if(Boolean(task?.pending)&&!task?.claimed)return 0;
+      if(isReady(task)&&task?.unread)return 1;
+      if(isReady(task))return 2;
+      if(isUrgent(task))return 3;
+      if(task?.claimed)return 9;
+      return 4;
+    };
+    return [...tasks].sort((a,b)=>{
+      const pa=bucket(a),pb=bucket(b);if(pa!==pb)return pa-pb;
+      if(pa===3){const ea=num(a?.endsAt)||Number.MAX_SAFE_INTEGER,eb=num(b?.endsAt)||Number.MAX_SAFE_INTEGER;if(ea!==eb)return ea-eb;}
+      if(pa===4){const ratio=taskRatio(b)-taskRatio(a);if(Math.abs(ratio)>.0001)return ratio;}
+      if((pa===1||pa===2)&&Boolean(a?.unread)!==Boolean(b?.unread))return a?.unread?-1:1;
+      return (positions.get(taskId(a))??9999)-(positions.get(taskId(b))??9999);
+    });
+  }
 
   function applyEntryNotice(next){
     if(!next||typeof next!=='object')return;
@@ -77,16 +150,16 @@
   }
 
   function filteredTasks(){
-    const tasks=list(payload?.tasks);
-    if(filter==='daily')return tasks.filter(isDaily);
-    if(filter==='event')return tasks.filter(task=>!isDaily(task));
-    return tasks;
+    let tasks=list(payload?.tasks);
+    if(filter==='daily')tasks=tasks.filter(isDaily);
+    else if(filter==='event')tasks=tasks.filter(isEvent);
+    else if(filter==='series')tasks=tasks.filter(isSeries);
+    else if(filter==='ready')tasks=tasks.filter(isReady);
+    return sortTasks(tasks);
   }
 
   function nearestTask(){
-    const tasks=list(payload?.tasks).filter(task=>!task?.claimed);
-    const ready=tasks.find(isReady);if(ready)return ready;
-    return tasks.sort((a,b)=>taskRatio(b)-taskRatio(a))[0]||null;
+    return sortTasks(list(payload?.tasks).filter(task=>!task?.claimed))[0]||null;
   }
 
   function toast(text){
@@ -141,20 +214,22 @@
     entry.hidden=isRunning();
     const summary=entry.querySelector('[data-tasks-summary]');
     const badge=entry.querySelector('[data-tasks-badge]');
+    const fresh=entry.querySelector('[data-tasks-new]');
     const ready=payload?whole(payload.readyCount):whole(entryNotice.readyCount);
     const unread=payload?whole(payload.unreadCount):whole(entryNotice.unreadCount);
     const active=payload?whole(payload.activeCount):whole(entryNotice.activeCount);
     entry.classList.toggle('has-ready',ready>0);
     entry.classList.toggle('has-unread',unread>0);
     if(summary){
-      if(unread===1)summary.textContent=ready>1?`Новое выполненное задание · ${ready} ${plural(ready,'награда готова','награды готовы','наград готово')}`:'Новое выполненное задание · награда готова';
-      else if(unread>1)summary.textContent=`${unread} ${plural(unread,'новое задание','новых задания','новых заданий')} · ${ready} ${plural(ready,'награда готова','награды готовы','наград готово')}`;
-      else if(ready>0&&active>0)summary.textContent=`${active} ${plural(active,'активное задание','активных задания','активных заданий')} · ${ready} ${plural(ready,'награда готова','награды готовы','наград готово')}`;
-      else if(ready>0)summary.textContent=`${ready} ${plural(ready,'награда готова','награды готовы','наград готово')}`;
-      else if(active>0)summary.textContent=`${active} ${plural(active,'активное задание','активных задания','активных заданий')}`;
+      if(unread===1)summary.textContent=ready>1?`Новое выполнение · ${ready} ${plural(ready,'награда ждёт','награды ждут','наград ждут')}`:'Новое выполнение · награда ждёт тебя';
+      else if(unread>1)summary.textContent=`${unread} ${plural(unread,'новое выполнение','новых выполнения','новых выполнений')} · ${ready} ${plural(ready,'награда ждёт','награды ждут','наград ждут')}`;
+      else if(ready>0)summary.textContent=`${ready} ${plural(ready,'награда ждёт тебя','награды ждут тебя','наград ждут тебя')}`;
+      else if(active>0)summary.textContent=`${active} ${plural(active,'активное задание','активных задания','активных заданий')} · продолжай играть`;
       else summary.textContent='Цели, награды и XP профиля';
     }
+    if(fresh){fresh.hidden=unread<=0;fresh.textContent=unread>1?`НОВОЕ ${Math.min(9,unread)} ✨`:'НОВОЕ ✨';}
     if(badge){badge.hidden=ready<=0;badge.textContent=String(Math.min(99,ready));}
+    entry.setAttribute('aria-label',unread>0?`Задания: ${unread} новых выполнений, ${ready} наград готово`:ready>0?`Задания: ${ready} наград готово`:active>0?`Задания: ${active} активных`:'Открыть задания');
   }
 
   function skeleton(){
@@ -178,24 +253,73 @@
     return `<section class="gt-next${ready?' is-ready':''}" aria-label="Ближайшая цель"><span class="gt-next-icon">${ready?'🎁':'🐾'}</span><span class="gt-next-copy"><small>${ready?'Награда готова':'Ближайшая цель'}</small><strong>${esc(task.title||'Задание')}</strong><span>${esc(ready?(task.rewardLabel||'Можно получить награду'):(extra?`До конца: ${extra}`:(task.description||'Продолжай играть')))}</span></span><span class="gt-next-status">${esc(status)}</span></section>`;
   }
 
-  function taskMarkup(task,index){
+  function taskArtMarkup(task){
+    const src=String(task?.artUrl||'/assets/ui/icon_quest_game.webp');
+    return `<div class="gt-task-art"><img src="${esc(src)}" alt="" loading="lazy" decoding="async" onerror="this.onerror=null;this.src='/assets/ui/icon_quest_game.webp'"></div>`;
+  }
+
+  function taskActionMarkup(task,index){
+    const ready=isReady(task),claimed=Boolean(task?.claimed),pending=Boolean(task?.pending)&&!claimed,currentClaim=claimingKey===taskId(task);
+    if(ready&&!pending&&!claimed)return `<button class="gt-claim" data-gt-claim="${index}" type="button"${currentClaim?' disabled':''}>${currentClaim?'Получаем…':'🎁 Получить'}</button>`;
+    if(pending)return `<button class="gt-state is-ready gt-state-action" data-gt-claim="${index}" type="button"${currentClaim?' disabled':''}>${currentClaim?'Проверяем…':'Проверить выдачу'}</button>`;
+    if(claimed)return '<span class="gt-state">✓ Получено</span>';
+    return '<span class="gt-state">В процессе</span>';
+  }
+
+  function taskClasses(task,extra=''){
+    const ready=isReady(task),claimed=Boolean(task?.claimed),pending=Boolean(task?.pending)&&!claimed,urgent=isUrgent(task);
+    return ['gt-task',ready?'is-ready':'',pending?'is-pending':'',urgent?'is-urgent':'',claimed?'is-claimed':'',extra].filter(Boolean).join(' ');
+  }
+
+  function standardTaskMarkup(task,index){
     const progress=whole(task.progress),target=Math.max(1,whole(task.target)),pct=Math.max(0,Math.min(100,(progress/target)*100));
-    const ready=isReady(task),claimed=Boolean(task.claimed),pending=Boolean(task.pending)&&!claimed;
-    const currentClaim=claimingKey===taskId(task);
-    const end=timeLeft(task.endsAt);
-    let action='';
-    if(ready&&!pending&&!claimed)action=`<button class="gt-claim" data-gt-claim="${index}" type="button"${currentClaim?' disabled':''}>${currentClaim?'Получаем…':'🎁 Получить'}</button>`;
-    else if(pending)action=`<button class="gt-state is-ready gt-state-action" data-gt-claim="${index}" type="button"${currentClaim?' disabled':''}>${currentClaim?'Проверяем…':'Проверить выдачу'}</button>`;
-    else if(claimed)action='<span class="gt-state">✓ Получено</span>';
-    else action='<span class="gt-state">В процессе</span>';
-    const steps=list(task.steps).slice(0,6);
-    const series=steps.length?`<div class="gt-series" aria-label="Этапы цепочки">${steps.map(step=>`<span>${esc(step.title||'Этап')}</span>`).join('')}</div>`:'';
-    return `<article class="gt-task${ready?' is-ready':''}${claimed?' is-claimed':''}"><div class="gt-task-head"><span class="gt-task-icon" aria-hidden="true">${taskIcon(task)}</span><span class="gt-task-title"><strong>${esc(task.title||'Задание')}</strong><span>${esc(task.description||'Выполни условие и забери награду.')}</span></span><span class="gt-task-tag">${taskTag(task)}</span></div><div class="gt-progress-meta"><span>${claimed?'Выполнено':ready?'Цель выполнена':`Прогресс ${taskProgressValue(task,Math.min(progress,target))} / ${taskProgressValue(task,target)}`}</span><b>${ready||claimed?'100%':`${Math.round(pct)}%`}</b></div><div class="gt-progress-track" role="progressbar" aria-valuemin="0" aria-valuemax="${target}" aria-valuenow="${Math.min(progress,target)}"><span class="gt-progress-fill" style="width:${ready||claimed?100:pct.toFixed(1)}%"></span></div>${series}<div class="gt-task-foot"><span class="gt-reward"><span>${end?`⏱ ${esc(end)} · `:''}Награда</span><b>${esc(task.rewardLabel||'Награда задания')}</b></span>${action}</div></article>`;
+    const ready=isReady(task),claimed=Boolean(task.claimed),badge=taskBadge(task),end=timeLeft(task.endsAt),action=taskActionMarkup(task,index);
+    const context=[taskKindLabel(task),end?`⏱ ${end}`:''].filter(Boolean).map(value=>`<span>${esc(value)}</span>`).join('<i>·</i>');
+    const progressText=taskProgressText(task,progress,target);
+    return `<article class="${taskClasses(task)}">${taskArtMarkup(task)}<div class="gt-task-head"><span class="gt-task-icon" aria-hidden="true">${taskIcon(task)}</span><span class="gt-task-title"><strong>${esc(task.title||'Задание')}</strong><span class="gt-task-description">${esc(task.description||'Выполни условие и забери награду.')}</span><span class="gt-task-context">${context}</span></span><span class="gt-task-badge ${badge.className}">${esc(badge.label)}</span></div><div class="gt-progress-meta"><span>${esc(progressText)}</span><b>${ready||claimed?'100%':`${Math.round(pct)}%`}</b></div><div class="gt-progress-track" role="progressbar" aria-valuemin="0" aria-valuemax="${target}" aria-valuenow="${Math.min(progress,target)}"><span class="gt-progress-fill" style="width:${ready||claimed?100:pct.toFixed(1)}%"></span></div><div class="gt-task-foot"><span class="gt-reward"><span>Награда</span><b>${esc(task.rewardLabel||'Награда задания')}</b></span>${action}</div></article>`;
+  }
+
+  function eventTaskMarkup(task,index){
+    const progress=whole(task.progress),target=Math.max(1,whole(task.target)),pct=Math.max(0,Math.min(100,(progress/target)*100));
+    const ready=isReady(task),claimed=Boolean(task.claimed),urgent=isUrgent(task),badge=taskBadge(task),end=timeLeft(task.endsAt),action=taskActionMarkup(task,index);
+    const timer=end?`<span class="gt-event-time${urgent?' is-urgent':''}">⏳ ${esc(end)}</span>`:'<span class="gt-event-time">Активно</span>';
+    return `<article class="${taskClasses(task,'is-event-card')}">${taskArtMarkup(task)}<div class="gt-event-strip"><span class="gt-event-label">Событийное задание</span>${timer}</div><div class="gt-task-head"><span class="gt-task-icon" aria-hidden="true">${taskIcon(task)}</span><span class="gt-task-title"><strong>${esc(task.title||'Событийное задание')}</strong><span class="gt-task-description">${esc(task.description||'Выполни цель до окончания события.')}</span></span><span class="gt-task-badge ${badge.className}">${esc(badge.label)}</span></div><div class="gt-progress-meta"><span>${esc(taskProgressText(task,progress,target))}</span><b>${ready||claimed?'100%':`${Math.round(pct)}%`}</b></div><div class="gt-progress-track" role="progressbar" aria-valuemin="0" aria-valuemax="${target}" aria-valuenow="${Math.min(progress,target)}"><span class="gt-progress-fill" style="width:${ready||claimed?100:pct.toFixed(1)}%"></span></div><div class="gt-task-foot"><span class="gt-reward"><span>Награда события</span><b>${esc(task.rewardLabel||'Награда задания')}</b></span>${action}</div></article>`;
+  }
+
+  function seriesStepText(step){
+    if(!step)return '';
+    if(step.done)return 'Выполнено';
+    if(step.locked)return 'Откроется после предыдущего этапа';
+    return taskProgressText({...step,kind:'task',mode:'one_time'},whole(step.progress),Math.max(1,whole(step.target)));
+  }
+
+  function seriesTaskMarkup(task,index){
+    const progress=whole(task.progress),target=Math.max(1,whole(task.target)),pct=Math.max(0,Math.min(100,(progress/target)*100));
+    const ready=isReady(task),claimed=Boolean(task.claimed),badge=taskBadge(task),action=taskActionMarkup(task,index),steps=list(task.steps);
+    const mode=String(task?.seriesMode||'ordered')==='any'?'В любом порядке':'По порядку',end=timeLeft(task.endsAt);
+    const modeLabel=end?`${mode} · ⏳ ${end}`:mode;
+    const current=steps.find(step=>step?.current)||steps.find(step=>!step?.done&&!step?.locked)||steps.find(step=>!step?.done)||null;
+    const nodes=steps.length?`<div class="gt-series-road" aria-label="Этапы цепочки">${steps.map((step,stepIndex)=>{const cls=['gt-series-node',step?.done?'is-done':'',step?.current?'is-current':'',step?.locked?'is-locked':''].filter(Boolean).join(' ');const mark=step?.done?'✓':String(stepIndex+1);return `<span class="${cls}" title="${esc(step?.title||`Этап ${stepIndex+1}`)}"><i>${esc(mark)}</i><span>${esc(step?.title||`Этап ${stepIndex+1}`)}</span></span>`;}).join('')}</div>`:'';
+    let currentBlock='';
+    if(Boolean(task?.pending)&&!claimed)currentBlock='<div class="gt-series-current"><small>Все этапы выполнены</small><strong>Проверяем финальную награду</strong><span>Выдача уже запущена и безопасно проверяется повторно.</span></div>';
+    else if(ready)currentBlock='<div class="gt-series-current"><small>Все этапы выполнены</small><strong>Финальная награда готова</strong><span>Забери её, чтобы завершить цепочку.</span></div>';
+    else if(claimed)currentBlock='<div class="gt-series-current"><small>Цепочка завершена</small><strong>Все этапы пройдены</strong><span>Финальная награда уже получена.</span></div>';
+    else if(current)currentBlock=`<div class="gt-series-current"><small>${String(task?.seriesMode||'ordered')==='any'?'Доступный этап':'Текущий этап'}</small><strong>${esc(current.title||'Следующий этап')}</strong><span>${esc(seriesStepText(current))}</span></div>`;
+    else currentBlock='<div class="gt-series-current"><small>Прогресс цепочки</small><strong>Продолжай выполнять этапы</strong><span>Следующий этап появится после обновления прогресса.</span></div>';
+    return `<article class="${taskClasses(task,'is-series-card')}">${taskArtMarkup(task)}<div class="gt-series-strip"><span class="gt-series-kicker">Цепочка · ${Math.min(progress,target)} / ${target}</span><span class="gt-series-mode">${esc(modeLabel)}</span></div><div class="gt-task-head"><span class="gt-task-icon" aria-hidden="true">${taskIcon(task)}</span><span class="gt-task-title"><strong>${esc(task.title||'Цепочка заданий')}</strong><span class="gt-task-description">${esc(task.description||'Пройди все этапы и получи финальную награду.')}</span></span><span class="gt-task-badge ${badge.className}">${esc(badge.label)}</span></div><div class="gt-progress-meta"><span>${esc(taskProgressText(task,progress,target))}</span><b>${ready||claimed?'100%':`${Math.round(pct)}%`}</b></div><div class="gt-progress-track" role="progressbar" aria-valuemin="0" aria-valuemax="${target}" aria-valuenow="${Math.min(progress,target)}"><span class="gt-progress-fill" style="width:${ready||claimed?100:pct.toFixed(1)}%"></span></div>${nodes}${currentBlock}<div class="gt-series-final"><span>Финальная награда</span><b>${esc(task.rewardLabel||'Награда цепочки')}</b></div><div class="gt-series-footer">${action}</div></article>`;
+  }
+
+  function taskMarkup(task,index){
+    if(isSeries(task))return seriesTaskMarkup(task,index);
+    if(isEvent(task))return eventTaskMarkup(task,index);
+    return standardTaskMarkup(task,index);
   }
 
   function filtersMarkup(){
-    const counts={all:list(payload?.tasks).length,daily:list(payload?.tasks).filter(isDaily).length,event:list(payload?.tasks).filter(t=>!isDaily(t)).length};
-    return `<div class="gt-filter-row" role="tablist" aria-label="Тип заданий"><button class="gt-filter" data-gt-filter="all" role="tab" aria-selected="${filter==='all'}" type="button">Все · ${counts.all}</button><button class="gt-filter" data-gt-filter="daily" role="tab" aria-selected="${filter==='daily'}" type="button">Сегодня · ${counts.daily}</button><button class="gt-filter" data-gt-filter="event" role="tab" aria-selected="${filter==='event'}" type="button">События · ${counts.event}</button></div>`;
+    const tasks=list(payload?.tasks);
+    const counts={all:tasks.length,daily:tasks.filter(isDaily).length,event:tasks.filter(isEvent).length,series:tasks.filter(isSeries).length,ready:tasks.filter(isReady).length};
+    const chip=(key,label,count,extra='')=>`<button class="gt-filter${extra}" data-gt-filter="${key}" role="tab" aria-selected="${filter===key}" type="button">${label}<span class="gt-filter-count">${count}</span></button>`;
+    return `<div class="gt-filter-row" role="tablist" aria-label="Фильтры заданий">${chip('all','Все',counts.all)}${chip('daily','Ежедневные',counts.daily)}${chip('event','События',counts.event)}${chip('series','Цепочки',counts.series)}${counts.ready?chip('ready','🎁 Готово',counts.ready,' is-ready-filter'):''}</div>`;
   }
 
   function seasonMarkup(){
@@ -205,8 +329,11 @@
 
   function render(){
     if(!payload){screen.innerHTML=skeleton();return;}
+    if(filter==='ready'&&!list(payload?.tasks).some(isReady))filter='all';
     const tasks=filteredTasks();
-    const listMarkup=tasks.length?tasks.map((task,index)=>taskMarkup(task,list(payload.tasks).indexOf(task))).join(''):`<div class="gt-empty"><span class="gt-empty-icon">☕</span><strong>${filter==='all'?'Сейчас активных заданий нет':'В этом разделе пока пусто'}</strong><span>${filter==='all'?'Загляни позже — новые цели появятся здесь автоматически.':'Переключись на другой тип заданий.'}</span></div>`;
+    const emptyTitle=filter==='ready'?'Готовых наград пока нет':filter==='all'?'Сейчас активных заданий нет':'В этом разделе пока пусто';
+    const emptyCopy=filter==='ready'?'Продолжай выполнять задания — готовые награды появятся здесь автоматически.':filter==='all'?'Загляни позже — новые цели появятся здесь автоматически.':'Переключись на другой тип заданий.';
+    const listMarkup=tasks.length?tasks.map(task=>taskMarkup(task,list(payload.tasks).indexOf(task))).join(''):`<div class="gt-empty"><span class="gt-empty-icon">${filter==='ready'?'🎁':'☕'}</span><strong>${emptyTitle}</strong><span>${emptyCopy}</span></div>`;
     screen.innerHTML=`<div class="gt-shell"><div class="gt-topbar"><button class="gt-icon-button" data-gt-back type="button" aria-label="Назад">‹</button><div class="gt-heading"><strong>Задания</strong><span>Играй, выполняй цели и развивай профиль</span></div><button class="gt-icon-button gt-refresh${loading?' is-busy':''}" data-gt-refresh type="button" aria-label="Обновить задания"${loading?' disabled':''}><svg viewBox="0 0 24 24"><path d="M20 11a8 8 0 1 0-2.3 5.7M20 4v7h-7"/></svg></button></div>${profileMarkup()}${nextMarkup()}${filtersMarkup()}<div class="gt-list" aria-live="polite">${listMarkup}</div>${seasonMarkup()}</div><div class="gt-toast" role="status"></div>`;
   }
 

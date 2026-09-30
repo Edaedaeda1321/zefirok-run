@@ -1,66 +1,106 @@
-Сладкий Забег — Task Hub UI: цепочки, события, кнопка «Задания»
+СЛАДКИЙ ЗАБЕГ — TASK HUB ART / STAGE 6
 Дата: 2026-09-30
 
-Патч продолжает предыдущий Task Hub UI и НЕ меняет экономическую логику выдачи наград.
-Server-authoritative claim/progress остаются в Worker/D1.
+Что сделано
+===========
+1. Картинка теперь есть у каждой карточки задания в Task Hub:
+   - обычные задания;
+   - ежедневные;
+   - событийные;
+   - цепочки.
 
-Изменено:
-1) Цепочки заданий
-- отдельная карточка цепочки вместо обычной task-card;
-- прогресс «выполнено этапов N / M»;
-- дорожка этапов: выполнено / текущий / заблокированный;
-- текущий этап с его собственным прогрессом;
-- отображается порядок прохождения: «По порядку» / «В любом порядке»;
-- отображается срок цепочки, если он задан;
-- финальная награда всегда вынесена в отдельный блок;
-- ready/pending/claimed продолжают иметь приоритет над обычным статусом.
+2. Для старых и новых заданий действует автоматический fallback-art по типу цели.
+   Ничего вручную назначать для существующих заданий не обязательно.
 
-2) Событийные задания
-- отдельный event-style карточки;
-- постоянная визуальная идентичность «Событийное задание»;
-- таймер до конца события;
-- отдельное оформление награды события;
-- при <= 3 часов используется urgent-state;
-- статус ГОТОВО / ПРОВЕРКА ВЫДАЧИ / ПОЛУЧЕНО остаётся главнее типа задания.
+3. Автоматический каталог использует уже существующие production-assets проекта:
+   - забеги -> achievement runs art;
+   - общий score -> total score art;
+   - score за один забег -> best score art;
+   - зефир -> zefir achievement art;
+   - кофе -> coffee achievement art;
+   - рекорды -> records art;
+   - кейсы -> case art;
+   - уровень -> level art;
+   - покупки/магазин -> shop art;
+   - конкретный skin -> реальный shop portrait выбранного skin;
+   - конкретный booster -> реальный booster art;
+   - конкретный case -> реальный closed-case art;
+   - цепочки -> season-pass quest art;
+   - неизвестный тип -> icon_quest_game.
 
-3) Кнопка «Задания» на главной
-- badge показывает именно количество готовых наград;
-- отдельная метка «НОВОЕ ✨» показывает unread completion;
-- после открытия Task Hub unread-маркер исчезает через уже существующий /api/tasks/read;
-- состояние с готовыми наградами выделяется золотистым акцентом;
-- новое выполнение получает лёгкий pulse с поддержкой prefers-reduced-motion;
-- подпись кнопки показывает активные задания / ожидающие награды без нового API-запроса;
-- aria-label синхронизируется с состоянием.
+4. В Control Center / Автоматизации / Задания добавлен выбор картинки:
+   - «Выбрать» открывает существующий Project Asset Picker;
+   - «Авто» возвращает автоматический art;
+   - в списке заданий показывается фактический art и режим «свой / авто».
 
-Backend:
-- /api/tasks/state теперь дополнительно отдаёт presentation-only данные этапов серии:
-  seriesMode, done/current/locked, progress/target, triggerType/progressFormat для каждого шага.
-- Дополнительных D1-запросов для этого нет: используются данные, которые уже вычисляет v77PlayerSeriesState().
+5. В Control Center добавлена вкладка «Цепочки»:
+   - показывает все task_series;
+   - позволяет назначить отдельный art цепочки;
+   - позволяет вернуть авто-art.
 
-Файлы:
-- index.html
-- src/worker.js
-- PATCH_README_RU.txt
+6. API /api/tasks/state отдаёт готовые поля artUrl + artMode.
+   Клиент не вычисляет критическое состояние и не делает дополнительных API-запросов ради картинок.
 
-Migration:
-- НЕ требуется.
+7. Картинки загружаются lazy + async decoding. При повреждённом пути используется безопасный icon_quest_game.
 
-Установка из корня проекта после скачивания ZIP в ~/Downloads:
-unzip -o "$HOME/Downloads/sweet-run-task-hub-series-events-main-button-20260930.zip" -d .
+База данных
+===========
+Добавлена migration:
+  migrations/0107_game_task_art.sql
 
-Дальше:
+Она добавляет:
+  automation_chains.task_art_url
+  task_series.art_url
+
+Пустое значение означает «Авто». Старые задания автоматически совместимы.
+
+Также обновлён integration snapshot scripts/fixtures/d1_pre_0087_snapshot.sql,
+чтобы D1 replay видел реальную pre-0087 таблицу task_series перед ALTER TABLE 0107.
+
+Изменённые файлы
+================
+index.html
+owner.html
+src/worker.js
+assets/game-tasks.css
+assets/game-tasks.js
+migrations/0107_game_task_art.sql
+scripts/migration-history.lock.json
+scripts/fixtures/d1_pre_0087_snapshot.sql
+PATCH_README_RU.txt
+
+Установка
+=========
+Из корня проекта после скачивания ZIP в Downloads:
+
+unzip -o "$HOME/Downloads/sweet-run-task-art-stage6-20260930.zip" -d .
+
+Применить D1 migration:
+
+npx --yes wrangler@4.131.1 d1 migrations apply zefirok-rewards --remote
+
+Затем:
+
 git status
 git diff --check
 git add -A
-git commit -m "Improve task series events and main button UI"
+git commit -m "Add artwork to game tasks"
 git push origin main
 ./update.sh
 
-Проверки перед упаковкой:
-- task runtime JS: node --check — OK
-- src/worker.js: node --check — OK
-- check-index-srcdoc.mjs — OK
-- check-worker-module-syntax.mjs --experimental-vm-modules — OK
-- check-operation-system.mjs — OK (424)
-- check-migrations.mjs — OK (105/105)
-- check-database-schema.mjs --contract-only — OK
+Проверки перед упаковкой
+========================
+PASS: node --check src/worker.js
+PASS: node --check assets/game-tasks.js
+PASS: strict Worker module syntax
+PASS: index srcdoc integrity
+PASS: migration history (106 migrations / 106 checksums)
+PASS: schema contract static
+PASS: operation system (424 checks)
+PASS: P1 read paths
+PASS: production asset references
+PASS: SQLite replay pre-0087 snapshot -> migrations 0087..0107
+
+Полный локальный Wrangler D1 integration в рабочем окружении ChatGPT упёрся в timeout.
+D1 migration отдельно проверена последовательным SQLite replay до 0107 включительно.
+Некоторые deploy/P2 checks требуют отсутствующий в переданной рабочей копии .assetsignore.

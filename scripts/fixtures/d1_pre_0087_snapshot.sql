@@ -191,6 +191,32 @@ CREATE TABLE IF NOT EXISTS task_exposure_log (
 );
 CREATE INDEX IF NOT EXISTS idx_task_exposure_chain ON task_exposure_log(chain_key, last_seen_at DESC);
 
+-- Task series also exists before the post-0087 replay point. Keep the canonical
+-- pre-art shape so later ALTER TABLE migrations are exercised realistically.
+CREATE TABLE task_series (
+  series_key TEXT PRIMARY KEY,
+  title TEXT NOT NULL,
+  description TEXT NOT NULL DEFAULT '',
+  enabled INTEGER NOT NULL DEFAULT 0,
+  completion_mode TEXT NOT NULL DEFAULT 'ordered',
+  final_reward_json TEXT NOT NULL DEFAULT '{}',
+  task_mode TEXT NOT NULL DEFAULT 'one_time',
+  starts_at INTEGER NOT NULL DEFAULT 0,
+  ends_at INTEGER NOT NULL DEFAULT 0,
+  sort_order INTEGER NOT NULL DEFAULT 100,
+  created_at INTEGER NOT NULL,
+  updated_at INTEGER NOT NULL,
+  updated_by TEXT NOT NULL DEFAULT ''
+);
+CREATE TABLE task_series_steps (
+  series_key TEXT NOT NULL,
+  step_order INTEGER NOT NULL,
+  chain_key TEXT NOT NULL,
+  PRIMARY KEY(series_key, step_order),
+  UNIQUE(series_key, chain_key)
+);
+CREATE INDEX IF NOT EXISTS idx_task_series_steps_chain ON task_series_steps(chain_key, series_key);
+
 CREATE TABLE player_task_claims(telegram_id TEXT);
 CREATE TABLE player_task_series_claims(telegram_id TEXT);
 CREATE TABLE newcomer_path_claims(telegram_id TEXT);

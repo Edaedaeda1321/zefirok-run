@@ -17327,6 +17327,70 @@ function gameTaskParams(row) {
   return normalizeGameTaskParamsObject(parsed,row?.trigger_type,false);
 }
 
+const GAME_TASK_ART_FALLBACK = Object.freeze({
+  default:"/assets/ui/icon_quest_game.webp",
+  series:"/assets/season-pass/quest.webp",
+  runs:"/assets/achievements/badges/runs-10.webp",
+  score:"/assets/achievements/badges/total-score-5000.webp",
+  singleScore:"/assets/achievements/badges/best-score-5000.webp",
+  zefir:"/assets/achievements/badges/run-zefir-25.webp",
+  coffee:"/assets/achievements/badges/run-coffee-25.webp",
+  records:"/assets/achievements/series/icon_recordsmen.webp",
+  case:"/assets/achievements/badges/case-open-1.webp",
+  level:"/assets/achievements/badges/level-10.webp",
+  skin:"/assets/optimized/v0.79.5/skinDefaultPortrait.webp",
+  shop:"/assets/optimized/v0.79.5/shopMascot.webp"
+});
+
+function gameTaskArtOverrideUrl(value) {
+  const text=String(value || "").trim();
+  if(!text)return "";
+  if(text.length>500)return "";
+  if(!/^\/assets\/[A-Za-z0-9_./%()@+\-]+$/.test(text))return "";
+  if(text.includes("..")||text.includes("\\"))return "";
+  if(!/\.(?:webp|png|jpe?g|avif)(?:\?.*)?$/i.test(text))return "";
+  return text;
+}
+
+function gameTaskCaseArt(caseType) {
+  return ({
+    small:"/assets/cases/standart_closed.webp",
+    sweet:"/assets/cases/Bronze_close.webp",
+    gold:"/assets/cases/gold_closed.webp",
+    mythic:"/assets/cases/Mifik_case_closed.webp",
+    legendary:"/assets/cases/legendary_closed.webp",
+    alex:"/assets/cases/alex/alex_case_close.webp"
+  })[String(caseType || "")] || GAME_TASK_ART_FALLBACK.case;
+}
+
+function gameTaskAutoArtUrl(row, series = false) {
+  if(series)return GAME_TASK_ART_FALLBACK.series;
+  const type=String(row?.trigger_type || "");
+  const params=gameTaskParams(row);
+  if(type==="runs_with_skin"){
+    const skinId=String(params.skinId || "");
+    return SKINS[skinId]?`/assets/skins/shop/${skinId}.webp`:GAME_TASK_ART_FALLBACK.skin;
+  }
+  if(type==="runs_with_booster")return String(runBoosterDefinition(params.boosterType)?.imageUrl || GAME_TASK_ART_FALLBACK.default);
+  if(type==="open_specific_case")return gameTaskCaseArt(params.caseType);
+  if(["opened_cases","case_purchases"].includes(type))return GAME_TASK_ART_FALLBACK.case;
+  if(["accepted_runs","single_run_duration","play_time","runs_without_boosters"].includes(type))return GAME_TASK_ART_FALLBACK.runs;
+  if(type==="total_score")return GAME_TASK_ART_FALLBACK.score;
+  if(type==="single_run_score")return GAME_TASK_ART_FALLBACK.singleScore;
+  if(type==="collect_zefir")return GAME_TASK_ART_FALLBACK.zefir;
+  if(type==="collect_coffee")return GAME_TASK_ART_FALLBACK.coffee;
+  if(["best_score","new_records"].includes(type))return GAME_TASK_ART_FALLBACK.records;
+  if(type==="level_reached")return GAME_TASK_ART_FALLBACK.level;
+  if(["skin_purchases"].includes(type))return GAME_TASK_ART_FALLBACK.skin;
+  if(["shop_purchases","physical_purchases"].includes(type))return GAME_TASK_ART_FALLBACK.shop;
+  return GAME_TASK_ART_FALLBACK.default;
+}
+
+function gameTaskArtMeta(row, series = false) {
+  const manual=gameTaskArtOverrideUrl(series?row?.art_url:row?.task_art_url);
+  return {artUrl:manual || gameTaskAutoArtUrl(row,series),artMode:manual?"manual":"auto"};
+}
+
 function normalizeGameTaskParamsJson(value, triggerType = "") {
   if (value == null || value === "") value={};
   const parsed = typeof value === "string" ? safeJson(value, null) : value;
@@ -17639,10 +17703,12 @@ async function gameTaskView(env, row, telegramId, now, series = false, context =
   const complete = series ? Boolean(progress.done) : Boolean(progress.completed);
   const target = series ? Number(progress.total || 0) : Number(progress.target || 1);
   const value = series ? Number(progress.completed || 0) : Number(progress.value || 0);
+  const art=gameTaskArtMeta(row,series);
   return {
     kind, key, cycleKey,
     title:String(row.title || "Задание"),
     description:String(row.task_description || row.description || ""),
+    artUrl:art.artUrl, artMode:art.artMode,
     mode:series ? "series" : String(row.task_mode || "one_time"),
     triggerType:series ? "" : String(row.trigger_type || ""),
     seriesMode:series ? String(row.completion_mode || "ordered") : undefined,
@@ -17815,7 +17881,8 @@ async function buildGameTasksState(env, telegramId, options = {}) {
 
   // A reward whose first response was lost remains visible after midnight,
   // publication end, or an administrator disabling the task.
-  const pending = (await env.DB.prepare(`SELECT r.*,c.status AS task_status,s.status AS series_status,a.title AS task_title,b.title AS series_title
+  const pending = (await env.DB.prepare(`SELECT r.*,c.status AS task_status,s.status AS series_status,a.title AS task_title,b.title AS series_title,
+      a.trigger_type AS task_trigger_type,a.task_params_json AS task_params_json,a.task_art_url AS task_art_url,b.art_url AS series_art_url
     FROM player_game_tasks r
     LEFT JOIN player_task_claims c ON r.kind='task' AND c.telegram_id=r.telegram_id AND c.chain_key=r.task_key AND c.cycle_key=r.cycle_key
     LEFT JOIN player_task_series_claims s ON r.kind='series' AND s.telegram_id=r.telegram_id AND s.series_key=r.task_key AND s.cycle_key=r.cycle_key
@@ -17827,9 +17894,13 @@ async function buildGameTasksState(env, telegramId, options = {}) {
     const reward = safeJson(receipt.reward_json, {});
     const claimStatus = String(receipt.kind === "series" ? receipt.series_status || "" : receipt.task_status || "");
     const deliveryPending = claimStatus === "pending";
+    const receiptArt=receipt.kind==="series"
+      ? gameTaskArtMeta({art_url:receipt.series_art_url},true)
+      : gameTaskArtMeta({trigger_type:receipt.task_trigger_type,task_params_json:receipt.task_params_json,task_art_url:receipt.task_art_url},false);
     tasks.push({
       kind:String(receipt.kind), key:String(receipt.task_key), cycleKey:String(receipt.cycle_key),
       title:String(receipt.task_title||receipt.series_title||"Сохранённая награда"),
+      artUrl:receiptArt.artUrl, artMode:receiptArt.artMode,
       description:deliveryPending
         ? "Выдача начата ранее. Награда сохранена и доступна для повторной проверки."
         : "Задание выполнено. Награда сохранена и готова к получению.",
@@ -38898,6 +38969,7 @@ async function ensureV67Schema(env) {
           task_mode TEXT NOT NULL DEFAULT 'one_time',
           task_description TEXT NOT NULL DEFAULT '',
           task_params_json TEXT NOT NULL DEFAULT '{}',
+          task_art_url TEXT NOT NULL DEFAULT '',
           task_starts_at INTEGER NOT NULL DEFAULT 0,
           task_ends_at INTEGER NOT NULL DEFAULT 0,
           task_sort INTEGER NOT NULL DEFAULT 100,
@@ -39014,6 +39086,7 @@ async function ensureV67Schema(env) {
         ["task_mode", "TEXT NOT NULL DEFAULT 'one_time'"],
         ["task_description", "TEXT NOT NULL DEFAULT ''"],
         ["task_params_json", "TEXT NOT NULL DEFAULT '{}'"],
+        ["task_art_url", "TEXT NOT NULL DEFAULT ''"],
         ["task_starts_at", "INTEGER NOT NULL DEFAULT 0"],
         ["task_ends_at", "INTEGER NOT NULL DEFAULT 0"],
         ["task_sort", "INTEGER NOT NULL DEFAULT 100"]
@@ -39972,7 +40045,7 @@ let v77SchemaPromise = null;
 async function ensureV77Schema(env) {
   if (!v77SchemaPromise) {
     v77SchemaPromise = env.DB.batch([
-      env.DB.prepare(`CREATE TABLE IF NOT EXISTS task_series (series_key TEXT PRIMARY KEY,title TEXT NOT NULL,description TEXT NOT NULL DEFAULT '',enabled INTEGER NOT NULL DEFAULT 0,completion_mode TEXT NOT NULL DEFAULT 'ordered',final_reward_json TEXT NOT NULL DEFAULT '{}',task_mode TEXT NOT NULL DEFAULT 'one_time',starts_at INTEGER NOT NULL DEFAULT 0,ends_at INTEGER NOT NULL DEFAULT 0,sort_order INTEGER NOT NULL DEFAULT 100,created_at INTEGER NOT NULL,updated_at INTEGER NOT NULL,updated_by TEXT NOT NULL DEFAULT '')`),
+      env.DB.prepare(`CREATE TABLE IF NOT EXISTS task_series (series_key TEXT PRIMARY KEY,title TEXT NOT NULL,description TEXT NOT NULL DEFAULT '',enabled INTEGER NOT NULL DEFAULT 0,completion_mode TEXT NOT NULL DEFAULT 'ordered',final_reward_json TEXT NOT NULL DEFAULT '{}',art_url TEXT NOT NULL DEFAULT '',task_mode TEXT NOT NULL DEFAULT 'one_time',starts_at INTEGER NOT NULL DEFAULT 0,ends_at INTEGER NOT NULL DEFAULT 0,sort_order INTEGER NOT NULL DEFAULT 100,created_at INTEGER NOT NULL,updated_at INTEGER NOT NULL,updated_by TEXT NOT NULL DEFAULT '')`),
       env.DB.prepare(`CREATE TABLE IF NOT EXISTS task_series_steps (series_key TEXT NOT NULL,step_order INTEGER NOT NULL,chain_key TEXT NOT NULL,PRIMARY KEY(series_key,step_order),UNIQUE(series_key,chain_key))`),
       env.DB.prepare(`CREATE INDEX IF NOT EXISTS idx_task_series_steps_chain ON task_series_steps(chain_key,series_key)`),
       env.DB.prepare(`CREATE TABLE IF NOT EXISTS player_task_series_claims (claim_key TEXT PRIMARY KEY,series_key TEXT NOT NULL,telegram_id TEXT NOT NULL,cycle_key TEXT NOT NULL,status TEXT NOT NULL DEFAULT 'pending',queue_id INTEGER NOT NULL DEFAULT 0,created_at INTEGER NOT NULL,updated_at INTEGER NOT NULL,claimed_at INTEGER NOT NULL DEFAULT 0,UNIQUE(series_key,telegram_id,cycle_key))`),
@@ -42762,6 +42835,7 @@ function ownerV8AutomationView(row, allRows=[]) {
     actionType:String(row.action_type||""),action,actionLabel:String(row.action_type)==="reward"?safeRewardDescription(action):String(row.action_type)==="mail"?`💌 ${String(action.title||row.title||"Письмо")}`:ownerV8AutomationPlainMessage(action.text).slice(0,180),messageText:String(row.action_type)==="message"?ownerV8AutomationPlainMessage(action.text):"",
     mailTitle:String(row.action_type)==="mail"?String(action.title||""):"",mailPreview:String(row.action_type)==="mail"?String(action.preview||""):"",mailText:String(row.action_type)==="mail"?String(action.text||""):"",mailImageUrl:String(row.action_type)==="mail"?String(action.imageUrl||""):"",mailReward:String(row.action_type)==="mail"?retentionV2Reward(action.reward):{kind:"none"},
     showAsTask:Boolean(row.show_as_task),taskMode:String(row.task_mode||"one_time"),taskDescription:String(row.task_description||""),taskParams:gameTaskParams(row),
+    taskArtUrl:gameTaskArtOverrideUrl(row.task_art_url),taskArtEffectiveUrl:gameTaskArtMeta(row,false).artUrl,taskArtMode:gameTaskArtMeta(row,false).artMode,
     taskStartsAt:Number(row.task_starts_at||0),taskEndsAt:Number(row.task_ends_at||0),taskSort:Number(row.task_sort||100),
     cooldownSeconds:Number(row.cooldown_seconds||0),lastRunAt:Number(row.last_run_at||0),updatedAt:Number(row.updated_at||0),updatedBy:String(row.updated_by||""),
     executions7d:Number(row.executions_7d||0),completed7d:Number(row.completed_7d||0),failed7d:Number(row.failed_7d||0),lastExecutionAt:Number(row.last_execution_at||0),
@@ -42788,7 +42862,7 @@ async function ownerPanelV8Automations(env, ctx) {
     FROM automation_chains c ORDER BY c.enabled DESC,c.show_as_task DESC,c.task_sort ASC,c.updated_at DESC`).bind(week,week,week,month,month,month,week,week,week).all();
   const rawRows=result.results||[];
   const automations=rawRows.map((row)=>ownerV8AutomationView(row,rawRows));
-  const [executionRows,claimRows,cron]=await Promise.all([
+  const [executionRows,claimRows,cron,seriesRows]=await Promise.all([
     env.DB.prepare(`SELECT e.id,e.chain_key,e.telegram_id,e.status,e.details_json,e.created_at,e.updated_at,c.title,
       COALESCE(NULLIF(b.display_name,''),NULLIF(b.username,''),e.telegram_id) AS player_name
       FROM automation_chain_executions e LEFT JOIN automation_chains c ON c.chain_key=e.chain_key LEFT JOIN bot_subscribers b ON b.telegram_id=e.telegram_id
@@ -42797,10 +42871,12 @@ async function ownerPanelV8Automations(env, ctx) {
       COALESCE(NULLIF(b.display_name,''),NULLIF(b.username,''),cl.telegram_id) AS player_name
       FROM player_task_claims cl LEFT JOIN automation_chains c ON c.chain_key=cl.chain_key LEFT JOIN bot_subscribers b ON b.telegram_id=cl.telegram_id
       ORDER BY cl.created_at DESC LIMIT 40`).all(),
-    env.DB.prepare(`SELECT job_key,enabled,interval_seconds,last_success_at,next_run_at,last_status,last_duration_ms,last_error FROM server_cron_jobs WHERE job_key='automations-five-minutes' LIMIT 1`).first().catch(()=>null)
+    env.DB.prepare(`SELECT job_key,enabled,interval_seconds,last_success_at,next_run_at,last_status,last_duration_ms,last_error FROM server_cron_jobs WHERE job_key='automations-five-minutes' LIMIT 1`).first().catch(()=>null),
+    env.DB.prepare(`SELECT s.*,(SELECT COUNT(*) FROM task_series_steps x WHERE x.series_key=s.series_key) AS step_count FROM task_series s ORDER BY s.enabled DESC,s.sort_order,s.updated_at DESC,s.series_key`).all()
   ]);
   const conflicts=automations.reduce((acc,row)=>acc+row.issues.length,0);
-  return {ok:true,summary:{total:automations.length,active:automations.filter(x=>x.enabled&&!x.showAsTask).length,tasks:automations.filter(x=>x.showAsTask).length,activeTasks:automations.filter(x=>x.showAsTask&&x.enabled).length,executions7d:automations.reduce((a,x)=>a+x.executions7d,0),failures7d:automations.reduce((a,x)=>a+x.failed7d,0),conflicts},cron:cron?{enabled:Boolean(cron.enabled),interval:Number(cron.interval_seconds||300),lastRunAt:Number(cron.last_success_at||0),nextRunAt:Number(cron.next_run_at||0),status:String(cron.last_status||""),duration:Number(cron.last_duration_ms||0),error:String(cron.last_error||"")}:null,taskTypes:gameTaskTriggerCatalog(),
+  const taskSeries=(seriesRows.results||[]).map((row)=>{const art=gameTaskArtMeta(row,true);return {key:String(row.series_key||""),title:String(row.title||"Цепочка заданий"),description:String(row.description||""),enabled:Boolean(row.enabled),completionMode:String(row.completion_mode||"ordered"),steps:Number(row.step_count||0),artUrl:gameTaskArtOverrideUrl(row.art_url),artEffectiveUrl:art.artUrl,artMode:art.artMode,updatedAt:Number(row.updated_at||0)};});
+  return {ok:true,summary:{total:automations.length,active:automations.filter(x=>x.enabled&&!x.showAsTask).length,tasks:automations.filter(x=>x.showAsTask).length,activeTasks:automations.filter(x=>x.showAsTask&&x.enabled).length,executions7d:automations.reduce((a,x)=>a+x.executions7d,0),failures7d:automations.reduce((a,x)=>a+x.failed7d,0),conflicts},cron:cron?{enabled:Boolean(cron.enabled),interval:Number(cron.interval_seconds||300),lastRunAt:Number(cron.last_success_at||0),nextRunAt:Number(cron.next_run_at||0),status:String(cron.last_status||""),duration:Number(cron.last_duration_ms||0),error:String(cron.last_error||"")}:null,taskTypes:gameTaskTriggerCatalog(),taskSeries,
     automations,recentExecutions:(executionRows.results||[]).map(r=>({id:Number(r.id),chainKey:String(r.chain_key||""),title:String(r.title||r.chain_key||""),telegramId:String(r.telegram_id||""),playerName:String(r.player_name||r.telegram_id||""),status:String(r.status||""),details:ownerV8SafeJson(r.details_json,{}),createdAt:Number(r.created_at||0),updatedAt:Number(r.updated_at||0)})),recentClaims:(claimRows.results||[]).map(r=>({claimKey:String(r.claim_key||""),chainKey:String(r.chain_key||""),title:String(r.title||r.chain_key||""),telegramId:String(r.telegram_id||""),playerName:String(r.player_name||r.telegram_id||""),cycleKey:String(r.cycle_key||""),status:String(r.status||""),createdAt:Number(r.created_at||0),claimedAt:Number(r.claimed_at||0)}))};
 }
 
@@ -42823,6 +42899,9 @@ async function ownerPanelV8SaveAutomation(env, ctx) {
   if(!["one_time","daily","event"].includes(taskMode))taskMode="one_time";
   if(showAsTask&&taskMode!=="one_time"&&!OWNER_V8_TASK_REPEATABLE_TRIGGERS.has(triggerType))throw new ApiError(400,"Для этого условия доступно только одноразовое задание.");
   const taskDescription=showAsTask?String(body.taskDescription||description||title).trim().slice(0,300):"";
+  const rawTaskArtUrl=showAsTask?String(body.taskArtUrl||"").trim():"";
+  const taskArtUrl=showAsTask?gameTaskArtOverrideUrl(rawTaskArtUrl):"";
+  if(rawTaskArtUrl&&!taskArtUrl)throw new ApiError(400,"Картинка задания должна быть изображением из /assets/.");
   const taskParamsJson=showAsTask
     ? normalizeGameTaskParamsJson(Object.prototype.hasOwnProperty.call(body,"taskParams")?body.taskParams:(old?.task_params_json||"{}"),triggerType)
     : "{}";
@@ -42835,20 +42914,39 @@ async function ownerPanelV8SaveAutomation(env, ctx) {
   if(!key&&triggerType==="inactive_days"&&cooldownSeconds===0)cooldownSeconds=7*V67_DAY;
   const now=Math.floor(Date.now()/1000);let chainKey=key;
   if(old){
-    await env.DB.prepare(`UPDATE automation_chains SET title=?,description=?,trigger_type=?,trigger_value=?,action_type=?,action_json=?,show_as_task=?,task_mode=?,task_description=?,task_params_json=?,task_starts_at=?,task_ends_at=?,task_sort=?,cooldown_seconds=?,updated_at=?,updated_by=? WHERE chain_key=?`).bind(title,description,triggerType,triggerValue,actionType,JSON.stringify(action),showAsTask?1:0,taskMode,taskDescription,taskParamsJson,taskStartsAt,taskEndsAt,taskSort,cooldownSeconds,now,String(ctx.user.id),key).run();
+    await env.DB.prepare(`UPDATE automation_chains SET title=?,description=?,trigger_type=?,trigger_value=?,action_type=?,action_json=?,show_as_task=?,task_mode=?,task_description=?,task_params_json=?,task_art_url=?,task_starts_at=?,task_ends_at=?,task_sort=?,cooldown_seconds=?,updated_at=?,updated_by=? WHERE chain_key=?`).bind(title,description,triggerType,triggerValue,actionType,JSON.stringify(action),showAsTask?1:0,taskMode,taskDescription,taskParamsJson,taskArtUrl,taskStartsAt,taskEndsAt,taskSort,cooldownSeconds,now,String(ctx.user.id),key).run();
     const fresh=await env.DB.prepare(`SELECT * FROM automation_chains WHERE chain_key=? LIMIT 1`).bind(key).first();
     const issues=v77ConflictList(fresh,(await env.DB.prepare(`SELECT * FROM automation_chains`).all()).results||[]);
     if(issues.some(x=>x.severity==="critical")){
       await env.DB.prepare(`UPDATE automation_chains SET enabled=0,updated_at=?,updated_by=? WHERE chain_key=?`).bind(now,String(ctx.user.id),key).run();
     }
-    await Promise.all([recordV67SettingChange(env,ctx.user,"automation",key,"web_edit",{title:old.title,triggerType:old.trigger_type,triggerValue:old.trigger_value,actionType:old.action_type,action:ownerV8SafeJson(old.action_json,{}),showAsTask:Boolean(old.show_as_task),taskMode:old.task_mode,taskParams:gameTaskParams(old)},{title,triggerType,triggerValue,actionType,action,showAsTask,taskMode,taskParams:safeJson(taskParamsJson,{}),taskStartsAt,taskEndsAt,taskSort}),logStaffAction(env,ctx.user,ctx.access,"owner_panel_automation_edit",null,"automation",null,null,{chainKey:key,showAsTask,triggerType,triggerValue,actionType})]);
+    await Promise.all([recordV67SettingChange(env,ctx.user,"automation",key,"web_edit",{title:old.title,triggerType:old.trigger_type,triggerValue:old.trigger_value,actionType:old.action_type,action:ownerV8SafeJson(old.action_json,{}),showAsTask:Boolean(old.show_as_task),taskMode:old.task_mode,taskParams:gameTaskParams(old),taskArtUrl:gameTaskArtOverrideUrl(old.task_art_url)},{title,triggerType,triggerValue,actionType,action,showAsTask,taskMode,taskParams:safeJson(taskParamsJson,{}),taskArtUrl,taskStartsAt,taskEndsAt,taskSort}),logStaffAction(env,ctx.user,ctx.access,"owner_panel_automation_edit",null,"automation",null,null,{chainKey:key,showAsTask,triggerType,triggerValue,actionType})]);
   }else{
     chainKey=`custom_web_${now.toString(36)}_${crypto.randomUUID().slice(0,6)}`;
-    await env.DB.prepare(`INSERT INTO automation_chains(chain_key,title,description,enabled,trigger_type,trigger_value,action_type,action_json,show_as_task,task_mode,task_description,task_params_json,task_starts_at,task_ends_at,task_sort,cooldown_seconds,last_run_at,updated_at,updated_by) VALUES(?,?,?,0,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`).bind(chainKey,title,description,triggerType,triggerValue,actionType,JSON.stringify(action),showAsTask?1:0,taskMode,taskDescription,taskParamsJson,taskStartsAt,taskEndsAt,taskSort,cooldownSeconds,0,now,String(ctx.user.id)).run();
-    await Promise.all([recordV67SettingChange(env,ctx.user,"automation",chainKey,"web_create",{}, {title,triggerType,triggerValue,actionType,action,showAsTask,taskMode,taskParams:safeJson(taskParamsJson,{}),taskStartsAt,taskEndsAt,taskSort}),logStaffAction(env,ctx.user,ctx.access,"owner_panel_automation_create",null,"automation",null,null,{chainKey,showAsTask,triggerType,triggerValue,actionType})]);
+    await env.DB.prepare(`INSERT INTO automation_chains(chain_key,title,description,enabled,trigger_type,trigger_value,action_type,action_json,show_as_task,task_mode,task_description,task_params_json,task_art_url,task_starts_at,task_ends_at,task_sort,cooldown_seconds,last_run_at,updated_at,updated_by) VALUES(?,?,?,0,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`).bind(chainKey,title,description,triggerType,triggerValue,actionType,JSON.stringify(action),showAsTask?1:0,taskMode,taskDescription,taskParamsJson,taskArtUrl,taskStartsAt,taskEndsAt,taskSort,cooldownSeconds,0,now,String(ctx.user.id)).run();
+    await Promise.all([recordV67SettingChange(env,ctx.user,"automation",chainKey,"web_create",{}, {title,triggerType,triggerValue,actionType,action,showAsTask,taskMode,taskParams:safeJson(taskParamsJson,{}),taskArtUrl,taskStartsAt,taskEndsAt,taskSort}),logStaffAction(env,ctx.user,ctx.access,"owner_panel_automation_create",null,"automation",null,null,{chainKey,showAsTask,triggerType,triggerValue,actionType})]);
   }
   v77CalendarCache={html:"",expiresAt:0};
   return {ok:true,chainKey,created:!old};
+}
+
+async function ownerPanelV8SaveTaskSeriesArt(env, ctx) {
+  await ensureV77Schema(env);
+  const seriesKey=String(ctx.body?.seriesKey||"").trim();
+  if(!seriesKey)throw new ApiError(400,"Цепочка не выбрана.");
+  const row=await env.DB.prepare(`SELECT * FROM task_series WHERE series_key=? LIMIT 1`).bind(seriesKey).first();
+  if(!row)throw new ApiError(404,"Цепочка заданий не найдена.");
+  const raw=String(ctx.body?.artUrl||"").trim();
+  const artUrl=gameTaskArtOverrideUrl(raw);
+  if(raw&&!artUrl)throw new ApiError(400,"Картинка цепочки должна быть изображением из /assets/.");
+  const now=Math.floor(Date.now()/1000);
+  await env.DB.prepare(`UPDATE task_series SET art_url=?,updated_at=?,updated_by=? WHERE series_key=?`).bind(artUrl,now,String(ctx.user.id),seriesKey).run();
+  await Promise.all([
+    recordV67SettingChange(env,ctx.user,"task_series",seriesKey,"web_art",{artUrl:gameTaskArtOverrideUrl(row.art_url)},{artUrl}),
+    logStaffAction(env,ctx.user,ctx.access,"owner_panel_task_series_art",null,"task_series",null,null,{seriesKey,artUrl})
+  ]);
+  const art=gameTaskArtMeta({...row,art_url:artUrl},true);
+  return {ok:true,seriesKey,artUrl,artEffectiveUrl:art.artUrl,artMode:art.artMode};
 }
 
 async function ownerPanelV8ToggleAutomation(env, ctx) {
@@ -49521,6 +49619,7 @@ const OWNER_CC_ENDPOINT_TARGET = Object.freeze({
   "/api/owner/v8/automations": "read",
   "/api/owner/v8/automations/save": "live",
   "/api/owner/v8/automations/toggle": "live",
+  "/api/owner/v8/task-series/art": "live",
   "/api/owner/v8/segments": "read",
   "/api/owner/v8/campaigns": "read",
   "/api/owner/v8/campaigns/create": "live",
@@ -49759,6 +49858,7 @@ async function handleOwnerPanelApi(request, env, path, executionCtx = null) {
     if (path === "/api/owner/v8/automations") return jsonResponse(await ownerPanelV8Automations(env, ctx));
     if (path === "/api/owner/v8/automations/save") return jsonResponse(await ownerPanelV8SaveAutomation(env, ctx));
     if (path === "/api/owner/v8/automations/toggle") return jsonResponse(await ownerPanelV8ToggleAutomation(env, ctx));
+    if (path === "/api/owner/v8/task-series/art") return jsonResponse(await ownerPanelV8SaveTaskSeriesArt(env, ctx));
     if (path === "/api/owner/v8/segments") return jsonResponse(await ownerPanelV8Segments(env, ctx));
     if (path === "/api/owner/v8/campaigns") return jsonResponse(await ownerPanelV8Campaigns(env, ctx));
     if (path === "/api/owner/v8/campaigns/create") return jsonResponse(await ownerPanelV8CreateCampaign(env, ctx));
