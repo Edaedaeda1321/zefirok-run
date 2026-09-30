@@ -16,28 +16,37 @@
 }
 #zefirok-maltipoo-runner [data-screen="tasks"] button{font:inherit;-webkit-tap-highlight-color:transparent}
 #zefirok-maltipoo-runner .tasks-entry{
-  width:100%;min-height:58px;margin:8px 0 10px;padding:9px 12px;
-  display:grid;grid-template-columns:42px minmax(0,1fr) auto;align-items:center;gap:10px;
-  border:1px solid rgba(224,163,185,.58);border-radius:18px;
-  background:linear-gradient(145deg,#fff,#fff2f7);color:#6b4050;text-align:left;
-  box-shadow:0 8px 20px rgba(123,69,89,.08);cursor:pointer;
-  transition:transform .14s ease,box-shadow .14s ease,opacity .14s ease;
+  position:relative;width:100%;min-height:74px;margin:14px 0 16px;padding:12px 50px 12px 14px;
+  display:grid;grid-template-columns:52px minmax(0,1fr);align-items:center;gap:12px;box-sizing:border-box;
+  border:1px solid rgba(226,159,185,.56);border-radius:24px;
+  background:linear-gradient(145deg,#fff9fb 0%,#ffeaf2 58%,#ffe3ed 100%);color:#684251;text-align:left;
+  box-shadow:0 8px 22px rgba(124,66,88,.07),inset 0 1px rgba(255,255,255,.88);cursor:pointer;
+  transition:transform .14s ease,box-shadow .14s ease,opacity .14s ease;overflow:visible;
 }
 #zefirok-maltipoo-runner .tasks-entry:active{transform:translateY(1px) scale(.995)}
 #zefirok-maltipoo-runner .tasks-entry[hidden]{display:none!important}
+#zefirok-maltipoo-runner .tasks-entry:after{
+  content:"\203A";position:absolute;right:18px;top:50%;transform:translateY(-52%);
+  color:#c44f7b;font-size:31px;line-height:1;font-weight:500;
+}
 #zefirok-maltipoo-runner .tasks-entry>span:first-child{
-  width:42px;height:42px;display:grid;place-items:center;border-radius:14px;
-  background:linear-gradient(145deg,#ffe1ec,#fff4f7);font-size:23px;
-  box-shadow:inset 0 0 0 1px rgba(224,143,174,.18);
+  width:52px;height:52px;display:grid;place-items:center;border-radius:17px;
+  background:linear-gradient(145deg,#fff1f6,#ffdbe8);font-size:30px;line-height:1;
+  box-shadow:inset 0 0 0 1px rgba(224,128,164,.18),0 5px 12px rgba(174,86,120,.08);
 }
-#zefirok-maltipoo-runner .tasks-entry>span:nth-child(2){display:grid;gap:2px;min-width:0}
-#zefirok-maltipoo-runner .tasks-entry strong{font-size:14px;line-height:1.1;font-weight:950}
-#zefirok-maltipoo-runner .tasks-entry small{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#957883;font-size:9px;font-weight:750}
-#zefirok-maltipoo-runner .tasks-entry b{
-  min-width:28px;height:28px;padding:0 8px;display:grid;place-items:center;border-radius:999px;
-  background:#fff;color:#c25780;font-size:17px;font-weight:950;box-shadow:0 5px 12px rgba(117,65,84,.08)
+#zefirok-maltipoo-runner .tasks-entry>span:nth-child(2){display:grid;gap:4px;min-width:0}
+#zefirok-maltipoo-runner .tasks-entry strong{font-size:16px;line-height:1.1;font-weight:950;color:#653b4b}
+#zefirok-maltipoo-runner .tasks-entry small{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#9a7b86;font-size:11px;line-height:1.2;font-weight:750}
+#zefirok-maltipoo-runner .tasks-entry:not(.is-loaded) small{font-size:0}
+#zefirok-maltipoo-runner .tasks-entry:not(.is-loaded) small:after{content:"\0412\044b\043f\043e\043b\043d\044f\0439 \0446\0435\043b\0438 \0438 \043f\043e\043b\0443\0447\0430\0439 XP";font-size:11px}
+#zefirok-maltipoo-runner .tasks-entry b[data-tasks-badge]{
+  position:absolute;right:7px;top:-8px;min-width:27px;height:27px;padding:0 7px;box-sizing:border-box;
+  display:grid;place-items:center;border:2px solid #fff;border-radius:999px;
+  background:linear-gradient(145deg,#f28db2,#dd5f91);color:#fff;font-size:11px;font-weight:950;
+  box-shadow:0 5px 12px rgba(172,65,107,.2);
 }
-#zefirok-maltipoo-runner .tasks-entry.has-ready b{background:linear-gradient(145deg,#f29abb,#d85f91);color:#fff;font-size:11px}
+#zefirok-maltipoo-runner .tasks-entry b[data-tasks-badge][hidden]{display:none!important}
+#zefirok-maltipoo-runner .tasks-entry.has-ready{border-color:rgba(226,126,165,.68);background:linear-gradient(145deg,#fff8fb 0%,#ffe5ef 54%,#ffdae8 100%)}
 
 #zefirok-maltipoo-runner .gt-shell{display:grid;gap:11px}
 #zefirok-maltipoo-runner .gt-topbar{display:grid;grid-template-columns:40px minmax(0,1fr) 40px;align-items:center;gap:8px;padding:2px 1px 0}

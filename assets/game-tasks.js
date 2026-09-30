@@ -1,7 +1,7 @@
 (()=>{
   'use strict';
-  if(window.__ZEFIROK_GAME_TASKS_UI_V2__)return;
-  window.__ZEFIROK_GAME_TASKS_UI_V2__=true;
+  if(window.__ZEFIROK_GAME_TASKS_UI_V3__)return;
+  window.__ZEFIROK_GAME_TASKS_UI_V3__=true;
 
   const root=document.querySelector('#zefirok-maltipoo-runner');
   const screen=root?.querySelector('[data-screen="tasks"]');
@@ -83,12 +83,14 @@
     const badge=entry.querySelector('[data-tasks-badge]');
     const ready=whole(payload?.readyCount),active=whole(payload?.activeCount);
     entry.classList.toggle('has-ready',ready>0);
+    entry.classList.toggle('is-loaded',Boolean(payload));
     if(summary){
-      if(ready>0)summary.textContent=ready===1?'Награда готова!':`Готово наград: ${ready}`;
-      else if(active>0)summary.textContent=`Активных целей: ${active}`;
-      else summary.textContent='Цели, награды и XP профиля';
+      const activeText=active===1?'1 \u0430\u043a\u0442\u0438\u0432\u043d\u043e\u0435':`${active} \u0430\u043a\u0442\u0438\u0432\u043d\u044b\u0445`;
+      const rewardText=ready===1?'1 \u043d\u0430\u0433\u0440\u0430\u0434\u0430 \u0433\u043e\u0442\u043e\u0432\u0430':`${ready} \u043d\u0430\u0433\u0440\u0430\u0434\u044b \u0433\u043e\u0442\u043e\u0432\u044b`;
+      if(payload&&(active>0||ready>0))summary.textContent=ready>0?`${activeText} \u00b7 ${rewardText}`:activeText;
+      else summary.textContent='\u0412\u044b\u043f\u043e\u043b\u043d\u044f\u0439 \u0446\u0435\u043b\u0438 \u0438 \u043f\u043e\u043b\u0443\u0447\u0430\u0439 XP';
     }
-    if(badge)badge.textContent=ready>0?String(Math.min(99,ready)):'›';
+    if(badge){badge.hidden=ready<=0;badge.textContent=String(Math.min(99,ready));}
   }
 
   function skeleton(){
@@ -185,13 +187,23 @@
 
   function open(){
     if(isRunning())return;
-    try{host().open?.();}catch{}
-    if(screen.hidden){
+    if(!payload)screen.innerHTML=skeleton();
+    let switched=false;
+    try{const fn=host().open;if(typeof fn==='function'){fn();switched=true;}}catch{}
+    if(!switched||screen.hidden){
       root.querySelectorAll('.screen').forEach(node=>{node.hidden=node!==screen;});
     }
-    window.setTimeout(()=>{void load(false);screen.querySelector('[data-gt-back]')?.focus({preventScroll:true});},0);
+    window.requestAnimationFrame(()=>{void load(false);screen.querySelector('[data-gt-back]')?.focus({preventScroll:true});});
   }
-  function back(){try{host().back?.();}catch{};}
+  function back(){
+    let switched=false;
+    try{const fn=host().back;if(typeof fn==='function'){fn();switched=true;}}catch{}
+    if(!switched){
+      const game=root.querySelector('[data-screen="game"]');
+      root.querySelectorAll('.screen').forEach(node=>{node.hidden=node!==game;});
+    }
+  }
+  window.zefirokOpenGameTasks=open;
 
   entry.addEventListener('click',event=>{event.preventDefault();open();});
   screen.addEventListener('click',event=>{

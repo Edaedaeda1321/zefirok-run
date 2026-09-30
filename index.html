@@ -11949,11 +11949,44 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
 &lt;div class=&quot;stat&quot;&gt;&lt;img alt=&quot;&quot; class=&quot;stat-icon&quot; data-shop-img=&quot;iconTreatPanel&quot;/&gt;&lt;span&gt;Зефир&lt;/span&gt;&lt;strong data-treats=&quot;&quot;&gt;0&lt;/strong&gt;&lt;/div&gt;
 &lt;div class=&quot;stat&quot;&gt;&lt;img alt=&quot;&quot; class=&quot;stat-icon&quot; data-shop-img=&quot;iconCoffee&quot;/&gt;&lt;span&gt;Кофе&lt;/span&gt;&lt;strong data-coffee=&quot;&quot;&gt;0&lt;/strong&gt;&lt;/div&gt;
 &lt;/div&gt;
-&lt;button type=&quot;button&quot; class=&quot;liveops-run-banner&quot; onclick=&quot;window.location.href='/tasks.html'&quot; style=&quot;display:flex;cursor:pointer;width:100%;border:1px solid #efd7df;border-radius:20px;background:#fff8fb;padding:12px;text-align:left&quot;&gt;📋 &lt;strong&gt;Задания&lt;/strong&gt;&amp;nbsp; Выполняй цели и получай XP&lt;/button&gt;
 &lt;div class=&quot;liveops-run-banner&quot; data-liveops-run-banner hidden&gt;
   &lt;div class=&quot;liveops-run-banner-icon&quot; aria-hidden=&quot;true&quot;&gt;⚡&lt;/div&gt;
   &lt;div class=&quot;liveops-run-banner-copy&quot;&gt;&lt;strong data-liveops-run-title&gt;LiveOps&lt;/strong&gt;&lt;span data-liveops-run-meta&gt;&lt;/span&gt;&lt;/div&gt;
 &lt;/div&gt;
+&lt;style id=&quot;zefirok-task-entry-v3&quot;&gt;
+#zefirok-maltipoo-runner .tasks-entry{
+  position:relative;width:100%;min-height:74px;margin:14px 0 16px;padding:12px 50px 12px 14px;
+  display:grid;grid-template-columns:52px minmax(0,1fr);align-items:center;gap:12px;box-sizing:border-box;
+  border:1px solid rgba(226,159,185,.56);border-radius:24px;
+  background:linear-gradient(145deg,#fff9fb 0%,#ffeaf2 58%,#ffe3ed 100%);color:#684251;text-align:left;
+  box-shadow:0 8px 22px rgba(124,66,88,.07),inset 0 1px rgba(255,255,255,.88);cursor:pointer;
+  transition:transform .14s ease,box-shadow .14s ease,opacity .14s ease;overflow:visible;
+}
+#zefirok-maltipoo-runner .tasks-entry:active{transform:translateY(1px) scale(.995)}
+#zefirok-maltipoo-runner .tasks-entry[hidden]{display:none!important}
+#zefirok-maltipoo-runner .tasks-entry:after{
+  content:&quot;\203A&quot;;position:absolute;right:18px;top:50%;transform:translateY(-52%);
+  color:#c44f7b;font-size:31px;line-height:1;font-weight:500;
+}
+#zefirok-maltipoo-runner .tasks-entry&gt;span:first-child{
+  width:52px;height:52px;display:grid;place-items:center;border-radius:17px;
+  background:linear-gradient(145deg,#fff1f6,#ffdbe8);font-size:30px;line-height:1;
+  box-shadow:inset 0 0 0 1px rgba(224,128,164,.18),0 5px 12px rgba(174,86,120,.08);
+}
+#zefirok-maltipoo-runner .tasks-entry&gt;span:nth-child(2){display:grid;gap:4px;min-width:0}
+#zefirok-maltipoo-runner .tasks-entry strong{font-size:16px;line-height:1.1;font-weight:950;color:#653b4b}
+#zefirok-maltipoo-runner .tasks-entry small{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#9a7b86;font-size:11px;line-height:1.2;font-weight:750}
+#zefirok-maltipoo-runner .tasks-entry:not(.is-loaded) small{font-size:0}
+#zefirok-maltipoo-runner .tasks-entry:not(.is-loaded) small:after{content:&quot;\0412\044b\043f\043e\043b\043d\044f\0439 \0446\0435\043b\0438 \0438 \043f\043e\043b\0443\0447\0430\0439 XP&quot;;font-size:11px}
+#zefirok-maltipoo-runner .tasks-entry b[data-tasks-badge]{
+  position:absolute;right:7px;top:-8px;min-width:27px;height:27px;padding:0 7px;box-sizing:border-box;
+  display:grid;place-items:center;border:2px solid #fff;border-radius:999px;
+  background:linear-gradient(145deg,#f28db2,#dd5f91);color:#fff;font-size:11px;font-weight:950;
+  box-shadow:0 5px 12px rgba(172,65,107,.2);
+}
+#zefirok-maltipoo-runner .tasks-entry b[data-tasks-badge][hidden]{display:none!important}
+#zefirok-maltipoo-runner .tasks-entry.has-ready{border-color:rgba(226,126,165,.68);background:linear-gradient(145deg,#fff8fb 0%,#ffe5ef 54%,#ffdae8 100%)}
+&lt;/style&gt;
 &lt;button class=&quot;tasks-entry&quot; data-tasks-open type=&quot;button&quot;&gt;&lt;span aria-hidden=&quot;true&quot;&gt;📋&lt;/span&gt;&lt;span&gt;&lt;strong&gt;Задания&lt;/strong&gt;&lt;small data-tasks-summary&gt;Цели, награды и XP профиля&lt;/small&gt;&lt;/span&gt;&lt;b data-tasks-badge&gt;›&lt;/b&gt;&lt;/button&gt;
 &lt;div class=&quot;stage&quot; data-stage=&quot;&quot;&gt;
 &lt;button aria-label=&quot;Развернуть игру на весь экран&quot; aria-pressed=&quot;false&quot; class=&quot;game-expand-toggle&quot; data-game-expand-toggle title=&quot;На весь экран&quot; type=&quot;button&quot;&gt;
@@ -32408,8 +32441,42 @@ html &gt; body.zefirok-game-expanded{height:var(--zefirok-visible-height,100dvh)
   scheduleMaybe(700);
 })();
 &lt;/script&gt;
-&lt;link rel=&quot;stylesheet&quot; href=&quot;/assets/game-tasks.css?v=2&quot;&gt;
-&lt;script src=&quot;/assets/game-tasks.js?v=2&quot;&gt;&lt;/script&gt;
+&lt;script id=&quot;zefirok-game-tasks-loader-v3&quot;&gt;
+(()=&gt;{
+  if(window.__ZEFIROK_GAME_TASKS_LOADER_V3__)return;
+  window.__ZEFIROK_GAME_TASKS_LOADER_V3__=true;
+  let assetsPromise=null;
+  const loadCss=()=&gt;new Promise(resolve=&gt;{
+    if(document.querySelector(&#x27;link[data-zefirok-game-tasks-css]&#x27;)){resolve();return;}
+    const link=document.createElement(&#x27;link&#x27;);
+    link.rel=&#x27;stylesheet&#x27;;link.href=&#x27;/assets/game-tasks.css?v=3&#x27;;link.dataset.zefirokGameTasksCss=&#x27;1&#x27;;
+    link.onload=resolve;link.onerror=resolve;(document.head||document.documentElement).append(link);
+  });
+  const loadJs=()=&gt;new Promise((resolve,reject)=&gt;{
+    if(window.zefirokOpenGameTasks){resolve();return;}
+    const existing=document.querySelector(&#x27;script[data-zefirok-game-tasks-js]&#x27;);
+    if(existing){existing.addEventListener(&#x27;load&#x27;,resolve,{once:true});existing.addEventListener(&#x27;error&#x27;,reject,{once:true});return;}
+    const script=document.createElement(&#x27;script&#x27;);
+    script.src=&#x27;/assets/game-tasks.js?v=3&#x27;;script.async=true;script.dataset.zefirokGameTasksJs=&#x27;1&#x27;;
+    script.onload=resolve;script.onerror=()=&gt;reject(new Error(&#x27;tasks-ui-load-failed&#x27;));(document.body||document.documentElement).append(script);
+  });
+  const load=()=&gt;assetsPromise||(assetsPromise=Promise.all([loadCss(),loadJs()]).catch(error=&gt;{assetsPromise=null;throw error;}));
+  const intercept=event=&gt;{
+    if(window.zefirokOpenGameTasks)return;
+    event.preventDefault();event.stopImmediatePropagation();
+    void load().then(()=&gt;window.zefirokOpenGameTasks?.()).catch(()=&gt;{});
+  };
+  document.querySelector(&#x27;[data-tasks-open]&#x27;)?.addEventListener(&#x27;click&#x27;,intercept,true);
+  try{
+    const params=new URLSearchParams(location.search);
+    const start=String(window.Telegram?.WebApp?.initDataUnsafe?.start_param||params.get(&#x27;startapp&#x27;)||params.get(&#x27;screen&#x27;)||&#x27;&#x27;).toLowerCase();
+    if(start===&#x27;tasks&#x27;||start===&#x27;task&#x27;)void load().then(()=&gt;window.zefirokOpenGameTasks?.()).catch(()=&gt;{});
+  }catch{}
+  const warm=()=&gt;void load().catch(()=&gt;{});
+  if(document.readyState===&#x27;complete&#x27;)window.setTimeout(warm,1200);
+  else window.addEventListener(&#x27;load&#x27;,()=&gt;window.setTimeout(warm,900),{once:true});
+})();
+&lt;/script&gt;
 &lt;/body&gt;
 &lt;/html&gt;
 &lt;style id=&quot;zefirok-levels-boosters-info-v2&quot;&gt;
