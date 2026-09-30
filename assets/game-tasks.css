@@ -45,6 +45,9 @@
 }
 #zefirok-maltipoo-runner .tasks-entry__badge[hidden]{display:none!important}
 #zefirok-maltipoo-runner .tasks-entry.has-ready{border-color:rgba(226,126,165,.68);background:linear-gradient(145deg,#fff8fb 0%,#ffe5ef 54%,#ffdae8 100%)}
+#zefirok-maltipoo-runner .tasks-entry.has-unread .tasks-entry__icon{box-shadow:inset 0 0 0 1px rgba(224,143,174,.28),0 0 0 4px rgba(240,139,177,.10)}
+#zefirok-maltipoo-runner .tasks-entry.has-unread .tasks-entry__badge{animation:gtTaskBadgePulse 1.8s ease-in-out infinite}
+@keyframes gtTaskBadgePulse{0%,100%{transform:scale(1)}50%{transform:scale(1.09)}}
 
 #zefirok-maltipoo-runner .gt-shell{display:grid;gap:11px}
 #zefirok-maltipoo-runner .gt-topbar{display:grid;grid-template-columns:40px minmax(0,1fr) 40px;align-items:center;gap:8px;padding:2px 1px 0}
@@ -169,5 +172,5 @@
 }
 @media(prefers-reduced-motion:reduce){
   #zefirok-maltipoo-runner .gt-xp-fill,#zefirok-maltipoo-runner .gt-progress-fill,#zefirok-maltipoo-runner .gt-toast,#zefirok-maltipoo-runner .tasks-entry{transition:none!important}
-  #zefirok-maltipoo-runner .gt-skeleton>i{animation:none!important}
+  #zefirok-maltipoo-runner .gt-skeleton>i,#zefirok-maltipoo-runner .tasks-entry.has-unread .tasks-entry__badge{animation:none!important}
 }

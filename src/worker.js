@@ -7938,6 +7938,7 @@ async function getGameStartupPackage(request, env, ctx = null) {
     const startupAccountRevisionPromise = startupMailMaintenancePromise.then(() => readPlayerAccountRevision(env, telegramId));
     const startupSideSections = Promise.allSettled([
       startupBounded('season-task-notice', readSeasonPassTaskNoticeState(env, telegramId), 1800),
+      startupBounded('game-task-notice', readGameTaskNoticeState(env, telegramId), 1800),
       startupBounded('season-profile-bonus', getSeasonPassProfileBonusForUser(env, telegramId), 1800),
       startupBounded('rewards', listMyRewards(null, env, { raw: true, body: internalBody, auth }), 2200),
       startupBounded('feature-flags', publicFeatureFlags(env, telegramId, { trustedIdentity: true }), 1500),
@@ -7965,7 +7966,7 @@ async function getGameStartupPackage(request, env, ctx = null) {
       startupSideSections
     ]);
     const casesResult = casesSettled[0];
-    const [taskNoticeResult, seasonPassBonusResult, rewardsResult, flagsResult, newsResult, giftsResult, gameStyleResult, accountRevisionResult, liveOpsEventResult, newcomerPathResult, achievementShowcaseResult] = sideSettled;
+    const [taskNoticeResult, gameTaskNoticeResult, seasonPassBonusResult, rewardsResult, flagsResult, newsResult, giftsResult, gameStyleResult, accountRevisionResult, liveOpsEventResult, newcomerPathResult, achievementShowcaseResult] = sideSettled;
     const cases = casesResult.status === "fulfilled" ? casesResult.value : null;
     const rewards = rewardsResult.status === "fulfilled" ? rewardsResult.value : null;
     const flags = flagsResult.status === "fulfilled" ? flagsResult.value : null;
@@ -7982,6 +7983,7 @@ async function getGameStartupPackage(request, env, ctx = null) {
     const newcomerPath = newcomerPathResult?.status === "fulfilled" ? newcomerPathResult.value : {available:false,dayNumber:0,runs:0,steps:[]};
     const achievementShowcase = achievementShowcaseResult?.status === "fulfilled" ? achievementShowcaseResult.value : null;
     const seasonPassTaskNotice = taskNoticeResult.status === "fulfilled" ? taskNoticeResult.value : null;
+    const gameTaskNotice = gameTaskNoticeResult.status === "fulfilled" ? gameTaskNoticeResult.value : null;
     // Do not turn a bounded/temporary bonus lookup failure into an explicit
     // revocation. The client will fall back to the dedicated profile-bonus API
     // and keep the last authoritative Elite+ state until that read completes.
@@ -7990,6 +7992,7 @@ async function getGameStartupPackage(request, env, ctx = null) {
       : null;
     if (casesResult.status === "rejected") errors.cases = startupSectionError(casesResult.reason);
     if (taskNoticeResult.status === "rejected") errors.seasonPassTaskNotice = startupSectionError(taskNoticeResult.reason);
+    if (gameTaskNoticeResult.status === "rejected") errors.gameTaskNotice = startupSectionError(gameTaskNoticeResult.reason);
     if (seasonPassBonusResult.status === "rejected") errors.seasonPassBonus = startupSectionError(seasonPassBonusResult.reason);
     if (rewardsResult.status === "rejected") errors.rewards = startupSectionError(rewardsResult.reason);
     if (flagsResult.status === "rejected") errors.flags = startupSectionError(flagsResult.reason);
@@ -8010,6 +8013,7 @@ async function getGameStartupPackage(request, env, ctx = null) {
       flags,
       seasonPassBonus,
       seasonPassTaskNotice,
+      gameTaskNotice,
       news,
       gifts,
       ...(miniGameVisuals ? { miniGameVisual, miniGameVisuals } : {}),
@@ -14384,14 +14388,15 @@ async function buildFastRepeatedRunResponse(env, executionCtx, context) {
   const { ledger, telegramId, runId, submittedMetrics, submittedStoryCollectibleSlots, season, minSeconds, minScore, ratingEntryEnabled, auth } = context;
   await importLegacyRunCaseDropMilestone(env,runId,telegramId).catch(()=>null);
   const profilePromise = ensureAuthoritativeProfileRow(env, telegramId, `run:${runId}:fast-repeat`);
-  const [profileRow, repeatCaseEnsured, repeatRunCaseDropsResult, repeatStoryCollectible] = await Promise.all([
+  const [profileRow, repeatCaseEnsured, repeatRunCaseDropsResult, repeatStoryCollectible, repeatGameTaskNotice] = await Promise.all([
     profilePromise,
     ensureCasePlayerState(env, telegramId, {}, { profilePromise }),
     env.DB.prepare(`SELECT m.*,CASE WHEN EXISTS(SELECT 1 FROM granted_cases g
         WHERE g.id=substr('run_case_drop_'||m.run_id||'_'||m.milestone_score,1,180)
            OR (m.milestone_score=1000 AND g.id=substr('run_case_drop_'||m.run_id,1,180))) THEN 1 ELSE 0 END AS grant_exists
       FROM game_run_case_drop_milestones m WHERE m.run_id=? AND m.telegram_id=? AND m.case_type<>'' ORDER BY m.milestone_score ASC`).bind(runId,telegramId).all().catch(()=>({results:[]})),
-    settleRunStoryCollectibles(env,{runId,telegramId,durationMs:Number(ledger?.duration_ms||submittedMetrics.durationMs),slots:submittedStoryCollectibleSlots,now:Math.floor(Date.now()/1000)}).catch(()=>readRunStoryCollectibleState(env,runId,telegramId).catch(()=>null))
+    settleRunStoryCollectibles(env,{runId,telegramId,durationMs:Number(ledger?.duration_ms||submittedMetrics.durationMs),slots:submittedStoryCollectibleSlots,now:Math.floor(Date.now()/1000)}).catch(()=>readRunStoryCollectibleState(env,runId,telegramId).catch(()=>null)),
+    readGameTaskNoticeState(env,telegramId).catch((error)=>{console.error('repeat run game task notice failed',error);return null;})
   ]);
   const repeatRunCaseDrops=(repeatRunCaseDropsResult?.results||[]).map(runCaseDropMilestoneView).filter(Boolean);
   const repeatMemories=freshStoryCollectibleMemories(repeatStoryCollectible,Math.floor(Date.now()/1000));
@@ -14432,6 +14437,7 @@ async function buildFastRepeatedRunResponse(env, executionCtx, context) {
     fastSettlement: { version: FAST_RUN_SETTLEMENT_VERSION, repeated: true },
     profile: authoritativeProfileView(profileRow),
     authoritativeProfile: true,
+    ...(repeatGameTaskNotice ? { gameTaskNotice:repeatGameTaskNotice } : {}),
     runSettlement: {
       accepted: true, repeated: true, acceptedToRating,
       reason: acceptedToRating ? "accepted" : (!qualifies ? "below_minimum" : (!ratingEntryEnabled ? "rating_disabled" : `season_${String(season.status || "inactive")}`)),
@@ -14834,7 +14840,15 @@ async function submitLeaderboardRun(request, env, executionCtx = null) {
       throw batchError;
     }
 
-    let storyCollectibleSettlement=await settleRunStoryCollectibles(env,{runId,telegramId,durationMs:metrics.durationMs,slots:submittedStoryCollectibleSlots,now}).catch((error)=>{if(isMissingRuntimeDatabaseSchemaError(error))return null;throw error;});
+    const [storyCollectibleSettlementResult,gameTaskNotice]=await Promise.all([
+      settleRunStoryCollectibles(env,{runId,telegramId,durationMs:metrics.durationMs,slots:submittedStoryCollectibleSlots,now}).catch((error)=>{if(isMissingRuntimeDatabaseSchemaError(error))return null;throw error;}),
+      gameTaskRunCompletionNotice(env,telegramId,{
+        runId,now,runCreatedAt:runActivityCreatedAt,score:metrics.score,durationMs:metrics.durationMs,runTreats:metrics.runTreats,runCoffee:metrics.runCoffee,
+        acceptedToRating,newRecord,bestBefore:Number(profileBefore?.best_score||0),bestAfter:rewardEligible?Math.max(Number(profileBefore?.best_score||0),metrics.score):Number(profileBefore?.best_score||0),
+        profileXpBefore:Number(profileBefore?.profile_xp||0),profileXpAfter:nextProfileXp
+      }).catch((error)=>{console.error('game task run completion notice failed',error);return null;})
+    ]);
+    let storyCollectibleSettlement=storyCollectibleSettlementResult;
     const storyCollectibleUnlocks=await persistStoryCollectibleAchievementUnlocks(env,telegramId,storyCollectibleSettlement,now).catch((error)=>{console.error('story collectible achievement unlock failed',error);return [];});
     const storyCollectibleMemories=freshStoryCollectibleMemories(storyCollectibleSettlement,now);
     if(storyCollectibleSettlement&&storyCollectibleMemories.length)storyCollectibleSettlement={...storyCollectibleSettlement,newMemories:storyCollectibleMemories};
@@ -14905,6 +14919,7 @@ async function submitLeaderboardRun(request, env, executionCtx = null) {
       authoritativeProfile: true,
       achievementUnlocks,
       ...(seasonPassAward ? { seasonPassAward } : {}),
+      ...(gameTaskNotice ? { gameTaskNotice } : {}),
       runSettlement: {
         accepted: true, repeated: false, acceptedToRating,
         reason: acceptedToRating ? "accepted" : (!qualifies ? "below_minimum" : (!ratingEntryEnabled ? "rating_disabled" : `season_${String(season.status || "inactive")}`)),
@@ -17641,7 +17656,7 @@ async function trackGameTaskExposures(env, telegramId, rows, views, now = Math.f
   return records.length;
 }
 
-async function gameTasksState(env, telegramId) {
+async function buildGameTasksState(env, telegramId, options = {}) {
   // Production migrations own this schema. Avoid runtime DDL on the latency-sensitive read path.
   // Pending claims are presentation state over the authoritative reward queue.
   // Reconcile only already-delivered operations here; unresolved rewards stay pending
@@ -17662,8 +17677,10 @@ async function gameTasksState(env, telegramId) {
     Promise.all(visibleSeries.map((row) => gameTaskView(env,row,telegramId,now,true,context)))
   ]);
   const tasks = [...taskViews,...seriesViews];
-  try { await trackGameTaskExposures(env,telegramId,supportedTasks,taskViews,now); }
-  catch (error) { console.error("game task exposure tracking failed",error); }
+  if (options.trackExposure !== false) {
+    try { await trackGameTaskExposures(env,telegramId,supportedTasks,taskViews,now); }
+    catch (error) { console.error("game task exposure tracking failed",error); }
+  }
 
   // A reward whose first response was lost remains visible after midnight,
   // publication end, or an administrator disabling the task.
@@ -17677,19 +17694,176 @@ async function gameTasksState(env, telegramId) {
   for (const receipt of pending) {
     if (tasks.some((task) => task.kind === receipt.kind && task.key === receipt.task_key && task.cycleKey === receipt.cycle_key)) continue;
     const reward = safeJson(receipt.reward_json, {});
-    tasks.push({kind:String(receipt.kind),key:String(receipt.task_key),cycleKey:String(receipt.cycle_key),title:String(receipt.task_title||receipt.series_title||"Сохранённая награда"),description:"Выдача начата ранее. Награда сохранена и доступна для повторной проверки.",mode:receipt.kind==="series"?"series":"event",progress:1,target:1,complete:true,claimed:false,pending:true,reward,rewardLabel:gameTaskRewardLabel(reward),endsAt:0,unread:false});
+    const claimStatus = String(receipt.kind === "series" ? receipt.series_status || "" : receipt.task_status || "");
+    const deliveryPending = claimStatus === "pending";
+    tasks.push({
+      kind:String(receipt.kind), key:String(receipt.task_key), cycleKey:String(receipt.cycle_key),
+      title:String(receipt.task_title||receipt.series_title||"Сохранённая награда"),
+      description:deliveryPending
+        ? "Выдача начата ранее. Награда сохранена и доступна для повторной проверки."
+        : "Задание выполнено. Награда сохранена и готова к получению.",
+      mode:receipt.kind==="series"?"series":"event", progress:1, target:1, complete:true, claimed:false,
+      pending:deliveryPending, reward, rewardLabel:gameTaskRewardLabel(reward), endsAt:0,
+      unread:!Number(receipt.read_at || 0)
+    });
   }
 
   const notices = tasks.filter((task) => task.complete && !task.claimed);
-  const newNotices = notices.filter((task) => !context.receipts.has(gameTaskReceiptMapKey(task.kind,task.key,task.cycleKey)));
-  if (newNotices.length) {
-    await env.DB.batch(newNotices.map((task) => env.DB.prepare(`INSERT OR IGNORE INTO player_game_tasks(telegram_id,kind,task_key,cycle_key,completed_at) VALUES(?,?,?,?,?)`).bind(telegramId,task.kind,task.key,task.cycleKey,now)));
+  const completionSnapshots = notices.filter((task) => {
+    const receipt = context.receipts.get(gameTaskReceiptMapKey(task.kind,task.key,task.cycleKey));
+    return !String(receipt?.reward_json || "").trim();
+  });
+  if (completionSnapshots.length) {
+    // Snapshot the reward at completion time. Event/daily rewards stay claimable even if
+    // publication ends or the task configuration changes before the player opens Task Hub.
+    // The upsert also backfills receipts created by the first Task Hub version, which
+    // intentionally stored only completed_at/read_at and therefore had no durable reward.
+    await env.DB.batch(completionSnapshots.map((task) => env.DB.prepare(`INSERT INTO player_game_tasks(telegram_id,kind,task_key,cycle_key,completed_at,reward_json) VALUES(?,?,?,?,?,?)
+      ON CONFLICT(telegram_id,kind,task_key,cycle_key) DO UPDATE SET
+        completed_at=CASE WHEN player_game_tasks.completed_at>0 THEN player_game_tasks.completed_at ELSE excluded.completed_at END,
+        reward_json=CASE WHEN player_game_tasks.reward_json='' THEN excluded.reward_json ELSE player_game_tasks.reward_json END`)
+      .bind(telegramId,task.kind,task.key,task.cycleKey,now,JSON.stringify(task.reward || {}))));
   }
   const xp = Math.max(0,Number(profile?.profile_xp || 0));
   const level = caseProfileLevel(xp);
   const levelFloor = 5 * (level - 1) * (level + 2);
   const needed = level < 50 ? 20 + (level - 1) * 10 : 0;
-  return {tasks,readyCount:notices.length,activeCount:tasks.filter((task)=>!task.claimed&&!task.complete).length,profile:{xp,level,progress:needed?xp-levelFloor:0,needed,revision:Number(profile?.revision||0)},serverTime:now};
+  return {
+    tasks,
+    readyCount:notices.length,
+    unreadCount:notices.filter((task)=>Boolean(task.unread)).length,
+    activeCount:tasks.filter((task)=>!task.claimed&&!task.complete).length,
+    profile:{xp,level,progress:needed?xp-levelFloor:0,needed,revision:Number(profile?.revision||0)},
+    serverTime:now
+  };
+}
+
+async function gameTasksState(env, telegramId) {
+  return await buildGameTasksState(env,telegramId,{trackExposure:true});
+}
+
+function gameTaskNoticePublic(state) {
+  const tasks = Array.isArray(state?.tasks) ? state.tasks : [];
+  const unread = tasks.filter((task) => task?.complete && !task?.claimed && task?.unread);
+  const notices = unread.slice(0,5).map((task) => ({
+    kind:String(task.kind || "task"), key:String(task.key || ""), cycleKey:String(task.cycleKey || ""),
+    title:String(task.title || "Задание").slice(0,180), rewardLabel:String(task.rewardLabel || "Награда готова").slice(0,220),
+    mode:String(task.mode || "event")
+  }));
+  return {
+    readyCount:Math.max(0,Number(state?.readyCount || 0)),
+    unreadCount:Math.max(0,Number(state?.unreadCount || unread.length)),
+    activeCount:Math.max(0,Number(state?.activeCount || 0)),
+    notice:notices[0] || null,
+    notices
+  };
+}
+
+async function readGameTaskNoticeState(env, telegramId) {
+  // Startup owns the first compact task pass so the main-screen badge is correct
+  // without a second client request. Exposure analytics remain tied to opening Task Hub.
+  return gameTaskNoticePublic(await buildGameTasksState(env,telegramId,{trackExposure:false}));
+}
+
+const GAME_TASK_RUN_NOTICE_TRIGGERS = Object.freeze(new Set([
+  "accepted_runs","total_score","best_score","level_reached",
+  "single_run_score","collect_zefir","collect_coffee","single_run_duration","play_time","new_records"
+]));
+
+async function gameTaskRunCompletionNotice(env, telegramId, input = {}) {
+  const playerId=String(telegramId||"").trim(),runId=String(input.runId||"").trim();
+  if(!playerId||!runId)return {readyCountDelta:0,unreadCountDelta:0,activeCountDelta:0,tasks:[]};
+  const now=Math.max(1,Math.floor(Number(input.now||0))||Math.floor(Date.now()/1000));
+  const placeholders=[...GAME_TASK_RUN_NOTICE_TRIGGERS].map(()=>"?").join(",");
+  const rows=(await env.DB.prepare(`SELECT * FROM automation_chains WHERE enabled=1 AND show_as_task=1 AND action_type='reward'
+    AND trigger_type IN (${placeholders}) AND (task_starts_at=0 OR task_starts_at<=?) AND (task_ends_at=0 OR task_ends_at>?)
+    ORDER BY task_sort,chain_key LIMIT 80`).bind(...GAME_TASK_RUN_NOTICE_TRIGGERS,now,now).all()).results||[];
+  const tasks=rows.filter((row)=>v71TaskTriggerSupported(row.trigger_type));
+  if(!tasks.length)return {readyCountDelta:0,unreadCountDelta:0,activeCountDelta:0,tasks:[]};
+
+  const taskKeys=[...new Set(tasks.map((row)=>String(row.chain_key||"")).filter(Boolean))];
+  if(!taskKeys.length)return {readyCountDelta:0,unreadCountDelta:0,activeCountDelta:0,tasks:[]};
+  const q=taskKeys.map(()=>"?").join(",");
+  const [claimRows,receiptRows,executionRows]=await Promise.all([
+    env.DB.prepare(`SELECT chain_key,cycle_key,status FROM player_task_claims WHERE telegram_id=? AND chain_key IN (${q})`).bind(playerId,...taskKeys).all(),
+    env.DB.prepare(`SELECT task_key,cycle_key FROM player_game_tasks WHERE telegram_id=? AND kind='task' AND task_key IN (${q})`).bind(playerId,...taskKeys).all(),
+    env.DB.prepare(`SELECT DISTINCT chain_key FROM automation_chain_executions WHERE telegram_id=? AND status='completed' AND chain_key IN (${q})`).bind(playerId,...taskKeys).all()
+  ]);
+  const claims=new Map((claimRows.results||[]).map((row)=>[`${String(row.chain_key)} ${String(row.cycle_key)}`,String(row.status||"")]));
+  const receipts=new Set((receiptRows.results||[]).map((row)=>`${String(row.task_key)} ${String(row.cycle_key)}`));
+  const completedExecutions=new Set((executionRows.results||[]).map((row)=>String(row.chain_key||"")));
+  const runCreatedAt=Math.max(0,Math.floor(Number(input.runCreatedAt||0)));
+  const minRunMs=positiveInt(env.LEADERBOARD_MIN_RUN_SECONDS,DEFAULT_LEADERBOARD_MIN_RUN_SECONDS)*1000;
+  const runDurationMs=Math.max(0,Math.floor(Number(input.durationMs||0)));
+  const runLedgerEligible=runDurationMs>=minRunMs;
+  const acceptedToRating=Boolean(input.acceptedToRating);
+  const score=Math.max(0,Math.floor(Number(input.score||0)));
+  const runTreats=Math.max(0,Math.floor(Number(input.runTreats||0)));
+  const runCoffee=Math.max(0,Math.floor(Number(input.runCoffee||0)));
+  const newRecord=Boolean(input.newRecord);
+  const profileXpBefore=Math.max(0,Math.floor(Number(input.profileXpBefore||0)));
+  const profileXpAfter=Math.max(profileXpBefore,Math.floor(Number(input.profileXpAfter||profileXpBefore)));
+  const bestBefore=Math.max(0,Math.floor(Number(input.bestBefore||0)));
+  const bestAfter=Math.max(bestBefore,Math.floor(Number(input.bestAfter||bestBefore)));
+  const runLedgerCache=new Map(),ratingCache=new Map();
+  const runLedgerBefore=async(start)=>{
+    const key=String(start);if(runLedgerCache.has(key))return await runLedgerCache.get(key);
+    const pending=env.DB.prepare(`SELECT COALESCE(MAX(raw_score),0) AS single_run_score,COALESCE(SUM(raw_treats),0) AS zefir,
+      COALESCE(SUM(raw_coffee),0) AS coffee,COALESCE(MAX(duration_ms),0) AS single_run_duration_ms,
+      COALESCE(SUM(duration_ms),0) AS play_time_ms,COALESCE(SUM(new_record),0) AS new_records
+      FROM player_economy_run_ledger WHERE telegram_id=? AND run_id<>? AND duration_ms>=? AND created_at>=? AND created_at<=?`).bind(playerId,runId,minRunMs,start,now).first();
+    runLedgerCache.set(key,pending);return await pending;
+  };
+  const ratingBefore=async(start)=>{
+    const key=String(start);if(ratingCache.has(key))return await ratingCache.get(key);
+    const pending=env.DB.prepare(`SELECT COUNT(*) AS runs,COALESCE(SUM(score),0) AS score FROM leaderboard_runs
+      WHERE telegram_id=? AND run_id<>? AND accepted=1 AND created_at>=? AND created_at<=?`).bind(playerId,runId,start,now).first();
+    ratingCache.set(key,pending);return await pending;
+  };
+  const completed=[];
+  for(const row of tasks){
+    const key=String(row.chain_key||"");if(!key)continue;
+    const cycle=v71TaskCycle(row,now),cycleKey=String(cycle.cycleKey||"once"),mapKey=`${key} ${cycleKey}`;
+    if(receipts.has(mapKey)||claims.has(mapKey))continue;
+    if(String(row.task_mode||"one_time")==="one_time"&&completedExecutions.has(key))continue;
+    const target=Math.max(1,Number(row.trigger_value||1)),triggerType=String(row.trigger_type||""),start=Math.max(0,Number(cycle.startsAt||0));
+    let before=0,after=0;
+    if(triggerType==="best_score"){
+      before=bestBefore;after=bestAfter;
+    }else if(triggerType==="level_reached"){
+      before=caseProfileLevel(profileXpBefore);after=caseProfileLevel(profileXpAfter);
+    }else if(triggerType==="accepted_runs"||triggerType==="total_score"){
+      const metrics=await ratingBefore(start);
+      before=triggerType==="accepted_runs"?Math.max(0,Number(metrics?.runs||0)):Math.max(0,Number(metrics?.score||0));
+      after=before+(acceptedToRating?(triggerType==="accepted_runs"?1:score):0);
+    }else{
+      const definition=gameTaskTriggerDefinition(triggerType);if(definition?.source!=="run_ledger")continue;
+      const metrics=await runLedgerBefore(start);
+      const currentCounts=runLedgerEligible&&runCreatedAt>=start&&runCreatedAt<=now;
+      if(triggerType==="single_run_score"){
+        before=Math.max(0,Number(metrics?.single_run_score||0));after=Math.max(before,currentCounts?score:0);
+      }else if(triggerType==="collect_zefir"){
+        before=Math.max(0,Number(metrics?.zefir||0));after=before+(currentCounts?runTreats:0);
+      }else if(triggerType==="collect_coffee"){
+        before=Math.max(0,Number(metrics?.coffee||0));after=before+(currentCounts?runCoffee:0);
+      }else if(triggerType==="single_run_duration"){
+        before=Math.max(0,Math.floor(Number(metrics?.single_run_duration_ms||0)/1000));after=Math.max(before,currentCounts?Math.floor(runDurationMs/1000):0);
+      }else if(triggerType==="play_time"){
+        const beforeMs=Math.max(0,Number(metrics?.play_time_ms||0));before=Math.floor(beforeMs/1000);after=Math.floor((beforeMs+(currentCounts?runDurationMs:0))/1000);
+      }else if(triggerType==="new_records"){
+        before=Math.max(0,Number(metrics?.new_records||0));after=before+(currentCounts&&newRecord?1:0);
+      }else continue;
+    }
+    if(before>=target||after<target)continue;
+    const reward=gameTaskReward(row,false);
+    completed.push({kind:"task",key,cycleKey,title:String(row.title||"Задание").slice(0,180),rewardLabel:gameTaskRewardLabel(reward),mode:String(row.task_mode||"one_time"),reward});
+  }
+  if(completed.length){
+    await env.DB.batch(completed.map((task)=>env.DB.prepare(`INSERT OR IGNORE INTO player_game_tasks(telegram_id,kind,task_key,cycle_key,completed_at,reward_json) VALUES(?,?,?,?,?,?)`)
+      .bind(playerId,"task",task.key,task.cycleKey,now,JSON.stringify(task.reward || {}))));
+  }
+  const publicTasks=completed.slice(0,5).map(({reward,...task})=>task);
+  return {readyCountDelta:completed.length,unreadCountDelta:completed.length,activeCountDelta:-completed.length,tasks:publicTasks,notice:publicTasks[0]||null};
 }
 
 async function gameTaskDeliver(env, telegramId, sourceType, sourceId, reward, title) {
@@ -46761,7 +46935,7 @@ async function testProjectSandboxRunSubmit(env, loaded, payload) {
   state.sandbox=testProjectNormalizeSandboxState({...state.sandbox,activeRun:null,completedRuns:Number(state.sandbox?.completedRuns||0)+1,achievementRunScore:Number(state.sandbox?.achievementRunScore||0)+score,achievementRunZefir:Number(state.sandbox?.achievementRunZefir||0)+runTreats,achievementRunCoffee:Number(state.sandbox?.achievementRunCoffee||0)+runCoffee,lastRun:{id:runId,score,durationMs,acceptedAt:Date.now()}});
   const persisted=await testProjectSandboxSave(env,ownerId,state,snapshot,before,"game_run_submit",`Игра · забег ${score.toLocaleString("ru-RU")} очков`);
   const current=persisted.state;
-  return {ok:true,testProject:true,fastSettlement:true,runSettlement:{accepted:true,acceptedToRating:score>0,reason:score>0?"accepted":"below_minimum",raw:{score,treats:runTreats,coffee:runCoffee,durationMs},credited:{points:creditedPoints,treats:creditedTreats,coffee:creditedCoffee},profileXpAwarded,newRecord,boosterType:String(boosterTypes[0]||""),boosterTypes,activeBoosters:current.caseState?.activeBoosters||{},activeBooster:current.caseState?.activeBooster||{type:"",runsLeft:0},skinId:runSkinId,skinBonus:{points:Number(skinBonus.points||0),treats:Number(skinBonus.treats||0),coffee:Number(skinBonus.coffee||0)},seasonId:String(season?.id||"")},profile:testProjectSandboxProfile(current),profileXpAwarded,seasonPassAward:{xpAwarded:seasonPassXpAwarded,taskNotice:null},serverTime:Date.now()};
+  return {ok:true,testProject:true,fastSettlement:true,runSettlement:{accepted:true,acceptedToRating:score>0,reason:score>0?"accepted":"below_minimum",raw:{score,treats:runTreats,coffee:runCoffee,durationMs},credited:{points:creditedPoints,treats:creditedTreats,coffee:creditedCoffee},profileXpAwarded,newRecord,boosterType:String(boosterTypes[0]||""),boosterTypes,activeBoosters:current.caseState?.activeBoosters||{},activeBooster:current.caseState?.activeBooster||{type:"",runsLeft:0},skinId:runSkinId,skinBonus:{points:Number(skinBonus.points||0),treats:Number(skinBonus.treats||0),coffee:Number(skinBonus.coffee||0)},seasonId:String(season?.id||"")},profile:testProjectSandboxProfile(current),profileXpAwarded,seasonPassAward:{xpAwarded:seasonPassXpAwarded,taskNotice:null},gameTaskNotice:{readyCountDelta:0,unreadCountDelta:0,activeCountDelta:0,tasks:[],notice:null},serverTime:Date.now()};
 }
 
 
@@ -46803,7 +46977,7 @@ async function testProjectSandboxGameData(env, ctx) {
   const response=(data,status=200)=>({ok:true,proxyStatus:status,data:{...data,testProject:true,productionWrites:false}});
   const reload=async()=>{loaded=await testProjectSandboxLoad(env,ctx);({ownerId,state,productionSnapshot,snapshot,nowMs}=loaded);return loaded;};
 
-  if(path==="/api/game/startup"){const achievementState=await testProjectSandboxAchievementsPayload(env,state,snapshot);return response({ok:true,authenticated:true,workerBuild:WORKER_BUILD,generatedAt:nowMs,publicConfig:testProjectClone(snapshot?.publicConfig||fallbackGamePublicConfig()),profile:testProjectSandboxProfile(state),cases:testProjectSandboxCasePayload(state,snapshot),rewards:{ok:true,rewards:(state.sandbox?.mockRewards||[]).map(testProjectSandboxRewardView),limitStatus:null},flags:{...(snapshot?.featureFlags||{}),battle_pass:true,shop:true,rating:true},seasonPassBonus:{active:state.passTier==="elite_plus",multiplier:state.passTier==="elite_plus"?2:1,claimableCount:testProjectSandboxPassPayload(state,snapshot).taskClaimableCount},seasonPassTaskNotice:{ok:true,pending:false,notice:null},news:{ok:true,items:[],unreadCount:0},gifts:{ok:true,pendingCount:0,unreadCount:0,items:[]},liveOpsEvent:{active:false,multipliers:{pointsMultiplier:1,treatsMultiplier:1,coffeeMultiplier:1}},newcomerPath:{available:false,dayNumber:1,runs:Number(state.sandbox?.completedRuns||0),steps:[]},miniGameVisual:testProjectMiniGameVisual(state,snapshot),miniGameVisuals:testProjectMiniGameVisuals(state,snapshot),achievementShowcase:{ok:true,version:1,serverAuthoritative:true,generatedAt:nowMs,summary:testProjectClone(achievementState.summary||{}),showcase:testProjectClone(achievementState.showcase||{})},errors:{}});}
+  if(path==="/api/game/startup"){const achievementState=await testProjectSandboxAchievementsPayload(env,state,snapshot);return response({ok:true,authenticated:true,workerBuild:WORKER_BUILD,generatedAt:nowMs,publicConfig:testProjectClone(snapshot?.publicConfig||fallbackGamePublicConfig()),profile:testProjectSandboxProfile(state),cases:testProjectSandboxCasePayload(state,snapshot),rewards:{ok:true,rewards:(state.sandbox?.mockRewards||[]).map(testProjectSandboxRewardView),limitStatus:null},flags:{...(snapshot?.featureFlags||{}),battle_pass:true,shop:true,rating:true},seasonPassBonus:{active:state.passTier==="elite_plus",multiplier:state.passTier==="elite_plus"?2:1,claimableCount:testProjectSandboxPassPayload(state,snapshot).taskClaimableCount},seasonPassTaskNotice:{ok:true,pending:false,notice:null},gameTaskNotice:{readyCount:0,unreadCount:0,activeCount:0,notice:null,notices:[]},news:{ok:true,items:[],unreadCount:0},gifts:{ok:true,pendingCount:0,unreadCount:0,items:[]},liveOpsEvent:{active:false,multipliers:{pointsMultiplier:1,treatsMultiplier:1,coffeeMultiplier:1}},newcomerPath:{available:false,dayNumber:1,runs:Number(state.sandbox?.completedRuns||0),steps:[]},miniGameVisual:testProjectMiniGameVisual(state,snapshot),miniGameVisuals:testProjectMiniGameVisuals(state,snapshot),achievementShowcase:{ok:true,version:1,serverAuthoritative:true,generatedAt:nowMs,summary:testProjectClone(achievementState.summary||{}),showcase:testProjectClone(achievementState.showcase||{})},errors:{}});}
   if(path==="/api/achievements"){const achievementState=await testProjectSandboxAchievementsPayload(env,state,snapshot),scope=String(payload?.scope||payload?.view||"").trim().toLowerCase();if(scope==="showcase"||scope==="profile")return response({ok:true,version:1,serverAuthoritative:true,generatedAt:nowMs,summary:testProjectClone(achievementState.summary||{}),showcase:testProjectClone(achievementState.showcase||{})});return response(achievementState);}
   if(path==="/api/achievements/claim"){
     const achievementId=String(payload?.achievementId||payload?.achievement_id||payload?.id||"").trim().slice(0,80);

@@ -9804,6 +9804,8 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
     #zefirok-maltipoo-runner .run-result-event strong { color:#704657; font-size:8.5px; line-height:1.15; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
     #zefirok-maltipoo-runner .run-result-event small { color:#9b818b; font-size:7px; line-height:1.15; }
     #zefirok-maltipoo-runner .run-results-state { display:flex; align-items:center; justify-content:center; gap:6px; margin-top:7px; color:#907581; font-size:8.5px; font-weight:900; text-align:center; }
+    #zefirok-maltipoo-runner .run-results-task-cta { width:100%; min-height:38px; margin-top:7px; display:flex; align-items:center; justify-content:center; gap:6px; border-radius:13px; }
+    #zefirok-maltipoo-runner .run-results-task-cta .run-result-inline-icon { width:17px; height:17px; }
     #zefirok-maltipoo-runner .run-results-spinner { width:12px; height:12px; border:2px solid rgba(210,132,161,.24); border-top-color:#d45e8a; border-radius:50%; animation:run-results-spin .8s linear infinite; }
     @keyframes run-results-spin { to { transform:rotate(360deg); } }
     #zefirok-maltipoo-runner .run-results-actions { position:sticky; bottom:-2px; z-index:3; display:grid; grid-template-columns:1.35fr .85fr; gap:6px; margin:7px -3px -3px; padding:7px 3px 3px; background:linear-gradient(180deg,rgba(255,252,253,0),rgba(255,252,253,.98) 34%); }
@@ -17669,6 +17671,17 @@ function createTutorialDeck(layer, mount, options, words) {
         return { seasonId:String(payload.seasonId || &quot;&quot;), seasonTitle:String(payload.seasonTitle || &quot;Сезонный пропуск&quot;), tasks };
       }
 
+      function applyGameTaskNotice(payload) {
+        if (!payload || typeof payload !== &quot;object&quot;) return;
+        window.__ZEFIROK_GAME_TASK_NOTICE__ = payload;
+        try {
+          if (typeof window.zefirokGameTasksApplyNotice === &quot;function&quot;) window.zefirokGameTasksApplyNotice(payload);
+          else window.dispatchEvent(new CustomEvent(&quot;zefirok-game-task-notice&quot;, { detail:payload }));
+        } catch (error) {
+          console.warn(&quot;Game task notice apply failed&quot;, error);
+        }
+      }
+
       function renderSeasonTaskNoticeButton() {
         if (!seasonTaskButton) return;
         const count = activeSeasonTaskNotice?.tasks?.length || 0;
@@ -18972,6 +18985,7 @@ function createTutorialDeck(layer, mount, options, words) {
         record: assetSources.iconRecord || &quot;/assets/optimized/v0.79.5/iconRecord.webp?v=0.79.5&quot;,
         caseDrop: &quot;/assets/ui/icone_cases.webp&quot;,
         achievement: &quot;/assets/ui/icon_score_acivment.webp&quot;,
+        gameTask: &quot;/assets/ui/icon_quest_game.webp&quot;,
         task: &quot;/assets/ui/icon_battlepass.webp&quot;,
         season: &quot;/assets/ui/icon_battlepass.webp&quot;,
         rating: &quot;/assets/ui/icon_reiting.webp&quot;,
@@ -19014,6 +19028,14 @@ function createTutorialDeck(layer, mount, options, words) {
       function runResultsEvents(payload) {
         const settlement = payload?.runSettlement || {};
         const events = [];
+        const gameTasks = Array.isArray(payload?.gameTaskNotice?.tasks) ? payload.gameTaskNotice.tasks : [];
+        if (gameTasks.length === 1) {
+          const gameTask = gameTasks[0] || {};
+          const rewardText = String(gameTask.rewardLabel || &quot;Награда готова&quot;);
+          events.push(runResultsEventMarkup(RUN_RESULT_ICONS.gameTask, &quot;Задание выполнено!&quot;, `${String(gameTask.title || &quot;Задание&quot;)} · ${rewardText}`));
+        } else if (gameTasks.length &gt; 1) {
+          events.push(runResultsEventMarkup(RUN_RESULT_ICONS.gameTask, `Выполнено заданий: ${gameTasks.length}`, &quot;Награды готовы в разделе «Задания»&quot;));
+        }
         const grantedCaseDrops=Array.isArray(settlement?.caseDrops)?settlement.caseDrops.filter((drop)=&gt;drop?.granted):(settlement?.caseDrop?.granted?[settlement.caseDrop]:[]);
         if(grantedCaseDrops.length===1)events.push(runResultsEventMarkup(RUN_RESULT_ICONS.caseDrop,&quot;\u041a\u0435\u0439\u0441 \u043f\u043e\u0439\u043c\u0430\u043d!&quot;,`${runResultCaseTitle(grantedCaseDrops[0].type)} \u0434\u043e\u0431\u0430\u0432\u043b\u0435\u043d \u0432 \u043f\u0440\u043e\u0444\u0438\u043b\u044c`));
         else if(grantedCaseDrops.length&gt;1)events.push(runResultsEventMarkup(RUN_RESULT_ICONS.caseDrop,`\u041f\u043e\u0439\u043c\u0430\u043d\u043e \u043a\u0435\u0439\u0441\u043e\u0432: ${grantedCaseDrops.length}`,grantedCaseDrops.map((drop)=&gt;runResultCaseTitle(drop.type)).join(&quot; · &quot;)));
@@ -19054,6 +19076,19 @@ function createTutorialDeck(layer, mount, options, words) {
       function bindRunResultsActions(context) {
         overlay.querySelector(&quot;[data-run-results-again]&quot;)?.addEventListener(&quot;click&quot;, (event) =&gt; { event.stopPropagation(); overlay.onclick = null; reset(); }, { once:true });
         overlay.querySelector(&quot;[data-run-results-cafe]&quot;)?.addEventListener(&quot;click&quot;, (event) =&gt; { event.stopPropagation(); overlay.onclick = null; overlay.classList.remove(&quot;is-run-results-modal&quot;); overlay.style.display = &quot;none&quot;; if (gameExpanded) setGameExpanded(false); }, { once:true });
+        overlay.querySelector(&quot;[data-run-results-tasks]&quot;)?.addEventListener(&quot;click&quot;, (event) =&gt; {
+          event.stopPropagation();
+          overlay.onclick = null;
+          overlay.classList.remove(&quot;is-run-results-modal&quot;);
+          overlay.style.display = &quot;none&quot;;
+          if (gameExpanded) setGameExpanded(false);
+          window.setTimeout(() =&gt; {
+            try {
+              if (typeof window.zefirokOpenGameTasks === &quot;function&quot;) window.zefirokOpenGameTasks();
+              else switchScreen(&quot;tasks&quot;);
+            } catch (error) { switchScreen(&quot;tasks&quot;); }
+          }, 0);
+        }, { once:true });
       }
       function showStoryCollectibleMemoryUnlocks(payload) {
         const memories=Array.isArray(payload?.runSettlement?.storyCollectible?.newMemories)?payload.runSettlement.storyCollectible.newMemories:[];
@@ -19103,8 +19138,12 @@ function createTutorialDeck(layer, mount, options, words) {
         const skinTitle = SKIN_CATALOG[skinId]?.title || character.name;
         const bonusMarkup = bonusParts.length ? `&lt;div class=&quot;run-skin-bonus${character.premium ? &quot; is-alex&quot; : &quot;&quot;}&quot;&gt;${character.premium ? `${runResultIconMarkup(RUN_RESULT_ICONS.character, &quot;is-bonus&quot;)} ` : &quot;&quot;}\u0411\u043e\u043d\u0443\u0441 \u00ab${runUiEscape(skinTitle)}\u00bb: ${runUiEscape(bonusParts.join(&quot; \u00b7 &quot;))}&lt;/div&gt;` : &quot;&quot;;
         const events = runResultsEvents(payload);
+        const completedGameTasks = Array.isArray(payload?.gameTaskNotice?.tasks) ? payload.gameTaskNotice.tasks : [];
+        const gameTaskCtaMarkup = completedGameTasks.length
+          ? `&lt;button type=&quot;button&quot; class=&quot;run-results-task-cta run-overlay-primary&quot; data-run-results-tasks&gt;${runResultIconMarkup(RUN_RESULT_ICONS.gameTask, &quot;is-button&quot;)}&lt;span&gt;Посмотреть задания&lt;/span&gt;&lt;/button&gt;`
+          : &quot;&quot;;
         const boosterStatusMarkup = runResultsBoosterStatusMarkup(settlement);
-        const body = `${runResultsHeader(context, newRecord ? &quot;\u041d\u043e\u0432\u044b\u0439 \u0440\u0435\u043a\u043e\u0440\u0434!&quot; : &quot;\u0417\u0430\u0431\u0435\u0433 \u0437\u0430\u0432\u0435\u0440\u0448\u0451\u043d!&quot;, phrase)}&lt;div class=&quot;run-results-score&quot;&gt;&lt;b&gt;${formatter.format(score)}&lt;/b&gt;&lt;span&gt;\u041e\u0427\u041a\u0410&lt;/span&gt;&lt;/div&gt;${recordLine}&lt;div class=&quot;run-results-metrics&quot;&gt;&lt;span class=&quot;run-result-metric&quot;&gt;&lt;span&gt;${runResultIconMarkup(RUN_RESULT_ICONS.zefir, &quot;is-metric&quot;)}\u0417\u0435\u0444\u0438\u0440&lt;/span&gt;&lt;b&gt;${formatter.format(Math.max(0, Number(settlement?.raw?.treats ?? context.treats)))}&lt;/b&gt;&lt;/span&gt;&lt;span class=&quot;run-result-metric&quot;&gt;&lt;span&gt;${runResultIconMarkup(RUN_RESULT_ICONS.coffee, &quot;is-metric&quot;)}\u041a\u043e\u0444\u0435&lt;/span&gt;&lt;b&gt;${formatter.format(Math.max(0, Number(settlement?.raw?.coffee ?? context.coffee)))}&lt;/b&gt;&lt;/span&gt;&lt;span class=&quot;run-result-metric&quot;&gt;&lt;span&gt;${runResultIconMarkup(RUN_RESULT_ICONS.time, &quot;is-metric&quot;)}\u0412\u0440\u0435\u043c\u044f&lt;/span&gt;&lt;b&gt;${runResultDurationLabel(settlement?.raw?.durationMs ?? context.durationMs)}&lt;/b&gt;&lt;/span&gt;&lt;/div&gt;&lt;div class=&quot;run-credit-line&quot;&gt;&lt;span&gt;+${formatter.format(Math.max(0, Number(credited.points || 0)))} \u043e\u0447\u043a\u043e\u0432&lt;/span&gt;&lt;span&gt;+${formatter.format(Math.max(0, Number(credited.treats || 0)))} \u0437\u0435\u0444\u0438\u0440\u0430&lt;/span&gt;&lt;span&gt;+${formatter.format(Math.max(0, Number(credited.coffee || 0)))} \u043a\u043e\u0444\u0435&lt;/span&gt;${Number(settlement.profileXpAwarded || 0) &gt; 0 ? `&lt;span&gt;+${formatter.format(Number(settlement.profileXpAwarded))} XP&lt;/span&gt;` : &quot;&quot;}&lt;/div&gt;${bonusMarkup}${boosterStatusMarkup}${events.length ? `&lt;div class=&quot;run-results-events&quot;&gt;${events.join(&quot;&quot;)}&lt;/div&gt;` : &quot;&quot;}&lt;div class=&quot;run-results-state&quot;&gt;${runResultIconMarkup(RUN_RESULT_ICONS.saved, &quot;is-state&quot;)}&lt;span&gt;\u0420\u0435\u0437\u0443\u043b\u044c\u0442\u0430\u0442 \u0441\u043e\u0445\u0440\u0430\u043d\u0451\u043d&lt;/span&gt;&lt;/div&gt;&lt;div class=&quot;run-results-actions&quot;&gt;&lt;button type=&quot;button&quot; class=&quot;run-overlay-primary&quot; data-run-results-again&gt;${runResultIconMarkup(RUN_RESULT_ICONS.replay, &quot;is-button&quot;)}&lt;span&gt;\u0415\u0449\u0451 \u0440\u0430\u0437&lt;/span&gt;&lt;/button&gt;&lt;button type=&quot;button&quot; class=&quot;run-overlay-secondary&quot; data-run-results-cafe&gt;${runResultIconMarkup(RUN_RESULT_ICONS.cafe, &quot;is-button&quot;)}&lt;span&gt;\u0412 \u043a\u0430\u0444\u0435&lt;/span&gt;&lt;/button&gt;&lt;/div&gt;`;
+        const body = `${runResultsHeader(context, newRecord ? &quot;\u041d\u043e\u0432\u044b\u0439 \u0440\u0435\u043a\u043e\u0440\u0434!&quot; : &quot;\u0417\u0430\u0431\u0435\u0433 \u0437\u0430\u0432\u0435\u0440\u0448\u0451\u043d!&quot;, phrase)}&lt;div class=&quot;run-results-score&quot;&gt;&lt;b&gt;${formatter.format(score)}&lt;/b&gt;&lt;span&gt;\u041e\u0427\u041a\u0410&lt;/span&gt;&lt;/div&gt;${recordLine}&lt;div class=&quot;run-results-metrics&quot;&gt;&lt;span class=&quot;run-result-metric&quot;&gt;&lt;span&gt;${runResultIconMarkup(RUN_RESULT_ICONS.zefir, &quot;is-metric&quot;)}\u0417\u0435\u0444\u0438\u0440&lt;/span&gt;&lt;b&gt;${formatter.format(Math.max(0, Number(settlement?.raw?.treats ?? context.treats)))}&lt;/b&gt;&lt;/span&gt;&lt;span class=&quot;run-result-metric&quot;&gt;&lt;span&gt;${runResultIconMarkup(RUN_RESULT_ICONS.coffee, &quot;is-metric&quot;)}\u041a\u043e\u0444\u0435&lt;/span&gt;&lt;b&gt;${formatter.format(Math.max(0, Number(settlement?.raw?.coffee ?? context.coffee)))}&lt;/b&gt;&lt;/span&gt;&lt;span class=&quot;run-result-metric&quot;&gt;&lt;span&gt;${runResultIconMarkup(RUN_RESULT_ICONS.time, &quot;is-metric&quot;)}\u0412\u0440\u0435\u043c\u044f&lt;/span&gt;&lt;b&gt;${runResultDurationLabel(settlement?.raw?.durationMs ?? context.durationMs)}&lt;/b&gt;&lt;/span&gt;&lt;/div&gt;&lt;div class=&quot;run-credit-line&quot;&gt;&lt;span&gt;+${formatter.format(Math.max(0, Number(credited.points || 0)))} \u043e\u0447\u043a\u043e\u0432&lt;/span&gt;&lt;span&gt;+${formatter.format(Math.max(0, Number(credited.treats || 0)))} \u0437\u0435\u0444\u0438\u0440\u0430&lt;/span&gt;&lt;span&gt;+${formatter.format(Math.max(0, Number(credited.coffee || 0)))} \u043a\u043e\u0444\u0435&lt;/span&gt;${Number(settlement.profileXpAwarded || 0) &gt; 0 ? `&lt;span&gt;+${formatter.format(Number(settlement.profileXpAwarded))} XP&lt;/span&gt;` : &quot;&quot;}&lt;/div&gt;${bonusMarkup}${boosterStatusMarkup}${events.length ? `&lt;div class=&quot;run-results-events&quot;&gt;${events.join(&quot;&quot;)}&lt;/div&gt;` : &quot;&quot;}&lt;div class=&quot;run-results-state&quot;&gt;${runResultIconMarkup(RUN_RESULT_ICONS.saved, &quot;is-state&quot;)}&lt;span&gt;\u0420\u0435\u0437\u0443\u043b\u044c\u0442\u0430\u0442 \u0441\u043e\u0445\u0440\u0430\u043d\u0451\u043d&lt;/span&gt;&lt;/div&gt;${gameTaskCtaMarkup}&lt;div class=&quot;run-results-actions&quot;&gt;&lt;button type=&quot;button&quot; class=&quot;run-overlay-primary&quot; data-run-results-again&gt;${runResultIconMarkup(RUN_RESULT_ICONS.replay, &quot;is-button&quot;)}&lt;span&gt;\u0415\u0449\u0451 \u0440\u0430\u0437&lt;/span&gt;&lt;/button&gt;&lt;button type=&quot;button&quot; class=&quot;run-overlay-secondary&quot; data-run-results-cafe&gt;${runResultIconMarkup(RUN_RESULT_ICONS.cafe, &quot;is-button&quot;)}&lt;span&gt;\u0412 \u043a\u0430\u0444\u0435&lt;/span&gt;&lt;/button&gt;&lt;/div&gt;`;
         runResultsFrame(context, body);
         bindRunResultsActions(context);
         showStoryCollectibleMemoryUnlocks(payload);
@@ -26805,6 +26844,7 @@ function createTutorialDeck(layer, mount, options, words) {
             // Compatibility fallback only. Normal startup already includes this state.
             window.setTimeout(() =&gt; void refreshSeasonTaskNotice(true), 120);
           }
+          if (Object.prototype.hasOwnProperty.call(data, &quot;gameTaskNotice&quot;) &amp;&amp; data.gameTaskNotice) applyGameTaskNotice(data.gameTaskNotice);
           if (Object.prototype.hasOwnProperty.call(data, &quot;news&quot;)) applyGameNewsPayload(data.news);
           if (Object.prototype.hasOwnProperty.call(data, &quot;newcomerPath&quot;)) applyNewcomerPath(data.newcomerPath);
           if (data.gifts) {
@@ -27810,6 +27850,7 @@ function createTutorialDeck(layer, mount, options, words) {
         }
         try {
           const loaded = await leaderboardApiRequest(LEADERBOARD_API_SUBMIT_PATH, { initData, ...run });
+          if (loaded?.gameTaskNotice) applyGameTaskNotice(loaded.gameTaskNotice);
           const fastSettlementApplied = applyFastRunSettlementPayload(loaded);
           if (!fastSettlementApplied &amp;&amp; loaded?.caseState) applyServerCasePayload(loaded);
           if(!silent){const grantedDrops=Array.isArray(loaded?.runSettlement?.caseDrops)?loaded.runSettlement.caseDrops.filter((drop)=&gt;drop?.granted):(loaded?.runSettlement?.caseDrop?.granted?[loaded.runSettlement.caseDrop]:[]);if(grantedDrops.length===1){const t=String(grantedDrops[0].type||&quot;small&quot;);const title=t===&quot;legendary&quot;?&quot;Легендарный&quot;:t===&quot;mythic&quot;?&quot;Мифический&quot;:t===&quot;gold&quot;?&quot;Золотой&quot;:t===&quot;sweet&quot;?&quot;Серебряный&quot;:&quot;Обычный&quot;;showProfileToast(`🎁 ${title} кейс пойман!`,&quot;success&quot;,3800);}else if(grantedDrops.length&gt;1)showProfileToast(`🎁 Поймано кейсов: ${grantedDrops.length}`,&quot;success&quot;,4200);}
@@ -32439,7 +32480,7 @@ html &gt; body.zefirok-game-expanded{height:var(--zefirok-visible-height,100dvh)
   scheduleMaybe(700);
 })();
 &lt;/script&gt;
-&lt;style id=&quot;zefirok-game-tasks-inline-style-v8&quot;&gt;
+&lt;style id=&quot;zefirok-game-tasks-inline-style-v10&quot;&gt;
 /* Sweet Run task hub UI. Client presentation only; task state/rewards stay server-authoritative. */
 #zefirok-maltipoo-runner [data-screen=&quot;tasks&quot;]{
   --gt-ink:#603d4a;
@@ -32487,6 +32528,9 @@ html &gt; body.zefirok-game-expanded{height:var(--zefirok-visible-height,100dvh)
 }
 #zefirok-maltipoo-runner .tasks-entry__badge[hidden]{display:none!important}
 #zefirok-maltipoo-runner .tasks-entry.has-ready{border-color:rgba(226,126,165,.68);background:linear-gradient(145deg,#fff8fb 0%,#ffe5ef 54%,#ffdae8 100%)}
+#zefirok-maltipoo-runner .tasks-entry.has-unread .tasks-entry__icon{box-shadow:inset 0 0 0 1px rgba(224,143,174,.28),0 0 0 4px rgba(240,139,177,.10)}
+#zefirok-maltipoo-runner .tasks-entry.has-unread .tasks-entry__badge{animation:gtTaskBadgePulse 1.8s ease-in-out infinite}
+@keyframes gtTaskBadgePulse{0%,100%{transform:scale(1)}50%{transform:scale(1.09)}}
 
 #zefirok-maltipoo-runner .gt-shell{display:grid;gap:11px}
 #zefirok-maltipoo-runner .gt-topbar{display:grid;grid-template-columns:40px minmax(0,1fr) 40px;align-items:center;gap:8px;padding:2px 1px 0}
@@ -32611,15 +32655,14 @@ html &gt; body.zefirok-game-expanded{height:var(--zefirok-visible-height,100dvh)
 }
 @media(prefers-reduced-motion:reduce){
   #zefirok-maltipoo-runner .gt-xp-fill,#zefirok-maltipoo-runner .gt-progress-fill,#zefirok-maltipoo-runner .gt-toast,#zefirok-maltipoo-runner .tasks-entry{transition:none!important}
-  #zefirok-maltipoo-runner .gt-skeleton&gt;i{animation:none!important}
+  #zefirok-maltipoo-runner .gt-skeleton&gt;i,#zefirok-maltipoo-runner .tasks-entry.has-unread .tasks-entry__badge{animation:none!important}
 }
-
 &lt;/style&gt;
-&lt;script id=&quot;zefirok-game-tasks-inline-runtime-v9&quot;&gt;
+&lt;script id=&quot;zefirok-game-tasks-inline-runtime-v10&quot;&gt;
 (()=&gt;{
   &#x27;use strict&#x27;;
-  if(window.__ZEFIROK_GAME_TASKS_UI_V9__)return;
-  window.__ZEFIROK_GAME_TASKS_UI_V9__=true;
+  if(window.__ZEFIROK_GAME_TASKS_UI_V10__)return;
+  window.__ZEFIROK_GAME_TASKS_UI_V10__=true;
 
   const root=document.querySelector(&#x27;#zefirok-maltipoo-runner&#x27;);
   const screen=root?.querySelector(&#x27;[data-screen=&quot;tasks&quot;]&#x27;);
@@ -32633,6 +32676,7 @@ html &gt; body.zefirok-game-expanded{height:var(--zefirok-visible-height,100dvh)
   const REQUEST_TIMEOUT_MS=12000;
   const FILTERS=new Set([&#x27;all&#x27;,&#x27;daily&#x27;,&#x27;event&#x27;]);
   let payload=null,filter=&#x27;all&#x27;,loading=false,inflight=null,readInflight=null,readQueued=false,lastFreshAt=0,serverOffsetMs=0,claimingKey=&#x27;&#x27;,toastTimer=0,timerTick=0;
+  let entryNotice={readyCount:0,unreadCount:0,activeCount:0};
 
   const host=()=&gt;window.zefirokTaskHost||{};
   const auth=()=&gt;String(host().auth?.()||window.Telegram?.WebApp?.initData||&#x27;&#x27;);
@@ -32662,6 +32706,28 @@ html &gt; body.zefirok-game-expanded{height:var(--zefirok-visible-height,100dvh)
     return `${seconds} сек`;
   }
   function plural(n,one,two,five){const value=Math.abs(whole(n))%100;const tail=value%10;if(value&gt;10&amp;&amp;value&lt;20)return five;if(tail===1)return one;if(tail&gt;=2&amp;&amp;tail&lt;=4)return two;return five;}
+
+  function applyEntryNotice(next){
+    if(!next||typeof next!==&#x27;object&#x27;)return;
+    const absolute=[&#x27;readyCount&#x27;,&#x27;unreadCount&#x27;,&#x27;activeCount&#x27;].some(key=&gt;Object.prototype.hasOwnProperty.call(next,key));
+    if(absolute){
+      entryNotice={readyCount:whole(next.readyCount),unreadCount:whole(next.unreadCount),activeCount:whole(next.activeCount)};
+      if(payload){payload.readyCount=entryNotice.readyCount;payload.unreadCount=entryNotice.unreadCount;payload.activeCount=entryNotice.activeCount;}
+    }else{
+      const readyDelta=Math.floor(num(next.readyCountDelta)),unreadDelta=Math.floor(num(next.unreadCountDelta)),activeDelta=Math.floor(num(next.activeCountDelta));
+      entryNotice={
+        readyCount:Math.max(0,entryNotice.readyCount+readyDelta),
+        unreadCount:Math.max(0,entryNotice.unreadCount+unreadDelta),
+        activeCount:Math.max(0,entryNotice.activeCount+activeDelta)
+      };
+      if(payload){
+        payload.readyCount=Math.max(0,whole(payload.readyCount)+readyDelta);
+        payload.unreadCount=Math.max(0,whole(payload.unreadCount)+unreadDelta);
+        payload.activeCount=Math.max(0,whole(payload.activeCount)+activeDelta);
+      }
+    }
+    updateEntry();
+  }
 
   function timeLeft(endsAt){
     const seconds=Math.floor(num(endsAt)-nowServerMs()/1000);
@@ -32717,6 +32783,9 @@ html &gt; body.zefirok-game-expanded{height:var(--zefirok-visible-height,100dvh)
       try{
         await post(API_READ,{notices});
         for(const task of list(payload?.tasks)){if(ids.has(taskId(task)))task.unread=false;}
+        if(payload)payload.unreadCount=Math.max(0,whole(payload.unreadCount)-ids.size);
+        entryNotice.unreadCount=Math.max(0,entryNotice.unreadCount-ids.size);
+        updateEntry();
         return true;
       }catch(error){
         console.warn(&#x27;game tasks read-state update failed&#x27;,error);
@@ -32733,10 +32802,15 @@ html &gt; body.zefirok-game-expanded{height:var(--zefirok-visible-height,100dvh)
     entry.hidden=isRunning();
     const summary=entry.querySelector(&#x27;[data-tasks-summary]&#x27;);
     const badge=entry.querySelector(&#x27;[data-tasks-badge]&#x27;);
-    const ready=whole(payload?.readyCount),active=whole(payload?.activeCount);
+    const ready=payload?whole(payload.readyCount):whole(entryNotice.readyCount);
+    const unread=payload?whole(payload.unreadCount):whole(entryNotice.unreadCount);
+    const active=payload?whole(payload.activeCount):whole(entryNotice.activeCount);
     entry.classList.toggle(&#x27;has-ready&#x27;,ready&gt;0);
+    entry.classList.toggle(&#x27;has-unread&#x27;,unread&gt;0);
     if(summary){
-      if(ready&gt;0&amp;&amp;active&gt;0)summary.textContent=`${active} ${plural(active,&#x27;активное задание&#x27;,&#x27;активных задания&#x27;,&#x27;активных заданий&#x27;)} · ${ready} ${plural(ready,&#x27;награда готова&#x27;,&#x27;награды готовы&#x27;,&#x27;наград готово&#x27;)}`;
+      if(unread===1)summary.textContent=ready&gt;1?`Новое выполненное задание · ${ready} ${plural(ready,&#x27;награда готова&#x27;,&#x27;награды готовы&#x27;,&#x27;наград готово&#x27;)}`:&#x27;Новое выполненное задание · награда готова&#x27;;
+      else if(unread&gt;1)summary.textContent=`${unread} ${plural(unread,&#x27;новое задание&#x27;,&#x27;новых задания&#x27;,&#x27;новых заданий&#x27;)} · ${ready} ${plural(ready,&#x27;награда готова&#x27;,&#x27;награды готовы&#x27;,&#x27;наград готово&#x27;)}`;
+      else if(ready&gt;0&amp;&amp;active&gt;0)summary.textContent=`${active} ${plural(active,&#x27;активное задание&#x27;,&#x27;активных задания&#x27;,&#x27;активных заданий&#x27;)} · ${ready} ${plural(ready,&#x27;награда готова&#x27;,&#x27;награды готовы&#x27;,&#x27;наград готово&#x27;)}`;
       else if(ready&gt;0)summary.textContent=`${ready} ${plural(ready,&#x27;награда готова&#x27;,&#x27;награды готовы&#x27;,&#x27;наград готово&#x27;)}`;
       else if(active&gt;0)summary.textContent=`${active} ${plural(active,&#x27;активное задание&#x27;,&#x27;активных задания&#x27;,&#x27;активных заданий&#x27;)}`;
       else summary.textContent=&#x27;Цели, награды и XP профиля&#x27;;
@@ -32810,6 +32884,7 @@ html &gt; body.zefirok-game-expanded{height:var(--zefirok-visible-height,100dvh)
         const data=await post(API_STATE);
         if(!Array.isArray(data.tasks))throw new Error(&#x27;Сервер вернул неполное состояние заданий.&#x27;);
         payload=data;lastFreshAt=Date.now();serverOffsetMs=num(data.serverTime)?num(data.serverTime)*1000-Date.now():0;
+        entryNotice={readyCount:whole(data.readyCount),unreadCount:whole(data.unreadCount??list(data.tasks).filter(task=&gt;task?.unread&amp;&amp;task?.complete&amp;&amp;!task?.claimed).length),activeCount:whole(data.activeCount)};
         updateEntry();render();void markVisibleCompletedRead();return data;
       }catch(error){
         if(payload){render();toast(String(error?.message||&#x27;Не удалось обновить задания.&#x27;));return payload;}
@@ -32875,9 +32950,12 @@ html &gt; body.zefirok-game-expanded{height:var(--zefirok-visible-height,100dvh)
 
   updateEntry();
 
-  // Expose an imperative opener for the lazy loader and deep links.
+  // Expose an imperative opener plus a compact notification bridge used by startup/run settlement.
   window.zefirokOpenGameTasks=open;
   window.zefirokTasksUiOpen=open;
+  window.zefirokGameTasksApplyNotice=applyEntryNotice;
+  window.addEventListener(&#x27;zefirok-game-task-notice&#x27;,event=&gt;applyEntryNotice(event?.detail));
+  if(window.__ZEFIROK_GAME_TASK_NOTICE__)applyEntryNotice(window.__ZEFIROK_GAME_TASK_NOTICE__);
 
   // Deep links created by the Telegram bot should land directly in the task hub.
   try{

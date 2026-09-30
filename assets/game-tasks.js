@@ -1,7 +1,7 @@
 (()=>{
   'use strict';
-  if(window.__ZEFIROK_GAME_TASKS_UI_V9__)return;
-  window.__ZEFIROK_GAME_TASKS_UI_V9__=true;
+  if(window.__ZEFIROK_GAME_TASKS_UI_V10__)return;
+  window.__ZEFIROK_GAME_TASKS_UI_V10__=true;
 
   const root=document.querySelector('#zefirok-maltipoo-runner');
   const screen=root?.querySelector('[data-screen="tasks"]');
@@ -15,6 +15,7 @@
   const REQUEST_TIMEOUT_MS=12000;
   const FILTERS=new Set(['all','daily','event']);
   let payload=null,filter='all',loading=false,inflight=null,readInflight=null,readQueued=false,lastFreshAt=0,serverOffsetMs=0,claimingKey='',toastTimer=0,timerTick=0;
+  let entryNotice={readyCount:0,unreadCount:0,activeCount:0};
 
   const host=()=>window.zefirokTaskHost||{};
   const auth=()=>String(host().auth?.()||window.Telegram?.WebApp?.initData||'');
@@ -44,6 +45,28 @@
     return `${seconds} сек`;
   }
   function plural(n,one,two,five){const value=Math.abs(whole(n))%100;const tail=value%10;if(value>10&&value<20)return five;if(tail===1)return one;if(tail>=2&&tail<=4)return two;return five;}
+
+  function applyEntryNotice(next){
+    if(!next||typeof next!=='object')return;
+    const absolute=['readyCount','unreadCount','activeCount'].some(key=>Object.prototype.hasOwnProperty.call(next,key));
+    if(absolute){
+      entryNotice={readyCount:whole(next.readyCount),unreadCount:whole(next.unreadCount),activeCount:whole(next.activeCount)};
+      if(payload){payload.readyCount=entryNotice.readyCount;payload.unreadCount=entryNotice.unreadCount;payload.activeCount=entryNotice.activeCount;}
+    }else{
+      const readyDelta=Math.floor(num(next.readyCountDelta)),unreadDelta=Math.floor(num(next.unreadCountDelta)),activeDelta=Math.floor(num(next.activeCountDelta));
+      entryNotice={
+        readyCount:Math.max(0,entryNotice.readyCount+readyDelta),
+        unreadCount:Math.max(0,entryNotice.unreadCount+unreadDelta),
+        activeCount:Math.max(0,entryNotice.activeCount+activeDelta)
+      };
+      if(payload){
+        payload.readyCount=Math.max(0,whole(payload.readyCount)+readyDelta);
+        payload.unreadCount=Math.max(0,whole(payload.unreadCount)+unreadDelta);
+        payload.activeCount=Math.max(0,whole(payload.activeCount)+activeDelta);
+      }
+    }
+    updateEntry();
+  }
 
   function timeLeft(endsAt){
     const seconds=Math.floor(num(endsAt)-nowServerMs()/1000);
@@ -99,6 +122,9 @@
       try{
         await post(API_READ,{notices});
         for(const task of list(payload?.tasks)){if(ids.has(taskId(task)))task.unread=false;}
+        if(payload)payload.unreadCount=Math.max(0,whole(payload.unreadCount)-ids.size);
+        entryNotice.unreadCount=Math.max(0,entryNotice.unreadCount-ids.size);
+        updateEntry();
         return true;
       }catch(error){
         console.warn('game tasks read-state update failed',error);
@@ -115,10 +141,15 @@
     entry.hidden=isRunning();
     const summary=entry.querySelector('[data-tasks-summary]');
     const badge=entry.querySelector('[data-tasks-badge]');
-    const ready=whole(payload?.readyCount),active=whole(payload?.activeCount);
+    const ready=payload?whole(payload.readyCount):whole(entryNotice.readyCount);
+    const unread=payload?whole(payload.unreadCount):whole(entryNotice.unreadCount);
+    const active=payload?whole(payload.activeCount):whole(entryNotice.activeCount);
     entry.classList.toggle('has-ready',ready>0);
+    entry.classList.toggle('has-unread',unread>0);
     if(summary){
-      if(ready>0&&active>0)summary.textContent=`${active} ${plural(active,'активное задание','активных задания','активных заданий')} · ${ready} ${plural(ready,'награда готова','награды готовы','наград готово')}`;
+      if(unread===1)summary.textContent=ready>1?`Новое выполненное задание · ${ready} ${plural(ready,'награда готова','награды готовы','наград готово')}`:'Новое выполненное задание · награда готова';
+      else if(unread>1)summary.textContent=`${unread} ${plural(unread,'новое задание','новых задания','новых заданий')} · ${ready} ${plural(ready,'награда готова','награды готовы','наград готово')}`;
+      else if(ready>0&&active>0)summary.textContent=`${active} ${plural(active,'активное задание','активных задания','активных заданий')} · ${ready} ${plural(ready,'награда готова','награды готовы','наград готово')}`;
       else if(ready>0)summary.textContent=`${ready} ${plural(ready,'награда готова','награды готовы','наград готово')}`;
       else if(active>0)summary.textContent=`${active} ${plural(active,'активное задание','активных задания','активных заданий')}`;
       else summary.textContent='Цели, награды и XP профиля';
@@ -192,6 +223,7 @@
         const data=await post(API_STATE);
         if(!Array.isArray(data.tasks))throw new Error('Сервер вернул неполное состояние заданий.');
         payload=data;lastFreshAt=Date.now();serverOffsetMs=num(data.serverTime)?num(data.serverTime)*1000-Date.now():0;
+        entryNotice={readyCount:whole(data.readyCount),unreadCount:whole(data.unreadCount??list(data.tasks).filter(task=>task?.unread&&task?.complete&&!task?.claimed).length),activeCount:whole(data.activeCount)};
         updateEntry();render();void markVisibleCompletedRead();return data;
       }catch(error){
         if(payload){render();toast(String(error?.message||'Не удалось обновить задания.'));return payload;}
@@ -257,9 +289,12 @@
 
   updateEntry();
 
-  // Expose an imperative opener for the lazy loader and deep links.
+  // Expose an imperative opener plus a compact notification bridge used by startup/run settlement.
   window.zefirokOpenGameTasks=open;
   window.zefirokTasksUiOpen=open;
+  window.zefirokGameTasksApplyNotice=applyEntryNotice;
+  window.addEventListener('zefirok-game-task-notice',event=>applyEntryNotice(event?.detail));
+  if(window.__ZEFIROK_GAME_TASK_NOTICE__)applyEntryNotice(window.__ZEFIROK_GAME_TASK_NOTICE__);
 
   // Deep links created by the Telegram bot should land directly in the task hub.
   try{
