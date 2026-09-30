@@ -178,6 +178,19 @@ CREATE TABLE automation_chains(
   task_sort INTEGER NOT NULL DEFAULT 100
 );
 
+CREATE TABLE IF NOT EXISTS task_exposure_log (
+  chain_key TEXT NOT NULL,
+  telegram_id TEXT NOT NULL,
+  cycle_key TEXT NOT NULL,
+  first_seen_at INTEGER NOT NULL,
+  last_seen_at INTEGER NOT NULL,
+  progress_value INTEGER NOT NULL DEFAULT 0,
+  target_value INTEGER NOT NULL DEFAULT 1,
+  completed_at INTEGER NOT NULL DEFAULT 0,
+  PRIMARY KEY(chain_key, telegram_id, cycle_key)
+);
+CREATE INDEX IF NOT EXISTS idx_task_exposure_chain ON task_exposure_log(chain_key, last_seen_at DESC);
+
 CREATE TABLE player_task_claims(telegram_id TEXT);
 CREATE TABLE player_task_series_claims(telegram_id TEXT);
 CREATE TABLE newcomer_path_claims(telegram_id TEXT);

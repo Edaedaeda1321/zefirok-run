@@ -19032,9 +19032,12 @@ function createTutorialDeck(layer, mount, options, words) {
         if (gameTasks.length === 1) {
           const gameTask = gameTasks[0] || {};
           const rewardText = String(gameTask.rewardLabel || &quot;Награда готова&quot;);
-          events.push(runResultsEventMarkup(RUN_RESULT_ICONS.gameTask, &quot;Задание выполнено!&quot;, `${String(gameTask.title || &quot;Задание&quot;)} · ${rewardText}`));
+          const series = String(gameTask.kind || &quot;&quot;) === &quot;series&quot;;
+          events.push(runResultsEventMarkup(RUN_RESULT_ICONS.gameTask, series ? &quot;Цепочка завершена!&quot; : &quot;Задание выполнено!&quot;, `${String(gameTask.title || (series ? &quot;Цепочка заданий&quot; : &quot;Задание&quot;))} · ${rewardText}`));
         } else if (gameTasks.length &gt; 1) {
-          events.push(runResultsEventMarkup(RUN_RESULT_ICONS.gameTask, `Выполнено заданий: ${gameTasks.length}`, &quot;Награды готовы в разделе «Задания»&quot;));
+          const seriesCount = gameTasks.filter((task) =&gt; String(task?.kind || &quot;&quot;) === &quot;series&quot;).length;
+          const title = seriesCount === gameTasks.length ? `Завершено цепочек: ${seriesCount}` : `Готово наград: ${gameTasks.length}`;
+          events.push(runResultsEventMarkup(RUN_RESULT_ICONS.gameTask, title, &quot;Награды готовы в разделе «Задания»&quot;));
         }
         const grantedCaseDrops=Array.isArray(settlement?.caseDrops)?settlement.caseDrops.filter((drop)=&gt;drop?.granted):(settlement?.caseDrop?.granted?[settlement.caseDrop]:[]);
         if(grantedCaseDrops.length===1)events.push(runResultsEventMarkup(RUN_RESULT_ICONS.caseDrop,&quot;\u041a\u0435\u0439\u0441 \u043f\u043e\u0439\u043c\u0430\u043d!&quot;,`${runResultCaseTitle(grantedCaseDrops[0].type)} \u0434\u043e\u0431\u0430\u0432\u043b\u0435\u043d \u0432 \u043f\u0440\u043e\u0444\u0438\u043b\u044c`));
@@ -21625,6 +21628,17 @@ function createTutorialDeck(layer, mount, options, words) {
         const hasAuthoritativeTaskNotice = Object.prototype.hasOwnProperty.call(data || {}, &quot;seasonPassTaskNotice&quot;);
         if (data?.seasonPassTaskNotice) applySeasonTaskNotice(data.seasonPassTaskNotice);
         if (!hasAuthoritativeTaskNotice &amp;&amp; (data?.opened || (Array.isArray(openedRewards) &amp;&amp; openedRewards.length))) window.setTimeout(() =&gt; void refreshSeasonTaskNotice(true), 180);
+        if (data?.gameTaskNotice) {
+          applyGameTaskNotice(data.gameTaskNotice);
+          const completedTasks = Array.isArray(data.gameTaskNotice.tasks) ? data.gameTaskNotice.tasks : [];
+          if (data?.opened &amp;&amp; completedTasks.length) {
+            const seriesCount = completedTasks.filter((task) =&gt; String(task?.kind || &quot;&quot;) === &quot;series&quot;).length;
+            const message = completedTasks.length === 1
+              ? (seriesCount ? `🏆 Цепочка завершена: ${String(completedTasks[0]?.title || &quot;Цепочка заданий&quot;)}` : `✅ Задание выполнено: ${String(completedTasks[0]?.title || &quot;Задание&quot;)}`)
+              : (seriesCount === completedTasks.length ? `🏆 Завершено цепочек: ${seriesCount}` : `✅ Готово наград за задания: ${completedTasks.length}`);
+            showProfileToast(message, &quot;success&quot;, 4200);
+          }
+        }
         if (data?.liveops) applyCaseLiveOpsConfig(data.liveops);
         const alexCollectionPayload = data?.opened?.alexCollection || data?.alexCollection;
         if (alexCollectionPayload &amp;&amp; typeof alexCollectionPayload === &quot;object&quot;) {

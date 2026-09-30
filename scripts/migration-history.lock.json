@@ -104,6 +104,8 @@
     "0101_album_story_unlock_revision.sql": "3d9ee34d9017a1ccc2e25fbe8b2189266579e30702592d9753822a1cf28a9c42",
     "0102_player_level_case_progression.sql": "d4689ca197bf4e7d69d7137d581939013b289f9f359748a1b0ed08cf9fbba234",
     "0103_game_task_hub.sql": "4197029bc9c2e82729a4988a274704fb44009e8fccc57743947326c49fce92ba",
-    "0104_game_task_types_stage1.sql": "1e695c3f3905b861c27156c61dc85a88eff09baf6a6d1cda997d290a6d0dca33"
+    "0104_game_task_types_stage1.sql": "1e695c3f3905b861c27156c61dc85a88eff09baf6a6d1cda997d290a6d0dca33",
+    "0105_game_task_notifications_stage3.sql": "357423fcab44ed83ded9bd0a3a1abe69e59411781cc9cf03c0e2a710b78bc0ee",
+    "0106_game_task_notification_indexes.sql": "d6092c2ef10bd562748305f18cec3cc2a843f7360d2dbd7b58ff52705e55aad8"
   }
 }
