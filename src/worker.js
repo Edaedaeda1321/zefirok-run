@@ -17582,6 +17582,16 @@ function gameTaskRewardLabel(reward) {
   return reward.profileXp > 0 ? `${main} · +${reward.profileXp} XP профиля` : main;
 }
 
+function gameTaskRewardItems(reward) {
+  const value=reward&&typeof reward==='object'?reward:{};
+  const items=[];
+  const kind=String(value.kind||'').trim();
+  if(kind&&kind!=='none')items.push({kind,id:String(value.id||''),amount:Math.max(1,Math.floor(Number(value.amount||1))),label:safeRewardDescription(value)});
+  const profileXp=Math.max(0,Math.floor(Number(value.profileXp||0)));
+  if(profileXp>0)items.push({kind:'profile_xp',id:'',amount:profileXp,label:`+${profileXp.toLocaleString('ru-RU')} XP профиля`});
+  return items;
+}
+
 function gameTaskWindowOpen(row, now, series = false) {
   const startsAt = Number(series ? row.starts_at : row.task_starts_at) || 0;
   const endsAt = Number(series ? row.ends_at : row.task_ends_at) || 0;
@@ -17726,7 +17736,7 @@ async function gameTaskView(env, row, telegramId, now, series = false, context =
     seriesMode:series ? String(row.completion_mode || "ordered") : undefined,
     progress:value, target, progressFormat:gameTaskTriggerProgressFormat(row.trigger_type), complete, claimed,
     pending:Boolean(claim && !claimed),
-    reward, rewardLabel:gameTaskRewardLabel(reward),
+    reward, rewardItems:gameTaskRewardItems(reward), rewardLabel:gameTaskRewardLabel(reward),
     endsAt:Number(series ? row.ends_at : row.task_ends_at) || (row.task_mode === "daily" ? Number(progress.startsAt || 0) + V67_DAY : row.task_mode === "weekly" ? Number(progress.startsAt || 0) + 7*V67_DAY : 0),
     unread:complete && !claimed && !Number(receipt?.read_at || 0),
     steps:series ? progress.steps.map((step) => {
@@ -17917,7 +17927,7 @@ async function buildGameTasksState(env, telegramId, options = {}) {
         ? "Выдача начата ранее. Награда сохранена и доступна для повторной проверки."
         : "Задание выполнено. Награда сохранена и готова к получению.",
       mode:receipt.kind==="series"?"series":"event", progress:1, target:1, complete:true, claimed:false,
-      pending:deliveryPending, reward, rewardLabel:gameTaskRewardLabel(reward), endsAt:0,
+      pending:deliveryPending, reward, rewardItems:gameTaskRewardItems(reward), rewardLabel:gameTaskRewardLabel(reward), endsAt:0,
       unread:!Number(receipt.read_at || 0)
     });
   }
@@ -17962,7 +17972,7 @@ function gameTaskNoticePublic(state) {
   const notices = unread.slice(0,5).map((task) => ({
     kind:String(task.kind || "task"), key:String(task.key || ""), cycleKey:String(task.cycleKey || ""),
     title:String(task.title || "Задание").slice(0,180), rewardLabel:String(task.rewardLabel || "Награда готова").slice(0,220),
-    mode:String(task.mode || "event")
+    rewardItems:Array.isArray(task.rewardItems)?task.rewardItems.slice(0,4):[], mode:String(task.mode || "event")
   }));
   return {
     readyCount:Math.max(0,Number(state?.readyCount || 0)),
@@ -18133,7 +18143,7 @@ async function gameTaskRunCompletionNotice(env, telegramId, input = {}) {
     // cannot suddenly generate a fresh completion notice.
     await gameTaskAppendSeriesCompletionNotices(env,playerId,completed,now);
   }
-  const publicTasks=completed.slice(0,6).map(({reward,...task})=>task);
+  const publicTasks=completed.slice(0,6).map(({reward,...task})=>({...task,rewardItems:gameTaskRewardItems(reward)}));
   return {readyCountDelta:completed.length,unreadCountDelta:completed.length,activeCountDelta:-completed.length,tasks:publicTasks,notice:publicTasks[0]||null};
 }
 
@@ -18174,7 +18184,7 @@ async function gameTaskCaseCompletionNotice(env, telegramId, input = {}) {
     if(Number(inserted.meta?.changes||0)>0)completed.push({kind:"task",key,cycleKey,title:String(row.title||"Задание").slice(0,180),rewardLabel:gameTaskRewardLabel(reward),mode:String(row.task_mode||"one_time"),reward});
   }
   if(completed.length)await gameTaskAppendSeriesCompletionNotices(env,playerId,completed,now);
-  const publicTasks=completed.slice(0,6).map(({reward,...task})=>task);
+  const publicTasks=completed.slice(0,6).map(({reward,...task})=>({...task,rewardItems:gameTaskRewardItems(reward)}));
   return {readyCountDelta:completed.length,unreadCountDelta:completed.length,activeCountDelta:-completed.length,tasks:publicTasks,notice:publicTasks[0]||null};
 }
 
@@ -18262,8 +18272,11 @@ async function gameTasksApi(request, env, action) {
       if (statements.length) await env.DB.batch(statements);
       return jsonResponse({ok:true});
     }
-    const claim = action === "claim" ? await claimGameTask(env,telegramId,body) : {};
-    return jsonResponse({ok:true,...claim,...await gameTasksState(env,telegramId)});
+    if (action === "claim") {
+      const claim = await claimGameTask(env,telegramId,body);
+      return jsonResponse({ok:true,...claim});
+    }
+    return jsonResponse({ok:true,...await gameTasksState(env,telegramId)});
   } catch (error) {
     if (error instanceof ApiError) return jsonResponse({ok:false,error:error.message},error.status);
     console.error("game tasks API failed",error);
