@@ -34100,6 +34100,39 @@ html &gt; body.zefirok-game-expanded{height:var(--zefirok-visible-height,100dvh)
 .zdl-note.error{border-color:#e5bdc9;background:#fff0f3;color:#a34c6c}
 .zdl-note strong{display:block;font-size:13px;margin-bottom:4px}
 .zdl-lead{color:#8e7181;font-size:13px;line-height:1.6}
+.zdl-streak-hero{position:relative;display:block;width:100%;padding:16px;border:1px solid #ead2db;border-radius:23px;background:linear-gradient(135deg,#fffaf7 0%,#fff4f8 56%,#fffaf0 100%);box-shadow:0 12px 28px rgba(195,122,150,.08);overflow:hidden;text-align:left;color:#714b60}
+.zdl-streak-hero::before{content:"";position:absolute;left:-24px;top:-34px;width:146px;height:146px;border-radius:50%;background:radial-gradient(circle,#ffd98a55 0%,#ffd98a1d 48%,transparent 72%);pointer-events:none}
+.zdl-streak-hero::after{content:"";position:absolute;inset:0;background:linear-gradient(115deg,transparent 18%,rgba(255,255,255,.52) 42%,transparent 65%);transform:translateX(-135%);animation:zdl-streak-shimmer 6.2s ease-in-out infinite;pointer-events:none}
+.zdl-streak-hero.warm::before{background:radial-gradient(circle,#ffd58b5f 0%,#ffd58b26 46%,transparent 72%)}
+.zdl-streak-hero.hot::before{background:radial-gradient(circle,#ffc27a66 0%,#ffb67f2e 44%,transparent 72%)}
+.zdl-streak-hero.legend::before{background:radial-gradient(circle,#ffd36f77 0%,#ffc98138 42%,transparent 72%)}
+.zdl-streak-hero:focus-visible{outline:2px solid #cb6b91;outline-offset:3px}
+.zdl-streak-hero-top{position:relative;display:flex;align-items:flex-start;gap:13px;z-index:1}
+.zdl-streak-burst{width:54px;height:54px;flex:none;display:grid;place-items:center;border-radius:19px;background:linear-gradient(180deg,#fff6de,#ffeecb);border:1px solid #f0d7a6;box-shadow:0 10px 18px rgba(214,162,69,.16);animation:zdl-streak-float 3.4s ease-in-out infinite}
+.zdl-streak-burst .zdl-ic{width:27px;height:27px;color:#d39a3f;filter:drop-shadow(0 2px 5px rgba(220,153,61,.22))}
+.zdl-streak-copy{min-width:0;flex:1}
+.zdl-streak-copy h3{margin:4px 0 0;font-size:24px;line-height:1.12;letter-spacing:-.4px;color:#6c4154}
+.zdl-streak-copy p{margin:8px 0 0;font-size:12px;line-height:1.55;color:#8f7180}
+.zdl-streak-total{display:flex;flex-direction:column;align-items:flex-end;justify-content:center;min-width:70px;flex:none;padding-top:2px;color:#b25b84}
+.zdl-streak-total strong{font-size:33px;line-height:1;font-weight:850;letter-spacing:-.8px;color:#b6567f}
+.zdl-streak-total small{margin-top:4px;font-size:11px;font-weight:750;color:#a2778b;text-transform:uppercase;letter-spacing:.08em}
+.zdl-streak-chips{position:relative;z-index:1;display:flex;flex-wrap:wrap;gap:8px;margin-top:14px}
+.zdl-streak-chip{display:inline-flex;align-items:center;gap:7px;padding:8px 11px;border-radius:999px;border:1px solid #eed5de;background:#fffdfb;color:#805566;font-size:11px;line-height:1.2;font-weight:700;box-shadow:0 4px 10px rgba(123,86,102,.04)}
+.zdl-streak-chip img{width:18px;height:18px;flex:none}
+.zdl-streak-chip .zdl-ic{width:14px;height:14px;color:#c5873c}
+.zdl-streak-chip.accent{border-color:#f0d391;background:#fff8e9;color:#8d6431}
+.zdl-streak-next{position:relative;z-index:1;display:flex;align-items:center;gap:12px;margin-top:14px;padding:12px 13px;border-radius:18px;border:1px solid #ecd8bb;background:rgba(255,255,255,.62);backdrop-filter:blur(8px)}
+.zdl-streak-next>img,.zdl-streak-next>.zdl-reward-token{width:39px;height:43px;flex:none}
+.zdl-streak-next>div{min-width:0;flex:1}
+.zdl-streak-next strong{display:block;font-size:14px;line-height:1.35;color:#795237}
+.zdl-streak-next small{display:block;margin-top:4px;font-size:11px;line-height:1.45;color:#9a7b67}
+.zdl-streak-bar{position:relative;z-index:1;margin-top:13px}
+.zdl-streak-bar-track{height:8px;border-radius:999px;background:#efdfdf;overflow:hidden}
+.zdl-streak-bar-track i{display:block;height:100%;border-radius:inherit;background:linear-gradient(90deg,#e57da5,#d6a245)}
+.zdl-streak-bar-meta{display:flex;justify-content:space-between;gap:10px;margin-top:7px;font-size:11px;line-height:1.35;color:#967789}
+.zdl-streak-footer{position:relative;z-index:1;display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:12px;color:#a27f91;font-size:11px;line-height:1.4}
+.zdl-streak-footer .zdl-footer-cta{display:inline-flex;align-items:center;gap:6px;font-weight:800;color:#b55b83}
+.zdl-streak-footer .zdl-footer-cta .zdl-ic{width:14px;height:14px;color:inherit}
 .zdl-stats{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}
 .zdl-stat{border:1px solid #ead8df;border-radius:19px;background:#fffdfb;padding:15px}
 .zdl-stat strong{display:flex;align-items:center;gap:8px;color:#714950;font-size:27px;line-height:1.2}
@@ -34137,8 +34170,10 @@ html &gt; body.zefirok-game-expanded{height:var(--zefirok-visible-height,100dvh)
 .zdl-toast{position:fixed;left:50%;bottom:max(22px,var(--zefirok-content-safe-bottom,0px));z-index:2147483600;width:min(390px,calc(100% - 28px));padding:12px 14px;border-radius:15px;background:#60414f;color:#fff;text-align:center;font:600 12px/1.45 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;opacity:0;pointer-events:none;transform:translate(-50%,18px);transition:opacity .18s,transform .18s}
 .zdl-toast.show{opacity:1;transform:translate(-50%,0)}
 @keyframes zdl-spin{to{transform:rotate(360deg)}}
-@media(min-width:640px){.zdl-layer{align-items:center;padding:24px}.zdl-card{height:min(750px,100%);border-radius:28px}}
-@media(max-width:360px){.zdl-header{padding-left:13px;padding-right:13px}.zdl-heading{gap:7px}.zdl-heading h2{font-size:20px}.zdl-body{padding:13px}.zdl-footer{padding:12px 13px 14px}.zdl-today{padding:12px}.zdl-today-art{width:59px;height:64px}.zdl-today h3{font-size:22px}.zdl-week{padding:10px}.zdl-stamps{gap:3px}.zdl-stamp{border-radius:9px}.zdl-stamp img{width:24px;height:26px}.zdl-stamp small{font-size:8px}.zdl-stamp b{font-size:9px}.zdl-heading small{font-size:10px}}
+@keyframes zdl-streak-float{0%,100%{transform:translateY(0)}50%{transform:translateY(-2px)}}
+@keyframes zdl-streak-shimmer{0%,18%{transform:translateX(-135%)}40%,100%{transform:translateX(135%)}}
+@media(min-width:640px){.zdl-layer{align-items:center;padding:24px}.zdl-card{height:min(750px,100%);border-radius:28px}.zdl-streak-hero{padding:18px 18px 17px}}
+@media(max-width:360px){.zdl-header{padding-left:13px;padding-right:13px}.zdl-heading{gap:7px}.zdl-heading h2{font-size:20px}.zdl-body{padding:13px}.zdl-footer{padding:12px 13px 14px}.zdl-today{padding:12px}.zdl-today-art{width:59px;height:64px}.zdl-today h3{font-size:22px}.zdl-week{padding:10px}.zdl-stamps{gap:3px}.zdl-stamp{border-radius:9px}.zdl-stamp img{width:24px;height:26px}.zdl-stamp small{font-size:8px}.zdl-stamp b{font-size:9px}.zdl-heading small{font-size:10px}.zdl-streak-hero{padding:14px}.zdl-streak-hero-top{gap:10px}.zdl-streak-burst{width:48px;height:48px;border-radius:17px}.zdl-streak-copy h3{font-size:21px}.zdl-streak-total strong{font-size:29px}.zdl-streak-total{min-width:58px}.zdl-streak-footer{flex-direction:column;align-items:flex-start}}
 @media(prefers-reduced-motion:reduce){.zdl-layer *{animation:none!important;transition:none!important;scroll-behavior:auto!important}}
 
 </style>
@@ -34270,13 +34305,36 @@ function nextContent(){
  if(!next)return '';
  return `<div class="zdl-next">${rewardVisual(next)}<div><span class="zdl-eyebrow">${completedToday()?'Следующий вход · завтра':'Следующий вход'}</span><strong>${esc(rewardText(next))}</strong><small>Неделя ${whole(st.nextProgressWeek)||1} · день ${whole(st.nextCycleDay)||1}${whole(st.nextCycleDay)===7?' · финал недели':''}</small></div></div>`;
 }
+function streakTone(streak){
+ if(streak>=42)return {className:'legend',badge:'Легендарная серия',copy:'Такую серию уже хочется беречь. Большой этап совсем рядом или уже открыт.'};
+ if(streak>=30)return {className:'hot',badge:'Сильная серия',copy:'Отличный ритм. Сохрани его — длинные серии должны ощущаться ценно.'};
+ if(streak>=14)return {className:'warm',badge:'Стабильный темп',copy:'Ты уверенно держишь активность. Осталось немного до следующего большого этапа.'};
+ if(streak>=7)return {className:'warm',badge:'Хороший ритм',copy:'Серия уже заметная. Продолжай, чтобы открывать бонусы серии быстрее.'};
+ if(streak>=1)return {className:'',badge:'Серия набирает ход',copy:'Каждый следующий вход усиливает серию и приближает бонусы.'};
+ return {className:'',badge:'Начни серию сегодня',copy:'Серия начнётся после подтверждённого входа. Дальше её можно усиливать каждый день.'};
+}
+function streakHeroContent(){
+ const st=model?.state||{},insurance=model?.insurance||{},streak=whole(st.streak),best=whole(st.bestStreak),tone=streakTone(streak),rows=[...list(model?.streakRewards)].sort((a,b)=>number(a.streakThreshold)-number(b.streakThreshold));
+ const next=st.nextStreakMilestone||null,nextGoal=whole(next?.streakThreshold);
+ let base=0;
+ for(const item of rows){const goal=whole(item?.streakThreshold);if(goal<=streak&&goal>base)base=goal;}
+ const ratio=nextGoal>base?Math.max(0,Math.min(1,(streak-base)/(nextGoal-base))):streak?1:0;
+ const protectionLabel=insurance.enabled===true?`Защита ${fmt(insurance.balance)} / ${fmt(insurance.max)}`:'Защита выключена';
+ const bestLabel=best?`Лучший результат ${fmt(best)} ${plural(best)}`:'Лучшая серия появится после первых дней';
+ const goalCopy=nextGoal?`До ${fmt(nextGoal)} ${plural(nextGoal)} — ещё ${fmt(Math.max(0,nextGoal-streak))}`:'Все этапы серии уже открыты';
+ const rewardCopy=nextGoal&&next?rewardText(next):best?`Лучший streak: ${fmt(best)} ${plural(best)}`:'Бонусы серии откроются после первых дней';
+ return `<button type="button" class="zdl-streak-hero ${tone.className}" data-zdl-view="streak" aria-label="Открыть бонусы серии. Сейчас серия ${fmt(streak)} ${plural(streak)}.">
+ <div class="zdl-streak-hero-top"><div class="zdl-streak-burst" aria-hidden="true">${icon('flame')}</div><div class="zdl-streak-copy"><span class="zdl-eyebrow">Серия входов</span><h3>${streak?`${fmt(streak)} ${plural(streak)} подряд`:'Серия ещё не начата'}</h3><p>${esc(tone.copy)}</p></div><div class="zdl-streak-total"><strong>${fmt(streak)}</strong><small>${streak===1?'день':'дней'}</small></div></div>
+ <div class="zdl-streak-chips"><span class="zdl-streak-chip accent">${icon('flame')} ${esc(tone.badge)}</span><span class="zdl-streak-chip">${insurance.enabled?image(SHIELD,''):icon('check')}${esc(protectionLabel)}</span><span class="zdl-streak-chip">${icon('history')}${esc(bestLabel)}</span></div>
+ <div class="zdl-streak-next">${next?rewardVisual(next):image(SHIELD)}<div><strong>${esc(goalCopy)}</strong><small>${esc(rewardCopy)}</small></div></div>
+ <div class="zdl-streak-bar"><div class="zdl-streak-bar-track"><i style="width:${Math.round(ratio*100)}%"></i></div><div class="zdl-streak-bar-meta"><span>${base?`${fmt(base)} ${plural(base)}`:'Старт серии'}</span><span>${nextGoal?`${fmt(nextGoal)} ${plural(nextGoal)}`:'Максимум серии'}</span></div></div>
+ <div class="zdl-streak-footer"><span>Серия и карточка — разные счётчики: серия считает дни подряд.</span><span class="zdl-footer-cta">Бонусы серии и защита ${icon('arrow')}</span></div></button>`;
+}
 function homeContent(){
  if(!model)return `<div class="zdl-empty">${busy?'<div class="zdl-spinner" aria-hidden="true"></div>Проверяем вход, серию и награды…':'Нет подтверждённого состояния. Повтори проверку.'}</div>`;
- const st=model.state||{},insurance=model.insurance||{},next=st.nextMilestone;
- const protection=insurance.enabled===true?`Защита: ${fmt(insurance.balance)} / ${fmt(insurance.max)}`:'Защита отключена';
+ const st=model.state||{},next=st.nextMilestone;
  const saved=whole(lastInsuranceEvent?.used)>0?note(`Защита использована: ${fmt(lastInsuranceEvent.used)}. Пропущенные награды не начисляются.`,'ok','Серия сохранена'):'';
- return `${todayContent()}${saved}${weekContent()}${nextContent()}<div class="zdl-link-list">
- ${link('streak',`Серия: ${fmt(st.streak)} ${plural(st.streak)}`,protection,insurance.enabled?SHIELD:'','flame')}
+ return `${todayContent()}${saved}${weekContent()}${streakHeroContent()}${nextContent()}<div class="zdl-link-list">
  ${link('milestones','Большие этапы',next?`До ${whole(next.dayIndex)} дней активности — ещё ${Math.max(0,whole(next.dayIndex)-whole(st.progressDays))}`:`Учтено ${fmt(st.progressDays)} ${plural(st.progressDays)} активности`,'','steps')}
  ${link('history','История наград','Последние подтверждённые выдачи','','history')}
  ${lastComeback?.reward?link('comeback',lastComeback.testMode?'Проверка возвращения':'Подарок за возвращение',lastComeback.rewardGranted===true?'Выдача подтверждена':'Предпросмотр без начисления',ART):''}</div>`;
