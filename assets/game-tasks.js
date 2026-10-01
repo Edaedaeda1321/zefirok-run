@@ -1,7 +1,7 @@
 (()=>{
   'use strict';
-  if(window.__ZEFIROK_GAME_TASKS_UI_V16__)return;
-  window.__ZEFIROK_GAME_TASKS_UI_V16__=true;
+  if(window.__ZEFIROK_GAME_TASKS_UI_V17__)return;
+  window.__ZEFIROK_GAME_TASKS_UI_V17__=true;
 
   const root=document.querySelector('#zefirok-maltipoo-runner');
   const screen=root?.querySelector('[data-screen="tasks"]');
@@ -112,8 +112,7 @@
   function plural(n,one,two,five){const value=Math.abs(whole(n))%100;const tail=value%10;if(value>10&&value<20)return five;if(tail===1)return one;if(tail>=2&&tail<=4)return two;return five;}
   function isUrgent(task){const left=num(task?.endsAt)-nowServerMs()/1000;return !task?.claimed&&!task?.complete&&left>0&&left<=10800;}
   function taskBadge(task){
-    const claimed=Boolean(task?.claimed),pending=Boolean(task?.pending)&&!claimed;
-    if(pending)return {label:'ПРОВЕРКА ВЫДАЧИ',className:'is-pending',state:'pending'};
+    const claimed=Boolean(task?.claimed);
     if(isReady(task))return {label:task?.unread?'ГОТОВО · НОВОЕ':'ГОТОВО',className:'is-ready',state:'ready'};
     if(claimed)return {label:'ПОЛУЧЕНО',className:'is-claimed',state:'claimed'};
     if(isUrgent(task))return {label:'СКОРО ЗАКОНЧИТСЯ',className:'is-urgent',state:'urgent'};
@@ -149,7 +148,6 @@
   function sortTasks(tasks){
     const source=list(payload?.tasks),positions=new Map(source.map((task,index)=>[taskId(task),index]));
     const bucket=task=>{
-      if(Boolean(task?.pending)&&!task?.claimed)return 0;
       if(isReady(task)&&task?.unread)return 1;
       if(isReady(task))return 2;
       if(isUrgent(task))return 3;
@@ -372,8 +370,8 @@
   function nextMarkup(){
     const task=nearestTask();
     if(!task)return '';
-    const ready=isReady(task),pending=Boolean(task?.pending)&&!task?.claimed,left=Math.max(0,whole(task.target)-whole(task.progress));
-    const status=pending?'Проверить выдачу':ready?'Забрать':left?`Осталось ${taskProgressValue(task,left)}`:'Проверить';
+    const ready=isReady(task),left=Math.max(0,whole(task.target)-whole(task.progress));
+    const status=ready?'Забрать':left?`Осталось ${taskProgressValue(task,left)}`:'Проверить';
     const extra=timeLeft(task.endsAt);
     return `<section class="gt-next${ready?' is-ready':''}" aria-label="Ближайшая цель"><span class="gt-next-icon">${iconMarkup(ready?TASK_ICONS.reward:taskIconSrc(task),'gt-next-icon-img')}</span><span class="gt-next-copy"><small>${ready?'Награда готова':'Ближайшая цель'}</small><strong>${esc(task.title||'Задание')}</strong><span>${esc(ready?(task.rewardLabel||'Можно получить награду'):(extra?`До конца: ${extra}`:(task.description||'Продолжай играть')))}</span></span><span class="gt-next-status">${esc(status)}</span></section>`;
   }
@@ -385,17 +383,16 @@
   }
 
   function taskActionMarkup(task,index){
-    const ready=isReady(task),claimed=Boolean(task?.claimed),pending=Boolean(task?.pending)&&!claimed,currentClaim=claimingKey===taskId(task),claimSuccess=claimSuccessKey===taskId(task);
+    const ready=isReady(task),claimed=Boolean(task?.claimed),currentClaim=claimingKey===taskId(task),claimSuccess=claimSuccessKey===taskId(task);
     if(claimSuccess)return `<span class="gt-state gt-state-success">${iconMarkup(TASK_ICONS.done,'gt-state-icon')}Получено</span>`;
-    if(ready&&!pending&&!claimed)return `<button class="gt-claim" data-gt-claim="${index}" type="button"${currentClaim?' disabled':''}>${currentClaim?'Получаем…':`${iconMarkup(TASK_ICONS.reward,'gt-button-icon')}Получить`}</button>`;
-    if(pending)return `<button class="gt-state is-ready gt-state-action" data-gt-claim="${index}" type="button"${currentClaim?' disabled':''}>${currentClaim?'Проверяем…':'Проверить выдачу'}</button>`;
+    if(ready&&!claimed)return `<button class="gt-claim" data-gt-claim="${index}" type="button"${currentClaim?' disabled':''}>${currentClaim?'Получаем…':`${iconMarkup(TASK_ICONS.reward,'gt-button-icon')}Получить`}</button>`;
     if(claimed)return `<span class="gt-state">${iconMarkup(TASK_ICONS.done,'gt-state-icon')}Получено</span>`;
     return '<span class="gt-state">В процессе</span>';
   }
 
   function taskClasses(task,extra=''){
-    const ready=isReady(task),claimed=Boolean(task?.claimed),pending=Boolean(task?.pending)&&!claimed,urgent=isUrgent(task),claimSuccess=claimSuccessKey===taskId(task);
-    return ['gt-task',ready?'is-ready':'',pending?'is-pending':'',urgent?'is-urgent':'',claimed?'is-claimed':'',claimSuccess?'is-claim-success':'',extra].filter(Boolean).join(' ');
+    const ready=isReady(task),claimed=Boolean(task?.claimed),urgent=isUrgent(task),claimSuccess=claimSuccessKey===taskId(task);
+    return ['gt-task',ready?'is-ready':'',urgent?'is-urgent':'',claimed?'is-claimed':'',claimSuccess?'is-claim-success':'',extra].filter(Boolean).join(' ');
   }
 
   function standardTaskMarkup(task,index){
@@ -428,8 +425,7 @@
     const current=steps.find(step=>step?.current)||steps.find(step=>!step?.done&&!step?.locked)||steps.find(step=>!step?.done)||null;
     const nodes=steps.length?`<div class="gt-series-road" aria-label="Этапы цепочки">${steps.map((step,stepIndex)=>{const cls=['gt-series-node',step?.done?'is-done':'',step?.current?'is-current':'',step?.locked?'is-locked':''].filter(Boolean).join(' ');const mark=step?.done?iconMarkup(TASK_ICONS.done,'gt-series-node-done'):esc(String(stepIndex+1));return `<span class="${cls}" title="${esc(step?.title||`Этап ${stepIndex+1}`)}"><i>${mark}</i><span>${esc(step?.title||`Этап ${stepIndex+1}`)}</span></span>`;}).join('')}</div>`:'';
     let currentBlock='';
-    if(Boolean(task?.pending)&&!claimed)currentBlock='<div class="gt-series-current"><small>Все этапы выполнены</small><strong>Проверяем финальную награду</strong><span>Выдача уже запущена и безопасно проверяется повторно.</span></div>';
-    else if(ready)currentBlock='<div class="gt-series-current"><small>Все этапы выполнены</small><strong>Финальная награда готова</strong><span>Забери её, чтобы завершить цепочку.</span></div>';
+    if(ready)currentBlock='<div class="gt-series-current"><small>Все этапы выполнены</small><strong>Финальная награда готова</strong><span>Забери её, чтобы завершить цепочку.</span></div>';
     else if(claimed)currentBlock='<div class="gt-series-current"><small>Цепочка завершена</small><strong>Все этапы пройдены</strong><span>Финальная награда уже получена.</span></div>';
     else if(current)currentBlock=`<div class="gt-series-current"><small>${String(task?.seriesMode||'ordered')==='any'?'Доступный этап':'Текущий этап'}</small><strong>${esc(current.title||'Следующий этап')}</strong><span>${esc(seriesStepText(current))}</span></div>`;
     else currentBlock='<div class="gt-series-current"><small>Прогресс цепочки</small><strong>Продолжай выполнять этапы</strong><span>Следующий этап появится после обновления прогресса.</span></div>';
@@ -498,7 +494,7 @@
           if(task?.claimed){committedClaims.delete(id);continue;}
           if(task?.complete)tombstonedReady+=1;
           if(task?.unread)tombstonedUnread+=1;
-          task.claimed=true;task.pending=false;task.unread=false;
+          task.claimed=true;task.unread=false;
         }
         if(tombstonedReady)data.readyCount=Math.max(0,whole(data.readyCount)-tombstonedReady);
         if(tombstonedUnread)data.unreadCount=Math.max(0,whole(data.unreadCount)-tombstonedUnread);
@@ -523,20 +519,15 @@
         claimSuccessKey=id;claimingKey='';render();
         await new Promise(resolve=>window.setTimeout(resolve,420));
         committedClaims.add(id);
-        task.claimed=true;task.pending=false;task.unread=false;
+        task.claimed=true;task.unread=false;
         if(payload){payload.readyCount=Math.max(0,whole(payload.readyCount)-1);payload.unreadCount=Math.max(0,whole(payload.unreadCount)-1);}
         entryNotice.readyCount=Math.max(0,entryNotice.readyCount-1);entryNotice.unreadCount=Math.max(0,entryNotice.unreadCount-1);
         claimSuccessKey='';render();updateEntry();
         try{void host().sync?.();}catch{}
         window.setTimeout(()=>void load(true),650);
         notice='Награда получена';
-      }else if(result?.pending){
-        task.pending=true;claimingKey='';render();
-        window.setTimeout(()=>void load(true),900);
-        notice=String(result?.message||'Награда доставляется. Состояние проверится автоматически.');
       }else{
-        claimingKey='';render();window.setTimeout(()=>void load(true),350);
-        notice='Состояние награды обновляется.';
+        throw new Error(String(result?.error||'Сервер не подтвердил получение награды.'));
       }
     }catch(error){
       claimingKey='';render();window.setTimeout(()=>void load(true),350);

@@ -32857,11 +32857,11 @@ html &gt; body.zefirok-game-expanded{height:var(--zefirok-visible-height,100dvh)
 #zefirok-maltipoo-runner .gt-series-node-done{width:18px;height:18px;object-fit:contain}
 
 &lt;/style&gt;
-&lt;script id=&quot;zefirok-game-tasks-inline-runtime-v16&quot;&gt;
+&lt;script id=&quot;zefirok-game-tasks-inline-runtime-v17&quot;&gt;
 (()=&gt;{
   &#x27;use strict&#x27;;
-  if(window.__ZEFIROK_GAME_TASKS_UI_V16__)return;
-  window.__ZEFIROK_GAME_TASKS_UI_V16__=true;
+  if(window.__ZEFIROK_GAME_TASKS_UI_V17__)return;
+  window.__ZEFIROK_GAME_TASKS_UI_V17__=true;
 
   const root=document.querySelector(&#x27;#zefirok-maltipoo-runner&#x27;);
   const screen=root?.querySelector(&#x27;[data-screen=&quot;tasks&quot;]&#x27;);
@@ -32972,8 +32972,7 @@ html &gt; body.zefirok-game-expanded{height:var(--zefirok-visible-height,100dvh)
   function plural(n,one,two,five){const value=Math.abs(whole(n))%100;const tail=value%10;if(value&gt;10&amp;&amp;value&lt;20)return five;if(tail===1)return one;if(tail&gt;=2&amp;&amp;tail&lt;=4)return two;return five;}
   function isUrgent(task){const left=num(task?.endsAt)-nowServerMs()/1000;return !task?.claimed&amp;&amp;!task?.complete&amp;&amp;left&gt;0&amp;&amp;left&lt;=10800;}
   function taskBadge(task){
-    const claimed=Boolean(task?.claimed),pending=Boolean(task?.pending)&amp;&amp;!claimed;
-    if(pending)return {label:&#x27;ПРОВЕРКА ВЫДАЧИ&#x27;,className:&#x27;is-pending&#x27;,state:&#x27;pending&#x27;};
+    const claimed=Boolean(task?.claimed);
     if(isReady(task))return {label:task?.unread?&#x27;ГОТОВО · НОВОЕ&#x27;:&#x27;ГОТОВО&#x27;,className:&#x27;is-ready&#x27;,state:&#x27;ready&#x27;};
     if(claimed)return {label:&#x27;ПОЛУЧЕНО&#x27;,className:&#x27;is-claimed&#x27;,state:&#x27;claimed&#x27;};
     if(isUrgent(task))return {label:&#x27;СКОРО ЗАКОНЧИТСЯ&#x27;,className:&#x27;is-urgent&#x27;,state:&#x27;urgent&#x27;};
@@ -33009,7 +33008,6 @@ html &gt; body.zefirok-game-expanded{height:var(--zefirok-visible-height,100dvh)
   function sortTasks(tasks){
     const source=list(payload?.tasks),positions=new Map(source.map((task,index)=&gt;[taskId(task),index]));
     const bucket=task=&gt;{
-      if(Boolean(task?.pending)&amp;&amp;!task?.claimed)return 0;
       if(isReady(task)&amp;&amp;task?.unread)return 1;
       if(isReady(task))return 2;
       if(isUrgent(task))return 3;
@@ -33232,8 +33230,8 @@ html &gt; body.zefirok-game-expanded{height:var(--zefirok-visible-height,100dvh)
   function nextMarkup(){
     const task=nearestTask();
     if(!task)return &#x27;&#x27;;
-    const ready=isReady(task),pending=Boolean(task?.pending)&amp;&amp;!task?.claimed,left=Math.max(0,whole(task.target)-whole(task.progress));
-    const status=pending?&#x27;Проверить выдачу&#x27;:ready?&#x27;Забрать&#x27;:left?`Осталось ${taskProgressValue(task,left)}`:&#x27;Проверить&#x27;;
+    const ready=isReady(task),left=Math.max(0,whole(task.target)-whole(task.progress));
+    const status=ready?&#x27;Забрать&#x27;:left?`Осталось ${taskProgressValue(task,left)}`:&#x27;Проверить&#x27;;
     const extra=timeLeft(task.endsAt);
     return `&lt;section class=&quot;gt-next${ready?&#x27; is-ready&#x27;:&#x27;&#x27;}&quot; aria-label=&quot;Ближайшая цель&quot;&gt;&lt;span class=&quot;gt-next-icon&quot;&gt;${iconMarkup(ready?TASK_ICONS.reward:taskIconSrc(task),&#x27;gt-next-icon-img&#x27;)}&lt;/span&gt;&lt;span class=&quot;gt-next-copy&quot;&gt;&lt;small&gt;${ready?&#x27;Награда готова&#x27;:&#x27;Ближайшая цель&#x27;}&lt;/small&gt;&lt;strong&gt;${esc(task.title||&#x27;Задание&#x27;)}&lt;/strong&gt;&lt;span&gt;${esc(ready?(task.rewardLabel||&#x27;Можно получить награду&#x27;):(extra?`До конца: ${extra}`:(task.description||&#x27;Продолжай играть&#x27;)))}&lt;/span&gt;&lt;/span&gt;&lt;span class=&quot;gt-next-status&quot;&gt;${esc(status)}&lt;/span&gt;&lt;/section&gt;`;
   }
@@ -33245,17 +33243,16 @@ html &gt; body.zefirok-game-expanded{height:var(--zefirok-visible-height,100dvh)
   }
 
   function taskActionMarkup(task,index){
-    const ready=isReady(task),claimed=Boolean(task?.claimed),pending=Boolean(task?.pending)&amp;&amp;!claimed,currentClaim=claimingKey===taskId(task),claimSuccess=claimSuccessKey===taskId(task);
+    const ready=isReady(task),claimed=Boolean(task?.claimed),currentClaim=claimingKey===taskId(task),claimSuccess=claimSuccessKey===taskId(task);
     if(claimSuccess)return `&lt;span class=&quot;gt-state gt-state-success&quot;&gt;${iconMarkup(TASK_ICONS.done,&#x27;gt-state-icon&#x27;)}Получено&lt;/span&gt;`;
-    if(ready&amp;&amp;!pending&amp;&amp;!claimed)return `&lt;button class=&quot;gt-claim&quot; data-gt-claim=&quot;${index}&quot; type=&quot;button&quot;${currentClaim?&#x27; disabled&#x27;:&#x27;&#x27;}&gt;${currentClaim?&#x27;Получаем…&#x27;:`${iconMarkup(TASK_ICONS.reward,&#x27;gt-button-icon&#x27;)}Получить`}&lt;/button&gt;`;
-    if(pending)return `&lt;button class=&quot;gt-state is-ready gt-state-action&quot; data-gt-claim=&quot;${index}&quot; type=&quot;button&quot;${currentClaim?&#x27; disabled&#x27;:&#x27;&#x27;}&gt;${currentClaim?&#x27;Проверяем…&#x27;:&#x27;Проверить выдачу&#x27;}&lt;/button&gt;`;
+    if(ready&amp;&amp;!claimed)return `&lt;button class=&quot;gt-claim&quot; data-gt-claim=&quot;${index}&quot; type=&quot;button&quot;${currentClaim?&#x27; disabled&#x27;:&#x27;&#x27;}&gt;${currentClaim?&#x27;Получаем…&#x27;:`${iconMarkup(TASK_ICONS.reward,&#x27;gt-button-icon&#x27;)}Получить`}&lt;/button&gt;`;
     if(claimed)return `&lt;span class=&quot;gt-state&quot;&gt;${iconMarkup(TASK_ICONS.done,&#x27;gt-state-icon&#x27;)}Получено&lt;/span&gt;`;
     return &#x27;&lt;span class=&quot;gt-state&quot;&gt;В процессе&lt;/span&gt;&#x27;;
   }
 
   function taskClasses(task,extra=&#x27;&#x27;){
-    const ready=isReady(task),claimed=Boolean(task?.claimed),pending=Boolean(task?.pending)&amp;&amp;!claimed,urgent=isUrgent(task),claimSuccess=claimSuccessKey===taskId(task);
-    return [&#x27;gt-task&#x27;,ready?&#x27;is-ready&#x27;:&#x27;&#x27;,pending?&#x27;is-pending&#x27;:&#x27;&#x27;,urgent?&#x27;is-urgent&#x27;:&#x27;&#x27;,claimed?&#x27;is-claimed&#x27;:&#x27;&#x27;,claimSuccess?&#x27;is-claim-success&#x27;:&#x27;&#x27;,extra].filter(Boolean).join(&#x27; &#x27;);
+    const ready=isReady(task),claimed=Boolean(task?.claimed),urgent=isUrgent(task),claimSuccess=claimSuccessKey===taskId(task);
+    return [&#x27;gt-task&#x27;,ready?&#x27;is-ready&#x27;:&#x27;&#x27;,urgent?&#x27;is-urgent&#x27;:&#x27;&#x27;,claimed?&#x27;is-claimed&#x27;:&#x27;&#x27;,claimSuccess?&#x27;is-claim-success&#x27;:&#x27;&#x27;,extra].filter(Boolean).join(&#x27; &#x27;);
   }
 
   function standardTaskMarkup(task,index){
@@ -33288,8 +33285,7 @@ html &gt; body.zefirok-game-expanded{height:var(--zefirok-visible-height,100dvh)
     const current=steps.find(step=&gt;step?.current)||steps.find(step=&gt;!step?.done&amp;&amp;!step?.locked)||steps.find(step=&gt;!step?.done)||null;
     const nodes=steps.length?`&lt;div class=&quot;gt-series-road&quot; aria-label=&quot;Этапы цепочки&quot;&gt;${steps.map((step,stepIndex)=&gt;{const cls=[&#x27;gt-series-node&#x27;,step?.done?&#x27;is-done&#x27;:&#x27;&#x27;,step?.current?&#x27;is-current&#x27;:&#x27;&#x27;,step?.locked?&#x27;is-locked&#x27;:&#x27;&#x27;].filter(Boolean).join(&#x27; &#x27;);const mark=step?.done?iconMarkup(TASK_ICONS.done,&#x27;gt-series-node-done&#x27;):esc(String(stepIndex+1));return `&lt;span class=&quot;${cls}&quot; title=&quot;${esc(step?.title||`Этап ${stepIndex+1}`)}&quot;&gt;&lt;i&gt;${mark}&lt;/i&gt;&lt;span&gt;${esc(step?.title||`Этап ${stepIndex+1}`)}&lt;/span&gt;&lt;/span&gt;`;}).join(&#x27;&#x27;)}&lt;/div&gt;`:&#x27;&#x27;;
     let currentBlock=&#x27;&#x27;;
-    if(Boolean(task?.pending)&amp;&amp;!claimed)currentBlock=&#x27;&lt;div class=&quot;gt-series-current&quot;&gt;&lt;small&gt;Все этапы выполнены&lt;/small&gt;&lt;strong&gt;Проверяем финальную награду&lt;/strong&gt;&lt;span&gt;Выдача уже запущена и безопасно проверяется повторно.&lt;/span&gt;&lt;/div&gt;&#x27;;
-    else if(ready)currentBlock=&#x27;&lt;div class=&quot;gt-series-current&quot;&gt;&lt;small&gt;Все этапы выполнены&lt;/small&gt;&lt;strong&gt;Финальная награда готова&lt;/strong&gt;&lt;span&gt;Забери её, чтобы завершить цепочку.&lt;/span&gt;&lt;/div&gt;&#x27;;
+    if(ready)currentBlock=&#x27;&lt;div class=&quot;gt-series-current&quot;&gt;&lt;small&gt;Все этапы выполнены&lt;/small&gt;&lt;strong&gt;Финальная награда готова&lt;/strong&gt;&lt;span&gt;Забери её, чтобы завершить цепочку.&lt;/span&gt;&lt;/div&gt;&#x27;;
     else if(claimed)currentBlock=&#x27;&lt;div class=&quot;gt-series-current&quot;&gt;&lt;small&gt;Цепочка завершена&lt;/small&gt;&lt;strong&gt;Все этапы пройдены&lt;/strong&gt;&lt;span&gt;Финальная награда уже получена.&lt;/span&gt;&lt;/div&gt;&#x27;;
     else if(current)currentBlock=`&lt;div class=&quot;gt-series-current&quot;&gt;&lt;small&gt;${String(task?.seriesMode||&#x27;ordered&#x27;)===&#x27;any&#x27;?&#x27;Доступный этап&#x27;:&#x27;Текущий этап&#x27;}&lt;/small&gt;&lt;strong&gt;${esc(current.title||&#x27;Следующий этап&#x27;)}&lt;/strong&gt;&lt;span&gt;${esc(seriesStepText(current))}&lt;/span&gt;&lt;/div&gt;`;
     else currentBlock=&#x27;&lt;div class=&quot;gt-series-current&quot;&gt;&lt;small&gt;Прогресс цепочки&lt;/small&gt;&lt;strong&gt;Продолжай выполнять этапы&lt;/strong&gt;&lt;span&gt;Следующий этап появится после обновления прогресса.&lt;/span&gt;&lt;/div&gt;&#x27;;
@@ -33358,7 +33354,7 @@ html &gt; body.zefirok-game-expanded{height:var(--zefirok-visible-height,100dvh)
           if(task?.claimed){committedClaims.delete(id);continue;}
           if(task?.complete)tombstonedReady+=1;
           if(task?.unread)tombstonedUnread+=1;
-          task.claimed=true;task.pending=false;task.unread=false;
+          task.claimed=true;task.unread=false;
         }
         if(tombstonedReady)data.readyCount=Math.max(0,whole(data.readyCount)-tombstonedReady);
         if(tombstonedUnread)data.unreadCount=Math.max(0,whole(data.unreadCount)-tombstonedUnread);
@@ -33383,20 +33379,15 @@ html &gt; body.zefirok-game-expanded{height:var(--zefirok-visible-height,100dvh)
         claimSuccessKey=id;claimingKey=&#x27;&#x27;;render();
         await new Promise(resolve=&gt;window.setTimeout(resolve,420));
         committedClaims.add(id);
-        task.claimed=true;task.pending=false;task.unread=false;
+        task.claimed=true;task.unread=false;
         if(payload){payload.readyCount=Math.max(0,whole(payload.readyCount)-1);payload.unreadCount=Math.max(0,whole(payload.unreadCount)-1);}
         entryNotice.readyCount=Math.max(0,entryNotice.readyCount-1);entryNotice.unreadCount=Math.max(0,entryNotice.unreadCount-1);
         claimSuccessKey=&#x27;&#x27;;render();updateEntry();
         try{void host().sync?.();}catch{}
         window.setTimeout(()=&gt;void load(true),650);
         notice=&#x27;Награда получена&#x27;;
-      }else if(result?.pending){
-        task.pending=true;claimingKey=&#x27;&#x27;;render();
-        window.setTimeout(()=&gt;void load(true),900);
-        notice=String(result?.message||&#x27;Награда доставляется. Состояние проверится автоматически.&#x27;);
       }else{
-        claimingKey=&#x27;&#x27;;render();window.setTimeout(()=&gt;void load(true),350);
-        notice=&#x27;Состояние награды обновляется.&#x27;;
+        throw new Error(String(result?.error||&#x27;Сервер не подтвердил получение награды.&#x27;));
       }
     }catch(error){
       claimingKey=&#x27;&#x27;;render();window.setTimeout(()=&gt;void load(true),350);

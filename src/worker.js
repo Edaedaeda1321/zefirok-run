@@ -17626,11 +17626,14 @@ async function gameTaskStateContext(env, telegramId, taskRows, seriesRows, profi
   const receiptsPromise = receiptParts.length
     ? env.DB.prepare(`SELECT kind,task_key,cycle_key,completed_at,read_at,reward_json FROM player_game_tasks WHERE telegram_id=? AND (${receiptParts.join(' OR ')})`).bind(...receiptBinds).all()
     : empty;
+  const rewardClaimsPromise = receiptParts.length
+    ? env.DB.prepare(`SELECT claim_id,kind,task_key,cycle_key,status,reward_json,claimed_at FROM game_task_reward_claims WHERE telegram_id=? AND (${receiptParts.join(' OR ')})`).bind(...receiptBinds).all()
+    : empty;
   const executionsPromise = taskKeys.length
     ? env.DB.prepare(`SELECT DISTINCT chain_key FROM automation_chain_executions WHERE telegram_id=? AND status='completed' AND chain_key IN (${placeholders(taskKeys)})`).bind(String(telegramId), ...taskKeys).all()
     : empty;
-  const [taskClaims, seriesClaims, receipts, executions] = await Promise.all([
-    taskClaimsPromise, seriesClaimsPromise, receiptsPromise, executionsPromise
+  const [taskClaims, seriesClaims, receipts, rewardClaims, executions] = await Promise.all([
+    taskClaimsPromise, seriesClaimsPromise, receiptsPromise, rewardClaimsPromise, executionsPromise
   ]);
   return {
     profile: profile || {},
@@ -17638,6 +17641,7 @@ async function gameTaskStateContext(env, telegramId, taskRows, seriesRows, profi
     taskClaims: new Map((taskClaims.results || []).map((row) => [String(row.claim_key), row])),
     seriesClaims: new Map((seriesClaims.results || []).map((row) => [String(row.claim_key), row])),
     receipts: new Map((receipts.results || []).map((row) => [gameTaskReceiptMapKey(row.kind,row.task_key,row.cycle_key), row])),
+    rewardClaims: new Map((rewardClaims.results || []).map((row) => [gameTaskReceiptMapKey(row.kind,row.task_key,row.cycle_key), row])),
     completedExecutions: new Set((executions.results || []).map((row) => String(row.chain_key)))
   };
 }
@@ -17694,18 +17698,21 @@ async function gameTaskView(env, row, telegramId, now, series = false, context =
   const cycleKey = String(baseCycle.cycleKey || "once");
   const claimKey = `${key}:${telegramId}:${cycleKey}`;
   const claimTable = series ? "player_task_series_claims" : "player_task_claims";
-  let claim = null;
+  let legacyClaim = null;
+  let rewardClaim = null;
   let receipt = null;
   if (context) {
-    claim = (series ? context.seriesClaims : context.taskClaims).get(claimKey) || null;
+    legacyClaim = (series ? context.seriesClaims : context.taskClaims).get(claimKey) || null;
+    rewardClaim = context.rewardClaims.get(gameTaskReceiptMapKey(kind,key,cycleKey)) || null;
     receipt = context.receipts.get(gameTaskReceiptMapKey(kind,key,cycleKey)) || null;
   } else {
-    [claim, receipt] = await Promise.all([
+    [legacyClaim, rewardClaim, receipt] = await Promise.all([
       env.DB.prepare(`SELECT * FROM ${claimTable} WHERE claim_key=? LIMIT 1`).bind(claimKey).first(),
+      env.DB.prepare(`SELECT * FROM game_task_reward_claims WHERE telegram_id=? AND kind=? AND task_key=? AND cycle_key=? LIMIT 1`).bind(telegramId,kind,key,cycleKey).first(),
       env.DB.prepare(`SELECT * FROM player_game_tasks WHERE telegram_id=? AND kind=? AND task_key=? AND cycle_key=? LIMIT 1`).bind(telegramId,kind,key,cycleKey).first()
     ]);
   }
-  let claimed = String(claim?.status || "") === "claimed";
+  let claimed = String(rewardClaim?.status || "") === "claimed" || String(legacyClaim?.status || "") === "claimed";
   if (!claimed && !series && String(row.task_mode || "one_time") === "one_time") {
     claimed = context
       ? context.completedExecutions.has(key)
@@ -17718,9 +17725,11 @@ async function gameTaskView(env, row, telegramId, now, series = false, context =
       : await gameTaskProgressCached(env,row,telegramId,now,context);
   const reward = receipt?.reward_json
     ? safeJson(receipt.reward_json, {})
-    : claim && !series
-      ? { ...safeJson(claim.reward_json, {}), profileXp: 0 }
-      : gameTaskReward(row, series);
+    : rewardClaim?.reward_json
+      ? safeJson(rewardClaim.reward_json, {})
+      : legacyClaim && !series
+        ? { ...safeJson(legacyClaim.reward_json, {}), profileXp: 0 }
+        : gameTaskReward(row, series);
   const complete = series ? Boolean(progress.done) : Boolean(progress.completed);
   const target = series ? Number(progress.total || 0) : Number(progress.target || 1);
   const value = series ? Number(progress.completed || 0) : Number(progress.value || 0);
@@ -17735,7 +17744,9 @@ async function gameTaskView(env, row, telegramId, now, series = false, context =
     triggerType:series ? "" : String(row.trigger_type || ""),
     seriesMode:series ? String(row.completion_mode || "ordered") : undefined,
     progress:value, target, progressFormat:gameTaskTriggerProgressFormat(row.trigger_type), complete, claimed,
-    pending:Boolean(claim && !claimed),
+    // Task Reward Engine V2 has no asynchronous player-facing delivery state.
+    // Historical pending claims stay immediately claimable and are reconciled inside /api/tasks/claim.
+    pending:false,
     reward, rewardItems:gameTaskRewardItems(reward), rewardLabel:gameTaskRewardLabel(reward),
     endsAt:Number(series ? row.ends_at : row.task_ends_at) || (row.task_mode === "daily" ? Number(progress.startsAt || 0) + V67_DAY : row.task_mode === "weekly" ? Number(progress.startsAt || 0) + 7*V67_DAY : 0),
     unread:complete && !claimed && !Number(receipt?.read_at || 0),
@@ -17758,6 +17769,10 @@ async function gameTaskView(env, row, telegramId, now, series = false, context =
       };
     }) : undefined
   };
+}
+
+function gameTaskRewardClaimId(kind, claimKey) {
+  return `gtr:v2:${kind === "series" ? "series" : "task"}:${String(claimKey || "")}`;
 }
 
 function gameTaskRewardOperationIds(telegramId, kind, claimKey, reward) {
@@ -17798,7 +17813,7 @@ async function reconcilePendingGameTaskClaims(env, telegramId) {
     if (!rawReward) continue;
     const reward = safeJson(rawReward, {});
     const required = gameTaskRewardOperationIds(playerId,String(row.kind || "task"),String(row.claim_key || ""),reward);
-    claims.push({ ...row, required });
+    claims.push({ ...row, reward, required });
     for (const operationId of required) operationIds.add(operationId);
   }
   if (!claims.length) return 0;
@@ -17825,6 +17840,14 @@ async function reconcilePendingGameTaskClaims(env, telegramId) {
   for (const claim of claims) {
     if (!claim.required.every((operationId) => delivered.has(operationId))) continue;
     const table = claim.kind === "series" ? "player_task_series_claims" : "player_task_claims";
+    const claimId = gameTaskRewardClaimId(String(claim.kind || "task"),String(claim.claim_key || ""));
+    statements.push(env.DB.prepare(`INSERT INTO game_task_reward_claims(claim_id,telegram_id,kind,task_key,cycle_key,reward_json,status,apply_token,created_at,updated_at,claimed_at)
+      VALUES(?,?,?,?,?,?,'claimed','',?,?,?)
+      ON CONFLICT(telegram_id,kind,task_key,cycle_key) DO UPDATE SET
+        reward_json=CASE WHEN game_task_reward_claims.reward_json='' OR game_task_reward_claims.reward_json='{}' THEN excluded.reward_json ELSE game_task_reward_claims.reward_json END,
+        status='claimed',apply_token='',updated_at=excluded.updated_at,
+        claimed_at=CASE WHEN game_task_reward_claims.claimed_at>0 THEN game_task_reward_claims.claimed_at ELSE excluded.claimed_at END`)
+      .bind(claimId,playerId,String(claim.kind),String(claim.task_key),String(claim.cycle_key),JSON.stringify(claim.reward||{}),now,now,now));
     statements.push(env.DB.prepare(`UPDATE ${table} SET status='claimed',claimed_at=CASE WHEN claimed_at>0 THEN claimed_at ELSE ? END,updated_at=? WHERE claim_key=? AND status='pending'`).bind(now,now,String(claim.claim_key)));
     statements.push(env.DB.prepare(`UPDATE player_game_tasks SET read_at=CASE WHEN read_at>0 THEN read_at ELSE ? END WHERE telegram_id=? AND kind=? AND task_key=? AND cycle_key=?`).bind(now,playerId,String(claim.kind),String(claim.task_key),String(claim.cycle_key)));
     finalized += 1;
@@ -17876,12 +17899,9 @@ async function trackGameTaskExposures(env, telegramId, rows, views, now = Math.f
 }
 
 async function buildGameTasksState(env, telegramId, options = {}) {
-  // Production migrations own this schema. Avoid runtime DDL on the latency-sensitive read path.
-  // Pending claims are presentation state over the authoritative reward queue.
-  // Reconcile only already-delivered operations here; unresolved rewards stay pending
-  // and can be retried through the claim endpoint without duplicating economic effects.
-  try { await reconcilePendingGameTaskClaims(env,telegramId); }
-  catch (error) { console.error("game task pending-claim reconciliation failed",error); }
+  // Production migrations own this schema. Avoid runtime DDL and reward-delivery
+  // reconciliation on the latency-sensitive Task Hub read path. Claim migration is
+  // handled atomically by Task Reward Engine V2 only when the player taps «Получить».
   const now = Math.floor(Date.now() / 1000);
   const [taskRows,seriesRows,profile] = await Promise.all([
     env.DB.prepare(`SELECT * FROM automation_chains WHERE enabled=1 AND show_as_task=1 AND action_type='reward' AND (task_starts_at=0 OR task_starts_at<=?) AND (task_ends_at=0 OR task_ends_at>?) ORDER BY task_sort,chain_key LIMIT 80`).bind(now,now).all(),
@@ -17903,19 +17923,19 @@ async function buildGameTasksState(env, telegramId, options = {}) {
 
   // A reward whose first response was lost remains visible after midnight,
   // publication end, or an administrator disabling the task.
-  const pending = (await env.DB.prepare(`SELECT r.*,c.status AS task_status,s.status AS series_status,a.title AS task_title,b.title AS series_title,
-      a.trigger_type AS task_trigger_type,a.task_params_json AS task_params_json,a.task_art_url AS task_art_url,b.art_url AS series_art_url
+  const pending = (await env.DB.prepare(`SELECT r.*,c.status AS task_status,s.status AS series_status,g.status AS reward_status,
+      a.title AS task_title,b.title AS series_title,a.trigger_type AS task_trigger_type,a.task_params_json AS task_params_json,
+      a.task_art_url AS task_art_url,b.art_url AS series_art_url
     FROM player_game_tasks r
+    LEFT JOIN game_task_reward_claims g ON g.telegram_id=r.telegram_id AND g.kind=r.kind AND g.task_key=r.task_key AND g.cycle_key=r.cycle_key
     LEFT JOIN player_task_claims c ON r.kind='task' AND c.telegram_id=r.telegram_id AND c.chain_key=r.task_key AND c.cycle_key=r.cycle_key
     LEFT JOIN player_task_series_claims s ON r.kind='series' AND s.telegram_id=r.telegram_id AND s.series_key=r.task_key AND s.cycle_key=r.cycle_key
     LEFT JOIN automation_chains a ON r.kind='task' AND a.chain_key=r.task_key
     LEFT JOIN task_series b ON r.kind='series' AND b.series_key=r.task_key
-    WHERE r.telegram_id=? AND r.reward_json<>'' AND COALESCE(c.status,s.status,'pending')<>'claimed' LIMIT 100`).bind(telegramId).all()).results || [];
+    WHERE r.telegram_id=? AND r.reward_json<>'' AND COALESCE(g.status,c.status,s.status,'ready')<>'claimed' LIMIT 100`).bind(telegramId).all()).results || [];
   for (const receipt of pending) {
     if (tasks.some((task) => task.kind === receipt.kind && task.key === receipt.task_key && task.cycleKey === receipt.cycle_key)) continue;
     const reward = safeJson(receipt.reward_json, {});
-    const claimStatus = String(receipt.kind === "series" ? receipt.series_status || "" : receipt.task_status || "");
-    const deliveryPending = claimStatus === "pending";
     const receiptArt=receipt.kind==="series"
       ? gameTaskArtMeta({art_url:receipt.series_art_url},true)
       : gameTaskArtMeta({trigger_type:receipt.task_trigger_type,task_params_json:receipt.task_params_json,task_art_url:receipt.task_art_url},false);
@@ -17923,11 +17943,9 @@ async function buildGameTasksState(env, telegramId, options = {}) {
       kind:String(receipt.kind), key:String(receipt.task_key), cycleKey:String(receipt.cycle_key),
       title:String(receipt.task_title||receipt.series_title||"Сохранённая награда"),
       artUrl:receiptArt.artUrl, artMode:receiptArt.artMode,
-      description:deliveryPending
-        ? "Выдача начата ранее. Награда сохранена и доступна для повторной проверки."
-        : "Задание выполнено. Награда сохранена и готова к получению.",
+      description:"Задание выполнено. Награда сохранена и готова к получению.",
       mode:receipt.kind==="series"?"series":"event", progress:1, target:1, complete:true, claimed:false,
-      pending:deliveryPending, reward, rewardItems:gameTaskRewardItems(reward), rewardLabel:gameTaskRewardLabel(reward), endsAt:0,
+      pending:false, reward, rewardItems:gameTaskRewardItems(reward), rewardLabel:gameTaskRewardLabel(reward), endsAt:0,
       unread:!Number(receipt.read_at || 0)
     });
   }
@@ -18188,15 +18206,134 @@ async function gameTaskCaseCompletionNotice(env, telegramId, input = {}) {
   return {readyCountDelta:completed.length,unreadCountDelta:completed.length,activeCountDelta:-completed.length,tasks:publicTasks,notice:publicTasks[0]||null};
 }
 
-async function gameTaskDeliver(env, telegramId, sourceType, sourceId, reward, title) {
-  if (!reward?.kind || reward.kind === "none") return true;
-  const operationId = rewardQueueOperationId(telegramId,sourceType,sourceId,reward);
-  await enqueueRewardDelivery(env,telegramId,sourceType,sourceId,reward,title);
-  const archived = await env.DB.prepare(`SELECT final_status FROM reward_delivery_archive WHERE operation_id=? LIMIT 1`).bind(operationId).first();
-  if (String(archived?.final_status || "") === "delivered") return true;
-  await processPlayerRewardDeliveryQueue(env,telegramId,10);
-  const queue = await env.DB.prepare(`SELECT status FROM reward_delivery_queue WHERE operation_id=? LIMIT 1`).bind(operationId).first();
-  return String(queue?.status || "") === "delivered";
+const GAME_TASK_DIRECT_REWARD_KINDS = Object.freeze(new Set(["points","zefir","coffee","profile_xp","case","booster"]));
+
+function gameTaskRewardRefreshHints(reward) {
+  const kind=String(reward?.kind||"");
+  return {
+    profileRefreshRequired:["points","zefir","coffee","profile_xp"].includes(kind) || Math.max(0,Number(reward?.profileXp||0))>0,
+    caseRefreshRequired:["case","booster"].includes(kind)
+  };
+}
+
+function gameTaskRewardApplyGateSql() {
+  return `EXISTS(SELECT 1 FROM game_task_reward_claims WHERE claim_id=? AND status='reserved' AND apply_token=?)
+    AND NOT EXISTS(SELECT 1 FROM reward_delivery_queue WHERE operation_id=? AND status IN ('delivered','claimed'))
+    AND NOT EXISTS(SELECT 1 FROM reward_delivery_archive WHERE operation_id=? AND final_status IN ('delivered','claimed'))`;
+}
+
+function gameTaskRewardApplyGateBinds(claimId, token, legacyOperationId) {
+  return [String(claimId),String(token),String(legacyOperationId),String(legacyOperationId)];
+}
+
+async function applyGameTaskRewardDirect(env, input) {
+  const telegramId=String(input?.telegramId||"").trim();
+  const kind=input?.kind==="series"?"series":"task";
+  const key=String(input?.key||"").trim();
+  const cycleKey=String(input?.cycleKey||"").trim();
+  const claimKey=String(input?.claimKey||"").trim();
+  const title=String(input?.title||"Задание").slice(0,180);
+  const reward=input?.reward&&typeof input.reward==="object"?{...input.reward}:{};
+  const claimId=gameTaskRewardClaimId(kind,claimKey);
+  const now=Math.floor(Date.now()/1000);
+  if(!telegramId||!key||!cycleKey||!claimKey)throw new ApiError(400,"Некорректная награда задания.");
+
+  const existing=await env.DB.prepare(`SELECT status,reward_json,claimed_at FROM game_task_reward_claims WHERE telegram_id=? AND kind=? AND task_key=? AND cycle_key=? LIMIT 1`).bind(telegramId,kind,key,cycleKey).first();
+  if(String(existing?.status||"")==="claimed")return {claimed:true,repeated:true,reward:safeJson(existing.reward_json,reward)};
+
+  const mainKind=String(reward.kind||"none").trim();
+  if(mainKind!=="none"&&!GAME_TASK_DIRECT_REWARD_KINDS.has(mainKind))throw new ApiError(409,"Этот тип награды пока нельзя получить через игровые задания.");
+  const mainAmount=mainKind==="none"?0:Math.max(1,Math.floor(Number(reward.amount||1)));
+  if(!Number.isFinite(mainAmount)||mainAmount>999999999)throw new ApiError(409,"Некорректный размер награды задания.");
+  const profileXp=Math.max(0,Math.min(500,Math.floor(Number(reward.profileXp||0))));
+  let caseType="",booster=null;
+  if(mainKind==="case"){
+    caseType=normalizeCaseType(reward.id);
+    if(!caseType)throw new ApiError(409,"Неизвестный кейс в награде задания.");
+    if(mainAmount>20)throw new ApiError(409,"Слишком много кейсов в одной награде задания.");
+  }
+  if(mainKind==="booster"){
+    booster=runBoosterDefinition(reward.id);
+    if(!booster)throw new ApiError(409,"Неизвестный усилитель в награде задания.");
+    if(mainAmount>999)throw new ApiError(409,"Слишком много усилителей в одной награде задания.");
+  }
+
+  await ensurePlayerAccountRevisionAvailable(env);
+  if(["points","zefir","coffee","profile_xp"].includes(mainKind)||profileXp>0){
+    await ensureAuthoritativeProfileRow(env,telegramId,`game-task-v2:${key}`);
+  }
+  if(mainKind==="booster")await ensureCasePlayerState(env,telegramId,{});
+
+  const legacyIds=gameTaskRewardOperationIds(telegramId,kind,claimKey,reward);
+  const mainOperationId=mainKind!=="none"?legacyIds[0]||rewardQueueOperationId(telegramId,kind==="series"?"task_series":"task",claimKey,reward):"";
+  const xpOperationId=profileXp>0?legacyIds[legacyIds.length-1]||rewardQueueOperationId(telegramId,"game_task_xp",`${kind}:${claimKey}`,{kind:"profile_xp",amount:profileXp}):"";
+  const token=caseGrantId("game_task_v2").slice(0,190);
+  const gate=gameTaskRewardApplyGateSql();
+  const statements=[
+    env.DB.prepare(`INSERT OR IGNORE INTO game_task_reward_claims(claim_id,telegram_id,kind,task_key,cycle_key,reward_json,status,apply_token,created_at,updated_at,claimed_at) VALUES(?,?,?,?,?,?,'reserved','',?,?,0)`)
+      .bind(claimId,telegramId,kind,key,cycleKey,JSON.stringify(reward||{}),now,now),
+    env.DB.prepare(`UPDATE game_task_reward_claims SET apply_token=?,updated_at=? WHERE claim_id=? AND status='reserved' AND apply_token=''`)
+      .bind(token,now,claimId)
+  ];
+
+  // Any historical task queue row for this exact reward component is superseded.
+  // If an old worker committed first, its delivered status makes the direct grant gate false.
+  // If V2 commits first, cancelling the row invalidates the old lease and prevents a duplicate.
+  for(const operationId of [...new Set([mainOperationId,xpOperationId].filter(Boolean))]){
+    statements.push(env.DB.prepare(`UPDATE reward_delivery_queue SET status='cancelled',last_error='superseded by game task reward engine v2',updated_at=?,lease_token='',lease_until=0 WHERE operation_id=? AND status NOT IN ('delivered','claimed','cancelled')`).bind(now,operationId));
+  }
+
+  if(mainKind==="points"||mainKind==="zefir"||mainKind==="coffee"||mainKind==="profile_xp"){
+    const field=({points:"pending_wallet",zefir:"pending_treats",coffee:"pending_coffee",profile_xp:"profile_xp"})[mainKind];
+    const increment=mainKind==="profile_xp"?`${field}=MIN(999999999,${field}+?)`:`${field}=${field}+?`;
+    statements.push(env.DB.prepare(`UPDATE admin_profile_state SET ${increment},revision=revision+1,updated_at=?,updated_by=? WHERE telegram_id=? AND ${gate}`)
+      .bind(mainAmount,now,`game-task-v2:${key}`,telegramId,...gameTaskRewardApplyGateBinds(claimId,token,mainOperationId)));
+  }else if(mainKind==="case"){
+    for(let index=0;index<mainAmount;index+=1){
+      const grantId=`game_task:${kind}:${key}:${telegramId}:${cycleKey}:${index+1}`;
+      statements.push(env.DB.prepare(`INSERT OR IGNORE INTO granted_cases(id,telegram_id,case_type,status,granted_by,reason,created_at) SELECT ?,?,?,'pending',?,?,? WHERE ${gate}`)
+        .bind(grantId,telegramId,caseType,"game-task-v2",`Задание · ${title}`.slice(0,300),now,...gameTaskRewardApplyGateBinds(claimId,token,mainOperationId)));
+    }
+  }else if(mainKind==="booster"){
+    const boosterId=String(booster.id);
+    if(CASE_REWARD_BOOSTER_TYPES.includes(boosterId)){
+      const column=boosterId==="points"?"boosters_points":boosterId==="treats"?"boosters_treats":"boosters_coffee";
+      statements.push(env.DB.prepare(`UPDATE case_player_state SET ${column}=MAX(0,${column})+?,revision=revision+1,updated_at=? WHERE telegram_id=? AND ${gate}`)
+        .bind(mainAmount,now,telegramId,...gameTaskRewardApplyGateBinds(claimId,token,mainOperationId)));
+    }else{
+      const jsonPath=`$.${boosterId}`;
+      statements.push(env.DB.prepare(`UPDATE case_player_state SET boosters_extra_json=json_set(CASE WHEN json_valid(boosters_extra_json) THEN boosters_extra_json ELSE '{}' END,'${jsonPath}',MAX(0,CAST(COALESCE(json_extract(CASE WHEN json_valid(boosters_extra_json) THEN boosters_extra_json ELSE '{}' END,'${jsonPath}'),0) AS INTEGER))+?),revision=revision+1,updated_at=? WHERE telegram_id=? AND ${gate}`)
+        .bind(mainAmount,now,telegramId,...gameTaskRewardApplyGateBinds(claimId,token,mainOperationId)));
+    }
+  }
+
+  if(profileXp>0){
+    statements.push(env.DB.prepare(`UPDATE admin_profile_state SET profile_xp=MIN(999999999,profile_xp+?),revision=revision+1,updated_at=?,updated_by=? WHERE telegram_id=? AND ${gate}`)
+      .bind(profileXp,now,`game-task-v2:${key}:xp`,telegramId,...gameTaskRewardApplyGateBinds(claimId,token,xpOperationId)));
+  }
+
+  // pending_wallet/pending_treats/pending_coffee do not have an economy-column trigger,
+  // so advance the global account revision once for every newly committed Task V2 claim.
+  statements.push(env.DB.prepare(`INSERT INTO player_account_revision(telegram_id,revision,updated_at)
+    SELECT ?,1,? WHERE EXISTS(SELECT 1 FROM game_task_reward_claims WHERE claim_id=? AND status='reserved' AND apply_token=?)
+    ON CONFLICT(telegram_id) DO UPDATE SET revision=player_account_revision.revision+1,updated_at=excluded.updated_at`)
+    .bind(telegramId,now,claimId,token));
+
+  // Old tables are compatibility history only: never create a new legacy claim here.
+  // If this is a pre-V2 pending claim, close it so admin/diagnostic screens converge too.
+  const legacyTable=kind==="series"?"player_task_series_claims":"player_task_claims";
+  statements.push(env.DB.prepare(`UPDATE ${legacyTable} SET status='claimed',claimed_at=CASE WHEN claimed_at>0 THEN claimed_at ELSE ? END,updated_at=? WHERE claim_key=? AND status<>'claimed'`).bind(now,now,claimKey));
+  statements.push(env.DB.prepare(`UPDATE player_game_tasks SET read_at=CASE WHEN read_at>0 THEN read_at ELSE ? END WHERE telegram_id=? AND kind=? AND task_key=? AND cycle_key=?`).bind(now,telegramId,kind,key,cycleKey));
+  statements.push(env.DB.prepare(`UPDATE game_task_reward_claims SET status='claimed',apply_token='',claimed_at=CASE WHEN claimed_at>0 THEN claimed_at ELSE ? END,updated_at=? WHERE claim_id=? AND status='reserved' AND apply_token=?`).bind(now,now,claimId,token));
+
+  const results=await env.DB.batch(statements);
+  const finalized=Number(results?.[results.length-1]?.meta?.changes||0);
+  if(finalized!==1){
+    const fresh=await env.DB.prepare(`SELECT status,reward_json FROM game_task_reward_claims WHERE telegram_id=? AND kind=? AND task_key=? AND cycle_key=? LIMIT 1`).bind(telegramId,kind,key,cycleKey).first();
+    if(String(fresh?.status||"")==="claimed")return {claimed:true,repeated:true,reward:safeJson(fresh.reward_json,reward)};
+    throw new ApiError(503,"Не удалось атомарно выдать награду. Попробуй ещё раз.");
+  }
+  return {claimed:true,reward};
 }
 
 async function claimGameTask(env, telegramId, body) {
@@ -18207,16 +18344,22 @@ async function claimGameTask(env, telegramId, body) {
   if (!/^[A-Za-z0-9_-]{1,120}$/.test(key) || !["task","series"].includes(String(body.kind || ""))) throw new ApiError(400,"Некорректное задание.");
   if (!cycleKey || cycleKey.length > 160) throw new ApiError(400,"Обновите список заданий.");
   const now = Math.floor(Date.now() / 1000);
-  const claimTable = series ? "player_task_series_claims" : "player_task_claims";
+  const legacyTable = series ? "player_task_series_claims" : "player_task_claims";
   const claimKey = `${key}:${telegramId}:${cycleKey}`;
-  const [row,previous,stored] = await Promise.all([
+  const [row,legacyClaim,stored,rewardClaim] = await Promise.all([
     env.DB.prepare(series ? `SELECT * FROM task_series WHERE series_key=? LIMIT 1` : `SELECT * FROM automation_chains WHERE chain_key=? LIMIT 1`).bind(key).first(),
-    env.DB.prepare(`SELECT * FROM ${claimTable} WHERE claim_key=? LIMIT 1`).bind(claimKey).first(),
-    env.DB.prepare(`SELECT reward_json FROM player_game_tasks WHERE telegram_id=? AND kind=? AND task_key=? AND cycle_key=? LIMIT 1`).bind(telegramId,kind,key,cycleKey).first()
+    env.DB.prepare(`SELECT * FROM ${legacyTable} WHERE claim_key=? LIMIT 1`).bind(claimKey).first(),
+    env.DB.prepare(`SELECT reward_json FROM player_game_tasks WHERE telegram_id=? AND kind=? AND task_key=? AND cycle_key=? LIMIT 1`).bind(telegramId,kind,key,cycleKey).first(),
+    env.DB.prepare(`SELECT status,reward_json FROM game_task_reward_claims WHERE telegram_id=? AND kind=? AND task_key=? AND cycle_key=? LIMIT 1`).bind(telegramId,kind,key,cycleKey).first()
   ]);
-  if (String(previous?.status || "") === "claimed") return {claimed:true,repeated:true};
-  if (!row && !stored?.reward_json && (!previous || series)) throw new ApiError(404,"Задание недоступно.");
-  if (!previous && !stored?.reward_json) {
+  if (String(rewardClaim?.status || "") === "claimed") return {claimed:true,repeated:true,rewardLabel:gameTaskRewardLabel(safeJson(rewardClaim.reward_json,{}))};
+  if (String(legacyClaim?.status || "") === "claimed") {
+    const legacyReward=stored?.reward_json?safeJson(stored.reward_json,{}):series?(row?gameTaskReward(row,true):{}):{...safeJson(legacyClaim.reward_json,{}),profileXp:0};
+    const migrated=await applyGameTaskRewardDirect(env,{telegramId,kind,key,cycleKey,claimKey,title:String(row?.title||"Задание"),reward:legacyReward});
+    return {claimed:true,repeated:true,rewardLabel:gameTaskRewardLabel(migrated.reward||legacyReward),...gameTaskRewardRefreshHints(migrated.reward||legacyReward)};
+  }
+  if (!row && !stored?.reward_json && (!legacyClaim || series)) throw new ApiError(404,"Задание недоступно.");
+  if (!legacyClaim && !stored?.reward_json) {
     if (!gameTaskWindowOpen(row,now,series) || (!series && (!Number(row.show_as_task)||row.action_type!=="reward"||!v71TaskTriggerSupported(row.trigger_type)))) throw new ApiError(409,"Задание уже недоступно.");
     const view = await gameTaskView(env,row,telegramId,now,series);
     if (view.cycleKey !== cycleKey) throw new ApiError(409,"Начался новый день. Обновите задания.");
@@ -18225,28 +18368,39 @@ async function claimGameTask(env, telegramId, body) {
   }
 
   let reward = stored?.reward_json ? safeJson(stored.reward_json,{}) : row ? gameTaskReward(row,series) : {};
-  if (previous && !stored?.reward_json) {
-    reward = series ? gameTaskReward(row,true) : { ...safeJson(previous.reward_json,{}), profileXp:0 };
+  if (legacyClaim && !stored?.reward_json) {
+    reward = series ? gameTaskReward(row,true) : { ...safeJson(legacyClaim.reward_json,{}), profileXp:0 };
   }
   await env.DB.prepare(`INSERT INTO player_game_tasks(telegram_id,kind,task_key,cycle_key,completed_at,reward_json) VALUES(?,?,?,?,?,?)
-    ON CONFLICT(telegram_id,kind,task_key,cycle_key) DO UPDATE SET reward_json=CASE WHEN player_game_tasks.reward_json='' THEN excluded.reward_json ELSE player_game_tasks.reward_json END`).bind(telegramId,kind,key,cycleKey,now,JSON.stringify(reward)).run();
+    ON CONFLICT(telegram_id,kind,task_key,cycle_key) DO UPDATE SET
+      completed_at=CASE WHEN player_game_tasks.completed_at>0 THEN player_game_tasks.completed_at ELSE excluded.completed_at END,
+      reward_json=CASE WHEN player_game_tasks.reward_json='' THEN excluded.reward_json ELSE player_game_tasks.reward_json END`).bind(telegramId,kind,key,cycleKey,now,JSON.stringify(reward)).run();
   reward = safeJson((await env.DB.prepare(`SELECT reward_json FROM player_game_tasks WHERE telegram_id=? AND kind=? AND task_key=? AND cycle_key=? LIMIT 1`).bind(telegramId,kind,key,cycleKey).first())?.reward_json,{});
-  if (series) {
-    await env.DB.prepare(`INSERT OR IGNORE INTO player_task_series_claims(claim_key,series_key,telegram_id,cycle_key,status,queue_id,created_at,updated_at,claimed_at) VALUES(?,?,?,?,'pending',0,?,?,0)`).bind(claimKey,key,telegramId,cycleKey,now,now).run();
-  } else {
-    await env.DB.prepare(`INSERT OR IGNORE INTO player_task_claims(claim_key,chain_key,telegram_id,cycle_key,status,queue_id,reward_json,created_at,updated_at,claimed_at) VALUES(?,?,?,?,'pending',0,?,?,?,0)`).bind(claimKey,key,telegramId,cycleKey,JSON.stringify(reward),now,now).run();
+
+  const result=await applyGameTaskRewardDirect(env,{telegramId,kind,key,cycleKey,claimKey,title:String(row?.title||"Задание"),reward});
+  const effectiveReward=result.reward||reward;
+  return {claimed:true,repeated:Boolean(result.repeated),rewardLabel:gameTaskRewardLabel(effectiveReward),rewardItems:gameTaskRewardItems(effectiveReward),...gameTaskRewardRefreshHints(effectiveReward)};
+}
+
+async function claimGameTasksBulk(env, telegramId, body) {
+  const source=Array.isArray(body?.claims)?body.claims:[];
+  if(!source.length)throw new ApiError(400,"Не выбраны задания для получения.");
+  if(source.length>20)throw new ApiError(400,"За один запрос можно получить не более 20 заданий.");
+  const results=[];
+  const seen=new Set();
+  for(const raw of source){
+    const item={kind:String(raw?.kind||""),key:String(raw?.key||""),cycleKey:String(raw?.cycleKey||"")};
+    const id=`${item.kind}:${item.key}:${item.cycleKey}`;
+    if(seen.has(id))continue;
+    seen.add(id);
+    try{
+      results.push({...item,...await claimGameTask(env,telegramId,item)});
+    }catch(error){
+      if(error instanceof ApiError){results.push({...item,claimed:false,error:error.message,status:error.status});continue;}
+      throw error;
+    }
   }
-  const title = String(row?.title || "Задание");
-  const mainDelivered = await gameTaskDeliver(env,telegramId,series?"task_series":"task",claimKey,reward,title);
-  const xpDelivered = reward.profileXp > 0
-    ? await gameTaskDeliver(env,telegramId,"game_task_xp",`${kind}:${claimKey}`,{kind:"profile_xp",amount:reward.profileXp},title)
-    : true;
-  if (!mainDelivered || !xpDelivered) return {claimed:false,pending:true,message:"Награда сохранена и доставляется. Нажми «Проверить выдачу» чуть позже."};
-  await env.DB.batch([
-    env.DB.prepare(`UPDATE ${claimTable} SET status='claimed',claimed_at=?,updated_at=? WHERE claim_key=?`).bind(now,now,claimKey),
-    env.DB.prepare(`UPDATE player_game_tasks SET read_at=? WHERE telegram_id=? AND kind=? AND task_key=? AND cycle_key=?`).bind(now,telegramId,kind,key,cycleKey)
-  ]);
-  return {claimed:true,rewardLabel:gameTaskRewardLabel(reward)};
+  return {bulk:true,claims:results,claimedCount:results.filter((item)=>item.claimed).length,failedCount:results.filter((item)=>!item.claimed).length};
 }
 
 async function gameTasksApi(request, env, action) {
@@ -18273,7 +18427,9 @@ async function gameTasksApi(request, env, action) {
       return jsonResponse({ok:true});
     }
     if (action === "claim") {
-      const claim = await claimGameTask(env,telegramId,body);
+      const claim = Array.isArray(body.claims)
+        ? await claimGameTasksBulk(env,telegramId,body)
+        : await claimGameTask(env,telegramId,body);
       return jsonResponse({ok:true,...claim});
     }
     return jsonResponse({ok:true,...await gameTasksState(env,telegramId)});
@@ -25422,6 +25578,7 @@ async function blockPlayerAndWipeProgress(env, options) {
     env.DB.prepare(`DELETE FROM achievement_unlocks WHERE telegram_id=?`).bind(telegramId),
     env.DB.prepare(`DELETE FROM achievement_season_history WHERE telegram_id=?`).bind(telegramId),
     env.DB.prepare(`DELETE FROM player_task_claims WHERE telegram_id=?`).bind(telegramId),
+    env.DB.prepare(`DELETE FROM game_task_reward_claims WHERE telegram_id=?`).bind(telegramId),
     env.DB.prepare(`DELETE FROM player_game_tasks WHERE telegram_id=?`).bind(telegramId),
     env.DB.prepare(`DELETE FROM player_task_series_claims WHERE telegram_id=?`).bind(telegramId),
     env.DB.prepare(`DELETE FROM tester_accounts WHERE telegram_id=?`).bind(telegramId),
@@ -40513,9 +40670,9 @@ async function processV77NotificationQueue(env,limit=24){
 
 async function showV77NotificationPolicy(chatId,user,env){const access=await requireV77OperationsAccess(chatId,user,env);if(!access)return;const p=await env.DB.prepare(`SELECT * FROM player_notification_policy WHERE id=1`).first();const stats=await env.DB.prepare(`SELECT SUM(CASE WHEN status='pending' THEN 1 ELSE 0 END) AS pending,SUM(CASE WHEN status='failed' THEN 1 ELSE 0 END) AS failed FROM player_notification_queue`).first();await sendTelegramMessage(env,chatId,`<b>🔕 Защита уведомлений игроков</b>\n\nСтатус: <b>${Number(p.paused)?"все необязательные приостановлены":"работает"}</b>\nМаксимум: <b>${Number(p.max_per_day)} в сутки</b>\nМинимальный интервал: <b>${Math.round(Number(p.min_gap_seconds)/60)} мин.</b>\nТихие часы: <b>${String(p.quiet_start_hour).padStart(2,"0")}:00–${String(p.quiet_end_hour).padStart(2,"0")}:00 МСК</b>\nОчередь: <b>${Number(stats?.pending||0)}</b> · ошибок ${Number(stats?.failed||0)}`,{inline_keyboard:[[{text:Number(p.paused)?"▶️ Возобновить":"⏸ Приостановить",callback_data:"v77_notify_pause"}],[{text:"1/сутки",callback_data:"v77_notify_max:1"},{text:"3/сутки",callback_data:"v77_notify_max:3"},{text:"5/сутки",callback_data:"v77_notify_max:5"}],[{text:"15 мин",callback_data:"v77_notify_gap:900"},{text:"1 час",callback_data:"v77_notify_gap:3600"},{text:"3 часа",callback_data:"v77_notify_gap:10800"}],[{text:"🚚 Обработать очередь",callback_data:"v77_notify_process"}],[{text:"⬅️ Центр",callback_data:"v77_home"}]]});}
 
-async function showV77TaskAnalytics(chatId,user,env){const access=await requireV77OperationsAccess(chatId,user,env);if(!access)return;const since=Math.floor(Date.now()/1000)-30*V67_DAY;const rows=(await env.DB.prepare(`SELECT c.chain_key,c.title,c.enabled,COUNT(DISTINCT e.telegram_id) AS seen,SUM(CASE WHEN e.completed_at>0 THEN 1 ELSE 0 END) AS completed,(SELECT COUNT(*) FROM player_task_claims cl WHERE cl.chain_key=c.chain_key AND cl.status='claimed' AND cl.created_at>=?) AS claimed FROM automation_chains c LEFT JOIN task_exposure_log e ON e.chain_key=c.chain_key AND e.last_seen_at>=? WHERE c.show_as_task=1 GROUP BY c.chain_key ORDER BY seen DESC,c.updated_at DESC LIMIT 20`).bind(since,since).all()).results||[];const lines=rows.map(r=>{const seen=Number(r.seen||0),done=Number(r.completed||0),claimed=Number(r.claimed||0);return `${Number(r.enabled)?"🟢":"⚫"} <b>${escapeHtml(r.title)}</b>\n  Увидели: <b>${seen}</b> · выполнили ${done}${seen?` (${(done/seen*100).toFixed(1)}%)`:""} · забрали ${claimed}`});const buttons=rows.slice(0,12).map(r=>[{text:`📊 ${String(r.title).slice(0,34)}`,callback_data:`v77_task_stat:${r.chain_key}`}]);buttons.push([{text:"⬅️ Центр",callback_data:"v77_home"}]);await sendTelegramMessage(env,chatId,`<b>📊 Аналитика заданий · 30 дней</b>\n\n${lines.join("\n\n")||"Данных пока нет. Они появятся после открытия игроками раздела «Задания»."}`,{inline_keyboard:buttons});}
+async function showV77TaskAnalytics(chatId,user,env){const access=await requireV77OperationsAccess(chatId,user,env);if(!access)return;const since=Math.floor(Date.now()/1000)-30*V67_DAY;const rows=(await env.DB.prepare(`SELECT c.chain_key,c.title,c.enabled,COUNT(DISTINCT e.telegram_id) AS seen,SUM(CASE WHEN e.completed_at>0 THEN 1 ELSE 0 END) AS completed,(SELECT COUNT(*) FROM game_task_reward_claims cl WHERE cl.kind='task' AND cl.task_key=c.chain_key AND cl.status='claimed' AND cl.created_at>=?) AS claimed FROM automation_chains c LEFT JOIN task_exposure_log e ON e.chain_key=c.chain_key AND e.last_seen_at>=? WHERE c.show_as_task=1 GROUP BY c.chain_key ORDER BY seen DESC,c.updated_at DESC LIMIT 20`).bind(since,since).all()).results||[];const lines=rows.map(r=>{const seen=Number(r.seen||0),done=Number(r.completed||0),claimed=Number(r.claimed||0);return `${Number(r.enabled)?"🟢":"⚫"} <b>${escapeHtml(r.title)}</b>\n  Увидели: <b>${seen}</b> · выполнили ${done}${seen?` (${(done/seen*100).toFixed(1)}%)`:""} · забрали ${claimed}`});const buttons=rows.slice(0,12).map(r=>[{text:`📊 ${String(r.title).slice(0,34)}`,callback_data:`v77_task_stat:${r.chain_key}`}]);buttons.push([{text:"⬅️ Центр",callback_data:"v77_home"}]);await sendTelegramMessage(env,chatId,`<b>📊 Аналитика заданий · 30 дней</b>\n\n${lines.join("\n\n")||"Данных пока нет. Они появятся после открытия игроками раздела «Задания»."}`,{inline_keyboard:buttons});}
 
-async function showV77TaskAnalyticsDetails(chatId,user,key,env){const access=await requireV77OperationsAccess(chatId,user,env);if(!access)return;const row=await env.DB.prepare(`SELECT * FROM automation_chains WHERE chain_key=?`).bind(String(key)).first();if(!row)return;const since=Math.floor(Date.now()/1000)-30*V67_DAY;const [exp,claims]=await Promise.all([env.DB.prepare(`SELECT COUNT(DISTINCT telegram_id) AS seen,SUM(CASE WHEN completed_at>0 THEN 1 ELSE 0 END) AS completed,AVG(CASE WHEN completed_at>0 THEN completed_at-first_seen_at END) AS avg_seconds FROM task_exposure_log WHERE chain_key=? AND last_seen_at>=?`).bind(row.chain_key,since).first(),env.DB.prepare(`SELECT COUNT(*) AS claimed FROM player_task_claims WHERE chain_key=? AND status='claimed' AND created_at>=?`).bind(row.chain_key,since).first()]);await sendTelegramMessage(env,chatId,`<b>📊 ${escapeHtml(row.title)}</b>\n\nУвидели: <b>${Number(exp?.seen||0)}</b>\nВыполнили: <b>${Number(exp?.completed||0)}</b>\nЗабрали награду: <b>${Number(claims?.claimed||0)}</b>\nСреднее время: <b>${exp?.avg_seconds?`${Math.round(Number(exp.avg_seconds)/3600)} ч.`:"нет данных"}</b>\n\nУсловие: ${escapeHtml(v67AutomationTriggerLabel(row.trigger_type,row.trigger_value))}`,{inline_keyboard:[[{text:"⬅️ Аналитика",callback_data:"v77_task_analytics"}]]});}
+async function showV77TaskAnalyticsDetails(chatId,user,key,env){const access=await requireV77OperationsAccess(chatId,user,env);if(!access)return;const row=await env.DB.prepare(`SELECT * FROM automation_chains WHERE chain_key=?`).bind(String(key)).first();if(!row)return;const since=Math.floor(Date.now()/1000)-30*V67_DAY;const [exp,claims]=await Promise.all([env.DB.prepare(`SELECT COUNT(DISTINCT telegram_id) AS seen,SUM(CASE WHEN completed_at>0 THEN 1 ELSE 0 END) AS completed,AVG(CASE WHEN completed_at>0 THEN completed_at-first_seen_at END) AS avg_seconds FROM task_exposure_log WHERE chain_key=? AND last_seen_at>=?`).bind(row.chain_key,since).first(),env.DB.prepare(`SELECT COUNT(*) AS claimed FROM game_task_reward_claims WHERE kind='task' AND task_key=? AND status='claimed' AND created_at>=?`).bind(row.chain_key,since).first()]);await sendTelegramMessage(env,chatId,`<b>📊 ${escapeHtml(row.title)}</b>\n\nУвидели: <b>${Number(exp?.seen||0)}</b>\nВыполнили: <b>${Number(exp?.completed||0)}</b>\nЗабрали награду: <b>${Number(claims?.claimed||0)}</b>\nСреднее время: <b>${exp?.avg_seconds?`${Math.round(Number(exp.avg_seconds)/3600)} ч.`:"нет данных"}</b>\n\nУсловие: ${escapeHtml(v67AutomationTriggerLabel(row.trigger_type,row.trigger_value))}`,{inline_keyboard:[[{text:"⬅️ Аналитика",callback_data:"v77_task_analytics"}]]});}
 
 async function showV77Economy(chatId,user,env){const access=await requireV77OperationsAccess(chatId,user,env);if(!access)return;const since=Math.floor(Date.now()/1000)-7*V67_DAY;const [balances,rewards,purchases,cases,queue]=await Promise.all([env.DB.prepare(`SELECT COUNT(*) AS players,SUM(wallet) AS points,SUM(treats) AS treats,SUM(coffee) AS coffee,SUM(pending_wallet) AS ppoints,SUM(pending_treats) AS ptreats,SUM(pending_coffee) AS pcoffee FROM admin_profile_state`).first(),env.DB.prepare(`SELECT reward_kind,SUM(amount) AS amount,COUNT(*) AS operations FROM reward_delivery_queue WHERE status='delivered' AND updated_at>=? GROUP BY reward_kind`).bind(since).all(),env.DB.prepare(`SELECT category,COUNT(*) AS operations FROM shop_stock_consumptions WHERE created_at>=? GROUP BY category`).bind(since).all(),env.DB.prepare(`SELECT case_type,COUNT(*) AS amount FROM granted_cases WHERE status IN ('available','pending') GROUP BY case_type`).all(),env.DB.prepare(`SELECT SUM(CASE WHEN status='pending' OR (status='failed' AND attempts<5) THEN 1 ELSE 0 END) AS pending,SUM(CASE WHEN status='failed' AND attempts>=5 THEN 1 ELSE 0 END) AS failed FROM reward_delivery_queue`).first()]);const rewardLines=(rewards.results||[]).map(r=>`• ${escapeHtml(r.reward_kind)}: <b>${Number(r.amount||0).toLocaleString("ru-RU")}</b> · ${Number(r.operations||0)} операций`);const purchaseLines=(purchases.results||[]).map(r=>`• ${escapeHtml(r.category)}: <b>${Number(r.operations||0)}</b> покупок`);const caseLines=(cases.results||[]).map(r=>`• ${escapeHtml(r.case_type)}: <b>${Number(r.amount||0)}</b>`);const warning=Number(queue?.failed||0)>0?"\n\n🔴 Есть ошибки доставки наград.":Number(balances?.ppoints||0)+Number(balances?.ptreats||0)+Number(balances?.pcoffee||0)>0?"\n\n🟡 Есть ожидающие начисления в профилях.":"";await sendTelegramMessage(env,chatId,`<b>💰 Экономика+</b>\n\nИгроков: <b>${Number(balances?.players||0)}</b>\nБаланс очков: <b>${Number(balances?.points||0).toLocaleString("ru-RU")}</b>\nЗефир: <b>${Number(balances?.treats||0).toLocaleString("ru-RU")}</b>\nКофе: <b>${Number(balances?.coffee||0).toLocaleString("ru-RU")}</b>\nОжидает начисления: ${Number(balances?.ppoints||0)} очков, ${Number(balances?.ptreats||0)} зефира, ${Number(balances?.pcoffee||0)} кофе\n\n<b>Выдано за 7 дней</b>\n${rewardLines.join("\n")||"Нет выдач."}\n\n<b>Покупки за 7 дней</b>\n${purchaseLines.join("\n")||"Нет покупок."}\n\n<b>Неоткрытые выданные кейсы</b>\n${caseLines.join("\n")||"Нет."}\n\nОчередь наград: ${Number(queue?.pending||0)} · ошибок ${Number(queue?.failed||0)}${warning}\n\n<i>Историческая сумма расходов по валютам пока недоступна: старые операции магазина не сохраняли цену на момент покупки.</i>`,{inline_keyboard:[[{text:"🔄 Обновить",callback_data:"v77_economy"}],[{text:"⬅️ Центр",callback_data:"v77_home"}]]});}
 
@@ -40634,16 +40791,18 @@ async function processGameTaskImportantNotifications(env,limit=24){
   // Telegram is intentionally important-only: event completions and final series rewards.
   const completedRows=(await env.DB.prepare(`SELECT r.telegram_id,r.kind,r.task_key,r.cycle_key,r.reward_json,r.completed_at,
       COALESCE(a.title,s.title,'Задание') AS title,COALESCE(a.task_mode,'') AS task_mode,b.chat_id,
-      tc.claim_key AS task_claim_key,sc.claim_key AS series_claim_key
+      tc.claim_key AS task_claim_key,sc.claim_key AS series_claim_key,g.status AS reward_claim_status
     FROM player_game_tasks r
     JOIN bot_subscribers b ON b.telegram_id=r.telegram_id AND b.active=1 AND TRIM(COALESCE(b.chat_id,''))<>''
     LEFT JOIN automation_chains a ON r.kind='task' AND a.chain_key=r.task_key
     LEFT JOIN task_series s ON r.kind='series' AND s.series_key=r.task_key
     LEFT JOIN player_task_claims tc ON r.kind='task' AND tc.telegram_id=r.telegram_id AND tc.chain_key=r.task_key AND tc.cycle_key=r.cycle_key
     LEFT JOIN player_task_series_claims sc ON r.kind='series' AND sc.telegram_id=r.telegram_id AND sc.series_key=r.task_key AND sc.cycle_key=r.cycle_key
+    LEFT JOIN game_task_reward_claims g ON g.telegram_id=r.telegram_id AND g.kind=r.kind AND g.task_key=r.task_key AND g.cycle_key=r.cycle_key
     LEFT JOIN game_task_notification_state n ON n.telegram_id=r.telegram_id AND n.kind=r.kind AND n.task_key=r.task_key AND n.cycle_key=r.cycle_key
     WHERE r.completed_at>0
       AND (r.kind='series' OR (r.kind='task' AND a.task_mode='event'))
+      AND COALESCE(g.status,'')<>'claimed'
       AND ((r.kind='task' AND tc.claim_key IS NULL) OR (r.kind='series' AND sc.claim_key IS NULL))
       AND COALESCE(n.completion_bot_at,0)<=0
     ORDER BY r.completed_at ASC LIMIT ?`).bind(max).all()).results||[];
@@ -42914,7 +43073,7 @@ async function ownerPanelV8Automations(env, ctx) {
     (SELECT MAX(e.created_at) FROM automation_chain_executions e WHERE e.chain_key=c.chain_key) AS last_execution_at,
     (SELECT COUNT(DISTINCT x.telegram_id) FROM task_exposure_log x WHERE x.chain_key=c.chain_key AND x.last_seen_at>=?) AS task_seen_30d,
     (SELECT COUNT(DISTINCT x.telegram_id) FROM task_exposure_log x WHERE x.chain_key=c.chain_key AND x.last_seen_at>=? AND x.completed_at>0) AS task_completed_30d,
-    (SELECT COUNT(*) FROM player_task_claims cl WHERE cl.chain_key=c.chain_key AND cl.status='claimed' AND cl.created_at>=?) AS task_claimed_30d,
+    (SELECT COUNT(*) FROM game_task_reward_claims cl WHERE cl.kind='task' AND cl.task_key=c.chain_key AND cl.status='claimed' AND cl.created_at>=?) AS task_claimed_30d,
     (SELECT COUNT(*) FROM automation_mail_deliveries d WHERE d.chain_key=c.chain_key AND d.created_at>=?) AS mail_sent_7d,
     (SELECT COUNT(*) FROM automation_mail_deliveries d JOIN player_mail_v3 m ON m.mail_id=d.gift_id AND m.telegram_id=d.telegram_id WHERE d.chain_key=c.chain_key AND d.created_at>=? AND m.read_at>0) AS mail_read_7d,
     (SELECT COUNT(*) FROM automation_mail_deliveries d JOIN player_mail_v3 m ON m.mail_id=d.gift_id AND m.telegram_id=d.telegram_id WHERE d.chain_key=c.chain_key AND d.created_at>=? AND m.reward_state='claimed') AS mail_claimed_7d
@@ -42926,10 +43085,17 @@ async function ownerPanelV8Automations(env, ctx) {
       COALESCE(NULLIF(b.display_name,''),NULLIF(b.username,''),e.telegram_id) AS player_name
       FROM automation_chain_executions e LEFT JOIN automation_chains c ON c.chain_key=e.chain_key LEFT JOIN bot_subscribers b ON b.telegram_id=e.telegram_id
       ORDER BY e.created_at DESC,e.id DESC LIMIT 50`).all(),
-    env.DB.prepare(`SELECT cl.claim_key,cl.chain_key,cl.telegram_id,cl.cycle_key,cl.status,cl.created_at,cl.claimed_at,c.title,
-      COALESCE(NULLIF(b.display_name,''),NULLIF(b.username,''),cl.telegram_id) AS player_name
+    env.DB.prepare(`SELECT * FROM (
+      SELECT g.claim_id AS claim_key,g.task_key AS chain_key,g.telegram_id,g.cycle_key,g.status,g.created_at,g.claimed_at,c.title,
+        COALESCE(NULLIF(b.display_name,''),NULLIF(b.username,''),g.telegram_id) AS player_name
+      FROM game_task_reward_claims g LEFT JOIN automation_chains c ON c.chain_key=g.task_key LEFT JOIN bot_subscribers b ON b.telegram_id=g.telegram_id
+      WHERE g.kind='task'
+      UNION ALL
+      SELECT cl.claim_key,cl.chain_key,cl.telegram_id,cl.cycle_key,cl.status,cl.created_at,cl.claimed_at,c.title,
+        COALESCE(NULLIF(b.display_name,''),NULLIF(b.username,''),cl.telegram_id) AS player_name
       FROM player_task_claims cl LEFT JOIN automation_chains c ON c.chain_key=cl.chain_key LEFT JOIN bot_subscribers b ON b.telegram_id=cl.telegram_id
-      ORDER BY cl.created_at DESC LIMIT 40`).all(),
+      WHERE cl.status<>'claimed' AND NOT EXISTS(SELECT 1 FROM game_task_reward_claims g WHERE g.telegram_id=cl.telegram_id AND g.kind='task' AND g.task_key=cl.chain_key AND g.cycle_key=cl.cycle_key)
+    ) ORDER BY created_at DESC LIMIT 40`).all(),
     env.DB.prepare(`SELECT job_key,enabled,interval_seconds,last_success_at,next_run_at,last_status,last_duration_ms,last_error FROM server_cron_jobs WHERE job_key='automations-five-minutes' LIMIT 1`).first().catch(()=>null),
     env.DB.prepare(`SELECT s.*,(SELECT COUNT(*) FROM task_series_steps x WHERE x.series_key=s.series_key) AS step_count FROM task_series s ORDER BY s.enabled DESC,s.sort_order,s.updated_at DESC,s.series_key`).all()
   ]);
