@@ -217,8 +217,34 @@ CREATE TABLE task_series_steps (
 );
 CREATE INDEX IF NOT EXISTS idx_task_series_steps_chain ON task_series_steps(chain_key, series_key);
 
-CREATE TABLE player_task_claims(telegram_id TEXT);
-CREATE TABLE player_task_series_claims(telegram_id TEXT);
+CREATE TABLE player_task_claims (
+  claim_key TEXT PRIMARY KEY,
+  chain_key TEXT NOT NULL,
+  telegram_id TEXT NOT NULL,
+  cycle_key TEXT NOT NULL,
+  status TEXT NOT NULL DEFAULT 'pending',
+  queue_id INTEGER NOT NULL DEFAULT 0,
+  reward_json TEXT NOT NULL DEFAULT '{}',
+  created_at INTEGER NOT NULL,
+  updated_at INTEGER NOT NULL,
+  claimed_at INTEGER NOT NULL DEFAULT 0,
+  UNIQUE(chain_key, telegram_id, cycle_key)
+);
+CREATE INDEX idx_player_task_claims_player ON player_task_claims(telegram_id, created_at DESC);
+
+CREATE TABLE player_task_series_claims (
+  claim_key TEXT PRIMARY KEY,
+  series_key TEXT NOT NULL,
+  telegram_id TEXT NOT NULL,
+  cycle_key TEXT NOT NULL,
+  status TEXT NOT NULL DEFAULT 'pending',
+  queue_id INTEGER NOT NULL DEFAULT 0,
+  created_at INTEGER NOT NULL,
+  updated_at INTEGER NOT NULL,
+  claimed_at INTEGER NOT NULL DEFAULT 0,
+  UNIQUE(series_key, telegram_id, cycle_key)
+);
+CREATE INDEX idx_task_series_claims_player ON player_task_series_claims(telegram_id, created_at DESC);
 CREATE TABLE newcomer_path_claims(telegram_id TEXT);
 CREATE TABLE friend_coop_claims(telegram_id TEXT);
 CREATE TABLE season_pass_task_claims(telegram_id TEXT);
