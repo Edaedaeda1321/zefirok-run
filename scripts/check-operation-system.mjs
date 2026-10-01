@@ -411,7 +411,7 @@ assert(worker.includes('const LEADERBOARD_DETHRONE_DELAY_SECONDS=90;'), 'rating 
 assert(worker.includes('const LEADERBOARD_DETHRONE_COOLDOWN_SECONDS=3600;'), 'rating dethrone notification cooldown is missing');
 assert(worker.includes('async function queueLeaderboardDethroneNotificationIfNeeded'), 'rating dethrone enqueue helper is missing');
 assert(worker.includes('async function materializeLeaderboardDethroneNotification'), 'rating dethrone send-time revalidation is missing');
-assert(worker.includes('previousSeasonLeader] = await Promise.all(['), 'run settlement does not capture the previous visible leader');
+assert(/const\s*\[[^\]]*\bpreviousSeasonLeader\b[^\]]*\]\s*=\s*await\s+Promise\.all\(\[/.test(worker), 'run settlement does not capture the previous visible leader');
 assert(worker.includes('ORDER BY best_score DESC,achieved_at ASC,telegram_id ASC LIMIT 1'), 'rating dethrone logic does not use leaderboard tie-break ordering');
 assert(worker.includes('scheduleRunSettlementBackground(executionCtx, queueLeaderboardDethroneNotificationIfNeeded'), 'leader change is not queued after authoritative settlement');
 assert(worker.includes('if(String(leader.telegram_id||"")===telegramId)return {action:"cancel",reason:"rating-lead-restored"};'), 'rating notice is not cancelled after the old leader retakes first place');
