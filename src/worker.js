@@ -18226,20 +18226,55 @@ function gameTaskRewardApplyGateBinds(claimId, token, legacyOperationId) {
   return [String(claimId),String(token),String(legacyOperationId),String(legacyOperationId)];
 }
 
-async function applyGameTaskRewardDirect(env, input) {
+async function gameTaskClaimFastState(env, telegramId, kind, key, cycleKey) {
+  return await env.DB.prepare(`SELECT
+      COALESCE(r.completed_at,0) AS completed_at,
+      COALESCE(r.reward_json,'') AS completion_reward_json,
+      COALESCE(g.status,'') AS claim_status,
+      COALESCE(g.reward_json,'') AS claim_reward_json
+    FROM (SELECT 1 AS seed) x
+    LEFT JOIN player_game_tasks r
+      ON r.telegram_id=? AND r.kind=? AND r.task_key=? AND r.cycle_key=?
+    LEFT JOIN game_task_reward_claims g
+      ON g.telegram_id=? AND g.kind=? AND g.task_key=? AND g.cycle_key=?
+    LIMIT 1`).bind(telegramId,kind,key,cycleKey,telegramId,kind,key,cycleKey).first() || {};
+}
+
+async function gameTaskBulkFastStates(env, telegramId, items) {
+  const source=Array.isArray(items)?items:[];
+  if(!source.length)return [];
+  const values=source.map(()=>"(?,?,?,?)").join(",");
+  const binds=[];
+  source.forEach((item,index)=>binds.push(index,String(item.kind),String(item.key),String(item.cycleKey)));
+  const rows=(await env.DB.prepare(`WITH requested(pos,kind,task_key,cycle_key) AS (VALUES ${values})
+    SELECT q.pos,q.kind,q.task_key,q.cycle_key,
+      COALESCE(r.completed_at,0) AS completed_at,
+      COALESCE(r.reward_json,'') AS completion_reward_json,
+      COALESCE(g.status,'') AS claim_status,
+      COALESCE(g.reward_json,'') AS claim_reward_json
+    FROM requested q
+    LEFT JOIN player_game_tasks r
+      ON r.telegram_id=? AND r.kind=q.kind AND r.task_key=q.task_key AND r.cycle_key=q.cycle_key
+    LEFT JOIN game_task_reward_claims g
+      ON g.telegram_id=? AND g.kind=q.kind AND g.task_key=q.task_key AND g.cycle_key=q.cycle_key
+    ORDER BY q.pos`).bind(...binds,telegramId,telegramId).all()).results||[];
+  const byPos=new Map(rows.map((row)=>[Number(row.pos),row]));
+  return source.map((_,index)=>byPos.get(index)||{});
+}
+
+function buildGameTaskRewardDirectPlan(env, input) {
   const telegramId=String(input?.telegramId||"").trim();
   const kind=input?.kind==="series"?"series":"task";
   const key=String(input?.key||"").trim();
   const cycleKey=String(input?.cycleKey||"").trim();
   const claimKey=String(input?.claimKey||"").trim();
-  const title=String(input?.title||"Задание").slice(0,180);
+  const title=String(input?.title||key||"Задание").slice(0,180);
   const reward=input?.reward&&typeof input.reward==="object"?{...input.reward}:{};
+  const existing=input?.existingClaim&&typeof input.existingClaim==="object"?input.existingClaim:null;
   const claimId=gameTaskRewardClaimId(kind,claimKey);
   const now=Math.floor(Date.now()/1000);
   if(!telegramId||!key||!cycleKey||!claimKey)throw new ApiError(400,"Некорректная награда задания.");
-
-  const existing=await env.DB.prepare(`SELECT status,reward_json,claimed_at FROM game_task_reward_claims WHERE telegram_id=? AND kind=? AND task_key=? AND cycle_key=? LIMIT 1`).bind(telegramId,kind,key,cycleKey).first();
-  if(String(existing?.status||"")==="claimed")return {claimed:true,repeated:true,reward:safeJson(existing.reward_json,reward)};
+  if(String(existing?.status||"")==="claimed")return {immediate:{claimed:true,repeated:true,reward:safeJson(existing.reward_json,reward)},statements:[]};
 
   const mainKind=String(reward.kind||"none").trim();
   if(mainKind!=="none"&&!GAME_TASK_DIRECT_REWARD_KINDS.has(mainKind))throw new ApiError(409,"Этот тип награды пока нельзя получить через игровые задания.");
@@ -18258,23 +18293,29 @@ async function applyGameTaskRewardDirect(env, input) {
     if(mainAmount>999)throw new ApiError(409,"Слишком много усилителей в одной награде задания.");
   }
 
-  await ensurePlayerAccountRevisionAvailable(env);
-  if(["points","zefir","coffee","profile_xp"].includes(mainKind)||profileXp>0){
-    await ensureAuthoritativeProfileRow(env,telegramId,`game-task-v2:${key}`);
-  }
-  if(mainKind==="booster")await ensureCasePlayerState(env,telegramId,{});
-
   const legacyIds=gameTaskRewardOperationIds(telegramId,kind,claimKey,reward);
   const mainOperationId=mainKind!=="none"?legacyIds[0]||rewardQueueOperationId(telegramId,kind==="series"?"task_series":"task",claimKey,reward):"";
   const xpOperationId=profileXp>0?legacyIds[legacyIds.length-1]||rewardQueueOperationId(telegramId,"game_task_xp",`${kind}:${claimKey}`,{kind:"profile_xp",amount:profileXp}):"";
   const token=caseGrantId("game_task_v2").slice(0,190);
   const gate=gameTaskRewardApplyGateSql();
+  const actor=`game-task-v2:${key}`;
   const statements=[
     env.DB.prepare(`INSERT OR IGNORE INTO game_task_reward_claims(claim_id,telegram_id,kind,task_key,cycle_key,reward_json,status,apply_token,created_at,updated_at,claimed_at) VALUES(?,?,?,?,?,?,'reserved','',?,?,0)`)
       .bind(claimId,telegramId,kind,key,cycleKey,JSON.stringify(reward||{}),now,now),
     env.DB.prepare(`UPDATE game_task_reward_claims SET apply_token=?,updated_at=? WHERE claim_id=? AND status='reserved' AND apply_token=''`)
       .bind(token,now,claimId)
   ];
+
+  // Production migrations own the schema. Keep only cheap row creation in the claim
+  // transaction so the hot path does not run runtime-DDL/profile hydration first.
+  if(["points","zefir","coffee","profile_xp"].includes(mainKind)||profileXp>0){
+    statements.push(env.DB.prepare(`INSERT OR IGNORE INTO admin_profile_state(
+      telegram_id,wallet,best_score,treats,coffee,profile_xp,revision,created_at,updated_at,updated_by
+    ) VALUES(?,0,0,0,0,0,1,?,?,?)`).bind(telegramId,now,now,actor));
+  }
+  if(mainKind==="booster"){
+    statements.push(env.DB.prepare(`INSERT OR IGNORE INTO case_player_state(telegram_id,created_at,updated_at) VALUES(?,?,?)`).bind(telegramId,now,now));
+  }
 
   // Any historical task queue row for this exact reward component is superseded.
   // If an old worker committed first, its delivered status makes the direct grant gate false.
@@ -18283,11 +18324,18 @@ async function applyGameTaskRewardDirect(env, input) {
     statements.push(env.DB.prepare(`UPDATE reward_delivery_queue SET status='cancelled',last_error='superseded by game task reward engine v2',updated_at=?,lease_token='',lease_until=0 WHERE operation_id=? AND status NOT IN ('delivered','claimed','cancelled')`).bind(now,operationId));
   }
 
-  if(mainKind==="points"||mainKind==="zefir"||mainKind==="coffee"||mainKind==="profile_xp"){
-    const field=({points:"pending_wallet",zefir:"pending_treats",coffee:"pending_coffee",profile_xp:"profile_xp"})[mainKind];
-    const increment=mainKind==="profile_xp"?`${field}=MIN(999999999,${field}+?)`:`${field}=${field}+?`;
-    statements.push(env.DB.prepare(`UPDATE admin_profile_state SET ${increment},revision=revision+1,updated_at=?,updated_by=? WHERE telegram_id=? AND ${gate}`)
-      .bind(mainAmount,now,`game-task-v2:${key}`,telegramId,...gameTaskRewardApplyGateBinds(claimId,token,mainOperationId)));
+  if(mainKind==="points"||mainKind==="zefir"||mainKind==="coffee"){
+    const field=({points:"pending_wallet",zefir:"pending_treats",coffee:"pending_coffee"})[mainKind];
+    statements.push(env.DB.prepare(`UPDATE admin_profile_state SET ${field}=${field}+?,revision=revision+1,updated_at=?,updated_by=? WHERE telegram_id=? AND ${gate}`)
+      .bind(mainAmount,now,actor,telegramId,...gameTaskRewardApplyGateBinds(claimId,token,mainOperationId)));
+  }else if(mainKind==="profile_xp"){
+    // Preserve an in-flight admin XP override by advancing the override and the base
+    // by the same delta. The next profile fold therefore cannot erase Task XP.
+    statements.push(env.DB.prepare(`UPDATE admin_profile_state SET
+      profile_xp=MIN(999999999,profile_xp+?),
+      profile_xp_override=CASE WHEN profile_xp_override IS NULL THEN NULL ELSE MIN(999999999,profile_xp_override+?) END,
+      revision=revision+1,updated_at=?,updated_by=? WHERE telegram_id=? AND ${gate}`)
+      .bind(mainAmount,mainAmount,now,actor,telegramId,...gameTaskRewardApplyGateBinds(claimId,token,mainOperationId)));
   }else if(mainKind==="case"){
     for(let index=0;index<mainAmount;index+=1){
       const grantId=`game_task:${kind}:${key}:${telegramId}:${cycleKey}:${index+1}`;
@@ -18308,8 +18356,11 @@ async function applyGameTaskRewardDirect(env, input) {
   }
 
   if(profileXp>0){
-    statements.push(env.DB.prepare(`UPDATE admin_profile_state SET profile_xp=MIN(999999999,profile_xp+?),revision=revision+1,updated_at=?,updated_by=? WHERE telegram_id=? AND ${gate}`)
-      .bind(profileXp,now,`game-task-v2:${key}:xp`,telegramId,...gameTaskRewardApplyGateBinds(claimId,token,xpOperationId)));
+    statements.push(env.DB.prepare(`UPDATE admin_profile_state SET
+      profile_xp=MIN(999999999,profile_xp+?),
+      profile_xp_override=CASE WHEN profile_xp_override IS NULL THEN NULL ELSE MIN(999999999,profile_xp_override+?) END,
+      revision=revision+1,updated_at=?,updated_by=? WHERE telegram_id=? AND ${gate}`)
+      .bind(profileXp,profileXp,now,`${actor}:xp`,telegramId,...gameTaskRewardApplyGateBinds(claimId,token,xpOperationId)));
   }
 
   // pending_wallet/pending_treats/pending_coffee do not have an economy-column trigger,
@@ -18326,14 +18377,48 @@ async function applyGameTaskRewardDirect(env, input) {
   statements.push(env.DB.prepare(`UPDATE player_game_tasks SET read_at=CASE WHEN read_at>0 THEN read_at ELSE ? END WHERE telegram_id=? AND kind=? AND task_key=? AND cycle_key=?`).bind(now,telegramId,kind,key,cycleKey));
   statements.push(env.DB.prepare(`UPDATE game_task_reward_claims SET status='claimed',apply_token='',claimed_at=CASE WHEN claimed_at>0 THEN claimed_at ELSE ? END,updated_at=? WHERE claim_id=? AND status='reserved' AND apply_token=?`).bind(now,now,claimId,token));
 
-  const results=await env.DB.batch(statements);
-  const finalized=Number(results?.[results.length-1]?.meta?.changes||0);
-  if(finalized!==1){
-    const fresh=await env.DB.prepare(`SELECT status,reward_json FROM game_task_reward_claims WHERE telegram_id=? AND kind=? AND task_key=? AND cycle_key=? LIMIT 1`).bind(telegramId,kind,key,cycleKey).first();
-    if(String(fresh?.status||"")==="claimed")return {claimed:true,repeated:true,reward:safeJson(fresh.reward_json,reward)};
-    throw new ApiError(503,"Не удалось атомарно выдать награду. Попробуй ещё раз.");
+  return {telegramId,kind,key,cycleKey,claimKey,claimId,reward,statements,finalOffset:statements.length-1};
+}
+
+async function applyGameTaskRewardsDirectBulk(env, inputs) {
+  const source=Array.isArray(inputs)?inputs:[];
+  const outputs=new Array(source.length);
+  const plans=[];
+  const statements=[];
+  for(let index=0;index<source.length;index+=1){
+    const plan=buildGameTaskRewardDirectPlan(env,source[index]);
+    if(plan.immediate){outputs[index]=plan.immediate;continue;}
+    plan.inputIndex=index;
+    plan.finalIndex=statements.length+plan.finalOffset;
+    statements.push(...plan.statements);
+    plans.push(plan);
   }
-  return {claimed:true,reward};
+  if(!statements.length)return outputs;
+
+  const batch=await env.DB.batch(statements);
+  const unresolved=[];
+  for(const plan of plans){
+    const finalized=Number(batch?.[plan.finalIndex]?.meta?.changes||0);
+    if(finalized===1)outputs[plan.inputIndex]={claimed:true,reward:plan.reward};
+    else unresolved.push(plan);
+  }
+  if(unresolved.length){
+    const placeholders=unresolved.map(()=>"?").join(",");
+    const rows=(await env.DB.prepare(`SELECT claim_id,status,reward_json FROM game_task_reward_claims WHERE claim_id IN (${placeholders})`).bind(...unresolved.map((plan)=>plan.claimId)).all()).results||[];
+    const byId=new Map(rows.map((row)=>[String(row.claim_id||""),row]));
+    for(const plan of unresolved){
+      const fresh=byId.get(plan.claimId);
+      if(String(fresh?.status||"")==="claimed")outputs[plan.inputIndex]={claimed:true,repeated:true,reward:safeJson(fresh.reward_json,plan.reward)};
+      else outputs[plan.inputIndex]={claimed:false,status:503,error:"Не удалось атомарно выдать награду. Попробуй ещё раз."};
+    }
+  }
+  return outputs;
+}
+
+async function applyGameTaskRewardDirect(env, input) {
+  const [result]=await applyGameTaskRewardsDirectBulk(env,[input]);
+  if(!result?.claimed)throw new ApiError(Number(result?.status||503),String(result?.error||"Не удалось атомарно выдать награду. Попробуй ещё раз."));
+  return result;
 }
 
 async function claimGameTask(env, telegramId, body) {
@@ -18346,20 +18431,35 @@ async function claimGameTask(env, telegramId, body) {
   const now = Math.floor(Date.now() / 1000);
   const legacyTable = series ? "player_task_series_claims" : "player_task_claims";
   const claimKey = `${key}:${telegramId}:${cycleKey}`;
-  const [row,legacyClaim,stored,rewardClaim] = await Promise.all([
-    env.DB.prepare(series ? `SELECT * FROM task_series WHERE series_key=? LIMIT 1` : `SELECT * FROM automation_chains WHERE chain_key=? LIMIT 1`).bind(key).first(),
-    env.DB.prepare(`SELECT * FROM ${legacyTable} WHERE claim_key=? LIMIT 1`).bind(claimKey).first(),
-    env.DB.prepare(`SELECT reward_json FROM player_game_tasks WHERE telegram_id=? AND kind=? AND task_key=? AND cycle_key=? LIMIT 1`).bind(telegramId,kind,key,cycleKey).first(),
-    env.DB.prepare(`SELECT status,reward_json FROM game_task_reward_claims WHERE telegram_id=? AND kind=? AND task_key=? AND cycle_key=? LIMIT 1`).bind(telegramId,kind,key,cycleKey).first()
-  ]);
-  if (String(rewardClaim?.status || "") === "claimed") return {claimed:true,repeated:true,rewardLabel:gameTaskRewardLabel(safeJson(rewardClaim.reward_json,{}))};
-  if (String(legacyClaim?.status || "") === "claimed") {
-    const legacyReward=stored?.reward_json?safeJson(stored.reward_json,{}):series?(row?gameTaskReward(row,true):{}):{...safeJson(legacyClaim.reward_json,{}),profileXp:0};
-    const migrated=await applyGameTaskRewardDirect(env,{telegramId,kind,key,cycleKey,claimKey,title:String(row?.title||"Задание"),reward:legacyReward});
-    return {claimed:true,repeated:true,rewardLabel:gameTaskRewardLabel(migrated.reward||legacyReward),...gameTaskRewardRefreshHints(migrated.reward||legacyReward)};
+
+  // Fast path: Task Hub completion receipts are already server-authoritative and
+  // contain the immutable reward snapshot. New claims therefore need one compact
+  // preflight read and one atomic reward batch, without reloading task config/progress.
+  const fast=await gameTaskClaimFastState(env,telegramId,kind,key,cycleKey);
+  if(String(fast?.claim_status||"")==="claimed"){
+    const reward=safeJson(fast.claim_reward_json,safeJson(fast.completion_reward_json,{}));
+    return {claimed:true,repeated:true,rewardLabel:gameTaskRewardLabel(reward),rewardItems:gameTaskRewardItems(reward),...gameTaskRewardRefreshHints(reward)};
   }
-  if (!row && !stored?.reward_json && (!legacyClaim || series)) throw new ApiError(404,"Задание недоступно.");
-  if (!legacyClaim && !stored?.reward_json) {
+  if(Number(fast?.completed_at||0)>0&&String(fast?.completion_reward_json||"").trim()){
+    const reward=safeJson(fast.completion_reward_json,{});
+    const result=await applyGameTaskRewardDirect(env,{telegramId,kind,key,cycleKey,claimKey,title:key,reward,existingClaim:{status:String(fast.claim_status||""),reward_json:String(fast.claim_reward_json||"")}});
+    const effectiveReward=result.reward||reward;
+    return {claimed:true,repeated:Boolean(result.repeated),rewardLabel:gameTaskRewardLabel(effectiveReward),rewardItems:gameTaskRewardItems(effectiveReward),...gameTaskRewardRefreshHints(effectiveReward)};
+  }
+
+  // Legacy/fallback path is intentionally off the hot path. It is used only for
+  // historical claims or old completion rows that predate reward snapshots.
+  const [row,legacyClaim] = await Promise.all([
+    env.DB.prepare(series ? `SELECT * FROM task_series WHERE series_key=? LIMIT 1` : `SELECT * FROM automation_chains WHERE chain_key=? LIMIT 1`).bind(key).first(),
+    env.DB.prepare(`SELECT * FROM ${legacyTable} WHERE claim_key=? LIMIT 1`).bind(claimKey).first()
+  ]);
+  if (String(legacyClaim?.status || "") === "claimed") {
+    const legacyReward=series?(row?gameTaskReward(row,true):{}):{...safeJson(legacyClaim.reward_json,{}),profileXp:0};
+    const migrated=await applyGameTaskRewardDirect(env,{telegramId,kind,key,cycleKey,claimKey,title:String(row?.title||"Задание"),reward:legacyReward,existingClaim:{status:String(fast.claim_status||""),reward_json:String(fast.claim_reward_json||"")}});
+    return {claimed:true,repeated:true,rewardLabel:gameTaskRewardLabel(migrated.reward||legacyReward),rewardItems:gameTaskRewardItems(migrated.reward||legacyReward),...gameTaskRewardRefreshHints(migrated.reward||legacyReward)};
+  }
+  if (!row && (!legacyClaim || series)) throw new ApiError(404,"Задание недоступно.");
+  if (!legacyClaim) {
     if (!gameTaskWindowOpen(row,now,series) || (!series && (!Number(row.show_as_task)||row.action_type!=="reward"||!v71TaskTriggerSupported(row.trigger_type)))) throw new ApiError(409,"Задание уже недоступно.");
     const view = await gameTaskView(env,row,telegramId,now,series);
     if (view.cycleKey !== cycleKey) throw new ApiError(409,"Начался новый день. Обновите задания.");
@@ -18367,40 +18467,92 @@ async function claimGameTask(env, telegramId, body) {
     if (!view.complete) throw new ApiError(409,"Задание ещё не выполнено.");
   }
 
-  let reward = stored?.reward_json ? safeJson(stored.reward_json,{}) : row ? gameTaskReward(row,series) : {};
-  if (legacyClaim && !stored?.reward_json) {
-    reward = series ? gameTaskReward(row,true) : { ...safeJson(legacyClaim.reward_json,{}), profileXp:0 };
-  }
-  await env.DB.prepare(`INSERT INTO player_game_tasks(telegram_id,kind,task_key,cycle_key,completed_at,reward_json) VALUES(?,?,?,?,?,?)
-    ON CONFLICT(telegram_id,kind,task_key,cycle_key) DO UPDATE SET
-      completed_at=CASE WHEN player_game_tasks.completed_at>0 THEN player_game_tasks.completed_at ELSE excluded.completed_at END,
-      reward_json=CASE WHEN player_game_tasks.reward_json='' THEN excluded.reward_json ELSE player_game_tasks.reward_json END`).bind(telegramId,kind,key,cycleKey,now,JSON.stringify(reward)).run();
-  reward = safeJson((await env.DB.prepare(`SELECT reward_json FROM player_game_tasks WHERE telegram_id=? AND kind=? AND task_key=? AND cycle_key=? LIMIT 1`).bind(telegramId,kind,key,cycleKey).first())?.reward_json,{});
+  const reward = legacyClaim
+    ? (series ? gameTaskReward(row,true) : { ...safeJson(legacyClaim.reward_json,{}), profileXp:0 })
+    : gameTaskReward(row,series);
+  const snapshotBatch=await env.DB.batch([
+    env.DB.prepare(`INSERT INTO player_game_tasks(telegram_id,kind,task_key,cycle_key,completed_at,reward_json) VALUES(?,?,?,?,?,?)
+      ON CONFLICT(telegram_id,kind,task_key,cycle_key) DO UPDATE SET
+        completed_at=CASE WHEN player_game_tasks.completed_at>0 THEN player_game_tasks.completed_at ELSE excluded.completed_at END,
+        reward_json=CASE WHEN player_game_tasks.reward_json='' THEN excluded.reward_json ELSE player_game_tasks.reward_json END`).bind(telegramId,kind,key,cycleKey,now,JSON.stringify(reward)),
+    env.DB.prepare(`SELECT reward_json FROM player_game_tasks WHERE telegram_id=? AND kind=? AND task_key=? AND cycle_key=? LIMIT 1`).bind(telegramId,kind,key,cycleKey)
+  ]);
+  const storedReward=safeJson(snapshotBatch?.[1]?.results?.[0]?.reward_json,reward);
 
-  const result=await applyGameTaskRewardDirect(env,{telegramId,kind,key,cycleKey,claimKey,title:String(row?.title||"Задание"),reward});
-  const effectiveReward=result.reward||reward;
+  const result=await applyGameTaskRewardDirect(env,{telegramId,kind,key,cycleKey,claimKey,title:String(row?.title||"Задание"),reward:storedReward,existingClaim:{status:String(fast.claim_status||""),reward_json:String(fast.claim_reward_json||"")}});
+  const effectiveReward=result.reward||storedReward;
   return {claimed:true,repeated:Boolean(result.repeated),rewardLabel:gameTaskRewardLabel(effectiveReward),rewardItems:gameTaskRewardItems(effectiveReward),...gameTaskRewardRefreshHints(effectiveReward)};
 }
 
 async function claimGameTasksBulk(env, telegramId, body) {
   const source=Array.isArray(body?.claims)?body.claims:[];
   if(!source.length)throw new ApiError(400,"Не выбраны задания для получения.");
-  if(source.length>20)throw new ApiError(400,"За один запрос можно получить не более 20 заданий.");
-  const results=[];
+  if(source.length>100)throw new ApiError(400,"За один запрос можно получить не более 100 заданий.");
+  const items=[];
   const seen=new Set();
   for(const raw of source){
     const item={kind:String(raw?.kind||""),key:String(raw?.key||""),cycleKey:String(raw?.cycleKey||"")};
+    if(!["task","series"].includes(item.kind)||!/^[A-Za-z0-9_-]{1,120}$/.test(item.key)||!item.cycleKey||item.cycleKey.length>160)throw new ApiError(400,"Некорректное задание в списке получения.");
     const id=`${item.kind}:${item.key}:${item.cycleKey}`;
     if(seen.has(id))continue;
-    seen.add(id);
-    try{
-      results.push({...item,...await claimGameTask(env,telegramId,item)});
-    }catch(error){
-      if(error instanceof ApiError){results.push({...item,claimed:false,error:error.message,status:error.status});continue;}
-      throw error;
+    seen.add(id);items.push(item);
+  }
+  if(!items.length)throw new ApiError(400,"Не выбраны задания для получения.");
+
+  // One preflight query for the whole button «Получить всё».
+  const fastStates=await gameTaskBulkFastStates(env,telegramId,items);
+  const results=new Array(items.length);
+  const fastInputs=[];
+  const fastIndexes=[];
+  const fallbackIndexes=[];
+  for(let index=0;index<items.length;index+=1){
+    const item=items[index],fast=fastStates[index]||{};
+    if(String(fast.claim_status||"")==="claimed"){
+      const reward=safeJson(fast.claim_reward_json,safeJson(fast.completion_reward_json,{}));
+      results[index]={...item,claimed:true,repeated:true,rewardLabel:gameTaskRewardLabel(reward),rewardItems:gameTaskRewardItems(reward),...gameTaskRewardRefreshHints(reward)};
+      continue;
+    }
+    if(Number(fast.completed_at||0)>0&&String(fast.completion_reward_json||"").trim()){
+      const reward=safeJson(fast.completion_reward_json,{});
+      fastIndexes.push(index);
+      fastInputs.push({telegramId,kind:item.kind,key:item.key,cycleKey:item.cycleKey,claimKey:`${item.key}:${telegramId}:${item.cycleKey}`,title:item.key,reward,existingClaim:{status:String(fast.claim_status||""),reward_json:String(fast.claim_reward_json||"")}});
+    }else fallbackIndexes.push(index);
+  }
+
+  // Normal Task Hub claims are granted through bounded D1 batches instead of
+  // awaiting N complete claim pipelines one after another.
+  if(fastInputs.length){
+    // Keep each transactional D1 batch bounded. Typical Task Hub claims (<=20 ready)
+    // still complete in one reward batch; larger backlogs remain one HTTP request.
+    for(let start=0;start<fastInputs.length;start+=20){
+      const chunkInputs=fastInputs.slice(start,start+20);
+      const chunkIndexes=fastIndexes.slice(start,start+20);
+      const granted=await applyGameTaskRewardsDirectBulk(env,chunkInputs);
+      for(let offset=0;offset<granted.length;offset+=1){
+        const index=chunkIndexes[offset],item=items[index],result=granted[offset]||{};
+        const reward=result.reward||chunkInputs[offset].reward||{};
+        results[index]=result.claimed
+          ? {...item,claimed:true,repeated:Boolean(result.repeated),rewardLabel:gameTaskRewardLabel(reward),rewardItems:gameTaskRewardItems(reward),...gameTaskRewardRefreshHints(reward)}
+          : {...item,claimed:false,error:String(result.error||"Не удалось получить награду."),status:Number(result.status||503)};
+      }
     }
   }
-  return {bulk:true,claims:results,claimedCount:results.filter((item)=>item.claimed).length,failedCount:results.filter((item)=>!item.claimed).length};
+
+  if(fallbackIndexes.length){
+    const fallback=await Promise.all(fallbackIndexes.map(async(index)=>{
+      const item=items[index];
+      try{return {...item,...await claimGameTask(env,telegramId,item)};}
+      catch(error){if(error instanceof ApiError)return {...item,claimed:false,error:error.message,status:error.status};throw error;}
+    }));
+    fallback.forEach((result,offset)=>{results[fallbackIndexes[offset]]=result;});
+  }
+  const claimedCount=results.filter((item)=>item?.claimed).length;
+  const failedCount=results.length-claimedCount;
+  return {
+    bulk:true,claims:results,claimedCount,failedCount,
+    profileRefreshRequired:results.some((item)=>item?.claimed&&item?.profileRefreshRequired),
+    caseRefreshRequired:results.some((item)=>item?.claimed&&item?.caseRefreshRequired)
+  };
 }
 
 async function gameTasksApi(request, env, action) {
@@ -18409,9 +18561,8 @@ async function gameTasksApi(request, env, action) {
     requireBotToken(env);
     const auth = await validateTelegramInitData(String(body.initData || ""),env);
     const telegramId = String(auth.user.id);
-    // State/read are hot paths and production migrations already guarantee their tables.
-    // Claim keeps the legacy runtime guards because it touches the broader reward/task schema.
-    if (action === "claim") await Promise.all([ensureV67Schema(env),ensureV77Schema(env)]);
+    // Production migrations + the release schema gate own Task Hub tables. Claim must
+    // stay free of runtime DDL so the first reward on a fresh Worker isolate is fast.
     if (action === "read") {
       const notices = Array.isArray(body.notices) ? body.notices.slice(0,100) : [];
       const now = Math.floor(Date.now()/1000);

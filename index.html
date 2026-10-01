@@ -32605,6 +32605,26 @@ html &gt; body.zefirok-game-expanded{height:var(--zefirok-visible-height,100dvh)
 #zefirok-maltipoo-runner .gt-next-status{padding:6px 8px;border-radius:999px;background:#ffe4ee;color:#b44b73;font-size:8px;font-weight:950;white-space:nowrap}
 #zefirok-maltipoo-runner .gt-next.is-ready .gt-next-status{background:#fff0bd;color:#a46c16}
 
+/* Task UX v18: compact multi-claim summary above filters. */
+#zefirok-maltipoo-runner .gt-ready-summary{
+  display:grid;grid-template-columns:42px minmax(0,1fr) auto;grid-template-areas:&quot;icon copy action&quot; &quot;rewards rewards action&quot;;align-items:center;gap:8px 10px;padding:11px 12px;
+  border:1px solid rgba(224,174,79,.58);border-radius:19px;background:radial-gradient(circle at 92% 12%,rgba(255,228,143,.38),transparent 34%),linear-gradient(145deg,#fffdf8,#fff4d8);box-shadow:0 8px 20px rgba(167,113,28,.09)
+}
+#zefirok-maltipoo-runner .gt-ready-summary-icon{grid-area:icon;width:42px;height:42px;display:grid;place-items:center;border-radius:14px;background:linear-gradient(145deg,#fff4ce,#ffe3a1);box-shadow:inset 0 0 0 1px rgba(220,165,65,.18)}
+#zefirok-maltipoo-runner .gt-ready-summary-icon-img{width:32px;height:32px;display:block;object-fit:contain}
+#zefirok-maltipoo-runner .gt-ready-summary-copy{grid-area:copy;min-width:0;display:grid;gap:2px}
+#zefirok-maltipoo-runner .gt-ready-summary-copy small{color:#a77833;font-size:7.5px;font-weight:950;letter-spacing:.055em;text-transform:uppercase}
+#zefirok-maltipoo-runner .gt-ready-summary-copy strong{color:#765046;font-size:11px;font-weight:950;line-height:1.16}
+#zefirok-maltipoo-runner .gt-ready-summary-copy span{color:#9a7b72;font-size:7.6px;font-weight:760;line-height:1.2}
+#zefirok-maltipoo-runner .gt-ready-summary-rewards{grid-area:rewards;display:flex;align-items:center;gap:5px;min-width:0;overflow:hidden}
+#zefirok-maltipoo-runner .gt-ready-reward{display:inline-flex;align-items:center;gap:4px;min-width:0;padding:5px 7px;border:1px solid rgba(222,188,172,.58);border-radius:999px;background:rgba(255,255,255,.82);color:#885b52;font-size:7.2px;font-weight:900;white-space:nowrap}
+#zefirok-maltipoo-runner .gt-ready-reward-icon{width:15px;height:15px;flex:0 0 15px;object-fit:contain}
+#zefirok-maltipoo-runner .gt-ready-more{display:inline-grid;place-items:center;min-width:25px;height:25px;padding:0 6px;border-radius:999px;background:#fff0bd;color:#a36b16;font-size:7.5px;font-weight:950}
+#zefirok-maltipoo-runner .gt-claim-all{grid-area:action;position:relative;z-index:0;overflow:hidden;display:inline-flex;align-items:center;justify-content:center;gap:5px;min-height:40px;padding:8px 11px;border:0;border-radius:14px;background:linear-gradient(135deg,#ef8eb4,#d95b90);color:#fff;font-size:8.5px;font-weight:950;white-space:nowrap;box-shadow:0 7px 15px rgba(190,73,119,.21);cursor:pointer;transition:transform .16s ease,opacity .16s ease,box-shadow .16s ease}
+#zefirok-maltipoo-runner .gt-claim-all:active{transform:translateY(1px) scale(.985)}
+#zefirok-maltipoo-runner .gt-claim-all:before{content:&quot;&quot;;position:absolute;z-index:-1;top:-70%;bottom:-70%;left:-55%;width:34%;background:linear-gradient(90deg,transparent,rgba(255,255,255,.48),transparent);transform:skewX(-18deg);animation:gtClaimShimmer 2.7s ease-in-out infinite}
+#zefirok-maltipoo-runner .gt-claim-all:disabled{opacity:.58;box-shadow:none;cursor:default}
+
 #zefirok-maltipoo-runner .gt-filter-row{
   display:flex;gap:7px;overflow-x:auto;overflow-y:hidden;padding:1px 1px 4px;scrollbar-width:none;overscroll-behavior-inline:contain;-webkit-overflow-scrolling:touch
 }
@@ -32788,6 +32808,11 @@ html &gt; body.zefirok-game-expanded{height:var(--zefirok-visible-height,100dvh)
   #zefirok-maltipoo-runner .gt-task.is-series-card .gt-task-art:not(.is-category-art){min-height:120px}
   #zefirok-maltipoo-runner .gt-task.is-series-card .gt-task-art:not(.is-category-art) img{height:106px}
   #zefirok-maltipoo-runner .gt-task-badge{max-width:106px;padding:5px 6px;font-size:6.5px}
+  #zefirok-maltipoo-runner .gt-ready-summary{grid-template-columns:38px minmax(0,1fr) auto;gap:7px 8px;padding:10px}
+  #zefirok-maltipoo-runner .gt-ready-summary-icon{width:38px;height:38px}
+  #zefirok-maltipoo-runner .gt-ready-summary-icon-img{width:29px;height:29px}
+  #zefirok-maltipoo-runner .gt-claim-all{min-height:38px;padding-inline:9px;font-size:8px}
+  #zefirok-maltipoo-runner .gt-ready-reward{padding:4px 6px;font-size:6.8px}
   #zefirok-maltipoo-runner .gt-filter{padding-inline:10px}
   #zefirok-maltipoo-runner .gt-series-node{flex-basis:48px;min-width:48px}
   #zefirok-maltipoo-runner .gt-series-node span{width:46px;font-size:6.4px}
@@ -32800,13 +32825,13 @@ html &gt; body.zefirok-game-expanded{height:var(--zefirok-visible-height,100dvh)
   #zefirok-maltipoo-runner .gt-history-done{padding-inline:6px;font-size:6.5px}
 }
 @media(prefers-reduced-motion:reduce){
-  #zefirok-maltipoo-runner .gt-xp-fill,#zefirok-maltipoo-runner .gt-progress-fill,#zefirok-maltipoo-runner .gt-toast,#zefirok-maltipoo-runner .tasks-entry,#zefirok-maltipoo-runner .tasks-entry__icon,#zefirok-maltipoo-runner .gt-task,#zefirok-maltipoo-runner .gt-history-panel,#zefirok-maltipoo-runner .gt-history-panel-inner,#zefirok-maltipoo-runner .gt-history-chevron,#zefirok-maltipoo-runner .gt-history-check,#zefirok-maltipoo-runner .gt-claim{transition:none!important}
-  #zefirok-maltipoo-runner .gt-skeleton&gt;i,#zefirok-maltipoo-runner .tasks-entry.has-unread .tasks-entry__icon,#zefirok-maltipoo-runner .tasks-entry.has-unread .tasks-entry__new,#zefirok-maltipoo-runner .gt-task,#zefirok-maltipoo-runner .gt-progress-fill,#zefirok-maltipoo-runner .gt-claim:before,#zefirok-maltipoo-runner .gt-state-success,#zefirok-maltipoo-runner .gt-task.is-claim-success,#zefirok-maltipoo-runner .gt-task.is-claim-success:after,#zefirok-maltipoo-runner .gt-history-task,#zefirok-maltipoo-runner .gt-event-time.is-urgent,#zefirok-maltipoo-runner .gt-series-node.is-done i,#zefirok-maltipoo-runner .gt-series-node.is-current i{animation:none!important}
+  #zefirok-maltipoo-runner .gt-xp-fill,#zefirok-maltipoo-runner .gt-progress-fill,#zefirok-maltipoo-runner .gt-toast,#zefirok-maltipoo-runner .tasks-entry,#zefirok-maltipoo-runner .tasks-entry__icon,#zefirok-maltipoo-runner .gt-task,#zefirok-maltipoo-runner .gt-history-panel,#zefirok-maltipoo-runner .gt-history-panel-inner,#zefirok-maltipoo-runner .gt-history-chevron,#zefirok-maltipoo-runner .gt-history-check,#zefirok-maltipoo-runner .gt-claim,#zefirok-maltipoo-runner .gt-claim-all{transition:none!important}
+  #zefirok-maltipoo-runner .gt-skeleton&gt;i,#zefirok-maltipoo-runner .tasks-entry.has-unread .tasks-entry__icon,#zefirok-maltipoo-runner .tasks-entry.has-unread .tasks-entry__new,#zefirok-maltipoo-runner .gt-task,#zefirok-maltipoo-runner .gt-progress-fill,#zefirok-maltipoo-runner .gt-claim:before,#zefirok-maltipoo-runner .gt-claim-all:before,#zefirok-maltipoo-runner .gt-state-success,#zefirok-maltipoo-runner .gt-task.is-claim-success,#zefirok-maltipoo-runner .gt-task.is-claim-success:after,#zefirok-maltipoo-runner .gt-history-task,#zefirok-maltipoo-runner .gt-event-time.is-urgent,#zefirok-maltipoo-runner .gt-series-node.is-done i,#zefirok-maltipoo-runner .gt-series-node.is-current i{animation:none!important}
 }
 
 
-/* Task UX v16: native icons, reward chips, weekly summary, completion notices. */
-#zefirok-maltipoo-runner .gt-inline-icon,#zefirok-maltipoo-runner .gt-task-type-icon,#zefirok-maltipoo-runner .gt-profile-xp-icon,#zefirok-maltipoo-runner .gt-next-icon-img,#zefirok-maltipoo-runner .gt-state-icon,#zefirok-maltipoo-runner .gt-button-icon,#zefirok-maltipoo-runner .gt-context-icon,#zefirok-maltipoo-runner .gt-event-time-icon,#zefirok-maltipoo-runner .gt-history-check-icon,#zefirok-maltipoo-runner .gt-season-icon-img,#zefirok-maltipoo-runner .gt-empty-icon-img{display:block;object-fit:contain}
+/* Task UX v18: native icons, reward chips, weekly summary, bulk reward claim. */
+#zefirok-maltipoo-runner .gt-inline-icon,#zefirok-maltipoo-runner .gt-task-type-icon,#zefirok-maltipoo-runner .gt-profile-xp-icon,#zefirok-maltipoo-runner .gt-next-icon-img,#zefirok-maltipoo-runner .gt-state-icon,#zefirok-maltipoo-runner .gt-button-icon,#zefirok-maltipoo-runner .gt-context-icon,#zefirok-maltipoo-runner .gt-event-time-icon,#zefirok-maltipoo-runner .gt-history-check-icon,#zefirok-maltipoo-runner .gt-season-icon-img,#zefirok-maltipoo-runner .gt-empty-icon-img,#zefirok-maltipoo-runner .gt-ready-summary-icon-img,#zefirok-maltipoo-runner .gt-ready-reward-icon{display:block;object-fit:contain}
 #zefirok-maltipoo-runner .gt-task-type-icon{width:31px;height:31px}
 #zefirok-maltipoo-runner .gt-profile-xp-total{display:inline-flex;align-items:center;gap:5px}
 #zefirok-maltipoo-runner .gt-profile-xp-icon{width:18px;height:18px}
@@ -32857,11 +32882,11 @@ html &gt; body.zefirok-game-expanded{height:var(--zefirok-visible-height,100dvh)
 #zefirok-maltipoo-runner .gt-series-node-done{width:18px;height:18px;object-fit:contain}
 
 &lt;/style&gt;
-&lt;script id=&quot;zefirok-game-tasks-inline-runtime-v17&quot;&gt;
+&lt;script id=&quot;zefirok-game-tasks-inline-runtime-v18&quot;&gt;
 (()=&gt;{
   &#x27;use strict&#x27;;
-  if(window.__ZEFIROK_GAME_TASKS_UI_V17__)return;
-  window.__ZEFIROK_GAME_TASKS_UI_V17__=true;
+  if(window.__ZEFIROK_GAME_TASKS_UI_V18__)return;
+  window.__ZEFIROK_GAME_TASKS_UI_V18__=true;
 
   const root=document.querySelector(&#x27;#zefirok-maltipoo-runner&#x27;);
   const screen=root?.querySelector(&#x27;[data-screen=&quot;tasks&quot;]&#x27;);
@@ -32874,7 +32899,7 @@ html &gt; body.zefirok-game-expanded{height:var(--zefirok-visible-height,100dvh)
   const CACHE_MS=15000;
   const REQUEST_TIMEOUT_MS=12000;
   const FILTERS=new Set([&#x27;all&#x27;,&#x27;daily&#x27;,&#x27;weekly&#x27;,&#x27;event&#x27;,&#x27;series&#x27;,&#x27;ready&#x27;]);
-  let payload=null,filter=&#x27;all&#x27;,loading=false,inflight=null,readInflight=null,readQueued=false,lastFreshAt=0,serverOffsetMs=0,claimingKey=&#x27;&#x27;,claimSuccessKey=&#x27;&#x27;,claimedOpen=false,toastTimer=0,timerTick=0,completionNoticeTimer=0,completionNoticePoll=0;
+  let payload=null,filter=&#x27;all&#x27;,loading=false,inflight=null,readInflight=null,readQueued=false,lastFreshAt=0,serverOffsetMs=0,claimingKey=&#x27;&#x27;,claimSuccessKey=&#x27;&#x27;,claimingAll=false,claimedOpen=false,toastTimer=0,timerTick=0,completionNoticeTimer=0,completionNoticePoll=0;
   const committedClaims=new Set();
   const completionNoticeSeen=new Set();
   const completionNoticeQueue=[];
@@ -33179,6 +33204,22 @@ html &gt; body.zefirok-game-expanded{height:var(--zefirok-visible-height,100dvh)
     if(whole(reward.profileXp)&gt;0)items.push({kind:&#x27;profile_xp&#x27;,id:&#x27;&#x27;,amount:whole(reward.profileXp)});
     return items;
   }
+  function readyTasks(){
+    return sortTasks(list(payload?.tasks).filter(task=&gt;isReady(task)&amp;&amp;!committedClaims.has(taskId(task))));
+  }
+  function mergedRewardItems(tasks){
+    const merged=new Map();
+    for(const task of list(tasks)){
+      for(const item of rewardItems(task)){
+        const kind=String(item?.kind||&#x27;&#x27;).toLowerCase(),id=String(item?.id||&#x27;&#x27;).toLowerCase(),key=`${kind}:${id}`;
+        const current=merged.get(key);
+        if(current)current.amount=Math.max(1,whole(current.amount))+Math.max(1,whole(item?.amount||1));
+        else merged.set(key,{...item,kind,id,amount:Math.max(1,whole(item?.amount||1))});
+      }
+    }
+    return [...merged.values()];
+  }
+
   function rewardItemsMarkup(task,compact=false){
     const items=rewardItems(task);
     if(!items.length)return `&lt;span class=&quot;gt-reward-fallback&quot;&gt;${iconMarkup(TASK_ICONS.reward,&#x27;gt-reward-icon&#x27;)}&lt;b&gt;${esc(task?.rewardLabel||&#x27;Награда задания&#x27;)}&lt;/b&gt;&lt;/span&gt;`;
@@ -33227,13 +33268,26 @@ html &gt; body.zefirok-game-expanded{height:var(--zefirok-visible-height,100dvh)
     return `&lt;section class=&quot;gt-profile-card&quot; aria-label=&quot;Прогресс профиля&quot;&gt;&lt;div class=&quot;gt-profile-top&quot;&gt;&lt;div&gt;&lt;span class=&quot;gt-level-label&quot;&gt;Уровень профиля&lt;/span&gt;&lt;div class=&quot;gt-level&quot;&gt;&lt;strong&gt;${level}&lt;/strong&gt;&lt;span&gt;${needed?&#x27;уровень&#x27;:&#x27;максимум&#x27;}&lt;/span&gt;&lt;/div&gt;&lt;/div&gt;&lt;span class=&quot;gt-profile-xp-total&quot;&gt;${iconMarkup(TASK_ICONS.xp,&#x27;gt-profile-xp-icon&#x27;)}&lt;b&gt;${fmt(xp)} XP&lt;/b&gt;&lt;/span&gt;&lt;/div&gt;&lt;div class=&quot;gt-xp-track&quot; role=&quot;progressbar&quot; aria-valuemin=&quot;0&quot; aria-valuemax=&quot;${needed||1}&quot; aria-valuenow=&quot;${needed?Math.min(progress,needed):1}&quot;&gt;&lt;span class=&quot;gt-xp-fill&quot; style=&quot;width:${pct.toFixed(1)}%&quot;&gt;&lt;/span&gt;&lt;/div&gt;&lt;div class=&quot;gt-xp-caption&quot;&gt;&lt;span&gt;${needed?`${fmt(progress)} / ${fmt(needed)} XP`:&#x27;Максимальный уровень&#x27;}&lt;/span&gt;&lt;span&gt;${needed?`До следующего: ${fmt(Math.max(0,needed-progress))} XP`:&#x27;Прогресс продолжается&#x27;}&lt;/span&gt;&lt;/div&gt;&lt;div class=&quot;gt-cycle-summary&quot;&gt;&lt;span&gt;${iconMarkup(TASK_ICONS.daily,&#x27;gt-cycle-icon&#x27;)}&lt;i&gt;&lt;small&gt;Ежедневные&lt;/small&gt;&lt;b&gt;${daily.done} / ${daily.total}&lt;/b&gt;&lt;/i&gt;&lt;/span&gt;&lt;span&gt;${iconMarkup(TASK_ICONS.weekly,&#x27;gt-cycle-icon&#x27;)}&lt;i&gt;&lt;small&gt;Еженедельные&lt;/small&gt;&lt;b&gt;${weekly.done} / ${weekly.total}&lt;/b&gt;&lt;/i&gt;&lt;/span&gt;&lt;/div&gt;&lt;div class=&quot;gt-overview&quot;&gt;&lt;div class=&quot;gt-overview-item${ready?&#x27; is-ready&#x27;:&#x27;&#x27;}&quot;&gt;&lt;b&gt;${ready}&lt;/b&gt;&lt;span&gt;готово&lt;/span&gt;&lt;/div&gt;&lt;div class=&quot;gt-overview-item&quot;&gt;&lt;b&gt;${active}&lt;/b&gt;&lt;span&gt;активно&lt;/span&gt;&lt;/div&gt;&lt;div class=&quot;gt-overview-item is-claimed&quot;&gt;&lt;b&gt;${claimed}&lt;/b&gt;&lt;span&gt;получено&lt;/span&gt;&lt;/div&gt;&lt;/div&gt;&lt;/section&gt;`;
   }
 
+  function readySummaryMarkup(){
+    const tasks=readyTasks();
+    if(!tasks.length)return &#x27;&#x27;;
+    const count=tasks.length,items=mergedRewardItems(tasks),shown=items.slice(0,4),extra=Math.max(0,items.length-shown.length);
+    const rewardMarkup=shown.length
+      ? shown.map(item=&gt;`&lt;span class=&quot;gt-ready-reward&quot;&gt;${iconMarkup(rewardItemIcon(item),&#x27;gt-ready-reward-icon&#x27;)}&lt;b&gt;${esc(rewardItemLabel(item))}&lt;/b&gt;&lt;/span&gt;`).join(&#x27;&#x27;)
+      : `&lt;span class=&quot;gt-ready-reward&quot;&gt;${iconMarkup(TASK_ICONS.reward,&#x27;gt-ready-reward-icon&#x27;)}&lt;b&gt;Награды заданий&lt;/b&gt;&lt;/span&gt;`;
+    const buttonLabel=claimingAll?&#x27;Получаем…&#x27;:count&gt;1?`Получить всё · ${count}`:&#x27;Получить&#x27;;
+    return `&lt;section class=&quot;gt-ready-summary&quot; aria-label=&quot;Готовые награды&quot;&gt;&lt;span class=&quot;gt-ready-summary-icon&quot;&gt;${iconMarkup(TASK_ICONS.reward,&#x27;gt-ready-summary-icon-img&#x27;)}&lt;/span&gt;&lt;span class=&quot;gt-ready-summary-copy&quot;&gt;&lt;small&gt;Награды готовы&lt;/small&gt;&lt;strong&gt;Выполнено ${count} ${plural(count,&#x27;задание&#x27;,&#x27;задания&#x27;,&#x27;заданий&#x27;)}&lt;/strong&gt;&lt;span&gt;Забери награды за выполненные цели&lt;/span&gt;&lt;/span&gt;&lt;span class=&quot;gt-ready-summary-rewards&quot;&gt;${rewardMarkup}${extra?`&lt;span class=&quot;gt-ready-more&quot;&gt;+${extra}&lt;/span&gt;`:&#x27;&#x27;}&lt;/span&gt;&lt;button class=&quot;gt-claim-all&quot; data-gt-claim-all type=&quot;button&quot;${claimingAll||claimingKey?&#x27; disabled&#x27;:&#x27;&#x27;}&gt;${iconMarkup(TASK_ICONS.reward,&#x27;gt-button-icon&#x27;)}&lt;span&gt;${esc(buttonLabel)}&lt;/span&gt;&lt;/button&gt;&lt;/section&gt;`;
+  }
+
   function nextMarkup(){
+    const readySummary=readySummaryMarkup();
+    if(readySummary)return readySummary;
     const task=nearestTask();
     if(!task)return &#x27;&#x27;;
-    const ready=isReady(task),left=Math.max(0,whole(task.target)-whole(task.progress));
-    const status=ready?&#x27;Забрать&#x27;:left?`Осталось ${taskProgressValue(task,left)}`:&#x27;Проверить&#x27;;
+    const left=Math.max(0,whole(task.target)-whole(task.progress));
+    const status=left?`Осталось ${taskProgressValue(task,left)}`:&#x27;Проверить&#x27;;
     const extra=timeLeft(task.endsAt);
-    return `&lt;section class=&quot;gt-next${ready?&#x27; is-ready&#x27;:&#x27;&#x27;}&quot; aria-label=&quot;Ближайшая цель&quot;&gt;&lt;span class=&quot;gt-next-icon&quot;&gt;${iconMarkup(ready?TASK_ICONS.reward:taskIconSrc(task),&#x27;gt-next-icon-img&#x27;)}&lt;/span&gt;&lt;span class=&quot;gt-next-copy&quot;&gt;&lt;small&gt;${ready?&#x27;Награда готова&#x27;:&#x27;Ближайшая цель&#x27;}&lt;/small&gt;&lt;strong&gt;${esc(task.title||&#x27;Задание&#x27;)}&lt;/strong&gt;&lt;span&gt;${esc(ready?(task.rewardLabel||&#x27;Можно получить награду&#x27;):(extra?`До конца: ${extra}`:(task.description||&#x27;Продолжай играть&#x27;)))}&lt;/span&gt;&lt;/span&gt;&lt;span class=&quot;gt-next-status&quot;&gt;${esc(status)}&lt;/span&gt;&lt;/section&gt;`;
+    return `&lt;section class=&quot;gt-next&quot; aria-label=&quot;Ближайшая цель&quot;&gt;&lt;span class=&quot;gt-next-icon&quot;&gt;${iconMarkup(taskIconSrc(task),&#x27;gt-next-icon-img&#x27;)}&lt;/span&gt;&lt;span class=&quot;gt-next-copy&quot;&gt;&lt;small&gt;Ближайшая цель&lt;/small&gt;&lt;strong&gt;${esc(task.title||&#x27;Задание&#x27;)}&lt;/strong&gt;&lt;span&gt;${esc(extra?`До конца: ${extra}`:(task.description||&#x27;Продолжай играть&#x27;))}&lt;/span&gt;&lt;/span&gt;&lt;span class=&quot;gt-next-status&quot;&gt;${esc(status)}&lt;/span&gt;&lt;/section&gt;`;
   }
 
   function taskArtMarkup(task){
@@ -33243,9 +33297,9 @@ html &gt; body.zefirok-game-expanded{height:var(--zefirok-visible-height,100dvh)
   }
 
   function taskActionMarkup(task,index){
-    const ready=isReady(task),claimed=Boolean(task?.claimed),currentClaim=claimingKey===taskId(task),claimSuccess=claimSuccessKey===taskId(task);
+    const ready=isReady(task),claimed=Boolean(task?.claimed),currentClaim=claimingKey===taskId(task),claimSuccess=claimSuccessKey===taskId(task),busy=currentClaim||claimingAll;
     if(claimSuccess)return `&lt;span class=&quot;gt-state gt-state-success&quot;&gt;${iconMarkup(TASK_ICONS.done,&#x27;gt-state-icon&#x27;)}Получено&lt;/span&gt;`;
-    if(ready&amp;&amp;!claimed)return `&lt;button class=&quot;gt-claim&quot; data-gt-claim=&quot;${index}&quot; type=&quot;button&quot;${currentClaim?&#x27; disabled&#x27;:&#x27;&#x27;}&gt;${currentClaim?&#x27;Получаем…&#x27;:`${iconMarkup(TASK_ICONS.reward,&#x27;gt-button-icon&#x27;)}Получить`}&lt;/button&gt;`;
+    if(ready&amp;&amp;!claimed)return `&lt;button class=&quot;gt-claim&quot; data-gt-claim=&quot;${index}&quot; type=&quot;button&quot;${busy?&#x27; disabled&#x27;:&#x27;&#x27;}&gt;${busy?&#x27;Получаем…&#x27;:`${iconMarkup(TASK_ICONS.reward,&#x27;gt-button-icon&#x27;)}Получить`}&lt;/button&gt;`;
     if(claimed)return `&lt;span class=&quot;gt-state&quot;&gt;${iconMarkup(TASK_ICONS.done,&#x27;gt-state-icon&#x27;)}Получено&lt;/span&gt;`;
     return &#x27;&lt;span class=&quot;gt-state&quot;&gt;В процессе&lt;/span&gt;&#x27;;
   }
@@ -33370,30 +33424,59 @@ html &gt; body.zefirok-game-expanded{height:var(--zefirok-visible-height,100dvh)
   }
 
   async function claim(task){
-    if(!task||claimingKey||task.claimed||committedClaims.has(taskId(task))||!task.complete)return;
-    const id=taskId(task);claimingKey=id;render();
+    if(!task||claimingKey||claimingAll||task.claimed||committedClaims.has(taskId(task))||!task.complete)return;
+    const id=taskId(task),wasUnread=Boolean(task.unread);claimingKey=id;render();
     let notice=&#x27;&#x27;;
     try{
       const result=await post(API_CLAIM,{kind:String(task.kind||&#x27;task&#x27;),key:String(task.key||&#x27;&#x27;),cycleKey:String(task.cycleKey||&#x27;&#x27;)});
       if(result?.claimed){
         claimSuccessKey=id;claimingKey=&#x27;&#x27;;render();
-        await new Promise(resolve=&gt;window.setTimeout(resolve,420));
+        await new Promise(resolve=&gt;window.setTimeout(resolve,120));
         committedClaims.add(id);
         task.claimed=true;task.unread=false;
-        if(payload){payload.readyCount=Math.max(0,whole(payload.readyCount)-1);payload.unreadCount=Math.max(0,whole(payload.unreadCount)-1);}
-        entryNotice.readyCount=Math.max(0,entryNotice.readyCount-1);entryNotice.unreadCount=Math.max(0,entryNotice.unreadCount-1);
+        if(payload){payload.readyCount=Math.max(0,whole(payload.readyCount)-1);if(wasUnread)payload.unreadCount=Math.max(0,whole(payload.unreadCount)-1);}
+        entryNotice.readyCount=Math.max(0,entryNotice.readyCount-1);if(wasUnread)entryNotice.unreadCount=Math.max(0,entryNotice.unreadCount-1);
         claimSuccessKey=&#x27;&#x27;;render();updateEntry();
         try{void host().sync?.();}catch{}
-        window.setTimeout(()=&gt;void load(true),650);
+        window.setTimeout(()=&gt;void load(true),250);
         notice=&#x27;Награда получена&#x27;;
       }else{
         throw new Error(String(result?.error||&#x27;Сервер не подтвердил получение награды.&#x27;));
       }
     }catch(error){
-      claimingKey=&#x27;&#x27;;render();window.setTimeout(()=&gt;void load(true),350);
+      claimingKey=&#x27;&#x27;;render();window.setTimeout(()=&gt;void load(true),250);
       notice=String(error?.message||&#x27;Не удалось получить награду.&#x27;);
     }finally{
       claimingKey=&#x27;&#x27;;if(notice)toast(notice);
+    }
+  }
+
+  async function claimAll(){
+    if(claimingAll||claimingKey)return;
+    const tasks=readyTasks();
+    if(!tasks.length)return;
+    claimingAll=true;render();
+    try{
+      const result=await post(API_CLAIM,{claims:tasks.map(task=&gt;({kind:String(task.kind||&#x27;task&#x27;),key:String(task.key||&#x27;&#x27;),cycleKey:String(task.cycleKey||&#x27;&#x27;)}))});
+      const returned=new Map(list(result?.claims).map(item=&gt;[`${String(item?.kind||&#x27;task&#x27;)}:${String(item?.key||&#x27;&#x27;)}:${String(item?.cycleKey||&#x27;&#x27;)}`,item]));
+      await new Promise(resolve=&gt;window.setTimeout(resolve,120));
+      let claimedCount=0,failedCount=0,unreadClaimed=0;
+      for(const task of tasks){
+        const item=returned.get(taskId(task));
+        if(item?.claimed){
+          if(task.unread)unreadClaimed+=1;
+          committedClaims.add(taskId(task));task.claimed=true;task.unread=false;claimedCount+=1;
+        }else failedCount+=1;
+      }
+      if(payload){payload.readyCount=Math.max(0,whole(payload.readyCount)-claimedCount);payload.unreadCount=Math.max(0,whole(payload.unreadCount)-unreadClaimed);}
+      entryNotice.readyCount=Math.max(0,entryNotice.readyCount-claimedCount);entryNotice.unreadCount=Math.max(0,entryNotice.unreadCount-unreadClaimed);
+      claimingAll=false;render();updateEntry();
+      if(claimedCount){try{void host().sync?.();}catch{}}
+      window.setTimeout(()=&gt;void load(true),250);
+      if(failedCount)toast(claimedCount?`Получено ${claimedCount} из ${tasks.length}. Остальные можно повторить.`:&#x27;Не удалось получить готовые награды. Попробуй ещё раз.&#x27;);
+      else toast(claimedCount===1?&#x27;Награда получена&#x27;:`Получено наград: ${claimedCount}`);
+    }catch(error){
+      claimingAll=false;render();window.setTimeout(()=&gt;void load(true),250);toast(String(error?.message||&#x27;Не удалось получить готовые награды.&#x27;));
     }
   }
 
@@ -33425,6 +33508,7 @@ html &gt; body.zefirok-game-expanded{height:var(--zefirok-visible-height,100dvh)
     const filterButton=target.closest(&#x27;[data-gt-filter]&#x27;);if(filterButton){const next=String(filterButton.dataset.gtFilter||&#x27;all&#x27;);if(FILTERS.has(next)){filter=next;if(filter!==&#x27;all&#x27;)claimedOpen=false;render();void markVisibleCompletedRead();}return;}
     const historyButton=target.closest(&#x27;[data-gt-history-toggle]&#x27;);if(historyButton){claimedOpen=!claimedOpen;const section=historyButton.closest(&#x27;.gt-history&#x27;);section?.classList.toggle(&#x27;is-open&#x27;,claimedOpen);historyButton.setAttribute(&#x27;aria-expanded&#x27;,claimedOpen?&#x27;true&#x27;:&#x27;false&#x27;);return;}
     if(target.closest(&#x27;[data-gt-season]&#x27;)){try{host().season?.();}catch{}return;}
+    if(target.closest(&#x27;[data-gt-claim-all]&#x27;)){void claimAll();return;}
     const claimButton=target.closest(&#x27;[data-gt-claim]&#x27;);if(claimButton){const index=Number(claimButton.dataset.gtClaim);void claim(list(payload?.tasks)[index]);}
   });
 

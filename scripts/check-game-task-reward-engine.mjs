@@ -29,7 +29,7 @@ const stateBlock=between(worker,'async function buildGameTasksState','async func
 expect(!stateBlock.includes('await reconcilePendingGameTaskClaims('),'Task Hub state hot path still reconciles the shared reward queue');
 expect(stateBlock.includes('game_task_reward_claims'),'Task Hub state does not read the V2 claim receipt');
 
-const directBlock=between(worker,'async function applyGameTaskRewardDirect','async function claimGameTask','direct reward block');
+const directBlock=between(worker,'function buildGameTaskRewardDirectPlan','async function claimGameTask','direct reward block');
 for(const needle of [
   'game_task_reward_claims',
   "reward_delivery_queue SET status='cancelled'",
@@ -52,22 +52,43 @@ expect(claimBlock.includes('async function claimGameTasksBulk'),'bulk claim back
 expect(!claimBlock.includes('enqueueRewardDelivery('),'Task Hub claim still enqueues shared reward delivery');
 expect(!claimBlock.includes('processPlayerRewardDeliveryQueue('),'Task Hub claim still waits for shared reward delivery');
 expect(!claimBlock.includes('pending:true'),'Task Hub claim can still return an asynchronous pending state');
+expect(worker.includes('async function gameTaskClaimFastState'),'single claim fast preflight is missing');
+expect(worker.includes('async function gameTaskBulkFastStates'),'bulk claim preflight is missing');
+expect(worker.includes('async function applyGameTaskRewardsDirectBulk'),'bulk reward transaction is missing');
+expect(claimBlock.includes('gameTaskClaimFastState('),'single claim does not use fast completion-receipt preflight');
+expect(claimBlock.includes('gameTaskBulkFastStates('),'bulk claim does not preflight all receipts together');
+expect(claimBlock.includes('applyGameTaskRewardsDirectBulk('),'bulk claim does not grant normal Task Hub rewards through the direct batched engine');
+expect(!claimBlock.includes('for(const raw of source){\n    const item={kind:String(raw?.kind||""),key:String(raw?.key||""),cycleKey:String(raw?.cycleKey||"")};\n    const id=`${item.kind}:${item.key}:${item.cycleKey}`;\n    if(seen.has(id))continue;\n    seen.add(id);\n    try{\n      results.push({...item,...await claimGameTask'),'bulk claim regressed to sequential full claim pipelines');
+const apiBlock=between(worker,'async function gameTasksApi','async function showPlayerTasksHub','Task Hub API block');
+expect(!apiBlock.includes('ensureV67Schema(env)'),'Task Hub claim still runs V67 runtime schema DDL');
+expect(!apiBlock.includes('ensureV77Schema(env)'),'Task Hub claim still runs V77 runtime schema DDL');
+expect(!directBlock.includes('ensureAuthoritativeProfileRow('),'direct Task claim still hydrates the full profile before granting');
+expect(!directBlock.includes('ensureCasePlayerState('),'direct Task claim still hydrates the full case state before granting');
+expect(!directBlock.includes('ensurePlayerAccountRevisionAvailable('),'direct Task claim still probes runtime account-revision schema');
 expect(worker.includes('DELETE FROM game_task_reward_claims WHERE telegram_id=?'),'player reset does not clear Task V2 receipts');
 expect(worker.includes("FROM game_task_reward_claims cl WHERE cl.kind='task' AND cl.task_key=c.chain_key AND cl.status='claimed'"),'task analytics still rely on legacy player_task_claims');
 expect(worker.includes("LEFT JOIN game_task_reward_claims g ON g.telegram_id=r.telegram_id AND g.kind=r.kind AND g.task_key=r.task_key AND g.cycle_key=r.cycle_key"),'important task notifications do not see V2 claim receipts');
 expect(worker.includes("AND COALESCE(g.status,'')<>'claimed'"),'important task notifications can fire after a V2 claim');
 
-expect(ui.includes('__ZEFIROK_GAME_TASKS_UI_V17__'),'Task Hub UI V17 guard is missing');
+expect(ui.includes('__ZEFIROK_GAME_TASKS_UI_V18__'),'Task Hub UI V18 guard is missing');
 for(const forbidden of ['Проверить выдачу','ПРОВЕРКА ВЫДАЧИ','Проверяем финальную награду','result?.pending','task?.pending','task.pending']) {
   expect(!ui.includes(forbidden),`Task Hub UI still contains legacy pending UX: ${forbidden}`);
 }
 expect(ui.includes('Получаем…'),'Task Hub immediate claim progress label is missing');
 expect(ui.includes('Награда получена'),'Task Hub success feedback is missing');
+expect(ui.includes('data-gt-claim-all'),'Task Hub bulk claim button is missing');
+expect(ui.includes('Получить всё ·'),'Task Hub bulk claim label is missing');
+expect(ui.includes('mergedRewardItems('),'Task Hub ready reward aggregation is missing');
+expect(ui.includes('window.setTimeout(resolve,120)'),'Task Hub fast claim feedback delay is missing');
+expect(!ui.includes('window.setTimeout(resolve,420)'),'legacy 420ms artificial claim delay remains');
 
-expect(index.includes('zefirok-game-tasks-inline-runtime-v17'),'index.html does not embed Task Hub runtime V17');
-expect(index.includes('__ZEFIROK_GAME_TASKS_UI_V17__'),'index.html embedded runtime is not V17');
+expect(index.includes('zefirok-game-tasks-inline-runtime-v18'),'index.html does not embed Task Hub runtime V18');
+expect(index.includes('__ZEFIROK_GAME_TASKS_UI_V18__'),'index.html embedded runtime is not V18');
 for(const forbidden of ['Проверить выдачу','ПРОВЕРКА ВЫДАЧИ','Проверяем финальную награду']) {
   expect(!index.includes(forbidden),`index.html still contains legacy Task Hub pending UX: ${forbidden}`);
 }
+expect(index.includes('data-gt-claim-all'),'index.html embedded runtime is missing bulk claim');
+expect(index.includes('.gt-ready-summary'),'index.html is missing ready reward summary styles');
+expect(index.includes('.gt-claim-all'),'index.html is missing bulk claim button styles');
 
-console.log('Game Task Reward Engine V2 check PASS: synchronous idempotent claims, legacy-safe reconciliation, no Task Hub pending queue UX.');
+console.log('Game Task Reward Engine V2.1 check PASS: fast synchronous claims, batched bulk rewards, legacy-safe reconciliation, no pending queue UX.');

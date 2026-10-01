@@ -1,7 +1,7 @@
 (()=>{
   'use strict';
-  if(window.__ZEFIROK_GAME_TASKS_UI_V17__)return;
-  window.__ZEFIROK_GAME_TASKS_UI_V17__=true;
+  if(window.__ZEFIROK_GAME_TASKS_UI_V18__)return;
+  window.__ZEFIROK_GAME_TASKS_UI_V18__=true;
 
   const root=document.querySelector('#zefirok-maltipoo-runner');
   const screen=root?.querySelector('[data-screen="tasks"]');
@@ -14,7 +14,7 @@
   const CACHE_MS=15000;
   const REQUEST_TIMEOUT_MS=12000;
   const FILTERS=new Set(['all','daily','weekly','event','series','ready']);
-  let payload=null,filter='all',loading=false,inflight=null,readInflight=null,readQueued=false,lastFreshAt=0,serverOffsetMs=0,claimingKey='',claimSuccessKey='',claimedOpen=false,toastTimer=0,timerTick=0,completionNoticeTimer=0,completionNoticePoll=0;
+  let payload=null,filter='all',loading=false,inflight=null,readInflight=null,readQueued=false,lastFreshAt=0,serverOffsetMs=0,claimingKey='',claimSuccessKey='',claimingAll=false,claimedOpen=false,toastTimer=0,timerTick=0,completionNoticeTimer=0,completionNoticePoll=0;
   const committedClaims=new Set();
   const completionNoticeSeen=new Set();
   const completionNoticeQueue=[];
@@ -319,6 +319,22 @@
     if(whole(reward.profileXp)>0)items.push({kind:'profile_xp',id:'',amount:whole(reward.profileXp)});
     return items;
   }
+  function readyTasks(){
+    return sortTasks(list(payload?.tasks).filter(task=>isReady(task)&&!committedClaims.has(taskId(task))));
+  }
+  function mergedRewardItems(tasks){
+    const merged=new Map();
+    for(const task of list(tasks)){
+      for(const item of rewardItems(task)){
+        const kind=String(item?.kind||'').toLowerCase(),id=String(item?.id||'').toLowerCase(),key=`${kind}:${id}`;
+        const current=merged.get(key);
+        if(current)current.amount=Math.max(1,whole(current.amount))+Math.max(1,whole(item?.amount||1));
+        else merged.set(key,{...item,kind,id,amount:Math.max(1,whole(item?.amount||1))});
+      }
+    }
+    return [...merged.values()];
+  }
+
   function rewardItemsMarkup(task,compact=false){
     const items=rewardItems(task);
     if(!items.length)return `<span class="gt-reward-fallback">${iconMarkup(TASK_ICONS.reward,'gt-reward-icon')}<b>${esc(task?.rewardLabel||'Награда задания')}</b></span>`;
@@ -367,13 +383,26 @@
     return `<section class="gt-profile-card" aria-label="Прогресс профиля"><div class="gt-profile-top"><div><span class="gt-level-label">Уровень профиля</span><div class="gt-level"><strong>${level}</strong><span>${needed?'уровень':'максимум'}</span></div></div><span class="gt-profile-xp-total">${iconMarkup(TASK_ICONS.xp,'gt-profile-xp-icon')}<b>${fmt(xp)} XP</b></span></div><div class="gt-xp-track" role="progressbar" aria-valuemin="0" aria-valuemax="${needed||1}" aria-valuenow="${needed?Math.min(progress,needed):1}"><span class="gt-xp-fill" style="width:${pct.toFixed(1)}%"></span></div><div class="gt-xp-caption"><span>${needed?`${fmt(progress)} / ${fmt(needed)} XP`:'Максимальный уровень'}</span><span>${needed?`До следующего: ${fmt(Math.max(0,needed-progress))} XP`:'Прогресс продолжается'}</span></div><div class="gt-cycle-summary"><span>${iconMarkup(TASK_ICONS.daily,'gt-cycle-icon')}<i><small>Ежедневные</small><b>${daily.done} / ${daily.total}</b></i></span><span>${iconMarkup(TASK_ICONS.weekly,'gt-cycle-icon')}<i><small>Еженедельные</small><b>${weekly.done} / ${weekly.total}</b></i></span></div><div class="gt-overview"><div class="gt-overview-item${ready?' is-ready':''}"><b>${ready}</b><span>готово</span></div><div class="gt-overview-item"><b>${active}</b><span>активно</span></div><div class="gt-overview-item is-claimed"><b>${claimed}</b><span>получено</span></div></div></section>`;
   }
 
+  function readySummaryMarkup(){
+    const tasks=readyTasks();
+    if(!tasks.length)return '';
+    const count=tasks.length,items=mergedRewardItems(tasks),shown=items.slice(0,4),extra=Math.max(0,items.length-shown.length);
+    const rewardMarkup=shown.length
+      ? shown.map(item=>`<span class="gt-ready-reward">${iconMarkup(rewardItemIcon(item),'gt-ready-reward-icon')}<b>${esc(rewardItemLabel(item))}</b></span>`).join('')
+      : `<span class="gt-ready-reward">${iconMarkup(TASK_ICONS.reward,'gt-ready-reward-icon')}<b>Награды заданий</b></span>`;
+    const buttonLabel=claimingAll?'Получаем…':count>1?`Получить всё · ${count}`:'Получить';
+    return `<section class="gt-ready-summary" aria-label="Готовые награды"><span class="gt-ready-summary-icon">${iconMarkup(TASK_ICONS.reward,'gt-ready-summary-icon-img')}</span><span class="gt-ready-summary-copy"><small>Награды готовы</small><strong>Выполнено ${count} ${plural(count,'задание','задания','заданий')}</strong><span>Забери награды за выполненные цели</span></span><span class="gt-ready-summary-rewards">${rewardMarkup}${extra?`<span class="gt-ready-more">+${extra}</span>`:''}</span><button class="gt-claim-all" data-gt-claim-all type="button"${claimingAll||claimingKey?' disabled':''}>${iconMarkup(TASK_ICONS.reward,'gt-button-icon')}<span>${esc(buttonLabel)}</span></button></section>`;
+  }
+
   function nextMarkup(){
+    const readySummary=readySummaryMarkup();
+    if(readySummary)return readySummary;
     const task=nearestTask();
     if(!task)return '';
-    const ready=isReady(task),left=Math.max(0,whole(task.target)-whole(task.progress));
-    const status=ready?'Забрать':left?`Осталось ${taskProgressValue(task,left)}`:'Проверить';
+    const left=Math.max(0,whole(task.target)-whole(task.progress));
+    const status=left?`Осталось ${taskProgressValue(task,left)}`:'Проверить';
     const extra=timeLeft(task.endsAt);
-    return `<section class="gt-next${ready?' is-ready':''}" aria-label="Ближайшая цель"><span class="gt-next-icon">${iconMarkup(ready?TASK_ICONS.reward:taskIconSrc(task),'gt-next-icon-img')}</span><span class="gt-next-copy"><small>${ready?'Награда готова':'Ближайшая цель'}</small><strong>${esc(task.title||'Задание')}</strong><span>${esc(ready?(task.rewardLabel||'Можно получить награду'):(extra?`До конца: ${extra}`:(task.description||'Продолжай играть')))}</span></span><span class="gt-next-status">${esc(status)}</span></section>`;
+    return `<section class="gt-next" aria-label="Ближайшая цель"><span class="gt-next-icon">${iconMarkup(taskIconSrc(task),'gt-next-icon-img')}</span><span class="gt-next-copy"><small>Ближайшая цель</small><strong>${esc(task.title||'Задание')}</strong><span>${esc(extra?`До конца: ${extra}`:(task.description||'Продолжай играть'))}</span></span><span class="gt-next-status">${esc(status)}</span></section>`;
   }
 
   function taskArtMarkup(task){
@@ -383,9 +412,9 @@
   }
 
   function taskActionMarkup(task,index){
-    const ready=isReady(task),claimed=Boolean(task?.claimed),currentClaim=claimingKey===taskId(task),claimSuccess=claimSuccessKey===taskId(task);
+    const ready=isReady(task),claimed=Boolean(task?.claimed),currentClaim=claimingKey===taskId(task),claimSuccess=claimSuccessKey===taskId(task),busy=currentClaim||claimingAll;
     if(claimSuccess)return `<span class="gt-state gt-state-success">${iconMarkup(TASK_ICONS.done,'gt-state-icon')}Получено</span>`;
-    if(ready&&!claimed)return `<button class="gt-claim" data-gt-claim="${index}" type="button"${currentClaim?' disabled':''}>${currentClaim?'Получаем…':`${iconMarkup(TASK_ICONS.reward,'gt-button-icon')}Получить`}</button>`;
+    if(ready&&!claimed)return `<button class="gt-claim" data-gt-claim="${index}" type="button"${busy?' disabled':''}>${busy?'Получаем…':`${iconMarkup(TASK_ICONS.reward,'gt-button-icon')}Получить`}</button>`;
     if(claimed)return `<span class="gt-state">${iconMarkup(TASK_ICONS.done,'gt-state-icon')}Получено</span>`;
     return '<span class="gt-state">В процессе</span>';
   }
@@ -510,30 +539,59 @@
   }
 
   async function claim(task){
-    if(!task||claimingKey||task.claimed||committedClaims.has(taskId(task))||!task.complete)return;
-    const id=taskId(task);claimingKey=id;render();
+    if(!task||claimingKey||claimingAll||task.claimed||committedClaims.has(taskId(task))||!task.complete)return;
+    const id=taskId(task),wasUnread=Boolean(task.unread);claimingKey=id;render();
     let notice='';
     try{
       const result=await post(API_CLAIM,{kind:String(task.kind||'task'),key:String(task.key||''),cycleKey:String(task.cycleKey||'')});
       if(result?.claimed){
         claimSuccessKey=id;claimingKey='';render();
-        await new Promise(resolve=>window.setTimeout(resolve,420));
+        await new Promise(resolve=>window.setTimeout(resolve,120));
         committedClaims.add(id);
         task.claimed=true;task.unread=false;
-        if(payload){payload.readyCount=Math.max(0,whole(payload.readyCount)-1);payload.unreadCount=Math.max(0,whole(payload.unreadCount)-1);}
-        entryNotice.readyCount=Math.max(0,entryNotice.readyCount-1);entryNotice.unreadCount=Math.max(0,entryNotice.unreadCount-1);
+        if(payload){payload.readyCount=Math.max(0,whole(payload.readyCount)-1);if(wasUnread)payload.unreadCount=Math.max(0,whole(payload.unreadCount)-1);}
+        entryNotice.readyCount=Math.max(0,entryNotice.readyCount-1);if(wasUnread)entryNotice.unreadCount=Math.max(0,entryNotice.unreadCount-1);
         claimSuccessKey='';render();updateEntry();
         try{void host().sync?.();}catch{}
-        window.setTimeout(()=>void load(true),650);
+        window.setTimeout(()=>void load(true),250);
         notice='Награда получена';
       }else{
         throw new Error(String(result?.error||'Сервер не подтвердил получение награды.'));
       }
     }catch(error){
-      claimingKey='';render();window.setTimeout(()=>void load(true),350);
+      claimingKey='';render();window.setTimeout(()=>void load(true),250);
       notice=String(error?.message||'Не удалось получить награду.');
     }finally{
       claimingKey='';if(notice)toast(notice);
+    }
+  }
+
+  async function claimAll(){
+    if(claimingAll||claimingKey)return;
+    const tasks=readyTasks();
+    if(!tasks.length)return;
+    claimingAll=true;render();
+    try{
+      const result=await post(API_CLAIM,{claims:tasks.map(task=>({kind:String(task.kind||'task'),key:String(task.key||''),cycleKey:String(task.cycleKey||'')}))});
+      const returned=new Map(list(result?.claims).map(item=>[`${String(item?.kind||'task')}:${String(item?.key||'')}:${String(item?.cycleKey||'')}`,item]));
+      await new Promise(resolve=>window.setTimeout(resolve,120));
+      let claimedCount=0,failedCount=0,unreadClaimed=0;
+      for(const task of tasks){
+        const item=returned.get(taskId(task));
+        if(item?.claimed){
+          if(task.unread)unreadClaimed+=1;
+          committedClaims.add(taskId(task));task.claimed=true;task.unread=false;claimedCount+=1;
+        }else failedCount+=1;
+      }
+      if(payload){payload.readyCount=Math.max(0,whole(payload.readyCount)-claimedCount);payload.unreadCount=Math.max(0,whole(payload.unreadCount)-unreadClaimed);}
+      entryNotice.readyCount=Math.max(0,entryNotice.readyCount-claimedCount);entryNotice.unreadCount=Math.max(0,entryNotice.unreadCount-unreadClaimed);
+      claimingAll=false;render();updateEntry();
+      if(claimedCount){try{void host().sync?.();}catch{}}
+      window.setTimeout(()=>void load(true),250);
+      if(failedCount)toast(claimedCount?`Получено ${claimedCount} из ${tasks.length}. Остальные можно повторить.`:'Не удалось получить готовые награды. Попробуй ещё раз.');
+      else toast(claimedCount===1?'Награда получена':`Получено наград: ${claimedCount}`);
+    }catch(error){
+      claimingAll=false;render();window.setTimeout(()=>void load(true),250);toast(String(error?.message||'Не удалось получить готовые награды.'));
     }
   }
 
@@ -565,6 +623,7 @@
     const filterButton=target.closest('[data-gt-filter]');if(filterButton){const next=String(filterButton.dataset.gtFilter||'all');if(FILTERS.has(next)){filter=next;if(filter!=='all')claimedOpen=false;render();void markVisibleCompletedRead();}return;}
     const historyButton=target.closest('[data-gt-history-toggle]');if(historyButton){claimedOpen=!claimedOpen;const section=historyButton.closest('.gt-history');section?.classList.toggle('is-open',claimedOpen);historyButton.setAttribute('aria-expanded',claimedOpen?'true':'false');return;}
     if(target.closest('[data-gt-season]')){try{host().season?.();}catch{}return;}
+    if(target.closest('[data-gt-claim-all]')){void claimAll();return;}
     const claimButton=target.closest('[data-gt-claim]');if(claimButton){const index=Number(claimButton.dataset.gtClaim);void claim(list(payload?.tasks)[index]);}
   });
 
