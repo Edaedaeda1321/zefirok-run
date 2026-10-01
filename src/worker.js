@@ -9702,7 +9702,15 @@ async function startAuthoritativeRunSession(request, env) {
                   s.booster_points,s.booster_treats,s.booster_coffee,s.booster_shield,s.booster_second_chance,s.booster_pause,
                   s.shield_used,s.second_chance_used,d.case_type AS case_drop_type,d.spawn_after_ms AS case_drop_spawn_after_ms,d.caught AS case_drop_caught
            FROM game_run_sessions s LEFT JOIN game_run_case_drop_milestones d ON d.run_id=s.run_id AND d.milestone_score=? WHERE s.run_id=? LIMIT 1`
-        ).bind(RUN_CASE_DROP_MILESTONE_SCORE,runId)
+        ).bind(RUN_CASE_DROP_MILESTONE_SCORE,runId),
+        // Keep the Control Center player directory complete without adding a
+        // separate D1 round trip to the run-start hot path. A run session is
+        // already server-authenticated, so a missing zero-value profile shell
+        // can be materialized safely inside the same atomic batch. Existing
+        // economy/profile rows are never overwritten here.
+        env.DB.prepare(`INSERT OR IGNORE INTO admin_profile_state (
+          telegram_id,wallet,best_score,treats,coffee,profile_xp,revision,created_at,updated_at,updated_by
+        ) VALUES (?,0,0,0,0,0,1,?,?,?)`).bind(telegramId,now,now,'run-start')
       ]);
 
       const session = result?.[5]?.results?.[0] || null;
@@ -13800,6 +13808,20 @@ async function repairLeaderboardFromServerRunRegistry(env,season,options={}){
     const previous=existing.get(row.telegramId),score=Math.max(0,Math.floor(row.score)),durationMs=Math.max(0,Math.floor(row.durationMs)),achievedAt=Math.max(1,Math.floor(row.createdAt||now));
     const changed=!previous||Number(previous.hidden||0)!==0||score>Number(previous.best_score||0)||(score===Number(previous.best_score||0)&&achievedAt<Number(previous.achieved_at||achievedAt+1));
     if(changed){repairedPlayers+=1;if(row.qualificationGrace)gracePlayers+=1;if(recovered.length<200)recovered.push({telegramId:row.telegramId,name:row.name,score,durationMs,status:row.status,source:row.source,runId:row.runId,grace:Boolean(row.qualificationGrace)});}
+    // A server-registry recovery may be the first durable server-side trace of
+    // a player when startup/profile sync failed and the client disappeared
+    // before final settlement. Keep the authoritative profile directory in
+    // sync with the recovered rating identity. Only the proven personal record
+    // can increase; currencies and XP stay untouched.
+    statements.push(env.DB.prepare(`INSERT INTO admin_profile_state (
+      telegram_id,wallet,best_score,treats,coffee,profile_xp,revision,created_at,updated_at,updated_by
+    ) VALUES (?,0,?,0,0,0,1,?,?,?)
+    ON CONFLICT(telegram_id) DO UPDATE SET
+      best_score=MAX(admin_profile_state.best_score,excluded.best_score),
+      updated_at=CASE WHEN excluded.best_score>admin_profile_state.best_score THEN excluded.updated_at ELSE admin_profile_state.updated_at END,
+      updated_by=CASE WHEN excluded.best_score>admin_profile_state.best_score THEN excluded.updated_by ELSE admin_profile_state.updated_by END`).bind(
+        row.telegramId,score,achievedAt,now,'rating:server_registry_recovery'
+      ));
     statements.push(env.DB.prepare(`INSERT INTO leaderboard_entries(season_id,telegram_id,display_name,username,photo_url,best_score,level,achieved_at,updated_at,hidden,case_avatar_id,case_frame_id)
       VALUES(?,?,?,?,?,?,?,?,?,0,?,?) ON CONFLICT(season_id,telegram_id) DO UPDATE SET
       display_name=CASE WHEN excluded.display_name<>'' THEN excluded.display_name ELSE leaderboard_entries.display_name END,
@@ -28043,48 +28065,88 @@ async function scanFraudAlerts(env) {
   await ensureLiveOpsAdminSchema(env);
   const since = Math.floor(Date.now() / 1000) - 7 * 86400;
   const now = Math.floor(Date.now() / 1000);
+  const minSeconds = positiveInt(env.LEADERBOARD_MIN_RUN_SECONDS, DEFAULT_LEADERBOARD_MIN_RUN_SECONDS);
+  const minDurationMs = minSeconds * 1000;
+  const minScore = positiveInt(env.LEADERBOARD_MIN_SCORE, DEFAULT_LEADERBOARD_MIN_SCORE);
+  // Server-registry recovery is allowed to use the last cryptographically/
+  // server-time bounded checkpoint when final settlement was lost. The final
+  // checkpoint can trail the real run by at most this attestation gap, so a
+  // recovered proof inside that explicit grace window is not a "6 second
+  // client run" and must not be treated as fraud.
+  const proofGraceMs = Math.max(0, Number(AUTHORITATIVE_RUN_CHECKPOINT_MAX_WALL_GAP_MS || 0));
+  const proofMinMs = Math.max(1000, minDurationMs - proofGraceMs);
 
   // These rejection reasons are normal gameplay / LiveOps outcomes, not fraud.
-  // Older versions of the scanner created false-positive alerts for them, so
-  // automatically dismiss any still-open legacy alerts before scanning again.
+  // server_registry_recovery is provenance, not a rejection. Older scanners
+  // created false positives for it, so close those historical alerts when the
+  // underlying server proof still satisfies the exact recovery guard.
   await env.DB.prepare(
     `UPDATE fraud_alerts
-     SET status='dismissed', resolution='Автоматически закрыто: штатное отклонение забега', updated_at=?
-     WHERE status IN ('open','reviewing') AND alert_type='rejected_run'
-       AND EXISTS (
+     SET status='dismissed', resolution='Автоматически закрыто: штатное отклонение или доверенное серверное восстановление', updated_at=?
+     WHERE status IN ('open','reviewing') AND (
+       (alert_type='rejected_run' AND EXISTS (
          SELECT 1 FROM leaderboard_runs r
          WHERE ('run:' || r.run_id || ':rejected_run') = fraud_alerts.fingerprint
-           AND (r.rejection_reason IN ('below_minimum','rating_disabled') OR r.rejection_reason LIKE 'season_%')
-       )`
-  ).bind(now).run();
+           AND (r.rejection_reason IN ('below_minimum','rating_disabled','server_registry_recovery') OR r.rejection_reason LIKE 'season_%')
+       ))
+       OR
+       (alert_type='too_fast_run' AND EXISTS (
+         SELECT 1 FROM leaderboard_runs r
+         JOIN game_run_live_proofs p ON p.run_id=r.run_id AND p.telegram_id=r.telegram_id
+         WHERE ('run:' || r.run_id || ':too_fast_run') = fraud_alerts.fingerprint
+           AND r.accepted=1 AND r.rejection_reason='server_registry_recovery'
+           AND p.seq>0 AND p.score>=? AND p.duration_ms>=?
+           AND r.score<=p.score AND r.duration_ms<=p.duration_ms AND r.duration_ms>=?
+       ))
+     )`
+  ).bind(now, minScore, proofMinMs, proofMinMs).run();
 
   const suspiciousRuns = await env.DB.prepare(
-    `SELECT run_id, telegram_id, score, duration_ms, accepted, rejection_reason, created_at
-     FROM leaderboard_runs
-     WHERE created_at >= ? AND (
-       score >= 100000
-       OR (accepted = 1 AND duration_ms < 12000)
+    `SELECT r.run_id,r.telegram_id,r.score,r.duration_ms,r.accepted,r.rejection_reason,r.created_at,
+            COALESCE(p.seq,0) AS proof_seq,COALESCE(p.score,0) AS proof_score,
+            COALESCE(p.duration_ms,0) AS proof_duration_ms
+     FROM leaderboard_runs r
+     LEFT JOIN game_run_live_proofs p ON p.run_id=r.run_id AND p.telegram_id=r.telegram_id
+     WHERE r.created_at >= ? AND (
+       r.score >= 100000
+       OR (r.accepted = 1 AND r.duration_ms < ?)
        OR (
-         rejection_reason <> ''
-         AND rejection_reason NOT IN ('below_minimum','rating_disabled')
-         AND rejection_reason NOT LIKE 'season_%'
+         r.rejection_reason <> ''
+         AND r.rejection_reason NOT IN ('below_minimum','rating_disabled','server_registry_recovery')
+         AND r.rejection_reason NOT LIKE 'season_%'
        )
      )
-     ORDER BY created_at DESC LIMIT 200`
-  ).bind(since).all();
+     ORDER BY r.created_at DESC LIMIT 200`
+  ).bind(since, minDurationMs).all();
   for (const row of suspiciousRuns.results || []) {
     const score = Number(row.score || 0);
     const durationMs = Number(row.duration_ms || 0);
     const rejectionReason = String(row.rejection_reason || '');
     const accepted = Number(row.accepted || 0) === 1;
-    const alertType = score >= 100000 ? "extreme_score" : accepted && durationMs < 12000 ? "too_fast_run" : "rejected_run";
-    const severity = score >= 250000 ? "critical" : score >= 100000 || (accepted && durationMs < 12000) ? "high" : "medium";
+    const proofSeq = Number(row.proof_seq || 0);
+    const proofScore = Number(row.proof_score || 0);
+    const proofDurationMs = Number(row.proof_duration_ms || 0);
+    const registryRecovery = accepted && rejectionReason === 'server_registry_recovery';
+    const trustedRegistryRecovery = registryRecovery
+      && proofSeq > 0
+      && score < 100000
+      && score >= minScore
+      && durationMs >= proofMinMs
+      && proofScore >= score
+      && proofDurationMs >= durationMs;
+    // A short row created by our own recovery path is valid only when the same
+    // persisted proof that recovery trusts also proves the configured grace
+    // floor. Anything outside that bound still reaches anti-fraud.
+    if (trustedRegistryRecovery) continue;
+
+    const alertType = score >= 100000 ? "extreme_score" : accepted && durationMs < minDurationMs ? "too_fast_run" : "rejected_run";
+    const severity = score >= 250000 ? "critical" : score >= 100000 || (accepted && durationMs < minDurationMs) ? "high" : "medium";
     const fingerprint = `run:${row.run_id}:${alertType}`;
     const alertTitle = alertType === "extreme_score" ? "Аномально высокий результат" : alertType === "too_fast_run" ? "Зачтён слишком быстрый забег" : "Подозрительно отклонённый забег";
     const insertedAlert = await env.DB.prepare(
       `INSERT OR IGNORE INTO fraud_alerts (telegram_id, alert_type, severity, title, details_json, status, fingerprint, created_at, updated_at)
        VALUES (?, ?, ?, ?, ?, 'open', ?, ?, ?)`
-    ).bind(String(row.telegram_id), alertType, severity, alertTitle, JSON.stringify({ runId: row.run_id, score, durationMs, accepted, rejectionReason }), fingerprint, row.created_at || now, now).run();
+    ).bind(String(row.telegram_id), alertType, severity, alertTitle, JSON.stringify({ runId: row.run_id, score, durationMs, accepted, rejectionReason, proofSeq, proofScore, proofDurationMs }), fingerprint, row.created_at || now, now).run();
     if (Number(insertedAlert.meta?.changes || 0) > 0) {
       const reasonLine = rejectionReason ? `\nПричина: <code>${escapeHtml(rejectionReason)}</code>` : '';
       await notifySubscribedStaff(env, "suspicious_runs", `🚨 <b>${escapeHtml(alertTitle)}</b>\n\nИгрок: <code>${escapeHtml(String(row.telegram_id))}</code>\nСчёт: <b>${score.toLocaleString("ru-RU")}</b>\nДлительность: <b>${Math.max(0, Math.round(durationMs / 1000))} сек.</b>${reasonLine}\nЗабег: <code>${escapeHtml(String(row.run_id))}</code>`);

@@ -68,6 +68,7 @@ const steps = [
   // public leaderboard reads must remain read-only and first paint must stay lazy.
   ['rating fast reads', 'node', ['scripts/check-rating-fast-read.mjs']],
   ['rating dethrone delivery', 'node', ['scripts/check-rating-dethrone-delivery.mjs']],
+  ['player directory integrity', 'node', ['scripts/check-player-directory-integrity.mjs']],
   ['case opening stability', 'node', ['scripts/check-case-stability.mjs']],
   ['Elite+ XP lifetime', 'node', ['scripts/check-elite-plus-xp-lifetime.mjs']],
   ['mail claim stability', 'node', ['scripts/check-mail-claim-stability.mjs']],

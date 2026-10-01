@@ -8,6 +8,20 @@ CREATE TABLE reward_delivery_queue(
 
 CREATE TABLE player_account_revision(telegram_id TEXT PRIMARY KEY,revision INTEGER NOT NULL DEFAULT 1,updated_at INTEGER NOT NULL DEFAULT 0);
 CREATE TABLE admin_profile_state(telegram_id TEXT PRIMARY KEY,wallet INTEGER NOT NULL DEFAULT 0,treats INTEGER NOT NULL DEFAULT 0,coffee INTEGER NOT NULL DEFAULT 0,profile_xp INTEGER NOT NULL DEFAULT 0,best_score INTEGER NOT NULL DEFAULT 0,revision INTEGER NOT NULL DEFAULT 1,created_at INTEGER NOT NULL DEFAULT 0,updated_at INTEGER NOT NULL DEFAULT 0,updated_by TEXT NOT NULL DEFAULT '');
+
+-- Leaderboard identity tables predate migration 0087 in production. Keep their
+-- canonical identity/score columns in the replay fixture so post-0087 profile
+-- integrity migrations can safely backfill rating-only players.
+CREATE TABLE leaderboard_entries(
+ season_id TEXT NOT NULL,telegram_id TEXT NOT NULL,display_name TEXT NOT NULL DEFAULT '',username TEXT NOT NULL DEFAULT '',photo_url TEXT NOT NULL DEFAULT '',
+ best_score INTEGER NOT NULL DEFAULT 0,level INTEGER NOT NULL DEFAULT 1,achieved_at INTEGER NOT NULL DEFAULT 0,updated_at INTEGER NOT NULL DEFAULT 0,
+ hidden INTEGER NOT NULL DEFAULT 0,PRIMARY KEY(season_id,telegram_id)
+);
+CREATE TABLE leaderboard_all_time(
+ telegram_id TEXT PRIMARY KEY,display_name TEXT NOT NULL DEFAULT '',username TEXT NOT NULL DEFAULT '',photo_url TEXT NOT NULL DEFAULT '',
+ best_score INTEGER NOT NULL DEFAULT 0,level INTEGER NOT NULL DEFAULT 1,achieved_at INTEGER NOT NULL DEFAULT 0,updated_at INTEGER NOT NULL DEFAULT 0,
+ hidden INTEGER NOT NULL DEFAULT 0
+);
 CREATE TABLE case_player_state(telegram_id TEXT PRIMARY KEY,revision INTEGER NOT NULL DEFAULT 1,owned_avatars_json TEXT NOT NULL DEFAULT '[]',updated_at INTEGER NOT NULL DEFAULT 0,created_at INTEGER NOT NULL DEFAULT 0);
 
 -- Level-case receipts have existed since migration 0010. The pre-0087 integration
