@@ -7953,7 +7953,7 @@ async function getGameStartupPackage(request, env, ctx = null) {
 
     let profile = null;
     try {
-      profile = await syncAdminProfile(null, env, { raw: true, body: internalBody, auth, shared });
+      profile = await syncAdminProfile(null, env, { raw: true, body: internalBody, auth, shared, includeRunXpDaily:true });
     } catch (error) {
       console.error("startup profile failed", error);
       errors.profile = startupSectionError(error);
@@ -8863,8 +8863,87 @@ const AUTHORITATIVE_RUN_CHECKPOINT_MAX_ADVANCE_MS = 6000;
 const AUTHORITATIVE_RUN_CHECKPOINT_MAX_WALL_GAP_MS = 6500;
 const AUTHORITATIVE_RUN_CHECKPOINT_CLOCK_GRACE_MS = 1200;
 const AUTHORITATIVE_RUN_CHECKPOINT_SCORE_SLACK = 8;
-const AUTHORITATIVE_PROFILE_RUN_XP = 4;
+const AUTHORITATIVE_PROFILE_LEGACY_RUN_XP = 4;
+const AUTHORITATIVE_PROFILE_RUN_XP_DAILY_BONUS = 22;
+const AUTHORITATIVE_PROFILE_RUN_XP_STANDARD = 4;
+const AUTHORITATIVE_PROFILE_RUN_XP_GRIND = 2;
+const AUTHORITATIVE_PROFILE_RUN_XP_DAILY_BONUS_RUNS = 3;
+const AUTHORITATIVE_PROFILE_RUN_XP_STANDARD_THROUGH = 10;
+const AUTHORITATIVE_PROFILE_RUN_XP_DAY_OFFSET_SECONDS = 3 * 3600;
 const AUTHORITATIVE_PROFILE_PURCHASE_XP = 5;
+
+function profileRunXpDayWindow(atSeconds = Math.floor(Date.now() / 1000)) {
+  const at = Math.max(1, Math.floor(Number(atSeconds) || Math.floor(Date.now() / 1000)));
+  const shifted = at + AUTHORITATIVE_PROFILE_RUN_XP_DAY_OFFSET_SECONDS;
+  const shiftedDayStart = Math.floor(shifted / 86400) * 86400;
+  const startsAt = shiftedDayStart - AUTHORITATIVE_PROFILE_RUN_XP_DAY_OFFSET_SECONDS;
+  const endsAt = startsAt + 86400;
+  return {
+    dayKey: new Date(shiftedDayStart * 1000).toISOString().slice(0, 10),
+    startsAt,
+    endsAt,
+    resetsAt: endsAt * 1000,
+    timezoneOffsetMinutes: AUTHORITATIVE_PROFILE_RUN_XP_DAY_OFFSET_SECONDS / 60
+  };
+}
+
+function profileRunXpBaseForOrdinal(runOrdinal) {
+  const ordinal = Math.max(1, Math.floor(Number(runOrdinal) || 1));
+  if (ordinal <= AUTHORITATIVE_PROFILE_RUN_XP_DAILY_BONUS_RUNS) return AUTHORITATIVE_PROFILE_RUN_XP_DAILY_BONUS;
+  if (ordinal <= AUTHORITATIVE_PROFILE_RUN_XP_STANDARD_THROUGH) return AUTHORITATIVE_PROFILE_RUN_XP_STANDARD;
+  return AUTHORITATIVE_PROFILE_RUN_XP_GRIND;
+}
+
+function profileRunXpTierForOrdinal(runOrdinal) {
+  const ordinal = Math.max(1, Math.floor(Number(runOrdinal) || 1));
+  if (ordinal <= AUTHORITATIVE_PROFILE_RUN_XP_DAILY_BONUS_RUNS) return 'daily_bonus';
+  if (ordinal <= AUTHORITATIVE_PROFILE_RUN_XP_STANDARD_THROUGH) return 'standard';
+  return 'grind';
+}
+
+function profileRunXpDailyStateFromCount(creditedRuns, atSeconds = Math.floor(Date.now() / 1000)) {
+  const count = Math.max(0, Math.floor(Number(creditedRuns) || 0));
+  const window = profileRunXpDayWindow(atSeconds);
+  const nextRunOrdinal = count + 1;
+  return {
+    ...window,
+    creditedRuns: count,
+    bonusRunsTotal: AUTHORITATIVE_PROFILE_RUN_XP_DAILY_BONUS_RUNS,
+    bonusRunsUsed: Math.min(count, AUTHORITATIVE_PROFILE_RUN_XP_DAILY_BONUS_RUNS),
+    bonusRunsRemaining: Math.max(0, AUTHORITATIVE_PROFILE_RUN_XP_DAILY_BONUS_RUNS - count),
+    standardThrough: AUTHORITATIVE_PROFILE_RUN_XP_STANDARD_THROUGH,
+    dailyBonusBaseXp: AUTHORITATIVE_PROFILE_RUN_XP_DAILY_BONUS,
+    standardBaseXp: AUTHORITATIVE_PROFILE_RUN_XP_STANDARD,
+    grindBaseXp: AUTHORITATIVE_PROFILE_RUN_XP_GRIND,
+    nextRunOrdinal,
+    nextTier: profileRunXpTierForOrdinal(nextRunOrdinal),
+    nextBaseXp: profileRunXpBaseForOrdinal(nextRunOrdinal)
+  };
+}
+
+async function readProfileRunXpDailyState(env, telegramId, atSeconds = Math.floor(Date.now() / 1000)) {
+  const window = profileRunXpDayWindow(atSeconds);
+  const row = await env.DB.prepare(`SELECT COUNT(*) AS value
+      FROM player_economy_run_ledger
+      WHERE telegram_id=? AND profile_xp>0 AND created_at>=? AND created_at<?`)
+    .bind(String(telegramId), window.startsAt, window.endsAt).first();
+  return profileRunXpDailyStateFromCount(Number(row?.value || 0), atSeconds);
+}
+
+function profileRunXpAwardView(dailyBefore, baseXp, multiplier, awardedXp) {
+  const ordinal = Math.max(1, Number(dailyBefore?.creditedRuns || 0) + 1);
+  return {
+    dayKey: String(dailyBefore?.dayKey || ''),
+    runOrdinal: ordinal,
+    tier: profileRunXpTierForOrdinal(ordinal),
+    dailyBonus: ordinal <= AUTHORITATIVE_PROFILE_RUN_XP_DAILY_BONUS_RUNS,
+    bonusRunNumber: ordinal <= AUTHORITATIVE_PROFILE_RUN_XP_DAILY_BONUS_RUNS ? ordinal : 0,
+    bonusRunsTotal: AUTHORITATIVE_PROFILE_RUN_XP_DAILY_BONUS_RUNS,
+    baseXp: Math.max(0, Math.floor(Number(baseXp) || 0)),
+    multiplier: Math.max(1, Math.floor(Number(multiplier) || 1)),
+    awardedXp: Math.max(0, Math.floor(Number(awardedXp) || 0))
+  };
+}
 // Runs accepted by an older Worker before this cutoff may be retried after
 // deploy even though they have no run-session row. No new row can be created
 // under the old code after the new Worker is deployed.
@@ -9147,7 +9226,7 @@ async function recoverLegacyUnsyncedRunProgress(env, telegramId, sourceUpdatedAt
   // recover the base amount that can be proven from accepted server rows.
   // Any premium multiplier already synchronized before the cutover remains in
   // the stored profile and is never reduced.
-  const profileXp = Math.min(999999999, runs * AUTHORITATIVE_PROFILE_RUN_XP);
+  const profileXp = Math.min(999999999, runs * AUTHORITATIVE_PROFILE_LEGACY_RUN_XP);
   const now = Math.floor(Date.now() / 1000);
   const token = `cutover_${id}_${now}_${Math.random().toString(36).slice(2,10)}`;
   const insertCutover = env.DB.prepare(
@@ -10135,6 +10214,10 @@ async function syncAdminProfile(request, env, internal = null) {
     if (mode === "write" || mode === "set") requireAdminUser(auth.user, env);
     const telegramId = String(auth.user.id);
     const now = Math.floor(Date.now() / 1000);
+    const includeRunXpDaily = internal ? internal.includeRunXpDaily === true : true;
+    const runXpDailyPromise = includeRunXpDaily
+      ? readProfileRunXpDailyState(env, telegramId, now).catch((error) => { console.error('profile run XP daily state failed', error); return null; })
+      : Promise.resolve(null);
     const appliedResetIds = Array.isArray(body.current?.appliedResetPlanIds)
       ? [...new Set(body.current.appliedResetPlanIds.map((value) => String(value || "").trim()).filter((value) => /^reset_[A-Za-z0-9_-]{6,120}$/.test(value)))].slice(-50)
       : [];
@@ -10199,7 +10282,8 @@ async function syncAdminProfile(request, env, internal = null) {
     }
 
     const row = authoritativeRow || ensuredCaseState?.profile;
-    const payload = { ok:true, resetPlan:activeResetPlan, profile:authoritativeProfileView(row) };
+    const runXpDaily = await runXpDailyPromise;
+    const payload = { ok:true, resetPlan:activeResetPlan, profile:authoritativeProfileView(row), ...(runXpDaily ? { runXpDaily } : {}) };
     if (internal?.shared?.caseEnsured) {
       internal.shared.caseEnsured.profile = {
         ...(internal.shared.caseEnsured.profile || {}),
@@ -14415,7 +14499,7 @@ async function buildFastRepeatedRunResponse(env, executionCtx, context) {
   const { ledger, telegramId, runId, submittedMetrics, submittedStoryCollectibleSlots, season, minSeconds, minScore, ratingEntryEnabled, auth } = context;
   await importLegacyRunCaseDropMilestone(env,runId,telegramId).catch(()=>null);
   const profilePromise = ensureAuthoritativeProfileRow(env, telegramId, `run:${runId}:fast-repeat`);
-  const [profileRow, repeatCaseEnsured, repeatRunCaseDropsResult, repeatStoryCollectible, repeatGameTaskNotice] = await Promise.all([
+  const [profileRow, repeatCaseEnsured, repeatRunCaseDropsResult, repeatStoryCollectible, repeatGameTaskNotice, repeatProfileRunXpDaily] = await Promise.all([
     profilePromise,
     ensureCasePlayerState(env, telegramId, {}, { profilePromise }),
     env.DB.prepare(`SELECT m.*,CASE WHEN EXISTS(SELECT 1 FROM granted_cases g
@@ -14423,7 +14507,8 @@ async function buildFastRepeatedRunResponse(env, executionCtx, context) {
            OR (m.milestone_score=1000 AND g.id=substr('run_case_drop_'||m.run_id,1,180))) THEN 1 ELSE 0 END AS grant_exists
       FROM game_run_case_drop_milestones m WHERE m.run_id=? AND m.telegram_id=? AND m.case_type<>'' ORDER BY m.milestone_score ASC`).bind(runId,telegramId).all().catch(()=>({results:[]})),
     settleRunStoryCollectibles(env,{runId,telegramId,durationMs:Number(ledger?.duration_ms||submittedMetrics.durationMs),slots:submittedStoryCollectibleSlots,now:Math.floor(Date.now()/1000)}).catch(()=>readRunStoryCollectibleState(env,runId,telegramId).catch(()=>null)),
-    readGameTaskNoticeState(env,telegramId).catch((error)=>{console.error('repeat run game task notice failed',error);return null;})
+    readGameTaskNoticeState(env,telegramId).catch((error)=>{console.error('repeat run game task notice failed',error);return null;}),
+    readProfileRunXpDailyState(env, telegramId).catch((error)=>{console.error('repeat run XP daily state failed',error);return null;})
   ]);
   const repeatRunCaseDrops=(repeatRunCaseDropsResult?.results||[]).map(runCaseDropMilestoneView).filter(Boolean);
   const repeatMemories=freshStoryCollectibleMemories(repeatStoryCollectible,Math.floor(Date.now()/1000));
@@ -14476,6 +14561,7 @@ async function buildFastRepeatedRunResponse(env, executionCtx, context) {
       },
       credited: { points: Number(ledger?.points || 0), treats: Number(ledger?.treats || 0), coffee: Number(ledger?.coffee || 0) },
       profileXpAwarded: Number(ledger?.profile_xp || 0),
+      ...(repeatProfileRunXpDaily ? { profileXpDaily:repeatProfileRunXpDaily } : {}),
       newRecord: Number(ledger?.new_record || 0) === 1,
       boosterType: String(ledger?.booster_type || ""),
       boosterTypes: caseStoredBoosterTypes(ledger?.booster_types_json, ledger?.booster_type),
@@ -14689,7 +14775,10 @@ async function submitLeaderboardRun(request, env, executionCtx = null) {
     const acceptedToRating = ratingEntryEnabled && String(season.status || "") === "active" && qualifies;
     await importLegacyRunCaseDropMilestone(env,runId,telegramId).catch(()=>null);
     const profileBeforePromise = ensureAuthoritativeProfileRow(env, telegramId, `run:${runId}:prepare`);
-    const [ensured, profileBefore, consumed, fastSeasonPass, testerRow, liveOpsRunEvent, runAchievementContext, reservedCaseDropsResult, previousSeasonLeader] = await Promise.all([
+    const profileRunXpDailyBeforePromise = qualifies
+      ? readProfileRunXpDailyState(env, telegramId, runActivityCreatedAt)
+      : Promise.resolve(null);
+    const [ensured, profileBefore, consumed, fastSeasonPass, testerRow, liveOpsRunEvent, runAchievementContext, reservedCaseDropsResult, previousSeasonLeader, profileRunXpDailyBefore] = await Promise.all([
       ensureCasePlayerState(env, telegramId, {}, { profilePromise: profileBeforePromise }),
       profileBeforePromise,
       env.DB.prepare(`SELECT booster_type,booster_types_json,telegram_id FROM case_booster_run_consumptions WHERE run_id=? LIMIT 1`).bind(runId).first(),
@@ -14701,7 +14790,8 @@ async function submitLeaderboardRun(request, env, executionCtx = null) {
       activeRunLiveOpsEvent(env).catch(()=>({active:false,multipliers:{pointsMultiplier:1,treatsMultiplier:1,coffeeMultiplier:1}})),
       rewardEligible ? prepareRunAchievementUnlockContext(env,telegramId,minSeconds*1000) : Promise.resolve(null),
       env.DB.prepare(`SELECT * FROM game_run_case_drop_milestones WHERE run_id=? AND telegram_id=? AND case_type<>'' ORDER BY milestone_score ASC`).bind(runId,telegramId).all().catch(()=>({results:[]})),
-      acceptedToRating ? env.DB.prepare(`SELECT telegram_id,display_name,username,best_score,achieved_at FROM leaderboard_entries WHERE season_id=? AND hidden=0 ORDER BY best_score DESC,achieved_at ASC,telegram_id ASC LIMIT 1`).bind(String(season.id || "")).first() : Promise.resolve(null)
+      acceptedToRating ? env.DB.prepare(`SELECT telegram_id,display_name,username,best_score,achieved_at FROM leaderboard_entries WHERE season_id=? AND hidden=0 ORDER BY best_score DESC,achieved_at ASC,telegram_id ASC LIMIT 1`).bind(String(season.id || "")).first() : Promise.resolve(null),
+      profileRunXpDailyBeforePromise
     ]);
     if (consumed && String(consumed.telegram_id || "") !== telegramId) throw new ApiError(409, "Этот идентификатор забега уже использован.");
 
@@ -14729,12 +14819,21 @@ async function submitLeaderboardRun(request, env, executionCtx = null) {
     const economyPoints = rewardEligible ? Math.min(999999999, eventPoints + (qualifies ? skinBonus.points : 0)) : 0;
     const economyTreats = rewardEligible ? Math.min(999999999, eventTreats + (qualifies ? skinBonus.treats : 0)) : 0;
     const economyCoffee = rewardEligible ? Math.min(999999999, eventCoffee + (qualifies ? skinBonus.coffee : 0)) : 0;
+    const now = Math.floor(Date.now() / 1000);
     const profileXpMultiplier = qualifies ? Math.max(1, Number(fastSeasonPass?.premiumMultiplier || 1)) : 1;
-    const profileXpAwarded = qualifies ? Math.min(999999999, AUTHORITATIVE_PROFILE_RUN_XP * profileXpMultiplier) : 0;
+    const profileXpBaseAwarded = qualifies
+      ? profileRunXpBaseForOrdinal(Number(profileRunXpDailyBefore?.creditedRuns || 0) + 1)
+      : 0;
+    const profileXpAwarded = qualifies ? Math.min(999999999, profileXpBaseAwarded * profileXpMultiplier) : 0;
+    const profileXpRun = qualifies
+      ? profileRunXpAwardView(profileRunXpDailyBefore, profileXpBaseAwarded, profileXpMultiplier, profileXpAwarded)
+      : null;
+    const profileXpDailyAfterRun = qualifies
+      ? profileRunXpDailyStateFromCount(Number(profileRunXpDailyBefore?.creditedRuns || 0) + 1, runActivityCreatedAt)
+      : null;
     const newRecord = rewardEligible && metrics.score > Number(profileBefore?.best_score || 0) && metrics.score > 0;
     const nextProfileXp = Math.min(999999999, Number(profileBefore?.profile_xp || 0) + profileXpAwarded);
     const nextLevel = profileLevelFromXp(nextProfileXp);
-    const now = Math.floor(Date.now() / 1000);
     const displayName = telegramDisplayName(auth.user).slice(0, 120);
     const username = String(auth.user.username || "").slice(0, 64);
     const photoUrl = String(auth.user.photo_url || "").slice(0, 500);
@@ -14868,6 +14967,15 @@ async function submitLeaderboardRun(request, env, executionCtx = null) {
       throw batchError;
     }
 
+    let profileXpDaily = profileXpDailyAfterRun;
+    const currentProfileXpDayKey = profileRunXpDayWindow(now).dayKey;
+    if (profileXpDaily && profileXpDaily.dayKey !== currentProfileXpDayKey) {
+      profileXpDaily = await readProfileRunXpDailyState(env, telegramId, now).catch((error)=>{
+        console.error('run XP daily state refresh failed', error);
+        return null;
+      });
+    }
+
     const [storyCollectibleSettlementResult,gameTaskNotice]=await Promise.all([
       settleRunStoryCollectibles(env,{runId,telegramId,durationMs:metrics.durationMs,slots:submittedStoryCollectibleSlots,now}).catch((error)=>{if(isMissingRuntimeDatabaseSchemaError(error))return null;throw error;}),
       gameTaskRunCompletionNotice(env,telegramId,{
@@ -14912,6 +15020,7 @@ async function submitLeaderboardRun(request, env, executionCtx = null) {
       {
         runId, score: metrics.score, durationMs: metrics.durationMs, runTreats: metrics.runTreats, runCoffee: metrics.runCoffee,
         credited: { points: economyPoints, treats: economyTreats, coffee: economyCoffee }, profileXpAwarded,
+        profileXpRun, profileXpDaily,
         boosterType: appliedBoosterType, boosterTypes: appliedBoosterTypes, runBoosterTypes: sessionBoosterTypes, skinId, newRecord, accepted: acceptedToRating, excludedFromRating: Boolean(ratingHidden), caseDrop:primaryCaseDrop, caseDrops:settlementCaseDrops
       },
       `run_${runId}`, auth.user, now
@@ -14953,7 +15062,10 @@ async function submitLeaderboardRun(request, env, executionCtx = null) {
         reason: acceptedToRating ? "accepted" : (!qualifies ? "below_minimum" : (!ratingEntryEnabled ? "rating_disabled" : `season_${String(season.status || "inactive")}`)),
         raw: { score: metrics.score, treats: metrics.runTreats, coffee: metrics.runCoffee, durationMs: metrics.durationMs },
         credited: { points: economyPoints, treats: economyTreats, coffee: economyCoffee },
-        profileXpAwarded, profileXpMultiplier, newRecord,
+        profileXpAwarded, profileXpMultiplier,
+        ...(profileXpRun ? { profileXpRun } : {}),
+        ...(profileXpDaily ? { profileXpDaily } : {}),
+        newRecord,
         boosterType: appliedBoosterType, boosterTypes: appliedBoosterTypes,
         activeBoosters: caseNormalizeActiveBoosters(caseState.activeBoosters, caseState.activeBooster?.type, caseState.activeBooster?.runsLeft),
         activeBooster: { type: String(caseState.activeBooster?.type || ""), runsLeft: safeAdminNumber(caseState.activeBooster?.runsLeft) },
@@ -46056,6 +46168,8 @@ function testProjectNormalizeSandboxState(raw = {}) {
   return {
     activeRun,
     completedRuns:Math.max(0, Math.min(999999, Math.floor(Number(source.completedRuns) || 0))),
+    profileRunXpDayKey:/^\d{4}-\d{2}-\d{2}$/.test(String(source.profileRunXpDayKey || '')) ? String(source.profileRunXpDayKey) : '',
+    profileRunXpCreditedRuns:Math.max(0, Math.min(9999, Math.floor(Number(source.profileRunXpCreditedRuns) || 0))),
     achievementRunScore:Math.max(0, Math.min(999999999999, Math.floor(Number(source.achievementRunScore) || 0))),
     achievementRunZefir:Math.max(0, Math.min(999999999, Math.floor(Number(source.achievementRunZefir) || 0))),
     achievementRunCoffee:Math.max(0, Math.min(999999999, Math.floor(Number(source.achievementRunCoffee) || 0))),
@@ -47800,15 +47914,22 @@ async function testProjectSandboxRunSubmit(env, loaded, payload) {
   const creditedPoints=(boosterTypes.includes("points")?score*2:score)+Number(skinBonus.points||0),creditedTreats=(boosterTypes.includes("treats")?runTreats*2:runTreats)+Number(skinBonus.treats||0),creditedCoffee=(boosterTypes.includes("coffee")?runCoffee*2:runCoffee)+Number(skinBonus.coffee||0),previousBest=Math.max(0,Number(state.bestScore||0)),newRecord=score>previousBest&&score>0;
   state.points=Math.min(999999999,Number(state.points||0)+creditedPoints);state.treats=Math.min(9999999,Number(state.treats||0)+creditedTreats);state.coffee=Math.min(9999999,Number(state.coffee||0)+creditedCoffee);state.bestScore=Math.max(previousBest,score);
   const active=caseNormalizeActiveBoosters(state.caseState?.activeBoosters,state.caseState?.activeBooster?.type,state.caseState?.activeBooster?.runsLeft);for(const type of boosterTypes){if(Number(active[type]||0)>0)active[type]=Math.max(0,Number(active[type])-1);}state.caseState.activeBoosters=active;state.caseState.activeBooster=caseLegacyActiveBooster(active);
-  const profileXpAwarded=score>0?AUTHORITATIVE_PROFILE_RUN_XP:0;state.profileXp=Math.min(999999999,Number(state.profileXp||0)+profileXpAwarded);
-  let seasonPassXpAwarded=0; const season=testProjectDynamicSeason(snapshot?.season||{},nowMs);
+  const season=testProjectDynamicSeason(snapshot?.season||{},nowMs),runXpDay=profileRunXpDayWindow(Math.floor(nowMs/1000));
+  const previousRunXpCount=String(state.sandbox?.profileRunXpDayKey||'')===runXpDay.dayKey?Math.max(0,Number(state.sandbox?.profileRunXpCreditedRuns||0)):0;
+  const profileXpMultiplier=score>0?Math.max(1,Number(testProjectPassEarnedMultiplier(state,season,nowMs)?.premiumMultiplier||1)):1;
+  const profileXpBaseAwarded=score>0?profileRunXpBaseForOrdinal(previousRunXpCount+1):0;
+  const profileXpAwarded=score>0?Math.min(999999999,profileXpBaseAwarded*profileXpMultiplier):0;
+  const profileXpRun=score>0?profileRunXpAwardView(profileRunXpDailyStateFromCount(previousRunXpCount,Math.floor(nowMs/1000)),profileXpBaseAwarded,profileXpMultiplier,profileXpAwarded):null;
+  const profileXpDaily=profileRunXpDailyStateFromCount(previousRunXpCount+(score>0?1:0),Math.floor(nowMs/1000));
+  state.profileXp=Math.min(999999999,Number(state.profileXp||0)+profileXpAwarded);
+  let seasonPassXpAwarded=0;
   if(season?.status==="active"&&score>0){const base=Math.max(0,Math.floor(Number(season?.baseRunXp||0)));const earned=testProjectPassEarnedMultiplier(state,season,nowMs);seasonPassXpAwarded=Math.floor(base*Math.max(1,Number(earned?.multiplier||1)));state.passXp=Math.min(999999999,Number(state.passXp||0)+seasonPassXpAwarded);
     for(const task of season?.tasks||[]){if(!task?.enabled)continue;const key=testProjectTaskKey(season.id,task,nowMs);let delta=0;const metric=String(task.metric||"");if(metric==="runs")delta=1;else if(metric==="score")delta=score;else if(metric==="treats")delta=runTreats;else if(metric==="coffee")delta=runCoffee;if(delta>0)state.passTaskProgress[key]=Math.min(999999999,Number(state.passTaskProgress[key]||0)+delta);}
   }
-  state.sandbox=testProjectNormalizeSandboxState({...state.sandbox,activeRun:null,completedRuns:Number(state.sandbox?.completedRuns||0)+1,achievementRunScore:Number(state.sandbox?.achievementRunScore||0)+score,achievementRunZefir:Number(state.sandbox?.achievementRunZefir||0)+runTreats,achievementRunCoffee:Number(state.sandbox?.achievementRunCoffee||0)+runCoffee,lastRun:{id:runId,score,durationMs,acceptedAt:Date.now()}});
+  state.sandbox=testProjectNormalizeSandboxState({...state.sandbox,activeRun:null,completedRuns:Number(state.sandbox?.completedRuns||0)+1,profileRunXpDayKey:profileXpDaily.dayKey,profileRunXpCreditedRuns:profileXpDaily.creditedRuns,achievementRunScore:Number(state.sandbox?.achievementRunScore||0)+score,achievementRunZefir:Number(state.sandbox?.achievementRunZefir||0)+runTreats,achievementRunCoffee:Number(state.sandbox?.achievementRunCoffee||0)+runCoffee,lastRun:{id:runId,score,durationMs,acceptedAt:Date.now()}});
   const persisted=await testProjectSandboxSave(env,ownerId,state,snapshot,before,"game_run_submit",`Игра · забег ${score.toLocaleString("ru-RU")} очков`);
   const current=persisted.state;
-  return {ok:true,testProject:true,fastSettlement:true,runSettlement:{accepted:true,acceptedToRating:score>0,reason:score>0?"accepted":"below_minimum",raw:{score,treats:runTreats,coffee:runCoffee,durationMs},credited:{points:creditedPoints,treats:creditedTreats,coffee:creditedCoffee},profileXpAwarded,newRecord,boosterType:String(boosterTypes[0]||""),boosterTypes,activeBoosters:current.caseState?.activeBoosters||{},activeBooster:current.caseState?.activeBooster||{type:"",runsLeft:0},skinId:runSkinId,skinBonus:{points:Number(skinBonus.points||0),treats:Number(skinBonus.treats||0),coffee:Number(skinBonus.coffee||0)},seasonId:String(season?.id||"")},profile:testProjectSandboxProfile(current),profileXpAwarded,seasonPassAward:{xpAwarded:seasonPassXpAwarded,taskNotice:null},gameTaskNotice:{readyCountDelta:0,unreadCountDelta:0,activeCountDelta:0,tasks:[],notice:null},serverTime:Date.now()};
+  return {ok:true,testProject:true,fastSettlement:true,runSettlement:{accepted:true,acceptedToRating:score>0,reason:score>0?"accepted":"below_minimum",raw:{score,treats:runTreats,coffee:runCoffee,durationMs},credited:{points:creditedPoints,treats:creditedTreats,coffee:creditedCoffee},profileXpAwarded,profileXpMultiplier,...(profileXpRun?{profileXpRun}:{}),profileXpDaily,newRecord,boosterType:String(boosterTypes[0]||""),boosterTypes,activeBoosters:current.caseState?.activeBoosters||{},activeBooster:current.caseState?.activeBooster||{type:"",runsLeft:0},skinId:runSkinId,skinBonus:{points:Number(skinBonus.points||0),treats:Number(skinBonus.treats||0),coffee:Number(skinBonus.coffee||0)},seasonId:String(season?.id||"")},profile:testProjectSandboxProfile(current),profileXpAwarded,seasonPassAward:{xpAwarded:seasonPassXpAwarded,taskNotice:null},gameTaskNotice:{readyCountDelta:0,unreadCountDelta:0,activeCountDelta:0,tasks:[],notice:null},serverTime:Date.now()};
 }
 
 

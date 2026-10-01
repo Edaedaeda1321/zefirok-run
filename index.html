@@ -6335,6 +6335,36 @@ html&gt;body{padding:
     background: linear-gradient(180deg, rgba(255,255,255,.9), rgba(255,247,250,.95));
   }
 
+  #zefirok-maltipoo-runner .profile-xp-guide-head {
+    min-width: 0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+  }
+
+  #zefirok-maltipoo-runner .profile-xp-guide-bonus {
+    flex: 0 0 auto;
+    max-width: 58%;
+    padding: 5px 8px;
+    border: 1px solid rgba(225, 163, 190, .55);
+    border-radius: 999px;
+    background: linear-gradient(180deg, #fff7fb, #ffeaf3);
+    color: #b34f79;
+    font-size: 9px;
+    line-height: 1;
+    font-weight: 950;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  #zefirok-maltipoo-runner .profile-xp-guide-bonus.is-complete {
+    border-color: rgba(197, 168, 95, .48);
+    background: linear-gradient(180deg, #fffaf0, #fff1d8);
+    color: #9a6a20;
+  }
+
   #zefirok-maltipoo-runner .profile-xp-guide-label {
     color: #9d7484;
     font-size: 10px;
@@ -6377,6 +6407,13 @@ html&gt;body{padding:
     line-height: 1.15;
     font-weight: 850;
     white-space: nowrap;
+  }
+
+  #zefirok-maltipoo-runner .profile-xp-guide-note {
+    color: #94747f;
+    font-size: 9px;
+    line-height: 1.35;
+    font-weight: 750;
   }
 
   #zefirok-maltipoo-runner .profile-actions--level [data-profile-refresh] {
@@ -9861,6 +9898,8 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
     #zefirok-maltipoo-runner .run-result-metric span { display:flex; align-items:center; justify-content:center; gap:2px; font-size:7.5px; color:#9b7e89; font-weight:850; }
     #zefirok-maltipoo-runner .run-result-metric b { display:block; margin-top:1px; font-size:10px; color:#6f4757; font-variant-numeric:tabular-nums; }
     #zefirok-maltipoo-runner .run-credit-line { display:flex; justify-content:center; flex-wrap:wrap; gap:4px 8px; margin-top:6px; padding:6px 7px; border-radius:12px; background:#f7fbef; border:1px solid rgba(155,185,98,.28); color:#657640; font-size:8px; font-weight:950; }
+    #zefirok-maltipoo-runner .run-xp-daily-bonus { display:flex; align-items:center; justify-content:center; gap:6px; margin-top:6px; padding:6px 8px; border-radius:12px; background:linear-gradient(145deg,#fff9e9,#fff3d6); border:1px solid rgba(220,174,76,.34); color:#9a6a18; font-size:8px; font-weight:950; text-align:center; }
+    #zefirok-maltipoo-runner .run-xp-daily-bonus img { width:15px; height:15px; flex:0 0 15px; object-fit:contain; }
     #zefirok-maltipoo-runner .run-skin-bonus { margin-top:5px; padding:5px 7px; border-radius:11px; background:#fff5fa; color:#9b5671; text-align:center; font-size:8px; font-weight:900; }
     #zefirok-maltipoo-runner .run-skin-bonus.is-alex { background:linear-gradient(135deg,#fff2c6,#eef7cf); color:#786125; }
     #zefirok-maltipoo-runner .run-results-booster-status { display:grid; gap:4px; margin-top:6px; padding:5px; border:1px solid rgba(229,181,79,.38); border-radius:12px; background:linear-gradient(135deg,rgba(255,248,220,.96),rgba(255,239,246,.95)); box-shadow:0 4px 12px rgba(154,100,55,.07); }
@@ -12631,10 +12670,10 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
         &lt;span data-profile-next-level&gt;До уровня 2: 20 XP&lt;/span&gt;
       &lt;/div&gt;
       &lt;div class=&quot;profile-xp-sources&quot;&gt;
-        &lt;span class=&quot;profile-xp-source&quot;&gt;&lt;strong data-profile-run-xp&gt;+4 XP&lt;/strong&gt;за зачтённый забег&lt;/span&gt;
+        &lt;span class=&quot;profile-xp-source&quot;&gt;&lt;strong data-profile-run-xp&gt;+22 XP&lt;/strong&gt;за зачтённый забег&lt;/span&gt;
         &lt;span class=&quot;profile-xp-source&quot;&gt;&lt;strong data-profile-purchase-xp&gt;+5 XP&lt;/strong&gt;за каждую успешную покупку&lt;/span&gt;
       &lt;/div&gt;
-      &lt;div class=&quot;profile-xp-guide&quot; aria-label=&quot;Источники XP профиля&quot;&gt;&lt;span class=&quot;profile-xp-guide-label&quot;&gt;Получай XP за&lt;/span&gt;&lt;div class=&quot;profile-xp-guide-row&quot;&gt;&lt;span class=&quot;profile-xp-guide-item&quot;&gt;&lt;img src=&quot;/assets/ui/icon_game_button.webp&quot; alt=&quot;&quot; loading=&quot;lazy&quot; decoding=&quot;async&quot;&gt;&lt;span&gt;Забеги&lt;/span&gt;&lt;/span&gt;&lt;span class=&quot;profile-xp-guide-item&quot;&gt;&lt;img src=&quot;/assets/ui/icon_shopping.webp&quot; alt=&quot;&quot; loading=&quot;lazy&quot; decoding=&quot;async&quot;&gt;&lt;span&gt;Покупки&lt;/span&gt;&lt;/span&gt;&lt;span class=&quot;profile-xp-guide-item&quot;&gt;&lt;img src=&quot;/assets/ui/icon_quest_game.webp&quot; alt=&quot;&quot; loading=&quot;lazy&quot; decoding=&quot;async&quot;&gt;&lt;span&gt;Задания&lt;/span&gt;&lt;/span&gt;&lt;/div&gt;&lt;/div&gt;
+      &lt;div class=&quot;profile-xp-guide&quot; aria-label=&quot;Источники XP профиля&quot;&gt;&lt;div class=&quot;profile-xp-guide-head&quot;&gt;&lt;span class=&quot;profile-xp-guide-label&quot;&gt;Получай XP за&lt;/span&gt;&lt;span class=&quot;profile-xp-guide-bonus&quot; data-profile-run-xp-daily&gt;Бонус дня&lt;/span&gt;&lt;/div&gt;&lt;div class=&quot;profile-xp-guide-row&quot;&gt;&lt;span class=&quot;profile-xp-guide-item&quot;&gt;&lt;img src=&quot;/assets/ui/icon_game_button.webp&quot; alt=&quot;&quot; loading=&quot;lazy&quot; decoding=&quot;async&quot;&gt;&lt;span&gt;Забеги&lt;/span&gt;&lt;/span&gt;&lt;span class=&quot;profile-xp-guide-item&quot;&gt;&lt;img src=&quot;/assets/ui/icon_shopping.webp&quot; alt=&quot;&quot; loading=&quot;lazy&quot; decoding=&quot;async&quot;&gt;&lt;span&gt;Покупки&lt;/span&gt;&lt;/span&gt;&lt;span class=&quot;profile-xp-guide-item&quot;&gt;&lt;img src=&quot;/assets/ui/icon_quest_game.webp&quot; alt=&quot;&quot; loading=&quot;lazy&quot; decoding=&quot;async&quot;&gt;&lt;span&gt;Задания&lt;/span&gt;&lt;/span&gt;&lt;/div&gt;&lt;div class=&quot;profile-xp-guide-note&quot; data-profile-run-xp-daily-note&gt;Первые 3 зачтённых забега сегодня дают повышенный XP.&lt;/div&gt;&lt;/div&gt;
       &lt;div class=&quot;profile-run-rule&quot; data-profile-run-rule&gt;Чтобы получить XP за забег, нужно продержаться минимум 12 секунд и набрать 150 очков.&lt;/div&gt;
       &lt;button class=&quot;profile-level-guide-link&quot; data-profile-level-guide type=&quot;button&quot;&gt;Посмотреть все уровни и звания&lt;/button&gt;
     &lt;/div&gt;
@@ -13337,6 +13376,8 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
       const profileXpProgressEl = root.querySelector(&quot;[data-profile-xp-progress]&quot;);
       const profileNextLevelEl = root.querySelector(&quot;[data-profile-next-level]&quot;);
       const profileRunXpEl = root.querySelector(&quot;[data-profile-run-xp]&quot;);
+      const profileRunXpDailyEl = root.querySelector(&quot;[data-profile-run-xp-daily]&quot;);
+      const profileRunXpDailyNoteEl = root.querySelector(&quot;[data-profile-run-xp-daily-note]&quot;);
       const profilePurchaseXpEl = root.querySelector(&quot;[data-profile-purchase-xp]&quot;);
       const profileBestEl = root.querySelector(&quot;[data-profile-best]&quot;);
       const profileWalletEl = root.querySelector(&quot;[data-profile-wallet]&quot;);
@@ -13476,7 +13517,7 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
 
 // Levels and booster information share presentation only. Eligibility, XP and
 // inventory remain owned by the existing server APIs and game state adapters.
-const PI_TEXT = {&quot;levels&quot;: &quot;Уровни и звания&quot;, &quot;profile&quot;: &quot;Прогресс профиля&quot;, &quot;level&quot;: &quot;Уровень&quot;, &quot;current&quot;: &quot;Текущий&quot;, &quot;next&quot;: &quot;Дальше&quot;, &quot;total&quot;: &quot;Всего&quot;, &quot;untilNext&quot;: &quot;До следующего уровня&quot;, &quot;left&quot;: &quot;осталось&quot;, &quot;max&quot;: &quot;Максимальный уровень&quot;, &quot;maxCopy&quot;: &quot;Вся дорожка уровней пройдена. Неоткрытые кейсы остаются в «Моих покупках».&quot;, &quot;nextReward&quot;: &quot;Ближайшая награда&quot;, &quot;atLevel&quot;: &quot;На уровне&quot;, &quot;caseContents&quot;: &quot;Состав и шансы&quot;, &quot;caseOpened&quot;: &quot;Кейс открыт&quot;, &quot;caseReady&quot;: &quot;Кейс в «Моих покупках»&quot;, &quot;caseLocked&quot;: &quot;Кейс за уровень&quot;, &quot;stock&quot;: &quot;Открыть мои кейсы&quot;, &quot;readyCases&quot;: &quot;Кейсы за уровни&quot;, &quot;available&quot;: &quot;Доступно&quot;, &quot;ladder&quot;: &quot;Все уровни и звания&quot;, &quot;ladderCopy&quot;: &quot;Требования XP и награды за уровни&quot;, &quot;ladderNote&quot;: &quot;Уровень добавляет кейс в «Мои покупки» → «Кейсы». Его содержимое выдаётся только после открытия.&quot;, &quot;currentJump&quot;: &quot;К текущему уровню&quot;, &quot;xp&quot;: &quot;Как получать XP&quot;, &quot;xpCopy&quot;: &quot;Забеги, покупки и бонус сезона&quot;, &quot;run&quot;: &quot;Зачтённый забег&quot;, &quot;purchase&quot;: &quot;Успешная покупка&quot;, &quot;purchaseCopy&quot;: &quot;За покупку, для которой предусмотрен XP. Просмотр товара или кейса XP не даёт.&quot;, &quot;xpSeparate&quot;: &quot;XP профиля открывает эти уровни. XP сезона и престиж достижений считаются отдельно.&quot;, &quot;xpServer&quot;: &quot;Результат забега и начисление XP подтверждает сервер.&quot;, &quot;booster&quot;: &quot;Усилитель&quot;, &quot;seasonBonus&quot;: &quot;Бонус сезона&quot;, &quot;consumable&quot;: &quot;Расходуемый бонус&quot;, &quot;active&quot;: &quot;Активен&quot;, &quot;ready&quot;: &quot;Можно активировать&quot;, &quot;empty&quot;: &quot;Нет в запасе&quot;, &quot;inventory&quot;: &quot;В запасе&quot;, &quot;oneItem&quot;: &quot;Один усилитель&quot;, &quot;remaining&quot;: &quot;Осталось&quot;, &quot;runs&quot;: &quot;Забеги&quot;, &quot;pieces&quot;: &quot;шт.&quot;, &quot;activate&quot;: &quot;Активировать&quot;, &quot;activating&quot;: &quot;Активируем…&quot;, &quot;checking&quot;: &quot;Проверяем…&quot;, &quot;check&quot;: &quot;Проверить состояние&quot;, &quot;checkShort&quot;: &quot;Проверить&quot;, &quot;rules&quot;: &quot;Подробные правила&quot;, &quot;combination&quot;: &quot;Две группы усилителей&quot;, &quot;combinationCopy&quot;: &quot;Одновременно можно активировать по одному усилителю из каждой группы: один «Бонус награды» и один «Помощник в забеге». Усилители одной группы нельзя совмещать.&quot;, &quot;activateHint&quot;: &quot;При активации из «Моих покупок» спишется 1 шт. Просмотр ничего не расходует.&quot;, &quot;activeHint&quot;: &quot;Усилитель уже активен. Повторная активация не нужна.&quot;, &quot;emptyHint&quot;: &quot;Сейчас этого усилителя нет в запасе.&quot;, &quot;xpBonusCopy&quot;: &quot;Удваивает XP профиля и сезонного пропуска.&quot;, &quot;xpBonusRule&quot;: &quot;Бонус «Элитного+» действует до окончания активного сезона, включая уровни 50+. Не расходуется и не удваивает рекорд.&quot;, &quot;auto&quot;: &quot;Автоматически&quot;, &quot;notActive&quot;: &quot;Сейчас не активен&quot;, &quot;until&quot;: &quot;До&quot;, &quot;season&quot;: &quot;Сезон&quot;, &quot;xpProfile&quot;: &quot;XP профиля&quot;, &quot;xpSeason&quot;: &quot;XP сезона&quot;, &quot;done&quot;: &quot;Понятно&quot;, &quot;close&quot;: &quot;Закрыть&quot;, &quot;back&quot;: &quot;Назад&quot;, &quot;drag&quot;: &quot;Потяни вниз, чтобы закрыть&quot;, &quot;confirmed&quot;: &quot;Активация подтверждена.&quot;, &quot;uncertain&quot;: &quot;Не удалось проверить активацию. Сначала обнови состояние, не запуская повторную активацию.&quot;, &quot;updated&quot;: &quot;Состояние обновлено.&quot;, &quot;invalid&quot;: &quot;Сервер не подтвердил активацию.&quot;, &quot;wait&quot;: &quot;Ожидаем ответ сервера&quot;, &quot;inRun&quot;: &quot;Сначала заверши текущий забег&quot;, &quot;runUseRule&quot;: &quot;Активируй до начала забега. Заряд расходуется после зачтённого для наград забега. Короткая незачтённая попытка его не расходует.&quot;, &quot;utilityRule&quot;: &quot;Закрепляется за следующим забегом. Не переносится на потом, даже если не понадобился.&quot;, &quot;recordRule&quot;: &quot;Рекорд в рейтинге не удваивается. Бонусы скина начисляются отдельно.&quot;, &quot;unknownStock&quot;: &quot;Запас ещё не подтверждён. Проверь состояние.&quot;, &quot;baseXp&quot;: &quot;Базовый XP&quot;, &quot;combineShort&quot;: &quot;Можно сочетать с усилителем другой группы&quot;, &quot;effectPoints&quot;: &quot;Удваивает очки забега, поступающие в кошелёк.&quot;, &quot;effectShield&quot;: &quot;Защищает от одного столкновения в следующем забеге.&quot;, &quot;effectSecond&quot;: &quot;Позволяет один раз продолжить ту же попытку после ошибки.&quot;, &quot;effectPause&quot;: &quot;Даёт 3 секунды на подготовку после возврата из фона.&quot;, &quot;levelThreshold&quot;: &quot;Требуется:&quot;, &quot;blocked&quot;: &quot;Недоступно&quot;, &quot;blockedCopy&quot;: &quot;Сначала дождись окончания активного усилителя этой группы.&quot;, &quot;group&quot;: &quot;Группа&quot;};
+const PI_TEXT = {&quot;levels&quot;: &quot;Уровни и звания&quot;, &quot;profile&quot;: &quot;Прогресс профиля&quot;, &quot;level&quot;: &quot;Уровень&quot;, &quot;current&quot;: &quot;Текущий&quot;, &quot;next&quot;: &quot;Дальше&quot;, &quot;total&quot;: &quot;Всего&quot;, &quot;untilNext&quot;: &quot;До следующего уровня&quot;, &quot;left&quot;: &quot;осталось&quot;, &quot;max&quot;: &quot;Максимальный уровень&quot;, &quot;maxCopy&quot;: &quot;Вся дорожка уровней пройдена. Неоткрытые кейсы остаются в «Моих покупках».&quot;, &quot;nextReward&quot;: &quot;Ближайшая награда&quot;, &quot;atLevel&quot;: &quot;На уровне&quot;, &quot;caseContents&quot;: &quot;Состав и шансы&quot;, &quot;caseOpened&quot;: &quot;Кейс открыт&quot;, &quot;caseReady&quot;: &quot;Кейс в «Моих покупках»&quot;, &quot;caseLocked&quot;: &quot;Кейс за уровень&quot;, &quot;stock&quot;: &quot;Открыть мои кейсы&quot;, &quot;readyCases&quot;: &quot;Кейсы за уровни&quot;, &quot;available&quot;: &quot;Доступно&quot;, &quot;ladder&quot;: &quot;Все уровни и звания&quot;, &quot;ladderCopy&quot;: &quot;Требования XP и награды за уровни&quot;, &quot;ladderNote&quot;: &quot;Уровень добавляет кейс в «Мои покупки» → «Кейсы». Его содержимое выдаётся только после открытия.&quot;, &quot;currentJump&quot;: &quot;К текущему уровню&quot;, &quot;xp&quot;: &quot;Как получать XP&quot;, &quot;xpCopy&quot;: &quot;Забеги, покупки и задания&quot;, &quot;run&quot;: &quot;Зачтённый забег&quot;, &quot;purchase&quot;: &quot;Успешная покупка&quot;, &quot;purchaseCopy&quot;: &quot;За покупку, для которой предусмотрен XP. Просмотр товара или кейса XP не даёт.&quot;, &quot;xpSeparate&quot;: &quot;XP профиля открывает эти уровни. XP сезона и престиж достижений считаются отдельно.&quot;, &quot;xpServer&quot;: &quot;Результат забега и начисление XP подтверждает сервер.&quot;, &quot;booster&quot;: &quot;Усилитель&quot;, &quot;seasonBonus&quot;: &quot;Бонус сезона&quot;, &quot;consumable&quot;: &quot;Расходуемый бонус&quot;, &quot;active&quot;: &quot;Активен&quot;, &quot;ready&quot;: &quot;Можно активировать&quot;, &quot;empty&quot;: &quot;Нет в запасе&quot;, &quot;inventory&quot;: &quot;В запасе&quot;, &quot;oneItem&quot;: &quot;Один усилитель&quot;, &quot;remaining&quot;: &quot;Осталось&quot;, &quot;runs&quot;: &quot;Забеги&quot;, &quot;pieces&quot;: &quot;шт.&quot;, &quot;activate&quot;: &quot;Активировать&quot;, &quot;activating&quot;: &quot;Активируем…&quot;, &quot;checking&quot;: &quot;Проверяем…&quot;, &quot;check&quot;: &quot;Проверить состояние&quot;, &quot;checkShort&quot;: &quot;Проверить&quot;, &quot;rules&quot;: &quot;Подробные правила&quot;, &quot;combination&quot;: &quot;Две группы усилителей&quot;, &quot;combinationCopy&quot;: &quot;Одновременно можно активировать по одному усилителю из каждой группы: один «Бонус награды» и один «Помощник в забеге». Усилители одной группы нельзя совмещать.&quot;, &quot;activateHint&quot;: &quot;При активации из «Моих покупок» спишется 1 шт. Просмотр ничего не расходует.&quot;, &quot;activeHint&quot;: &quot;Усилитель уже активен. Повторная активация не нужна.&quot;, &quot;emptyHint&quot;: &quot;Сейчас этого усилителя нет в запасе.&quot;, &quot;xpBonusCopy&quot;: &quot;Удваивает XP профиля и сезонного пропуска.&quot;, &quot;xpBonusRule&quot;: &quot;Бонус «Элитного+» действует до окончания активного сезона, включая уровни 50+. Не расходуется и не удваивает рекорд.&quot;, &quot;auto&quot;: &quot;Автоматически&quot;, &quot;notActive&quot;: &quot;Сейчас не активен&quot;, &quot;until&quot;: &quot;До&quot;, &quot;season&quot;: &quot;Сезон&quot;, &quot;xpProfile&quot;: &quot;XP профиля&quot;, &quot;xpSeason&quot;: &quot;XP сезона&quot;, &quot;done&quot;: &quot;Понятно&quot;, &quot;close&quot;: &quot;Закрыть&quot;, &quot;back&quot;: &quot;Назад&quot;, &quot;drag&quot;: &quot;Потяни вниз, чтобы закрыть&quot;, &quot;confirmed&quot;: &quot;Активация подтверждена.&quot;, &quot;uncertain&quot;: &quot;Не удалось проверить активацию. Сначала обнови состояние, не запуская повторную активацию.&quot;, &quot;updated&quot;: &quot;Состояние обновлено.&quot;, &quot;invalid&quot;: &quot;Сервер не подтвердил активацию.&quot;, &quot;wait&quot;: &quot;Ожидаем ответ сервера&quot;, &quot;inRun&quot;: &quot;Сначала заверши текущий забег&quot;, &quot;runUseRule&quot;: &quot;Активируй до начала забега. Заряд расходуется после зачтённого для наград забега. Короткая незачтённая попытка его не расходует.&quot;, &quot;utilityRule&quot;: &quot;Закрепляется за следующим забегом. Не переносится на потом, даже если не понадобился.&quot;, &quot;recordRule&quot;: &quot;Рекорд в рейтинге не удваивается. Бонусы скина начисляются отдельно.&quot;, &quot;unknownStock&quot;: &quot;Запас ещё не подтверждён. Проверь состояние.&quot;, &quot;baseXp&quot;: &quot;Базовый XP&quot;, &quot;combineShort&quot;: &quot;Можно сочетать с усилителем другой группы&quot;, &quot;effectPoints&quot;: &quot;Удваивает очки забега, поступающие в кошелёк.&quot;, &quot;effectShield&quot;: &quot;Защищает от одного столкновения в следующем забеге.&quot;, &quot;effectSecond&quot;: &quot;Позволяет один раз продолжить ту же попытку после ошибки.&quot;, &quot;effectPause&quot;: &quot;Даёт 3 секунды на подготовку после возврата из фона.&quot;, &quot;levelThreshold&quot;: &quot;Требуется:&quot;, &quot;blocked&quot;: &quot;Недоступно&quot;, &quot;blockedCopy&quot;: &quot;Сначала дождись окончания активного усилителя этой группы.&quot;, &quot;group&quot;: &quot;Группа&quot;};
 const progressInfo = {layer:null, view:&#x27;levels&#x27;, id:&#x27;&#x27;, stack:[], focus:null, motion:null, inert:[], back:null, previousBackVisible:false, frame:0, expiryTimer:0, caseReturn:null, bodyMarkup:null, footerMarkup:null};
 const boosterActivation = {busy:&#x27;&#x27;, uncertain:&#x27;&#x27;, checking:false, message:&#x27;&#x27;, failed:false, lastType:&#x27;&#x27;};
 const piEscape=value=&gt;escapePurchaseText(String(value??&#x27;&#x27;));
@@ -13522,9 +13563,10 @@ function piLevelsHome(){
 }
 function piXpContent(){
  const multiplier=piBonusActive()?2:1;
- return `&lt;section class=&quot;zpi-xp-card&quot;&gt;${piImage(&#x27;/assets/season-pass/xp.webp&#x27;,&#x27;zpi-xp-art&#x27;)}&lt;h3&gt;${piEscape(PI_TEXT.run)}&lt;/h3&gt;&lt;b&gt;+${piNum(PROFILE_XP_PER_COMPLETED_RUN*multiplier)} XP&lt;/b&gt;&lt;p&gt;${piEscape(profileRunRequirementText(multiplier))}&lt;/p&gt;&lt;/section&gt;
- &lt;section class=&quot;zpi-xp-card&quot;&gt;&lt;h3&gt;${piEscape(PI_TEXT.purchase)}&lt;/h3&gt;&lt;b&gt;+${piNum(PROFILE_XP_PER_PURCHASE*multiplier)} XP&lt;/b&gt;&lt;p&gt;${piEscape(PI_TEXT.purchaseCopy)}&lt;/p&gt;&lt;/section&gt;
- &lt;section class=&quot;zpi-xp-card&quot;&gt;&lt;h3&gt;📋 Задания&lt;/h3&gt;&lt;p&gt;Ежедневные и событийные цели дают XP профиля после получения награды. Точное количество указано в задании. XP сезона учитывается отдельно, а усилитель ×2 не умножает награду задания.&lt;/p&gt;&lt;/section&gt;
+ const bonusXp=PROFILE_XP_RUN_DAILY_BONUS*multiplier,standardXp=PROFILE_XP_RUN_STANDARD*multiplier,grindXp=PROFILE_XP_RUN_GRIND*multiplier;
+ return `&lt;section class=&quot;zpi-xp-card&quot;&gt;${piImage(&#x27;/assets/ui/icon_game_button.webp&#x27;,&#x27;zpi-xp-art&#x27;)}&lt;h3&gt;Забеги&lt;/h3&gt;&lt;b&gt;+${piNum(bonusXp)} XP · первые ${PROFILE_XP_RUN_DAILY_BONUS_COUNT}&lt;/b&gt;&lt;p&gt;Забеги 4–${PROFILE_XP_RUN_STANDARD_THROUGH}: +${piNum(standardXp)} XP. С ${PROFILE_XP_RUN_STANDARD_THROUGH+1}-го: +${piNum(grindXp)} XP. Бонус первых забегов обновляется ежедневно в 00:00 МСК. Для начисления нужен зачтённый сервером забег: минимум ${PROFILE_XP_MIN_RUN_SECONDS} секунд и ${PROFILE_XP_MIN_RUN_SCORE} очков.&lt;/p&gt;&lt;/section&gt;
+ &lt;section class=&quot;zpi-xp-card&quot;&gt;${piImage(&#x27;/assets/ui/icon_shopping.webp&#x27;,&#x27;zpi-xp-art&#x27;)}&lt;h3&gt;${piEscape(PI_TEXT.purchase)}&lt;/h3&gt;&lt;b&gt;+${piNum(PROFILE_XP_PER_PURCHASE*multiplier)} XP&lt;/b&gt;&lt;p&gt;${piEscape(PI_TEXT.purchaseCopy)}&lt;/p&gt;&lt;/section&gt;
+ &lt;section class=&quot;zpi-xp-card&quot;&gt;${piImage(&#x27;/assets/ui/icon_quest_game.webp&#x27;,&#x27;zpi-xp-art&#x27;)}&lt;h3&gt;Задания&lt;/h3&gt;&lt;p&gt;Ежедневные, еженедельные и событийные цели дают XP профиля после получения награды. Точное количество указано в задании. XP сезона учитывается отдельно, а Элитный+ не умножает XP награды задания.&lt;/p&gt;&lt;/section&gt;
  ${piLink(CASE_SPECIAL_CATALOG.season_xp_x2.title,piBonusActive()?`${PI_TEXT.active} \u00b7 ${PI_TEXT.auto}`:PI_TEXT.notActive,&#x27;xp-bonus&#x27;,&#x27;&#x27;,&#x27;/assets/season-pass/xp_x2.webp&#x27;)}
  ${piNote(PI_TEXT.xpSeparate)}${piNote(PI_TEXT.xpServer)}`;
 }
@@ -17010,7 +17052,10 @@ function installProgressInfo(){
       // =============================================================
       // НАСТРОЙКИ ПРОФИЛЯ, XP И УРОВНЕЙ.
       // Эти значения можно менять самостоятельно прямо в коде.
-      // PROFILE_XP_PER_COMPLETED_RUN — XP за зачтённый забег.
+      // PROFILE_XP_RUN_DAILY_BONUS — базовый XP первых 3 зачтённых забегов дня.
+      // PROFILE_XP_RUN_STANDARD — базовый XP за забеги 4–10 за день.
+      // PROFILE_XP_RUN_GRIND — базовый XP с 11-го зачтённого забега за день.
+      // Элитный+ умножает эти значения ×2. Сервер остаётся источником истины.
       // PROFILE_XP_PER_PURCHASE — XP за успешную покупку.
       // PROFILE_XP_RUN_ANTI_FARM_ENABLED — включить защиту от быстрых смертей ради XP.
       // PROFILE_XP_MIN_RUN_SECONDS — минимальная длительность забега для начисления XP.
@@ -17019,7 +17064,12 @@ function installProgressInfo(){
       // PROFILE_LEVEL_BASE_XP — XP от 1-го до 2-го уровня.
       // PROFILE_LEVEL_XP_STEP — насколько растёт требование каждого нового уровня.
       // PROFILE_LEVEL_MAX — максимальный уровень.
-      const PROFILE_XP_PER_COMPLETED_RUN = 4;
+      const PROFILE_XP_RUN_DAILY_BONUS = 22;
+      const PROFILE_XP_RUN_STANDARD = 4;
+      const PROFILE_XP_RUN_GRIND = 2;
+      const PROFILE_XP_RUN_DAILY_BONUS_COUNT = 3;
+      const PROFILE_XP_RUN_STANDARD_THROUGH = 10;
+      const PROFILE_XP_PER_COMPLETED_RUN = PROFILE_XP_RUN_STANDARD;
       const PROFILE_XP_PER_PURCHASE = 5;
       const PROFILE_XP_RUN_ANTI_FARM_ENABLED = true;
       const PROFILE_XP_MIN_RUN_SECONDS = 12;
@@ -19230,7 +19280,11 @@ function createTutorialDeck(layer, mount, options, words) {
           ? `&lt;button type=&quot;button&quot; class=&quot;run-results-task-cta run-overlay-primary&quot; data-run-results-tasks&gt;${runResultIconMarkup(RUN_RESULT_ICONS.gameTask, &quot;is-button&quot;)}&lt;span&gt;Посмотреть задания&lt;/span&gt;&lt;/button&gt;`
           : &quot;&quot;;
         const boosterStatusMarkup = runResultsBoosterStatusMarkup(settlement);
-        const body = `${runResultsHeader(context, newRecord ? &quot;\u041d\u043e\u0432\u044b\u0439 \u0440\u0435\u043a\u043e\u0440\u0434!&quot; : &quot;\u0417\u0430\u0431\u0435\u0433 \u0437\u0430\u0432\u0435\u0440\u0448\u0451\u043d!&quot;, phrase)}&lt;div class=&quot;run-results-score&quot;&gt;&lt;b&gt;${formatter.format(score)}&lt;/b&gt;&lt;span&gt;\u041e\u0427\u041a\u0410&lt;/span&gt;&lt;/div&gt;${recordLine}&lt;div class=&quot;run-results-metrics&quot;&gt;&lt;span class=&quot;run-result-metric&quot;&gt;&lt;span&gt;${runResultIconMarkup(RUN_RESULT_ICONS.zefir, &quot;is-metric&quot;)}\u0417\u0435\u0444\u0438\u0440&lt;/span&gt;&lt;b&gt;${formatter.format(Math.max(0, Number(settlement?.raw?.treats ?? context.treats)))}&lt;/b&gt;&lt;/span&gt;&lt;span class=&quot;run-result-metric&quot;&gt;&lt;span&gt;${runResultIconMarkup(RUN_RESULT_ICONS.coffee, &quot;is-metric&quot;)}\u041a\u043e\u0444\u0435&lt;/span&gt;&lt;b&gt;${formatter.format(Math.max(0, Number(settlement?.raw?.coffee ?? context.coffee)))}&lt;/b&gt;&lt;/span&gt;&lt;span class=&quot;run-result-metric&quot;&gt;&lt;span&gt;${runResultIconMarkup(RUN_RESULT_ICONS.time, &quot;is-metric&quot;)}\u0412\u0440\u0435\u043c\u044f&lt;/span&gt;&lt;b&gt;${runResultDurationLabel(settlement?.raw?.durationMs ?? context.durationMs)}&lt;/b&gt;&lt;/span&gt;&lt;/div&gt;&lt;div class=&quot;run-credit-line&quot;&gt;&lt;span&gt;+${formatter.format(Math.max(0, Number(credited.points || 0)))} \u043e\u0447\u043a\u043e\u0432&lt;/span&gt;&lt;span&gt;+${formatter.format(Math.max(0, Number(credited.treats || 0)))} \u0437\u0435\u0444\u0438\u0440\u0430&lt;/span&gt;&lt;span&gt;+${formatter.format(Math.max(0, Number(credited.coffee || 0)))} \u043a\u043e\u0444\u0435&lt;/span&gt;${Number(settlement.profileXpAwarded || 0) &gt; 0 ? `&lt;span&gt;+${formatter.format(Number(settlement.profileXpAwarded))} XP&lt;/span&gt;` : &quot;&quot;}&lt;/div&gt;${bonusMarkup}${boosterStatusMarkup}${events.length ? `&lt;div class=&quot;run-results-events&quot;&gt;${events.join(&quot;&quot;)}&lt;/div&gt;` : &quot;&quot;}&lt;div class=&quot;run-results-state&quot;&gt;${runResultIconMarkup(RUN_RESULT_ICONS.saved, &quot;is-state&quot;)}&lt;span&gt;\u0420\u0435\u0437\u0443\u043b\u044c\u0442\u0430\u0442 \u0441\u043e\u0445\u0440\u0430\u043d\u0451\u043d&lt;/span&gt;&lt;/div&gt;${gameTaskCtaMarkup}&lt;div class=&quot;run-results-actions&quot;&gt;&lt;button type=&quot;button&quot; class=&quot;run-overlay-primary&quot; data-run-results-again&gt;${runResultIconMarkup(RUN_RESULT_ICONS.replay, &quot;is-button&quot;)}&lt;span&gt;\u0415\u0449\u0451 \u0440\u0430\u0437&lt;/span&gt;&lt;/button&gt;&lt;button type=&quot;button&quot; class=&quot;run-overlay-secondary&quot; data-run-results-cafe&gt;${runResultIconMarkup(RUN_RESULT_ICONS.cafe, &quot;is-button&quot;)}&lt;span&gt;\u0412 \u043a\u0430\u0444\u0435&lt;/span&gt;&lt;/button&gt;&lt;/div&gt;`;
+        const profileXpRun = settlement?.profileXpRun && typeof settlement.profileXpRun === &quot;object&quot; ? settlement.profileXpRun : null;
+        const profileXpDailyBonusMarkup = profileXpRun?.dailyBonus
+          ? `&lt;div class=&quot;run-xp-daily-bonus&quot;&gt;&lt;img src=&quot;/assets/season-pass/xp.webp&quot; alt=&quot;&quot; aria-hidden=&quot;true&quot; decoding=&quot;async&quot;&gt;&lt;span&gt;${Number(profileXpRun.bonusRunNumber || 0) &gt;= Number(profileXpRun.bonusRunsTotal || PROFILE_XP_RUN_DAILY_BONUS_COUNT) ? &quot;Бонус дня получен ✓&quot; : `Бонус первых забегов · ${Math.max(1, Number(profileXpRun.bonusRunNumber || 1))}/${Math.max(1, Number(profileXpRun.bonusRunsTotal || PROFILE_XP_RUN_DAILY_BONUS_COUNT))}`}&lt;/span&gt;&lt;/div&gt;`
+          : &quot;&quot;;
+        const body = `${runResultsHeader(context, newRecord ? &quot;\u041d\u043e\u0432\u044b\u0439 \u0440\u0435\u043a\u043e\u0440\u0434!&quot; : &quot;\u0417\u0430\u0431\u0435\u0433 \u0437\u0430\u0432\u0435\u0440\u0448\u0451\u043d!&quot;, phrase)}&lt;div class=&quot;run-results-score&quot;&gt;&lt;b&gt;${formatter.format(score)}&lt;/b&gt;&lt;span&gt;\u041e\u0427\u041a\u0410&lt;/span&gt;&lt;/div&gt;${recordLine}&lt;div class=&quot;run-results-metrics&quot;&gt;&lt;span class=&quot;run-result-metric&quot;&gt;&lt;span&gt;${runResultIconMarkup(RUN_RESULT_ICONS.zefir, &quot;is-metric&quot;)}\u0417\u0435\u0444\u0438\u0440&lt;/span&gt;&lt;b&gt;${formatter.format(Math.max(0, Number(settlement?.raw?.treats ?? context.treats)))}&lt;/b&gt;&lt;/span&gt;&lt;span class=&quot;run-result-metric&quot;&gt;&lt;span&gt;${runResultIconMarkup(RUN_RESULT_ICONS.coffee, &quot;is-metric&quot;)}\u041a\u043e\u0444\u0435&lt;/span&gt;&lt;b&gt;${formatter.format(Math.max(0, Number(settlement?.raw?.coffee ?? context.coffee)))}&lt;/b&gt;&lt;/span&gt;&lt;span class=&quot;run-result-metric&quot;&gt;&lt;span&gt;${runResultIconMarkup(RUN_RESULT_ICONS.time, &quot;is-metric&quot;)}\u0412\u0440\u0435\u043c\u044f&lt;/span&gt;&lt;b&gt;${runResultDurationLabel(settlement?.raw?.durationMs ?? context.durationMs)}&lt;/b&gt;&lt;/span&gt;&lt;/div&gt;&lt;div class=&quot;run-credit-line&quot;&gt;&lt;span&gt;+${formatter.format(Math.max(0, Number(credited.points || 0)))} \u043e\u0447\u043a\u043e\u0432&lt;/span&gt;&lt;span&gt;+${formatter.format(Math.max(0, Number(credited.treats || 0)))} \u0437\u0435\u0444\u0438\u0440\u0430&lt;/span&gt;&lt;span&gt;+${formatter.format(Math.max(0, Number(credited.coffee || 0)))} \u043a\u043e\u0444\u0435&lt;/span&gt;${Number(settlement.profileXpAwarded || 0) &gt; 0 ? `&lt;span&gt;+${formatter.format(Number(settlement.profileXpAwarded))} XP&lt;/span&gt;` : &quot;&quot;}&lt;/div&gt;${profileXpDailyBonusMarkup}${bonusMarkup}${boosterStatusMarkup}${events.length ? `&lt;div class=&quot;run-results-events&quot;&gt;${events.join(&quot;&quot;)}&lt;/div&gt;` : &quot;&quot;}&lt;div class=&quot;run-results-state&quot;&gt;${runResultIconMarkup(RUN_RESULT_ICONS.saved, &quot;is-state&quot;)}&lt;span&gt;\u0420\u0435\u0437\u0443\u043b\u044c\u0442\u0430\u0442 \u0441\u043e\u0445\u0440\u0430\u043d\u0451\u043d&lt;/span&gt;&lt;/div&gt;${gameTaskCtaMarkup}&lt;div class=&quot;run-results-actions&quot;&gt;&lt;button type=&quot;button&quot; class=&quot;run-overlay-primary&quot; data-run-results-again&gt;${runResultIconMarkup(RUN_RESULT_ICONS.replay, &quot;is-button&quot;)}&lt;span&gt;\u0415\u0449\u0451 \u0440\u0430\u0437&lt;/span&gt;&lt;/button&gt;&lt;button type=&quot;button&quot; class=&quot;run-overlay-secondary&quot; data-run-results-cafe&gt;${runResultIconMarkup(RUN_RESULT_ICONS.cafe, &quot;is-button&quot;)}&lt;span&gt;\u0412 \u043a\u0430\u0444\u0435&lt;/span&gt;&lt;/button&gt;&lt;/div&gt;`;
         runResultsFrame(context, body);
         bindRunResultsActions(context);
         showStoryCollectibleMemoryUnlocks(payload);
@@ -19292,10 +19346,9 @@ function createTutorialDeck(layer, mount, options, words) {
           // active booster locally here: the legacy local queue could race the
           // settlement and restore a stale pre-settlement charge.
           state.completedRuns = sanitizeGameNumber(Number(state.completedRuns || 0) + 1);
-          const runXpEarned = profileRunQualifiesForXp(state.time, earned) ? profileRunXpReward() : 0;
-          if (runXpEarned &gt; 0) state.profileXp = sanitizeGameNumber(Number(state.profileXp || 0) + runXpEarned);
-          const currentLevelAfterRun = profileLevelState(state.profileXp).level;
-          const reachedNewLevel = currentLevelAfterRun &gt; previousLevel;
+          // XP профиля за забег теперь зависит от дневного server-authoritative тарифа.
+          // Не начисляем его оптимистично на клиенте: точную сумму возвращает settlement.
+          const runXpEarned = 0;
           playGameSound(&quot;hitPouf&quot;);
           playGameSound(&quot;gameOver&quot;, 170);
           state.runTreats = 0;
@@ -19318,6 +19371,8 @@ function createTutorialDeck(layer, mount, options, words) {
               try {
                 if (payload?.runSettlement?.accepted) {
                   if (payload.runSettlement.newRecord) { window.setTimeout(() =&gt; hapticNotify(&quot;success&quot;), 80); playGameSound(&quot;newRecord&quot;, 80); }
+                  const reachedNewLevel = profileLevelState(state.profileXp).level &gt; previousLevel;
+                  if (reachedNewLevel) { playGameSound(&quot;levelUp&quot;, 430); void loadCaseState(true); }
                   renderRunResultsSettled(payload, resultContext);
                 } else renderRunResultsSyncError(resultContext, error);
               } catch (resultUiError) {
@@ -19326,7 +19381,6 @@ function createTutorialDeck(layer, mount, options, words) {
               }
             }
           });
-          if (reachedNewLevel) { playGameSound(&quot;levelUp&quot;, 430); void loadCaseState(true); }
         });
       }
 
@@ -20946,8 +21000,64 @@ function createTutorialDeck(layer, mount, options, words) {
         return state.seasonProfileXpBonusActive &amp;&amp; Number(state.seasonProfileXpMultiplier || 1) &gt;= 2 ? 2 : 1;
       }
 
+      let profileRunXpDailyState = null;
+
+      function profileRunXpBaseForOrdinalClient(runOrdinal) {
+        const ordinal = Math.max(1, Math.floor(Number(runOrdinal) || 1));
+        if (ordinal &lt;= PROFILE_XP_RUN_DAILY_BONUS_COUNT) return PROFILE_XP_RUN_DAILY_BONUS;
+        if (ordinal &lt;= PROFILE_XP_RUN_STANDARD_THROUGH) return PROFILE_XP_RUN_STANDARD;
+        return PROFILE_XP_RUN_GRIND;
+      }
+
+      function normalizeProfileRunXpDailyState(raw) {
+        if (!raw || typeof raw !== &quot;object&quot;) return null;
+        const creditedRuns = Math.max(0, Math.floor(Number(raw.creditedRuns || 0)));
+        const bonusRunsTotal = Math.max(1, Math.floor(Number(raw.bonusRunsTotal || PROFILE_XP_RUN_DAILY_BONUS_COUNT)));
+        const bonusRunsUsed = Math.max(0, Math.min(bonusRunsTotal, Math.floor(Number(raw.bonusRunsUsed ?? Math.min(creditedRuns, bonusRunsTotal)))));
+        const bonusRunsRemaining = Math.max(0, Math.min(bonusRunsTotal, Math.floor(Number(raw.bonusRunsRemaining ?? (bonusRunsTotal - bonusRunsUsed)))));
+        const nextRunOrdinal = Math.max(1, Math.floor(Number(raw.nextRunOrdinal || creditedRuns + 1)));
+        return {
+          dayKey:String(raw.dayKey || &quot;&quot;),
+          creditedRuns, bonusRunsTotal, bonusRunsUsed, bonusRunsRemaining, nextRunOrdinal,
+          nextBaseXp:Math.max(1, Math.floor(Number(raw.nextBaseXp || profileRunXpBaseForOrdinalClient(nextRunOrdinal)))),
+          dailyBonusBaseXp:Math.max(1, Math.floor(Number(raw.dailyBonusBaseXp || PROFILE_XP_RUN_DAILY_BONUS))),
+          standardBaseXp:Math.max(1, Math.floor(Number(raw.standardBaseXp || PROFILE_XP_RUN_STANDARD))),
+          grindBaseXp:Math.max(1, Math.floor(Number(raw.grindBaseXp || PROFILE_XP_RUN_GRIND))),
+          standardThrough:Math.max(PROFILE_XP_RUN_DAILY_BONUS_COUNT, Math.floor(Number(raw.standardThrough || PROFILE_XP_RUN_STANDARD_THROUGH))),
+          resetsAt:Math.max(0, Number(raw.resetsAt || 0)),
+          timezoneOffsetMinutes:Number(raw.timezoneOffsetMinutes || 180)
+        };
+      }
+
+      function applyProfileRunXpDailyState(raw) {
+        const normalized = normalizeProfileRunXpDailyState(raw);
+        if (!normalized) return false;
+        profileRunXpDailyState = normalized;
+        if (isScreenVisible(&quot;profile&quot;)) renderProfile();
+        return true;
+      }
+
+      function currentProfileRunXpDailyState() {
+        const daily = profileRunXpDailyState;
+        if (!daily) return null;
+        if (Number(daily.resetsAt || 0) > 0 && Date.now() >= Number(daily.resetsAt)) {
+          return {
+            ...daily,
+            creditedRuns:0,
+            bonusRunsUsed:0,
+            bonusRunsRemaining:Math.max(1, Number(daily.bonusRunsTotal || PROFILE_XP_RUN_DAILY_BONUS_COUNT)),
+            nextRunOrdinal:1,
+            nextBaseXp:Math.max(1, Number(daily.dailyBonusBaseXp || PROFILE_XP_RUN_DAILY_BONUS)),
+            nextTier:&quot;daily_bonus&quot;
+          };
+        }
+        return daily;
+      }
+
       function profileRunXpReward() {
-        return sanitizeGameNumber(PROFILE_XP_PER_COMPLETED_RUN * profileXpMultiplier());
+        const daily = currentProfileRunXpDailyState();
+        const nextBaseXp = Math.max(1, Number(daily?.nextBaseXp || PROFILE_XP_RUN_DAILY_BONUS));
+        return sanitizeGameNumber(nextBaseXp * profileXpMultiplier());
       }
 
       function profilePurchaseXpReward() {
@@ -21022,9 +21132,13 @@ function createTutorialDeck(layer, mount, options, words) {
       }
 
       function profileRunRequirementText(multiplier = profileXpMultiplier()) {
-        const multiplierNote = multiplier &gt; 1 ? &quot; Элитный+ активен: XP удваивается.&quot; : &quot;&quot;;
-        if (!PROFILE_XP_RUN_ANTI_FARM_ENABLED) return `XP начисляется за каждый завершённый забег.${multiplierNote}`;
-        return `Чтобы получить XP за забег, нужно продержаться минимум ${PROFILE_XP_MIN_RUN_SECONDS} секунд и набрать ${PROFILE_XP_MIN_RUN_SCORE} очков.${multiplierNote}`;
+        const bonusXp = PROFILE_XP_RUN_DAILY_BONUS * multiplier;
+        const standardXp = PROFILE_XP_RUN_STANDARD * multiplier;
+        const grindXp = PROFILE_XP_RUN_GRIND * multiplier;
+        const multiplierNote = multiplier &gt; 1 ? &quot; Элитный+ активен: все значения уже удвоены.&quot; : &quot;&quot;;
+        const tierCopy = `Первые ${PROFILE_XP_RUN_DAILY_BONUS_COUNT} зачтённых забега за день дают +${bonusXp} XP, забеги 4–${PROFILE_XP_RUN_STANDARD_THROUGH} — +${standardXp} XP, с ${PROFILE_XP_RUN_STANDARD_THROUGH + 1}-го — +${grindXp} XP. Бонус обновляется в 00:00 МСК.`;
+        if (!PROFILE_XP_RUN_ANTI_FARM_ENABLED) return `${tierCopy}${multiplierNote}`;
+        return `${tierCopy} Чтобы получить XP, нужно продержаться минимум ${PROFILE_XP_MIN_RUN_SECONDS} секунд и набрать ${PROFILE_XP_MIN_RUN_SCORE} очков.${multiplierNote}`;
       }
 
       function profileRunQualifiesForXp(durationSeconds, scoreValue) {
@@ -21133,6 +21247,23 @@ function createTutorialDeck(layer, mount, options, words) {
             : `До уровня ${levelState.level + 1}: ${formatter.format(levelState.needed - levelState.currentXp)} XP`;
         }
         if (profileRunXpEl) profileRunXpEl.textContent = `+${formatter.format(profileRunXpReward())} XP`;
+        if (profileRunXpDailyEl || profileRunXpDailyNoteEl) {
+          const daily = currentProfileRunXpDailyState();
+          const total = Math.max(1, Number(daily?.bonusRunsTotal || PROFILE_XP_RUN_DAILY_BONUS_COUNT));
+          const used = Math.max(0, Math.min(total, Number(daily?.bonusRunsUsed || 0)));
+          const remaining = Math.max(0, total - used);
+          const complete = Boolean(daily &amp;&amp; remaining &lt;= 0);
+          const bonusXp = Math.max(1, Number(daily?.dailyBonusBaseXp || PROFILE_XP_RUN_DAILY_BONUS)) * profileXpMultiplier();
+          if (profileRunXpDailyEl) {
+            profileRunXpDailyEl.textContent = daily ? (complete ? &quot;Бонус дня получен&quot; : `Бонус дня · ${used}/${total}`) : &quot;Бонус дня&quot;;
+            profileRunXpDailyEl.classList.toggle(&quot;is-complete&quot;, complete);
+          }
+          if (profileRunXpDailyNoteEl) {
+            profileRunXpDailyNoteEl.textContent = complete
+              ? &quot;Бонус первых 3 забегов получен. Завтра он станет доступен снова.&quot;
+              : `Первые ${total} зачтённых забега сегодня — +${formatter.format(bonusXp)} XP. Осталось бонусных: ${remaining}.`;
+          }
+        }
         if (profileRunRuleEl) profileRunRuleEl.textContent = profileRunRequirementText();
         if (profileRankEl) profileRankEl.title = &quot;Нажми, чтобы посмотреть требования всех уровней и званий&quot;;
         if (profilePurchaseXpEl) profilePurchaseXpEl.textContent = `+${formatter.format(profilePurchaseXpReward())} XP`;
@@ -26826,6 +26957,7 @@ function createTutorialDeck(layer, mount, options, words) {
       function applyServerProfilePayload(data) {
         const profile = data?.profile || {};
         let changed = false;
+        if (data?.runXpDaily) applyProfileRunXpDailyState(data.runXpDaily);
         if (data?.resetPlan) changed = applyLeaderboardResetPlan(data.resetPlan, Date.now()) || changed;
         antiCheatWithTrustedChange(&quot;profile-server-sync&quot;, () =&gt; {
           for (const field of [&quot;wallet&quot;, &quot;best&quot;, &quot;treats&quot;, &quot;coffee&quot;, &quot;profileXp&quot;]) {
@@ -27643,13 +27775,17 @@ function createTutorialDeck(layer, mount, options, words) {
 
       function reconcileSeasonProfileXpForRun(run, payload) {
         if (!run || !run.runId || run.profileXpReconciled === true) return 0;
-        const multiplier = Math.max(1, Math.min(2, Math.floor(Number(payload?.profileXpMultiplier || payload?.multiplier || 1))));
-        const expected = sanitizeGameNumber(PROFILE_XP_PER_COMPLETED_RUN * multiplier);
+        // Profile run XP is tiered by the server (22 / 4 / 2 before Elite+).
+        // Legacy season responses may carry the authoritative award, but the client
+        // must never reconstruct a tier from local run counters.
+        const serverAwarded = payload && Object.prototype.hasOwnProperty.call(payload, &quot;profileXpAwarded&quot;)
+          ? sanitizeGameNumber(payload.profileXpAwarded)
+          : sanitizeGameNumber(run.profileXpLocalAwarded);
         const localAwarded = sanitizeGameNumber(run.profileXpLocalAwarded);
-        const delta = Math.max(0, expected - localAwarded);
+        const delta = Math.max(0, serverAwarded - localAwarded);
         antiCheatWithTrustedChange(&quot;season-profile-xp-reconcile&quot;, () =&gt; {
           if (delta &gt; 0) state.profileXp = sanitizeGameNumber(Number(state.profileXp || 0) + delta);
-          run.profileXpLocalAwarded = expected;
+          run.profileXpLocalAwarded = serverAwarded;
           run.profileXpReconciled = true;
           savePendingLeaderboardRun(run);
           if (delta &gt; 0) {
@@ -27658,7 +27794,6 @@ function createTutorialDeck(layer, mount, options, words) {
             saveProgress();
           }
         });
-        if (delta &gt; 0) showProfileToast(`Элитный+: дополнительно +${formatter.format(delta)} XP профиля`, &quot;success&quot;, 3000);
         return delta;
       }
 
@@ -27871,6 +28006,7 @@ function createTutorialDeck(layer, mount, options, words) {
 
       function applyFastRunSettlementPayload(data) {
         if (!data?.fastSettlement || !data?.runSettlement?.accepted) return false;
+        if (data?.runSettlement?.profileXpDaily) applyProfileRunXpDailyState(data.runSettlement.profileXpDaily);
         antiCheatWithTrustedChange(&quot;run-fast-server-settlement&quot;, () =&gt; {
           const profile = data?.profile &amp;&amp; typeof data.profile === &quot;object&quot; ? data.profile : null;
           if (profile) {
@@ -31706,6 +31842,8 @@ function createTutorialDeck(layer, mount, options, words) {
 #zefirok-maltipoo-runner .profile-section--progress .profile-xp-guide-item{padding:7px 6px;border-radius:13px}
 #zefirok-maltipoo-runner .profile-section--progress .profile-xp-guide-item img{width:22px;height:22px;flex-basis:22px}
 #zefirok-maltipoo-runner .profile-section--progress .profile-xp-guide-item span{font-size:10px}
+#zefirok-maltipoo-runner .profile-section--progress .profile-xp-guide-note{font-size:8.5px}
+#zefirok-maltipoo-runner .profile-section--progress .profile-xp-guide-bonus{font-size:8.5px;padding:5px 7px}
 #zefirok-maltipoo-runner .profile-xp-sources,#zefirok-maltipoo-runner .profile-run-rule,#zefirok-maltipoo-runner .profile-level-guide-link{display:none!important}
 
 #zefirok-maltipoo-runner .profile-section--cases{gap:10px;background:linear-gradient(155deg,#fff,#fff9f2);border-color:rgba(221,176,121,.24)}
