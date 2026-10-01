@@ -477,7 +477,7 @@
   const rewardImage = (reward) => { const kind=String(reward?.kind||''); if(kind==='case')return REWARD_IMAGES.case[String(reward?.id||'small')]||REWARD_IMAGES.fallback;if(kind==='booster')return REWARD_IMAGES.booster[String(reward?.id||'points')]||REWARD_IMAGES.fallback;return REWARD_IMAGES[kind]||REWARD_IMAGES.fallback; };
   const rewardImageMarkup = (reward,cls='') => `<img class="${esc(cls)}" src="${esc(rewardImage(reward))}" alt="" loading="lazy" decoding="async">`;
   const showToast = (text) => { toast.textContent=String(text||'');toast.classList.add('show');clearTimeout(showToast.t);showToast.t=setTimeout(()=>toast.classList.remove('show'),2400); };
-  const haptic = (value='light') => { try { webApp?.HapticFeedback?.impactOccurred?.(value); } catch {} };
+  const haptic = (value='light') => { try { if(window.parent && window.parent!==window){window.parent.postMessage({type:'zefirok-haptic',kind:'impact',value},'*');return;} if(window.ZefirokMediaPrefs?.get().vibrationEnabled!==false)webApp?.HapticFeedback?.impactOccurred?.(value); } catch {} };
   const FEED_IMAGES = Object.freeze({
     join:"/assets/ui/icon_referals.webp",
     active:"/assets/optimized/v0.79.5/iconCoffee.webp",
