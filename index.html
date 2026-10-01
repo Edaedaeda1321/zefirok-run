@@ -34100,35 +34100,60 @@ html &gt; body.zefirok-game-expanded{height:var(--zefirok-visible-height,100dvh)
 .zdl-note.error{border-color:#e5bdc9;background:#fff0f3;color:#a34c6c}
 .zdl-note strong{display:block;font-size:13px;margin-bottom:4px}
 .zdl-lead{color:#8e7181;font-size:13px;line-height:1.6}
-.zdl-streak-hero{position:relative;display:block;width:100%;padding:16px;border:1px solid #ead2db;border-radius:23px;background:linear-gradient(135deg,#fffaf7 0%,#fff4f8 56%,#fffaf0 100%);box-shadow:0 12px 28px rgba(195,122,150,.08);overflow:hidden;text-align:left;color:#714b60}
-.zdl-streak-hero::before{content:"";position:absolute;left:-24px;top:-34px;width:146px;height:146px;border-radius:50%;background:radial-gradient(circle,#ffd98a55 0%,#ffd98a1d 48%,transparent 72%);pointer-events:none}
-.zdl-streak-hero::after{content:"";position:absolute;inset:0;background:linear-gradient(115deg,transparent 18%,rgba(255,255,255,.52) 42%,transparent 65%);transform:translateX(-135%);animation:zdl-streak-shimmer 6.2s ease-in-out infinite;pointer-events:none}
-.zdl-streak-hero.warm::before{background:radial-gradient(circle,#ffd58b5f 0%,#ffd58b26 46%,transparent 72%)}
-.zdl-streak-hero.hot::before{background:radial-gradient(circle,#ffc27a66 0%,#ffb67f2e 44%,transparent 72%)}
-.zdl-streak-hero.legend::before{background:radial-gradient(circle,#ffd36f77 0%,#ffc98138 42%,transparent 72%)}
+.zdl-streak-hero{--streak-bg:linear-gradient(135deg,#fffaf7 0%,#fff4f8 56%,#fffaf0 100%);--streak-border:#ead2db;--streak-shadow:0 12px 28px rgba(195,122,150,.08);--streak-aura:radial-gradient(circle,#ffd98a55 0%,#ffd98a1d 48%,transparent 72%);--streak-text:#714b60;--streak-title:#6c4154;--streak-copy:#8f7180;--streak-total:#b6567f;--streak-total-soft:#a2778b;--streak-pill-bg:#fffdfb;--streak-pill-border:#eed5de;--streak-pill-color:#805566;--streak-accent-bg:#fff8e9;--streak-accent-border:#f0d391;--streak-accent-color:#8d6431;--streak-panel-bg:rgba(255,255,255,.62);--streak-panel-border:#ecd8bb;--streak-panel-title:#795237;--streak-panel-copy:#9a7b67;--streak-progress-bg:#efdfdf;--streak-progress-fill:linear-gradient(90deg,#e57da5,#d6a245);position:relative;display:block;width:100%;padding:16px;border:1px solid var(--streak-border);border-radius:23px;background:var(--streak-bg);box-shadow:var(--streak-shadow);overflow:hidden;text-align:left;color:var(--streak-text)}
+.zdl-streak-hero::before{content:"";position:absolute;left:-24px;top:-34px;width:146px;height:146px;border-radius:50%;background:var(--streak-aura);pointer-events:none;opacity:.95}
+.zdl-streak-hero::after{content:"";position:absolute;inset:0;background:linear-gradient(115deg,transparent 18%,rgba(255,255,255,.52) 42%,transparent 65%);transform:translateX(-135%);animation:zdl-streak-shimmer 7.4s ease-in-out infinite;pointer-events:none;opacity:.72}
+.zdl-streak-hero.tier-rising{--streak-bg:linear-gradient(135deg,#fffaf6 0%,#fff4f8 56%,#fff9ef 100%)}
+.zdl-streak-hero.tier-proud{--streak-bg:linear-gradient(135deg,#fff8f1 0%,#fff1f7 52%,#fff7e8 100%);--streak-border:#eccfd1;--streak-shadow:0 14px 32px rgba(202,135,152,.12);--streak-aura:radial-gradient(circle,#ffd99066 0%,#ffd17f2a 46%,transparent 72%);--streak-total:#bc547e;--streak-total-soft:#a96c83}
+.zdl-streak-hero.tier-elite{--streak-bg:linear-gradient(135deg,#fff6ed 0%,#fff0f7 48%,#fff6df 100%);--streak-border:#eac8cb;--streak-shadow:0 16px 36px rgba(202,124,141,.15);--streak-aura:radial-gradient(circle,#ffc97a72 0%,#ffd99036 42%,transparent 74%);--streak-total:#c0577c;--streak-total-soft:#a86f80;--streak-pill-border:#efd7c2}
+.zdl-streak-hero.tier-legend{--streak-bg:linear-gradient(135deg,#fff4e8 0%,#ffeef8 46%,#fff6d8 100%);--streak-border:#e8c3ba;--streak-shadow:0 20px 42px rgba(194,112,136,.18);--streak-aura:radial-gradient(circle,#ffbd677e 0%,#ffd57b3e 40%,transparent 74%);--streak-total:#c24b77;--streak-total-soft:#9f6d78;--streak-accent-bg:#fff4d8;--streak-accent-border:#edc973;--streak-accent-color:#945f18;--streak-progress-fill:linear-gradient(90deg,#ea6d99,#df9f34,#efc86c)}
+.zdl-streak-hero.tier-mythic{--streak-bg:linear-gradient(135deg,#fff2e4 0%,#ffeaf8 44%,#fff5cc 100%);--streak-border:#e4b59d;--streak-shadow:0 22px 46px rgba(191,101,127,.22);--streak-aura:radial-gradient(circle,#ffb85f8a 0%,#ffd15a44 38%,transparent 74%);--streak-total:#c94775;--streak-total-soft:#9d6576;--streak-accent-bg:#fff1cf;--streak-accent-border:#e9c25f;--streak-accent-color:#8d5912;--streak-progress-fill:linear-gradient(90deg,#ef6997,#e39a2f,#f2d977)}
+.zdl-streak-hero.is-shareworthy::after{animation-duration:5.4s;opacity:.85}
+.zdl-streak-hero.is-milestone{box-shadow:0 20px 46px rgba(198,115,137,.24),0 0 0 1px rgba(247,216,132,.22) inset}
+.zdl-streak-hero.is-milestone::before{transform:scale(1.06)}
+.zdl-streak-hero.is-milestone::after{animation-duration:4.4s;opacity:.95}
 .zdl-streak-hero:focus-visible{outline:2px solid #cb6b91;outline-offset:3px}
+.zdl-streak-sparkles{position:absolute;inset:0;pointer-events:none;z-index:0;opacity:0}
+.zdl-streak-hero.has-sparkles .zdl-streak-sparkles{opacity:1}
+.zdl-streak-sparkles i{position:absolute;width:9px;height:9px;border-radius:999px;background:radial-gradient(circle,#fff8d8 0%,#ffd676 45%,rgba(255,214,118,0) 76%);box-shadow:0 0 14px rgba(255,212,110,.38);animation:zdl-streak-twinkle 2.8s ease-in-out infinite}
+.zdl-streak-sparkles i:nth-child(1){top:14px;right:22px;animation-delay:0s}
+.zdl-streak-sparkles i:nth-child(2){top:56px;right:72px;width:7px;height:7px;animation-delay:.7s}
+.zdl-streak-sparkles i:nth-child(3){bottom:64px;right:32px;width:8px;height:8px;animation-delay:1.3s}
+.zdl-streak-sparkles i:nth-child(4){top:32px;left:54px;width:6px;height:6px;animation-delay:1.9s}
+.zdl-streak-ribbons{position:relative;z-index:1;display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px}
+.zdl-streak-ribbon{display:inline-flex;align-items:center;gap:6px;padding:7px 11px;border-radius:999px;border:1px solid rgba(234,212,222,.95);background:rgba(255,255,255,.82);color:#936a7c;font-size:11px;line-height:1.2;font-weight:800;box-shadow:0 7px 14px rgba(134,92,108,.06)}
+.zdl-streak-ribbon .zdl-ic{width:13px;height:13px;color:#d19b41}
+.zdl-streak-ribbon.main{border-color:var(--streak-accent-border);background:var(--streak-accent-bg);color:var(--streak-accent-color)}
+.zdl-streak-ribbon.milestone{border-color:#ecc56f;background:linear-gradient(135deg,#fff8de,#fff1d0 55%,#ffe9f4 100%);color:#91581e;box-shadow:0 9px 18px rgba(226,178,78,.16)}
 .zdl-streak-hero-top{position:relative;display:flex;align-items:flex-start;gap:13px;z-index:1}
-.zdl-streak-burst{width:54px;height:54px;flex:none;display:grid;place-items:center;border-radius:19px;background:linear-gradient(180deg,#fff6de,#ffeecb);border:1px solid #f0d7a6;box-shadow:0 10px 18px rgba(214,162,69,.16);animation:zdl-streak-float 3.4s ease-in-out infinite}
-.zdl-streak-burst .zdl-ic{width:27px;height:27px;color:#d39a3f;filter:drop-shadow(0 2px 5px rgba(220,153,61,.22))}
+.zdl-streak-burst{position:relative;width:54px;height:54px;flex:none;display:grid;place-items:center;border-radius:19px;background:linear-gradient(180deg,#fff6de,#ffeecb);border:1px solid #f0d7a6;box-shadow:0 10px 18px rgba(214,162,69,.16);animation:zdl-streak-float 3.4s ease-in-out infinite}
+.zdl-streak-burst::after{content:"";position:absolute;inset:-7px;border-radius:24px;border:1px solid rgba(241,208,119,.34);opacity:.3;transform:scale(.96);animation:zdl-streak-ring 3.8s ease-in-out infinite}
+.zdl-streak-hero.is-shareworthy .zdl-streak-burst{box-shadow:0 12px 22px rgba(215,160,61,.2)}
+.zdl-streak-hero.is-milestone .zdl-streak-burst::after{opacity:.65}
+.zdl-streak-burst .zdl-ic{width:27px;height:27px;color:#d39a3f;filter:drop-shadow(0 2px 5px rgba(220,153,61,.22));animation:zdl-streak-flame 1.8s ease-in-out infinite}
 .zdl-streak-copy{min-width:0;flex:1}
-.zdl-streak-copy h3{margin:4px 0 0;font-size:24px;line-height:1.12;letter-spacing:-.4px;color:#6c4154}
-.zdl-streak-copy p{margin:8px 0 0;font-size:12px;line-height:1.55;color:#8f7180}
-.zdl-streak-total{display:flex;flex-direction:column;align-items:flex-end;justify-content:center;min-width:70px;flex:none;padding-top:2px;color:#b25b84}
-.zdl-streak-total strong{font-size:33px;line-height:1;font-weight:850;letter-spacing:-.8px;color:#b6567f}
-.zdl-streak-total small{margin-top:4px;font-size:11px;font-weight:750;color:#a2778b;text-transform:uppercase;letter-spacing:.08em}
+.zdl-streak-copy h3{margin:4px 0 0;font-size:24px;line-height:1.12;letter-spacing:-.4px;color:var(--streak-title)}
+.zdl-streak-copy p{margin:8px 0 0;font-size:12px;line-height:1.55;color:var(--streak-copy)}
+.zdl-streak-tier-note{display:block;margin-top:6px;font-size:11px;line-height:1.4;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:#b46a8a}
+.zdl-streak-hero.tier-legend .zdl-streak-tier-note,.zdl-streak-hero.tier-mythic .zdl-streak-tier-note{color:#b4665f}
+.zdl-streak-total{display:flex;flex-direction:column;align-items:flex-end;justify-content:center;min-width:74px;flex:none;padding-top:2px;color:var(--streak-total)}
+.zdl-streak-total strong{font-size:33px;line-height:1;font-weight:850;letter-spacing:-.9px;color:var(--streak-total);text-shadow:0 4px 16px rgba(255,255,255,.18)}
+.zdl-streak-hero.is-milestone .zdl-streak-total strong{text-shadow:0 0 18px rgba(255,228,153,.48),0 6px 16px rgba(255,255,255,.24)}
+.zdl-streak-total small{margin-top:4px;font-size:11px;font-weight:750;color:var(--streak-total-soft);text-transform:uppercase;letter-spacing:.08em}
 .zdl-streak-chips{position:relative;z-index:1;display:flex;flex-wrap:wrap;gap:8px;margin-top:14px}
-.zdl-streak-chip{display:inline-flex;align-items:center;gap:7px;padding:8px 11px;border-radius:999px;border:1px solid #eed5de;background:#fffdfb;color:#805566;font-size:11px;line-height:1.2;font-weight:700;box-shadow:0 4px 10px rgba(123,86,102,.04)}
+.zdl-streak-chip{display:inline-flex;align-items:center;gap:7px;padding:8px 11px;border-radius:999px;border:1px solid var(--streak-pill-border);background:var(--streak-pill-bg);color:var(--streak-pill-color);font-size:11px;line-height:1.2;font-weight:700;box-shadow:0 4px 10px rgba(123,86,102,.04)}
 .zdl-streak-chip img{width:18px;height:18px;flex:none}
 .zdl-streak-chip .zdl-ic{width:14px;height:14px;color:#c5873c}
-.zdl-streak-chip.accent{border-color:#f0d391;background:#fff8e9;color:#8d6431}
-.zdl-streak-next{position:relative;z-index:1;display:flex;align-items:center;gap:12px;margin-top:14px;padding:12px 13px;border-radius:18px;border:1px solid #ecd8bb;background:rgba(255,255,255,.62);backdrop-filter:blur(8px)}
+.zdl-streak-chip.accent{border-color:var(--streak-accent-border);background:var(--streak-accent-bg);color:var(--streak-accent-color)}
+.zdl-streak-chip.celebration{border-color:#ecc56f;background:linear-gradient(135deg,#fff7dd,#ffedd2 60%,#fff7f4 100%);color:#965d1f}
+.zdl-streak-next{position:relative;z-index:1;display:flex;align-items:center;gap:12px;margin-top:14px;padding:12px 13px;border-radius:18px;border:1px solid var(--streak-panel-border);background:var(--streak-panel-bg);backdrop-filter:blur(8px)}
 .zdl-streak-next>img,.zdl-streak-next>.zdl-reward-token{width:39px;height:43px;flex:none}
 .zdl-streak-next>div{min-width:0;flex:1}
-.zdl-streak-next strong{display:block;font-size:14px;line-height:1.35;color:#795237}
-.zdl-streak-next small{display:block;margin-top:4px;font-size:11px;line-height:1.45;color:#9a7b67}
+.zdl-streak-next strong{display:block;font-size:14px;line-height:1.35;color:var(--streak-panel-title)}
+.zdl-streak-next small{display:block;margin-top:4px;font-size:11px;line-height:1.45;color:var(--streak-panel-copy)}
 .zdl-streak-bar{position:relative;z-index:1;margin-top:13px}
-.zdl-streak-bar-track{height:8px;border-radius:999px;background:#efdfdf;overflow:hidden}
-.zdl-streak-bar-track i{display:block;height:100%;border-radius:inherit;background:linear-gradient(90deg,#e57da5,#d6a245)}
+.zdl-streak-bar-track{height:8px;border-radius:999px;background:var(--streak-progress-bg);overflow:hidden}
+.zdl-streak-bar-track i{display:block;height:100%;border-radius:inherit;background:var(--streak-progress-fill);box-shadow:0 0 14px rgba(229,126,165,.18)}
 .zdl-streak-bar-meta{display:flex;justify-content:space-between;gap:10px;margin-top:7px;font-size:11px;line-height:1.35;color:#967789}
 .zdl-streak-footer{position:relative;z-index:1;display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:12px;color:#a27f91;font-size:11px;line-height:1.4}
 .zdl-streak-footer .zdl-footer-cta{display:inline-flex;align-items:center;gap:6px;font-weight:800;color:#b55b83}
@@ -34171,9 +34196,12 @@ html &gt; body.zefirok-game-expanded{height:var(--zefirok-visible-height,100dvh)
 .zdl-toast.show{opacity:1;transform:translate(-50%,0)}
 @keyframes zdl-spin{to{transform:rotate(360deg)}}
 @keyframes zdl-streak-float{0%,100%{transform:translateY(0)}50%{transform:translateY(-2px)}}
+@keyframes zdl-streak-flame{0%,100%{transform:scale(1) rotate(-3deg)}35%{transform:scale(1.06) rotate(2deg)}60%{transform:scale(.97) rotate(-1deg)}}
+@keyframes zdl-streak-ring{0%,100%{transform:scale(.96);opacity:.24}50%{transform:scale(1.05);opacity:.52}}
+@keyframes zdl-streak-twinkle{0%,100%{transform:scale(.7);opacity:.22}40%{transform:scale(1);opacity:.9}70%{transform:scale(.82);opacity:.55}}
 @keyframes zdl-streak-shimmer{0%,18%{transform:translateX(-135%)}40%,100%{transform:translateX(135%)}}
 @media(min-width:640px){.zdl-layer{align-items:center;padding:24px}.zdl-card{height:min(750px,100%);border-radius:28px}.zdl-streak-hero{padding:18px 18px 17px}}
-@media(max-width:360px){.zdl-header{padding-left:13px;padding-right:13px}.zdl-heading{gap:7px}.zdl-heading h2{font-size:20px}.zdl-body{padding:13px}.zdl-footer{padding:12px 13px 14px}.zdl-today{padding:12px}.zdl-today-art{width:59px;height:64px}.zdl-today h3{font-size:22px}.zdl-week{padding:10px}.zdl-stamps{gap:3px}.zdl-stamp{border-radius:9px}.zdl-stamp img{width:24px;height:26px}.zdl-stamp small{font-size:8px}.zdl-stamp b{font-size:9px}.zdl-heading small{font-size:10px}.zdl-streak-hero{padding:14px}.zdl-streak-hero-top{gap:10px}.zdl-streak-burst{width:48px;height:48px;border-radius:17px}.zdl-streak-copy h3{font-size:21px}.zdl-streak-total strong{font-size:29px}.zdl-streak-total{min-width:58px}.zdl-streak-footer{flex-direction:column;align-items:flex-start}}
+@media(max-width:360px){.zdl-header{padding-left:13px;padding-right:13px}.zdl-heading{gap:7px}.zdl-heading h2{font-size:20px}.zdl-body{padding:13px}.zdl-footer{padding:12px 13px 14px}.zdl-today{padding:12px}.zdl-today-art{width:59px;height:64px}.zdl-today h3{font-size:22px}.zdl-week{padding:10px}.zdl-stamps{gap:3px}.zdl-stamp{border-radius:9px}.zdl-stamp img{width:24px;height:26px}.zdl-stamp small{font-size:8px}.zdl-stamp b{font-size:9px}.zdl-heading small{font-size:10px}.zdl-streak-hero{padding:14px}.zdl-streak-ribbons{margin-bottom:10px}.zdl-streak-hero-top{gap:10px}.zdl-streak-burst{width:48px;height:48px;border-radius:17px}.zdl-streak-copy h3{font-size:21px}.zdl-streak-total strong{font-size:29px}.zdl-streak-total{min-width:58px}.zdl-streak-footer{flex-direction:column;align-items:flex-start}}
 @media(prefers-reduced-motion:reduce){.zdl-layer *{animation:none!important;transition:none!important;scroll-behavior:auto!important}}
 
 </style>
@@ -34306,12 +34334,18 @@ function nextContent(){
  return `<div class="zdl-next">${rewardVisual(next)}<div><span class="zdl-eyebrow">${completedToday()?'Следующий вход · завтра':'Следующий вход'}</span><strong>${esc(rewardText(next))}</strong><small>Неделя ${whole(st.nextProgressWeek)||1} · день ${whole(st.nextCycleDay)||1}${whole(st.nextCycleDay)===7?' · финал недели':''}</small></div></div>`;
 }
 function streakTone(streak){
- if(streak>=42)return {className:'legend',badge:'Легендарная серия',copy:'Такую серию уже хочется беречь. Большой этап совсем рядом или уже открыт.'};
- if(streak>=30)return {className:'hot',badge:'Сильная серия',copy:'Отличный ритм. Сохрани его — длинные серии должны ощущаться ценно.'};
- if(streak>=14)return {className:'warm',badge:'Стабильный темп',copy:'Ты уверенно держишь активность. Осталось немного до следующего большого этапа.'};
- if(streak>=7)return {className:'warm',badge:'Хороший ритм',copy:'Серия уже заметная. Продолжай, чтобы открывать бонусы серии быстрее.'};
- if(streak>=1)return {className:'',badge:'Серия набирает ход',copy:'Каждый следующий вход усиливает серию и приближает бонусы.'};
- return {className:'',badge:'Начни серию сегодня',copy:'Серия начнётся после подтверждённого входа. Дальше её можно усиливать каждый день.'};
+ const safe=whole(streak),milestone=safe>0&&safe%10===0;
+ const nextMilestone=safe>0?Math.ceil((safe+1)/10)*10:10;
+ const toNext=Math.max(0,nextMilestone-safe);
+ const milestoneBadge=milestone?(safe===10?'10 дней — первый серьёзный рубеж':safe===20?'20 дней — уверенная привычка':safe===30?'30 дней — месяц подряд':safe===40?'40 дней — редкая серия':safe===50?'50 дней — легендарный рубеж':`${fmt(safe)} дней подряд`):'';
+ if(safe>=50)return {className:'tier-mythic is-shareworthy'+(milestone?' is-milestone has-sparkles':' has-sparkles'),badge:'Легендарная серия',ribbon:'50+ дней — элита активности',copy:'Это уже витринный streak: длинная серия, которой хочется гордиться и делиться.',tierNote:milestone?'Юбилей серии достигнут':'Удерживай ритм и не отпускай легендарный статус.',milestone,celebration:milestoneBadge,nextHint:toNext?`До следующего юбилея ещё ${fmt(toNext)} ${plural(toNext)}`:'Новый юбилейный рубеж уже достигнут.'};
+ if(safe>=40)return {className:'tier-legend is-shareworthy'+(milestone?' is-milestone has-sparkles':' has-sparkles'),badge:'Кофейная легенда',ribbon:'40+ дней — серия, которой гордятся',copy:'Такой темп уже ощущается как достижение. Это редкая серия, которую хочется показать.',tierNote:milestone?'Юбилей серии достигнут':'Продолжай — после 40 дней серия уже выглядит по-настоящему престижно.',milestone,celebration:milestoneBadge,nextHint:toNext?`До следующего юбилея ещё ${fmt(toNext)} ${plural(toNext)}`:'Следующий юбилей уже взят.'};
+ if(safe>=30)return {className:'tier-elite is-shareworthy'+(milestone?' is-milestone has-sparkles':' has-sparkles'),badge:'Сильная серия',ribbon:'30+ дней — престижный ритм',copy:'Месяц без срыва — это уже сильная привычка. Такой streak хочется сохранить и показывать.',tierNote:milestone?'Юбилей серии достигнут':'Ты уже в зоне, где серия ощущается как настоящая гордость.',milestone,celebration:milestoneBadge,nextHint:toNext?`До следующего юбилея ещё ${fmt(toNext)} ${plural(toNext)}`:'Новый рубеж уже открыт.'};
+ if(safe>=20)return {className:'tier-proud'+(milestone?' is-milestone has-sparkles':' has-sparkles'),badge:'Уверенная привычка',ribbon:'20+ дней — уже серьёзно',copy:'Стабильная активность уже выглядит сильно. Следующий юбилей совсем близко.',tierNote:milestone?'Юбилей серии достигнут':'Серия стала заметной и уже воспринимается как достижение.',milestone,celebration:milestoneBadge,nextHint:toNext?`До следующего юбилея ещё ${fmt(toNext)} ${plural(toNext)}`:'Рубеж активности достигнут.'};
+ if(safe>=10)return {className:'tier-proud'+(milestone?' is-milestone':''),badge:'Повод для гордости',ribbon:'10+ дней — уже есть чем гордиться',copy:'Это уже не случайность, а ритм. Десять дней подряд должны ощущаться как личная победа.',tierNote:milestone?'Юбилей серии достигнут':'Каждый новый вход укрепляет гордость за серию и ведёт к следующему рубежу.',milestone,celebration:milestoneBadge,nextHint:toNext?`До следующего юбилея ещё ${fmt(toNext)} ${plural(toNext)}`:'Первый серьёзный рубеж уже открыт.'};
+ if(safe>=7)return {className:'tier-rising',badge:'Хороший ритм',ribbon:'Серия уже заметна',copy:'Ещё немного — и серия перейдёт в состояние, которым уже приятно гордиться.',tierNote:'Поддерживай ритм и дойди до первого юбилея.',milestone:false,celebration:'',nextHint:`До 10 дней ещё ${fmt(Math.max(0,10-safe))} ${plural(Math.max(0,10-safe))}`};
+ if(safe>=1)return {className:'',badge:'Серия набирает ход',ribbon:'Старт серии',copy:'Каждый следующий вход усиливает серию и приближает бонусы.',tierNote:'Первые дни создают фундамент для будущей гордости.',milestone:false,celebration:'',nextHint:`До 10 дней ещё ${fmt(Math.max(0,10-safe))} ${plural(Math.max(0,10-safe))}`};
+ return {className:'',badge:'Начни серию сегодня',ribbon:'Первый шаг к серии',copy:'Серия начнётся после подтверждённого входа. Дальше её можно усиливать каждый день.',tierNote:'Начни сегодня, чтобы открыть первый юбилей на 10-м дне.',milestone:false,celebration:'',nextHint:'Первый юбилей начинается с одного входа.'};
 }
 function streakHeroContent(){
  const st=model?.state||{},insurance=model?.insurance||{},streak=whole(st.streak),best=whole(st.bestStreak),tone=streakTone(streak),rows=[...list(model?.streakRewards)].sort((a,b)=>number(a.streakThreshold)-number(b.streakThreshold));
@@ -34321,11 +34355,14 @@ function streakHeroContent(){
  const ratio=nextGoal>base?Math.max(0,Math.min(1,(streak-base)/(nextGoal-base))):streak?1:0;
  const protectionLabel=insurance.enabled===true?`Защита ${fmt(insurance.balance)} / ${fmt(insurance.max)}`:'Защита выключена';
  const bestLabel=best?`Лучший результат ${fmt(best)} ${plural(best)}`:'Лучшая серия появится после первых дней';
- const goalCopy=nextGoal?`До ${fmt(nextGoal)} ${plural(nextGoal)} — ещё ${fmt(Math.max(0,nextGoal-streak))}`:'Все этапы серии уже открыты';
- const rewardCopy=nextGoal&&next?rewardText(next):best?`Лучший streak: ${fmt(best)} ${plural(best)}`:'Бонусы серии откроются после первых дней';
+ const goalCopy=tone.milestone&&streak?`Юбилей серии — ${fmt(streak)} ${plural(streak)} подряд`:nextGoal?`До ${fmt(nextGoal)} ${plural(nextGoal)} — ещё ${fmt(Math.max(0,nextGoal-streak))}`:'Все этапы серии уже открыты';
+ const rewardCopy=tone.milestone&&streak?tone.nextHint:(nextGoal&&next?rewardText(next):best?`Лучший streak: ${fmt(best)} ${plural(best)}`:'Бонусы серии откроются после первых дней');
+ const totalLabel=streak===1?'день':'дней';
  return `<button type="button" class="zdl-streak-hero ${tone.className}" data-zdl-view="streak" aria-label="Открыть бонусы серии. Сейчас серия ${fmt(streak)} ${plural(streak)}.">
- <div class="zdl-streak-hero-top"><div class="zdl-streak-burst" aria-hidden="true">${icon('flame')}</div><div class="zdl-streak-copy"><span class="zdl-eyebrow">Серия входов</span><h3>${streak?`${fmt(streak)} ${plural(streak)} подряд`:'Серия ещё не начата'}</h3><p>${esc(tone.copy)}</p></div><div class="zdl-streak-total"><strong>${fmt(streak)}</strong><small>${streak===1?'день':'дней'}</small></div></div>
- <div class="zdl-streak-chips"><span class="zdl-streak-chip accent">${icon('flame')} ${esc(tone.badge)}</span><span class="zdl-streak-chip">${insurance.enabled?image(SHIELD,''):icon('check')}${esc(protectionLabel)}</span><span class="zdl-streak-chip">${icon('history')}${esc(bestLabel)}</span></div>
+ <div class="zdl-streak-sparkles" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
+ <div class="zdl-streak-ribbons"><span class="zdl-streak-ribbon main">${icon('flame')} ${esc(tone.ribbon)}</span>${tone.celebration?`<span class="zdl-streak-ribbon milestone">${icon('flame')} ${esc(tone.celebration)}</span>`:''}</div>
+ <div class="zdl-streak-hero-top"><div class="zdl-streak-burst" aria-hidden="true">${icon('flame')}</div><div class="zdl-streak-copy"><span class="zdl-eyebrow">Серия входов</span><h3>${streak?`${fmt(streak)} ${plural(streak)} подряд`:'Серия ещё не начата'}</h3><span class="zdl-streak-tier-note">${esc(tone.tierNote)}</span><p>${esc(tone.copy)}</p></div><div class="zdl-streak-total"><strong>${fmt(streak)}</strong><small>${totalLabel}</small></div></div>
+ <div class="zdl-streak-chips"><span class="zdl-streak-chip accent">${icon('flame')} ${esc(tone.badge)}</span>${tone.milestone?`<span class="zdl-streak-chip celebration">${icon('check')} Юбилей серии</span>`:''}<span class="zdl-streak-chip">${insurance.enabled?image(SHIELD,''):icon('check')}${esc(protectionLabel)}</span><span class="zdl-streak-chip">${icon('history')}${esc(bestLabel)}</span></div>
  <div class="zdl-streak-next">${next?rewardVisual(next):image(SHIELD)}<div><strong>${esc(goalCopy)}</strong><small>${esc(rewardCopy)}</small></div></div>
  <div class="zdl-streak-bar"><div class="zdl-streak-bar-track"><i style="width:${Math.round(ratio*100)}%"></i></div><div class="zdl-streak-bar-meta"><span>${base?`${fmt(base)} ${plural(base)}`:'Старт серии'}</span><span>${nextGoal?`${fmt(nextGoal)} ${plural(nextGoal)}`:'Максимум серии'}</span></div></div>
  <div class="zdl-streak-footer"><span>Серия и карточка — разные счётчики: серия считает дни подряд.</span><span class="zdl-footer-cta">Бонусы серии и защита ${icon('arrow')}</span></div></button>`;
