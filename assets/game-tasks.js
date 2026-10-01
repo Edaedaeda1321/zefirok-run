@@ -67,6 +67,8 @@
     legendary:'/assets/cases/legendary_closed.webp',
     alex:'/assets/cases/alex/alex_case_close.webp'
   });
+  const CASE_LABELS=Object.freeze({small:'Обычный кейс',sweet:'Серебряный кейс',gold:'Золотой кейс',mythic:'Мифический кейс',legendary:'Легендарный кейс',alex:'Кейс Алекса'});
+  const BOOSTER_LABELS=Object.freeze({points:'Очки ×2',treats:'Зефир ×2',coffee:'Кофе ×2',shield:'Щит Зеффи',second_chance:'Второй шанс',pause:'Пауза Зеффи'});
   function iconMarkup(src,className='gt-inline-icon'){return `<img class="${esc(className)}" src="${esc(src||TASK_ICONS.task)}" alt="" aria-hidden="true" loading="lazy" decoding="async">`;}
   function isRunning(){try{return Boolean(host().running?.());}catch{return false;}}
   function taskId(task){return `${String(task?.kind||'task')}:${String(task?.key||'')}:${String(task?.cycleKey||'')}`;}
@@ -295,9 +297,23 @@
     if(kind==='points')return `${fmt(amount)} очков`;
     if(kind==='zefir'||kind==='treats')return `${fmt(amount)} зефира`;
     if(kind==='coffee')return `${fmt(amount)} кофе`;
-    if(kind==='case')return amount>1?`${fmt(amount)} кейса`:'Кейс';
-    if(kind==='booster')return amount>1?`${fmt(amount)} усилителя`:'Усилитель';
+    if(kind==='case'){
+      const title=CASE_LABELS[id]||String(item?.title||'Кейс');
+      return amount>1?`${title} ×${fmt(amount)}`:title;
+    }
+    if(kind==='booster'){
+      const title=BOOSTER_LABELS[id]||String(item?.title||'Усилитель');
+      return amount>1?`${title} · ${fmt(amount)} шт.`:title;
+    }
     return String(item?.label||item?.title||`${fmt(amount)} награда`);
+  }
+  function receiptRewardLabel(item){
+    const kind=String(item?.kind||'').toLowerCase(),amount=Math.max(1,whole(item?.amount||1));
+    if(kind==='profile_xp')return `+${fmt(amount)} XP`;
+    if(kind==='points')return `+${fmt(amount)} очков`;
+    if(kind==='zefir'||kind==='treats')return `+${fmt(amount)} зефира`;
+    if(kind==='coffee')return `+${fmt(amount)} кофе`;
+    return rewardItemLabel(item);
   }
   function rewardItemIcon(item){
     const kind=String(item?.kind||'').toLowerCase(),id=String(item?.id||'').toLowerCase();
@@ -386,12 +402,12 @@
   function readySummaryMarkup(){
     const tasks=readyTasks();
     if(!tasks.length)return '';
-    const count=tasks.length,items=mergedRewardItems(tasks),shown=items.slice(0,4),extra=Math.max(0,items.length-shown.length);
+    const count=tasks.length,items=mergedRewardItems(tasks),shown=items.slice(0,6),extra=Math.max(0,items.length-shown.length);
     const rewardMarkup=shown.length
       ? shown.map(item=>`<span class="gt-ready-reward">${iconMarkup(rewardItemIcon(item),'gt-ready-reward-icon')}<b>${esc(rewardItemLabel(item))}</b></span>`).join('')
       : `<span class="gt-ready-reward">${iconMarkup(TASK_ICONS.reward,'gt-ready-reward-icon')}<b>Награды заданий</b></span>`;
     const buttonLabel=claimingAll?'Получаем…':count>1?`Получить всё · ${count}`:'Получить';
-    return `<section class="gt-ready-summary" aria-label="Готовые награды"><span class="gt-ready-summary-icon">${iconMarkup(TASK_ICONS.reward,'gt-ready-summary-icon-img')}</span><span class="gt-ready-summary-copy"><small>Награды готовы</small><strong>Выполнено ${count} ${plural(count,'задание','задания','заданий')}</strong><span>Забери награды за выполненные цели</span></span><span class="gt-ready-summary-rewards">${rewardMarkup}${extra?`<span class="gt-ready-more">+${extra}</span>`:''}</span><button class="gt-claim-all" data-gt-claim-all type="button"${claimingAll||claimingKey?' disabled':''}>${iconMarkup(TASK_ICONS.reward,'gt-button-icon')}<span>${esc(buttonLabel)}</span></button></section>`;
+    return `<section class="gt-ready-summary" aria-label="Готовые награды"><span class="gt-ready-summary-icon">${iconMarkup(TASK_ICONS.reward,'gt-ready-summary-icon-img')}</span><span class="gt-ready-summary-copy"><small>Награды готовы</small><strong>Выполнено ${count} ${plural(count,'задание','задания','заданий')}</strong><span>Забери награды за выполненные цели</span></span><span class="gt-ready-summary-rewards">${rewardMarkup}${extra?`<span class="gt-ready-more">Ещё ${extra}</span>`:''}</span><button class="gt-claim-all" data-gt-claim-all type="button"${claimingAll||claimingKey?' disabled':''}>${iconMarkup(TASK_ICONS.reward,'gt-button-icon')}<span>${esc(buttonLabel)}</span></button></section>`;
   }
 
   function nextMarkup(){
@@ -538,6 +554,55 @@
     return inflight;
   }
 
+  function closeBulkReceipt(immediate=false){
+    const layer=root.querySelector('[data-gt-receipt-layer]');
+    if(!layer)return;
+    if(immediate){layer.remove();return;}
+    layer.classList.add('is-closing');
+    window.setTimeout(()=>layer.remove(),180);
+  }
+  function bindBulkReceiptGestures(layer){
+    const sheet=layer?.querySelector('.gt-receipt-sheet'),drag=layer?.querySelector('[data-gt-receipt-drag]');
+    if(!sheet||!drag)return;
+    let pointerId=null,startY=0,deltaY=0;
+    const reset=()=>{sheet.style.transform='';sheet.style.transition='';pointerId=null;deltaY=0;};
+    drag.addEventListener('pointerdown',event=>{
+      if(pointerId!==null)return;
+      pointerId=event.pointerId;startY=event.clientY;deltaY=0;sheet.style.transition='none';
+      try{drag.setPointerCapture(pointerId);}catch{}
+    });
+    drag.addEventListener('pointermove',event=>{
+      if(event.pointerId!==pointerId)return;
+      deltaY=Math.max(0,event.clientY-startY);sheet.style.transform=`translateY(${Math.min(120,deltaY)}px)`;
+    });
+    const finish=event=>{
+      if(event.pointerId!==pointerId)return;
+      try{drag.releasePointerCapture(pointerId);}catch{}
+      if(deltaY>=64){closeBulkReceipt();return;}
+      sheet.style.transition='transform .18s ease';sheet.style.transform='translateY(0)';window.setTimeout(reset,190);
+    };
+    drag.addEventListener('pointerup',finish);drag.addEventListener('pointercancel',finish);
+  }
+  function showBulkReceipt({claimedCount=0,total=0,failedCount=0,rewards=[]}={}){
+    if(total<2||claimedCount<1)return false;
+    closeBulkReceipt(true);
+    const items=list(rewards),shown=items.slice(0,8),extra=Math.max(0,items.length-shown.length);
+    const partial=failedCount>0;
+    const title=partial?`Получено ${claimedCount} из ${total} наград`:'Награды получены';
+    const subtitle=partial?`Сервер подтвердил ${claimedCount} из ${total}`:`Выполнено заданий: ${claimedCount}`;
+    const rewardsMarkup=shown.length
+      ? shown.map(item=>`<span class="gt-receipt-reward">${iconMarkup(rewardItemIcon(item),'gt-receipt-reward-icon')}<b>${esc(receiptRewardLabel(item))}</b></span>`).join('')
+      : `<span class="gt-receipt-reward is-wide">${iconMarkup(TASK_ICONS.done,'gt-receipt-reward-icon')}<b>Начисление подтверждено сервером</b></span>`;
+    const left=Math.max(0,total-claimedCount);
+    const note=partial?`${left} ${plural(left,'награда осталась','награды остались','наград осталось')} доступно — попробуй ещё раз.`:'Всё начислено и сохранено.';
+    root.insertAdjacentHTML('beforeend',`<div class="gt-receipt-layer" data-gt-receipt-layer><button class="gt-receipt-backdrop" data-gt-receipt-close type="button" aria-label="Закрыть итог наград"></button><section class="gt-receipt-sheet" role="dialog" aria-modal="true" aria-labelledby="gt-receipt-title"><button class="gt-receipt-grabber" data-gt-receipt-drag type="button" aria-label="Смахни вниз, чтобы закрыть"><span></span></button><div class="gt-receipt-head"><span class="gt-receipt-main-icon">${iconMarkup(TASK_ICONS.reward,'gt-receipt-main-img')}</span><span><small>${esc(subtitle)}</small><strong id="gt-receipt-title">${esc(title)}</strong></span></div><div class="gt-receipt-rewards">${rewardsMarkup}${extra?`<span class="gt-receipt-more">Ещё ${extra}</span>`:''}</div><p class="gt-receipt-note${partial?' is-partial':''}">${esc(note)}</p><button class="gt-receipt-done" data-gt-receipt-close type="button">Готово</button></section></div>`);
+    const layer=root.querySelector('[data-gt-receipt-layer]');
+    bindBulkReceiptGestures(layer);
+    window.requestAnimationFrame(()=>layer?.classList.add('is-open'));
+    window.setTimeout(()=>layer?.querySelector('.gt-receipt-done')?.focus({preventScroll:true}),80);
+    return true;
+  }
+
   async function claim(task){
     if(!task||claimingKey||claimingAll||task.claimed||committedClaims.has(taskId(task))||!task.complete)return;
     const id=taskId(task),wasUnread=Boolean(task.unread);claimingKey=id;render();
@@ -573,7 +638,8 @@
     claimingAll=true;render();
     try{
       const result=await post(API_CLAIM,{claims:tasks.map(task=>({kind:String(task.kind||'task'),key:String(task.key||''),cycleKey:String(task.cycleKey||'')}))});
-      const returned=new Map(list(result?.claims).map(item=>[`${String(item?.kind||'task')}:${String(item?.key||'')}:${String(item?.cycleKey||'')}`,item]));
+      const responseClaims=list(result?.claims),returned=new Map(responseClaims.map(item=>[`${String(item?.kind||'task')}:${String(item?.key||'')}:${String(item?.cycleKey||'')}`,item]));
+      const confirmedRewards=mergedRewardItems(responseClaims.filter(item=>Boolean(item?.claimed&&!item?.repeated)));
       await new Promise(resolve=>window.setTimeout(resolve,120));
       let claimedCount=0,failedCount=0,unreadClaimed=0;
       for(const task of tasks){
@@ -588,8 +654,11 @@
       claimingAll=false;render();updateEntry();
       if(claimedCount){try{void host().sync?.();}catch{}}
       window.setTimeout(()=>void load(true),250);
-      if(failedCount)toast(claimedCount?`Получено ${claimedCount} из ${tasks.length}. Остальные можно повторить.`:'Не удалось получить готовые награды. Попробуй ещё раз.');
-      else toast(claimedCount===1?'Награда получена':`Получено наград: ${claimedCount}`);
+      const receiptShown=showBulkReceipt({claimedCount,total:tasks.length,failedCount,rewards:confirmedRewards});
+      if(!receiptShown){
+        if(failedCount)toast(claimedCount?`Получено ${claimedCount} из ${tasks.length}. Остальные можно повторить.`:'Не удалось получить готовые награды. Попробуй ещё раз.');
+        else toast(claimedCount===1?'Награда получена':`Получено наград: ${claimedCount}`);
+      }
     }catch(error){
       claimingAll=false;render();window.setTimeout(()=>void load(true),250);toast(String(error?.message||'Не удалось получить готовые награды.'));
     }
@@ -615,7 +684,7 @@
   }
 
   entry.addEventListener('click',event=>{event.preventDefault();open();});
-  root.addEventListener('click',event=>{const target=event.target instanceof Element?event.target:null;if(!target)return;if(target.closest('[data-gt-completion-open]')){event.preventDefault();hideCompletionNotice();open();}});
+  root.addEventListener('click',event=>{const target=event.target instanceof Element?event.target:null;if(!target)return;if(target.closest('[data-gt-receipt-close]')){event.preventDefault();closeBulkReceipt();return;}if(target.closest('[data-gt-completion-open]')){event.preventDefault();hideCompletionNotice();open();}});
   screen.addEventListener('click',event=>{
     const target=event.target instanceof Element?event.target:null;if(!target)return;
     if(target.closest('[data-gt-back]')){back();return;}
@@ -633,7 +702,7 @@
   document.addEventListener('visibilitychange',()=>{if(!document.hidden&&!screen.hidden&&payload&&Date.now()-lastFreshAt>CACHE_MS)void load(true);});
 
   timerTick=window.setInterval(()=>{if(!screen.hidden&&payload)render();},60000);
-  window.addEventListener('pagehide',()=>{if(timerTick)clearInterval(timerTick);window.clearTimeout(completionNoticeTimer);window.clearTimeout(completionNoticePoll);},{once:true});
+  window.addEventListener('pagehide',()=>{if(timerTick)clearInterval(timerTick);window.clearTimeout(completionNoticeTimer);window.clearTimeout(completionNoticePoll);closeBulkReceipt(true);},{once:true});
 
   updateEntry();
 
@@ -641,8 +710,10 @@
   window.zefirokOpenGameTasks=open;
   window.zefirokTasksUiOpen=open;
   window.zefirokGameTasksApplyNotice=applyEntryNotice;
+  window.zefirokGameTasksPreload=()=>load(false);
   window.addEventListener('zefirok-game-task-notice',event=>applyEntryNotice(event?.detail));
   if(window.__ZEFIROK_GAME_TASK_NOTICE__)applyEntryNotice(window.__ZEFIROK_GAME_TASK_NOTICE__);
+  if(window.__ZEFIROK_GAME_TASKS_PRELOAD_PENDING__){window.__ZEFIROK_GAME_TASKS_PRELOAD_PENDING__=false;window.setTimeout(()=>void window.zefirokGameTasksPreload(),0);}
 
   // Deep links created by the Telegram bot should land directly in the task hub.
   try{
