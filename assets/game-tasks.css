@@ -57,15 +57,15 @@
 @keyframes gtTaskNewPulse{0%,100%{box-shadow:0 3px 8px rgba(177,121,29,.10)}50%{box-shadow:0 4px 12px rgba(177,121,29,.24)}}
 
 #zefirok-maltipoo-runner .gt-shell{display:grid;gap:11px}
-#zefirok-maltipoo-runner .gt-topbar{display:grid;grid-template-columns:40px minmax(0,1fr) 40px;align-items:center;gap:8px;padding:2px 1px 0}
+#zefirok-maltipoo-runner .gt-topbar{display:grid;grid-template-columns:34px minmax(0,1fr) 34px;align-items:center;gap:7px;padding:1px 1px 0}
 #zefirok-maltipoo-runner .gt-icon-button{
-  width:40px;height:40px;display:grid;place-items:center;border:1px solid var(--gt-line);border-radius:14px;
-  background:rgba(255,255,255,.92);color:#a5486d;font-size:20px;font-weight:950;box-shadow:0 6px 16px rgba(107,62,78,.07);cursor:pointer
+  width:34px;height:34px;display:grid;place-items:center;border:1px solid var(--gt-line);border-radius:11px;
+  background:rgba(255,255,255,.92);color:#a5486d;font-size:17px;font-weight:950;box-shadow:0 4px 11px rgba(107,62,78,.06);cursor:pointer
 }
 #zefirok-maltipoo-runner .gt-heading{min-width:0;text-align:center}
 #zefirok-maltipoo-runner .gt-heading strong{display:block;font-size:20px;line-height:1.08;font-weight:950;color:#6b3650}
 #zefirok-maltipoo-runner .gt-heading span{display:block;margin-top:3px;color:var(--gt-muted);font-size:9px;font-weight:750}
-#zefirok-maltipoo-runner .gt-refresh svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+#zefirok-maltipoo-runner .gt-refresh svg{width:15px;height:15px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
 #zefirok-maltipoo-runner .gt-refresh.is-busy svg{animation:gtSpin .8s linear infinite}
 @keyframes gtSpin{to{transform:rotate(360deg)}}
 
@@ -307,12 +307,14 @@
 #zefirok-maltipoo-runner .gt-receipt-layer{position:fixed;z-index:2147483300;inset:0;display:grid;align-items:end;pointer-events:auto;opacity:0;transition:opacity .2s ease}
 #zefirok-maltipoo-runner .gt-receipt-layer.is-open{opacity:1}
 #zefirok-maltipoo-runner .gt-receipt-layer.is-closing{opacity:0;pointer-events:none}
-#zefirok-maltipoo-runner .gt-receipt-backdrop{position:absolute;inset:0;width:100%;height:100%;padding:0;border:0;background:rgba(68,38,50,.28);backdrop-filter:blur(2px);-webkit-backdrop-filter:blur(2px);cursor:pointer}
-#zefirok-maltipoo-runner .gt-receipt-sheet{position:relative;width:min(100%,520px);max-height:min(62vh,560px);margin:0 auto;padding:8px 14px calc(14px + env(safe-area-inset-bottom));display:grid;gap:10px;overflow:auto;border:1px solid rgba(225,181,197,.68);border-bottom:0;border-radius:24px 24px 0 0;background:linear-gradient(180deg,#fffdfb 0%,#fff6f8 100%);box-shadow:0 -16px 40px rgba(74,41,52,.20);box-sizing:border-box;transform:translateY(24px);transition:transform .24s cubic-bezier(.2,.75,.25,1)}
+#zefirok-maltipoo-runner .gt-receipt-backdrop{position:absolute;inset:0;width:100%;height:100%;padding:0;border:0;background:rgba(68,38,50,.28);backdrop-filter:blur(2px);-webkit-backdrop-filter:blur(2px);cursor:pointer;touch-action:none;transition:opacity .2s ease}
+#zefirok-maltipoo-runner .gt-receipt-sheet{position:relative;width:min(100%,520px);max-height:min(62vh,560px);margin:0 auto;padding:8px 14px calc(14px + env(safe-area-inset-bottom));display:grid;gap:10px;overflow:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;touch-action:pan-y;border:1px solid rgba(225,181,197,.68);border-bottom:0;border-radius:24px 24px 0 0;background:linear-gradient(180deg,#fffdfb 0%,#fff6f8 100%);box-shadow:0 -16px 40px rgba(74,41,52,.20);box-sizing:border-box;transform:translateY(24px);transition:transform .24s cubic-bezier(.2,.75,.25,1);cursor:grab}
 #zefirok-maltipoo-runner .gt-receipt-layer.is-open .gt-receipt-sheet{transform:translateY(0)}
-#zefirok-maltipoo-runner .gt-receipt-layer.is-closing .gt-receipt-sheet{transform:translateY(18px)}
+#zefirok-maltipoo-runner .gt-receipt-sheet.is-full-dragging{cursor:grabbing;user-select:none;-webkit-user-select:none}
 #zefirok-maltipoo-runner .gt-receipt-grabber{justify-self:center;width:54px;height:18px;padding:5px 0;border:0;background:transparent;touch-action:none;cursor:grab}
-#zefirok-maltipoo-runner .gt-receipt-grabber span{display:block;width:38px;height:4px;margin:auto;border-radius:999px;background:#e6cdd6}
+#zefirok-maltipoo-runner .gt-receipt-grabber span{display:block;width:38px;height:4px;margin:auto;border-radius:999px;background:#e6cdd6;transition:width .16s ease,background .16s ease}
+#zefirok-maltipoo-runner .gt-receipt-grabber.is-dragging span{width:42px}
+#zefirok-maltipoo-runner .gt-receipt-grabber.is-armed span{width:46px;background:#d77199}
 #zefirok-maltipoo-runner .gt-receipt-head{display:grid;grid-template-columns:48px minmax(0,1fr);align-items:center;gap:10px}
 #zefirok-maltipoo-runner .gt-receipt-main-icon{width:48px;height:48px;display:grid;place-items:center;border-radius:16px;background:linear-gradient(145deg,#fff2c3,#ffd985);box-shadow:inset 0 0 0 1px rgba(211,151,42,.18)}
 #zefirok-maltipoo-runner .gt-receipt-main-img{width:37px;height:37px;object-fit:contain}

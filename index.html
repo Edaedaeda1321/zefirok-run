@@ -32575,15 +32575,15 @@ html &gt; body.zefirok-game-expanded{height:var(--zefirok-visible-height,100dvh)
 @keyframes gtTaskNewPulse{0%,100%{box-shadow:0 3px 8px rgba(177,121,29,.10)}50%{box-shadow:0 4px 12px rgba(177,121,29,.24)}}
 
 #zefirok-maltipoo-runner .gt-shell{display:grid;gap:11px}
-#zefirok-maltipoo-runner .gt-topbar{display:grid;grid-template-columns:40px minmax(0,1fr) 40px;align-items:center;gap:8px;padding:2px 1px 0}
+#zefirok-maltipoo-runner .gt-topbar{display:grid;grid-template-columns:34px minmax(0,1fr) 34px;align-items:center;gap:7px;padding:1px 1px 0}
 #zefirok-maltipoo-runner .gt-icon-button{
-  width:40px;height:40px;display:grid;place-items:center;border:1px solid var(--gt-line);border-radius:14px;
-  background:rgba(255,255,255,.92);color:#a5486d;font-size:20px;font-weight:950;box-shadow:0 6px 16px rgba(107,62,78,.07);cursor:pointer
+  width:34px;height:34px;display:grid;place-items:center;border:1px solid var(--gt-line);border-radius:11px;
+  background:rgba(255,255,255,.92);color:#a5486d;font-size:17px;font-weight:950;box-shadow:0 4px 11px rgba(107,62,78,.06);cursor:pointer
 }
 #zefirok-maltipoo-runner .gt-heading{min-width:0;text-align:center}
 #zefirok-maltipoo-runner .gt-heading strong{display:block;font-size:20px;line-height:1.08;font-weight:950;color:#6b3650}
 #zefirok-maltipoo-runner .gt-heading span{display:block;margin-top:3px;color:var(--gt-muted);font-size:9px;font-weight:750}
-#zefirok-maltipoo-runner .gt-refresh svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+#zefirok-maltipoo-runner .gt-refresh svg{width:15px;height:15px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
 #zefirok-maltipoo-runner .gt-refresh.is-busy svg{animation:gtSpin .8s linear infinite}
 @keyframes gtSpin{to{transform:rotate(360deg)}}
 
@@ -32825,12 +32825,14 @@ html &gt; body.zefirok-game-expanded{height:var(--zefirok-visible-height,100dvh)
 #zefirok-maltipoo-runner .gt-receipt-layer{position:fixed;z-index:2147483300;inset:0;display:grid;align-items:end;pointer-events:auto;opacity:0;transition:opacity .2s ease}
 #zefirok-maltipoo-runner .gt-receipt-layer.is-open{opacity:1}
 #zefirok-maltipoo-runner .gt-receipt-layer.is-closing{opacity:0;pointer-events:none}
-#zefirok-maltipoo-runner .gt-receipt-backdrop{position:absolute;inset:0;width:100%;height:100%;padding:0;border:0;background:rgba(68,38,50,.28);backdrop-filter:blur(2px);-webkit-backdrop-filter:blur(2px);cursor:pointer}
-#zefirok-maltipoo-runner .gt-receipt-sheet{position:relative;width:min(100%,520px);max-height:min(62vh,560px);margin:0 auto;padding:8px 14px calc(14px + env(safe-area-inset-bottom));display:grid;gap:10px;overflow:auto;border:1px solid rgba(225,181,197,.68);border-bottom:0;border-radius:24px 24px 0 0;background:linear-gradient(180deg,#fffdfb 0%,#fff6f8 100%);box-shadow:0 -16px 40px rgba(74,41,52,.20);box-sizing:border-box;transform:translateY(24px);transition:transform .24s cubic-bezier(.2,.75,.25,1)}
+#zefirok-maltipoo-runner .gt-receipt-backdrop{position:absolute;inset:0;width:100%;height:100%;padding:0;border:0;background:rgba(68,38,50,.28);backdrop-filter:blur(2px);-webkit-backdrop-filter:blur(2px);cursor:pointer;touch-action:none;transition:opacity .2s ease}
+#zefirok-maltipoo-runner .gt-receipt-sheet{position:relative;width:min(100%,520px);max-height:min(62vh,560px);margin:0 auto;padding:8px 14px calc(14px + env(safe-area-inset-bottom));display:grid;gap:10px;overflow:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;touch-action:pan-y;border:1px solid rgba(225,181,197,.68);border-bottom:0;border-radius:24px 24px 0 0;background:linear-gradient(180deg,#fffdfb 0%,#fff6f8 100%);box-shadow:0 -16px 40px rgba(74,41,52,.20);box-sizing:border-box;transform:translateY(24px);transition:transform .24s cubic-bezier(.2,.75,.25,1);cursor:grab}
 #zefirok-maltipoo-runner .gt-receipt-layer.is-open .gt-receipt-sheet{transform:translateY(0)}
-#zefirok-maltipoo-runner .gt-receipt-layer.is-closing .gt-receipt-sheet{transform:translateY(18px)}
+#zefirok-maltipoo-runner .gt-receipt-sheet.is-full-dragging{cursor:grabbing;user-select:none;-webkit-user-select:none}
 #zefirok-maltipoo-runner .gt-receipt-grabber{justify-self:center;width:54px;height:18px;padding:5px 0;border:0;background:transparent;touch-action:none;cursor:grab}
-#zefirok-maltipoo-runner .gt-receipt-grabber span{display:block;width:38px;height:4px;margin:auto;border-radius:999px;background:#e6cdd6}
+#zefirok-maltipoo-runner .gt-receipt-grabber span{display:block;width:38px;height:4px;margin:auto;border-radius:999px;background:#e6cdd6;transition:width .16s ease,background .16s ease}
+#zefirok-maltipoo-runner .gt-receipt-grabber.is-dragging span{width:42px}
+#zefirok-maltipoo-runner .gt-receipt-grabber.is-armed span{width:46px;background:#d77199}
 #zefirok-maltipoo-runner .gt-receipt-head{display:grid;grid-template-columns:48px minmax(0,1fr);align-items:center;gap:10px}
 #zefirok-maltipoo-runner .gt-receipt-main-icon{width:48px;height:48px;display:grid;place-items:center;border-radius:16px;background:linear-gradient(145deg,#fff2c3,#ffd985);box-shadow:inset 0 0 0 1px rgba(211,151,42,.18)}
 #zefirok-maltipoo-runner .gt-receipt-main-img{width:37px;height:37px;object-fit:contain}
@@ -32957,7 +32959,7 @@ html &gt; body.zefirok-game-expanded{height:var(--zefirok-visible-height,100dvh)
   const CACHE_MS=15000;
   const REQUEST_TIMEOUT_MS=12000;
   const FILTERS=new Set([&#x27;all&#x27;,&#x27;daily&#x27;,&#x27;weekly&#x27;,&#x27;event&#x27;,&#x27;series&#x27;,&#x27;ready&#x27;]);
-  let payload=null,filter=&#x27;all&#x27;,loading=false,inflight=null,readInflight=null,readQueued=false,lastFreshAt=0,serverOffsetMs=0,claimingKey=&#x27;&#x27;,claimSuccessKey=&#x27;&#x27;,claimingAll=false,claimedOpen=false,toastTimer=0,timerTick=0,completionNoticeTimer=0,completionNoticePoll=0;
+  let payload=null,filter=&#x27;all&#x27;,loading=false,inflight=null,readInflight=null,readQueued=false,lastFreshAt=0,serverOffsetMs=0,claimingKey=&#x27;&#x27;,claimSuccessKey=&#x27;&#x27;,claimingAll=false,claimedOpen=false,toastTimer=0,timerTick=0,completionNoticeTimer=0,completionNoticePoll=0,bulkReceiptViewportLock=null,bulkReceiptCloseTimer=0;
   const committedClaims=new Set();
   const completionNoticeSeen=new Set();
   const completionNoticeQueue=[];
@@ -33500,34 +33502,83 @@ html &gt; body.zefirok-game-expanded{height:var(--zefirok-visible-height,100dvh)
     return inflight;
   }
 
+  function lockBulkReceiptViewport(){
+    if(bulkReceiptViewportLock)return;
+    const html=document.documentElement,body=document.body,x=Math.max(0,window.scrollX||0),y=Math.max(0,window.scrollY||0);
+    bulkReceiptViewportLock={x,y,htmlOverflow:html.style.overflow,htmlOverscroll:html.style.overscrollBehavior,bodyOverflow:body.style.overflow,bodyOverscroll:body.style.overscrollBehavior,bodyPosition:body.style.position,bodyTop:body.style.top,bodyLeft:body.style.left,bodyRight:body.style.right,bodyWidth:body.style.width};
+    html.style.overflow=&#x27;hidden&#x27;;html.style.overscrollBehavior=&#x27;none&#x27;;body.style.overflow=&#x27;hidden&#x27;;body.style.overscrollBehavior=&#x27;none&#x27;;body.style.position=&#x27;fixed&#x27;;body.style.top=`-${y}px`;body.style.left=`-${x}px`;body.style.right=&#x27;0&#x27;;body.style.width=&#x27;100%&#x27;;
+  }
+  function unlockBulkReceiptViewport(){
+    const lock=bulkReceiptViewportLock;if(!lock)return;bulkReceiptViewportLock=null;
+    const html=document.documentElement,body=document.body;html.style.overflow=lock.htmlOverflow;html.style.overscrollBehavior=lock.htmlOverscroll;body.style.overflow=lock.bodyOverflow;body.style.overscrollBehavior=lock.bodyOverscroll;body.style.position=lock.bodyPosition;body.style.top=lock.bodyTop;body.style.left=lock.bodyLeft;body.style.right=lock.bodyRight;body.style.width=lock.bodyWidth;
+    window.requestAnimationFrame(()=&gt;{try{window.scrollTo(lock.x,lock.y);}catch{}});
+  }
   function closeBulkReceipt(immediate=false){
     const layer=root.querySelector(&#x27;[data-gt-receipt-layer]&#x27;);
-    if(!layer)return;
-    if(immediate){layer.remove();return;}
+    if(!layer){if(bulkReceiptCloseTimer){window.clearTimeout(bulkReceiptCloseTimer);bulkReceiptCloseTimer=0;}unlockBulkReceiptViewport();return;}
+    if(!immediate&amp;&amp;layer.classList.contains(&#x27;is-closing&#x27;))return;
+    if(bulkReceiptCloseTimer){window.clearTimeout(bulkReceiptCloseTimer);bulkReceiptCloseTimer=0;}
+    const sheet=layer.querySelector(&#x27;.gt-receipt-sheet&#x27;);
+    if(immediate){layer.remove();unlockBulkReceiptViewport();return;}
     layer.classList.add(&#x27;is-closing&#x27;);
-    window.setTimeout(()=&gt;layer.remove(),180);
+    if(sheet){sheet.style.transition=&#x27;transform .24s cubic-bezier(.32,.72,0,1)&#x27;;sheet.style.transform=&#x27;translate3d(0,calc(100% + 18px),0)&#x27;;}
+    bulkReceiptCloseTimer=window.setTimeout(()=&gt;{bulkReceiptCloseTimer=0;layer.remove();unlockBulkReceiptViewport();},250);
   }
   function bindBulkReceiptGestures(layer){
-    const sheet=layer?.querySelector(&#x27;.gt-receipt-sheet&#x27;),drag=layer?.querySelector(&#x27;[data-gt-receipt-drag]&#x27;);
+    const sheet=layer?.querySelector(&#x27;.gt-receipt-sheet&#x27;),drag=layer?.querySelector(&#x27;[data-gt-receipt-drag]&#x27;),backdrop=layer?.querySelector(&#x27;.gt-receipt-backdrop&#x27;);
     if(!sheet||!drag)return;
-    let pointerId=null,startY=0,deltaY=0;
-    const reset=()=&gt;{sheet.style.transform=&#x27;&#x27;;sheet.style.transition=&#x27;&#x27;;pointerId=null;deltaY=0;};
+    let pointerId=null,pointerStartY=0,pointerLastY=0,pointerLastTs=0,pointerVelocity=0,pointerDelta=0;
+    let touchId=null,touchStartX=0,touchStartY=0,touchLastY=0,touchLastTs=0,touchVelocity=0,touchDelta=0,touchDragging=false;
+    const metrics=()=&gt;{const height=Math.max(220,sheet.offsetHeight||sheet.getBoundingClientRect().height||0);return {height,threshold:Math.max(88,Math.min(150,height*.28))};};
+    const applyOffset=offset=&gt;{const {height}=metrics(),distance=Math.max(0,Math.min(height*.92,Number(offset)||0)),fade=Math.min(.56,(distance/height)*1.2);sheet.style.transition=&#x27;none&#x27;;sheet.style.transform=`translate3d(0,${Math.round(distance)}px,0)`;if(backdrop){backdrop.style.transition=&#x27;none&#x27;;backdrop.style.opacity=String(Math.max(.44,1-fade));}return distance;};
+    const clearVisuals=()=&gt;{sheet.style.transform=&#x27;&#x27;;sheet.style.transition=&#x27;&#x27;;sheet.style.willChange=&#x27;&#x27;;sheet.style.overflowY=&#x27;&#x27;;sheet.classList.remove(&#x27;is-full-dragging&#x27;);drag.classList.remove(&#x27;is-dragging&#x27;,&#x27;is-armed&#x27;);if(backdrop){backdrop.style.opacity=&#x27;&#x27;;backdrop.style.transition=&#x27;&#x27;;}};
+    const settle=offset=&gt;{const distance=Math.max(0,Number(offset)||0);sheet.style.transition=&#x27;transform .26s cubic-bezier(.32,.72,0,1)&#x27;;sheet.style.transform=&#x27;translate3d(0,0,0)&#x27;;if(backdrop){backdrop.style.transition=&#x27;opacity .24s ease&#x27;;backdrop.style.opacity=&#x27;1&#x27;;}window.setTimeout(clearVisuals,275);};
+    const shouldClose=(delta,velocity,cancelled=false)=&gt;{if(cancelled)return false;const {threshold}=metrics();return delta&gt;=threshold||(delta&gt;=threshold*.52&amp;&amp;velocity&gt;.78);};
+    const markArmed=delta=&gt;{const {threshold}=metrics();if(delta&gt;=threshold)drag.classList.add(&#x27;is-armed&#x27;);else if(delta&lt;threshold*.86)drag.classList.remove(&#x27;is-armed&#x27;);};
+    const touchByIdentifier=(touches,id)=&gt;{for(const touch of Array.from(touches||[])){if(touch.identifier===id)return touch;}return null;};
+    const isInteractiveTarget=target=&gt;target instanceof Element&amp;&amp;!!target.closest(&#x27;button,a,input,select,textarea,[contenteditable=&quot;true&quot;]&#x27;);
+
     drag.addEventListener(&#x27;pointerdown&#x27;,event=&gt;{
-      if(pointerId!==null)return;
-      pointerId=event.pointerId;startY=event.clientY;deltaY=0;sheet.style.transition=&#x27;none&#x27;;
+      if(layer.classList.contains(&#x27;is-closing&#x27;)||pointerId!==null)return;
+      if(event.pointerType===&#x27;mouse&#x27;&amp;&amp;event.button!==0)return;
+      event.preventDefault();pointerId=event.pointerId;pointerStartY=Number(event.clientY||0);pointerLastY=pointerStartY;pointerLastTs=performance.now();pointerVelocity=0;pointerDelta=0;sheet.style.willChange=&#x27;transform&#x27;;drag.classList.add(&#x27;is-dragging&#x27;);
       try{drag.setPointerCapture(pointerId);}catch{}
     });
     drag.addEventListener(&#x27;pointermove&#x27;,event=&gt;{
-      if(event.pointerId!==pointerId)return;
-      deltaY=Math.max(0,event.clientY-startY);sheet.style.transform=`translateY(${Math.min(120,deltaY)}px)`;
+      if(event.pointerId!==pointerId||layer.classList.contains(&#x27;is-closing&#x27;))return;
+      event.preventDefault();const currentY=Number(event.clientY||0),nowTs=performance.now(),dt=Math.max(1,nowTs-pointerLastTs),step=currentY-pointerLastY;pointerVelocity=step/dt;pointerLastY=currentY;pointerLastTs=nowTs;pointerDelta=Math.max(0,currentY-pointerStartY);applyOffset(pointerDelta);markArmed(pointerDelta);
     });
-    const finish=event=&gt;{
+    const finishPointer=(event,cancelled=false)=&gt;{
       if(event.pointerId!==pointerId)return;
       try{drag.releasePointerCapture(pointerId);}catch{}
-      if(deltaY&gt;=64){closeBulkReceipt();return;}
-      sheet.style.transition=&#x27;transform .18s ease&#x27;;sheet.style.transform=&#x27;translateY(0)&#x27;;window.setTimeout(reset,190);
+      const delta=pointerDelta,velocity=Math.max(0,pointerVelocity),close=shouldClose(delta,velocity,cancelled);pointerId=null;pointerStartY=0;pointerLastY=0;pointerLastTs=0;pointerVelocity=0;pointerDelta=0;drag.classList.remove(&#x27;is-dragging&#x27;,&#x27;is-armed&#x27;);
+      if(close){closeBulkReceipt();return;}settle(delta);
     };
-    drag.addEventListener(&#x27;pointerup&#x27;,finish);drag.addEventListener(&#x27;pointercancel&#x27;,finish);
+    drag.addEventListener(&#x27;pointerup&#x27;,event=&gt;finishPointer(event,false));drag.addEventListener(&#x27;pointercancel&#x27;,event=&gt;finishPointer(event,true));
+
+    sheet.addEventListener(&#x27;touchstart&#x27;,event=&gt;{
+      if(layer.classList.contains(&#x27;is-closing&#x27;)||event.touches?.length!==1)return;
+      if(event.target instanceof Element&amp;&amp;event.target.closest(&#x27;[data-gt-receipt-drag]&#x27;))return;
+      if(isInteractiveTarget(event.target)||(sheet.scrollTop||0)&gt;2)return;
+      const touch=event.touches[0];touchId=touch.identifier;touchStartX=Number(touch.clientX||0);touchStartY=Number(touch.clientY||0);touchLastY=touchStartY;touchLastTs=performance.now();touchVelocity=0;touchDelta=0;touchDragging=false;
+    },{passive:false});
+    sheet.addEventListener(&#x27;touchmove&#x27;,event=&gt;{
+      if(touchId==null||layer.classList.contains(&#x27;is-closing&#x27;))return;
+      const touch=touchByIdentifier(event.touches,touchId);if(!touch)return;
+      const currentX=Number(touch.clientX||0),currentY=Number(touch.clientY||0),dy=currentY-touchStartY,dx=currentX-touchStartX,atTop=(sheet.scrollTop||0)&lt;=2,verticalDown=dy&gt;0&amp;&amp;Math.abs(dx)&lt;=Math.max(5,Math.abs(dy)*.9);
+      if(!touchDragging){
+        if(atTop&amp;&amp;verticalDown){event.preventDefault();if(Math.abs(dy)&lt;3)return;touchDragging=true;sheet.scrollTop=0;sheet.style.overflowY=&#x27;hidden&#x27;;sheet.style.willChange=&#x27;transform&#x27;;sheet.classList.add(&#x27;is-full-dragging&#x27;);}
+        else{if(Math.abs(dy)&lt;9)return;touchId=null;return;}
+      }
+      event.preventDefault();const nowTs=performance.now(),dt=Math.max(1,nowTs-touchLastTs),step=currentY-touchLastY;touchVelocity=step/dt;touchLastY=currentY;touchLastTs=nowTs;touchDelta=Math.max(0,dy);applyOffset(touchDelta);markArmed(touchDelta);
+    },{passive:false});
+    const finishTouch=(event,cancelled=false)=&gt;{
+      if(touchId==null)return;
+      const changed=touchByIdentifier(event.changedTouches,touchId);if(!changed&amp;&amp;!cancelled)return;
+      const delta=touchDelta,velocity=Math.max(0,touchVelocity),dragged=touchDragging,close=dragged&amp;&amp;shouldClose(delta,velocity,cancelled);touchId=null;touchStartX=0;touchStartY=0;touchLastY=0;touchLastTs=0;touchVelocity=0;touchDelta=0;touchDragging=false;sheet.classList.remove(&#x27;is-full-dragging&#x27;);drag.classList.remove(&#x27;is-armed&#x27;);sheet.style.overflowY=&#x27;&#x27;;
+      if(close){closeBulkReceipt();return;}if(dragged||delta&gt;0)settle(delta);
+    };
+    sheet.addEventListener(&#x27;touchend&#x27;,event=&gt;finishTouch(event,false),{passive:false});sheet.addEventListener(&#x27;touchcancel&#x27;,event=&gt;finishTouch(event,true),{passive:false});
   }
   function showBulkReceipt({claimedCount=0,total=0,failedCount=0,rewards=[]}={}){
     if(total&lt;2||claimedCount&lt;1)return false;
@@ -33541,8 +33592,10 @@ html &gt; body.zefirok-game-expanded{height:var(--zefirok-visible-height,100dvh)
       : `&lt;span class=&quot;gt-receipt-reward is-wide&quot;&gt;${iconMarkup(TASK_ICONS.done,&#x27;gt-receipt-reward-icon&#x27;)}&lt;b&gt;Начисление подтверждено сервером&lt;/b&gt;&lt;/span&gt;`;
     const left=Math.max(0,total-claimedCount);
     const note=partial?`${left} ${plural(left,&#x27;награда осталась&#x27;,&#x27;награды остались&#x27;,&#x27;наград осталось&#x27;)} доступно — попробуй ещё раз.`:&#x27;Всё начислено и сохранено.&#x27;;
-    root.insertAdjacentHTML(&#x27;beforeend&#x27;,`&lt;div class=&quot;gt-receipt-layer&quot; data-gt-receipt-layer&gt;&lt;button class=&quot;gt-receipt-backdrop&quot; data-gt-receipt-close type=&quot;button&quot; aria-label=&quot;Закрыть итог наград&quot;&gt;&lt;/button&gt;&lt;section class=&quot;gt-receipt-sheet&quot; role=&quot;dialog&quot; aria-modal=&quot;true&quot; aria-labelledby=&quot;gt-receipt-title&quot;&gt;&lt;button class=&quot;gt-receipt-grabber&quot; data-gt-receipt-drag type=&quot;button&quot; aria-label=&quot;Смахни вниз, чтобы закрыть&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/button&gt;&lt;div class=&quot;gt-receipt-head&quot;&gt;&lt;span class=&quot;gt-receipt-main-icon&quot;&gt;${iconMarkup(TASK_ICONS.reward,&#x27;gt-receipt-main-img&#x27;)}&lt;/span&gt;&lt;span&gt;&lt;small&gt;${esc(subtitle)}&lt;/small&gt;&lt;strong id=&quot;gt-receipt-title&quot;&gt;${esc(title)}&lt;/strong&gt;&lt;/span&gt;&lt;/div&gt;&lt;div class=&quot;gt-receipt-rewards&quot;&gt;${rewardsMarkup}${extra?`&lt;span class=&quot;gt-receipt-more&quot;&gt;Ещё ${extra}&lt;/span&gt;`:&#x27;&#x27;}&lt;/div&gt;&lt;p class=&quot;gt-receipt-note${partial?&#x27; is-partial&#x27;:&#x27;&#x27;}&quot;&gt;${esc(note)}&lt;/p&gt;&lt;button class=&quot;gt-receipt-done&quot; data-gt-receipt-close type=&quot;button&quot;&gt;Готово&lt;/button&gt;&lt;/section&gt;&lt;/div&gt;`);
+    lockBulkReceiptViewport();
+    root.insertAdjacentHTML(&#x27;beforeend&#x27;,`&lt;div class=&quot;gt-receipt-layer&quot; data-gt-receipt-layer&gt;&lt;button class=&quot;gt-receipt-backdrop&quot; data-gt-receipt-close type=&quot;button&quot; aria-label=&quot;Закрыть итог наград&quot;&gt;&lt;/button&gt;&lt;section class=&quot;gt-receipt-sheet&quot; role=&quot;dialog&quot; aria-modal=&quot;true&quot; aria-labelledby=&quot;gt-receipt-title&quot;&gt;&lt;button class=&quot;gt-receipt-grabber&quot; data-gt-receipt-drag type=&quot;button&quot; aria-label=&quot;Смахни окно вниз, чтобы закрыть&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/button&gt;&lt;div class=&quot;gt-receipt-head&quot;&gt;&lt;span class=&quot;gt-receipt-main-icon&quot;&gt;${iconMarkup(TASK_ICONS.reward,&#x27;gt-receipt-main-img&#x27;)}&lt;/span&gt;&lt;span&gt;&lt;small&gt;${esc(subtitle)}&lt;/small&gt;&lt;strong id=&quot;gt-receipt-title&quot;&gt;${esc(title)}&lt;/strong&gt;&lt;/span&gt;&lt;/div&gt;&lt;div class=&quot;gt-receipt-rewards&quot;&gt;${rewardsMarkup}${extra?`&lt;span class=&quot;gt-receipt-more&quot;&gt;Ещё ${extra}&lt;/span&gt;`:&#x27;&#x27;}&lt;/div&gt;&lt;p class=&quot;gt-receipt-note${partial?&#x27; is-partial&#x27;:&#x27;&#x27;}&quot;&gt;${esc(note)}&lt;/p&gt;&lt;button class=&quot;gt-receipt-done&quot; data-gt-receipt-close type=&quot;button&quot;&gt;Готово&lt;/button&gt;&lt;/section&gt;&lt;/div&gt;`);
     const layer=root.querySelector(&#x27;[data-gt-receipt-layer]&#x27;);
+    if(!layer){unlockBulkReceiptViewport();return false;}
     bindBulkReceiptGestures(layer);
     window.requestAnimationFrame(()=&gt;layer?.classList.add(&#x27;is-open&#x27;));
     window.setTimeout(()=&gt;layer?.querySelector(&#x27;.gt-receipt-done&#x27;)?.focus({preventScroll:true}),80);

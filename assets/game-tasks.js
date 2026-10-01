@@ -14,7 +14,7 @@
   const CACHE_MS=15000;
   const REQUEST_TIMEOUT_MS=12000;
   const FILTERS=new Set(['all','daily','weekly','event','series','ready']);
-  let payload=null,filter='all',loading=false,inflight=null,readInflight=null,readQueued=false,lastFreshAt=0,serverOffsetMs=0,claimingKey='',claimSuccessKey='',claimingAll=false,claimedOpen=false,toastTimer=0,timerTick=0,completionNoticeTimer=0,completionNoticePoll=0;
+  let payload=null,filter='all',loading=false,inflight=null,readInflight=null,readQueued=false,lastFreshAt=0,serverOffsetMs=0,claimingKey='',claimSuccessKey='',claimingAll=false,claimedOpen=false,toastTimer=0,timerTick=0,completionNoticeTimer=0,completionNoticePoll=0,bulkReceiptViewportLock=null,bulkReceiptCloseTimer=0;
   const committedClaims=new Set();
   const completionNoticeSeen=new Set();
   const completionNoticeQueue=[];
@@ -557,34 +557,83 @@
     return inflight;
   }
 
+  function lockBulkReceiptViewport(){
+    if(bulkReceiptViewportLock)return;
+    const html=document.documentElement,body=document.body,x=Math.max(0,window.scrollX||0),y=Math.max(0,window.scrollY||0);
+    bulkReceiptViewportLock={x,y,htmlOverflow:html.style.overflow,htmlOverscroll:html.style.overscrollBehavior,bodyOverflow:body.style.overflow,bodyOverscroll:body.style.overscrollBehavior,bodyPosition:body.style.position,bodyTop:body.style.top,bodyLeft:body.style.left,bodyRight:body.style.right,bodyWidth:body.style.width};
+    html.style.overflow='hidden';html.style.overscrollBehavior='none';body.style.overflow='hidden';body.style.overscrollBehavior='none';body.style.position='fixed';body.style.top=`-${y}px`;body.style.left=`-${x}px`;body.style.right='0';body.style.width='100%';
+  }
+  function unlockBulkReceiptViewport(){
+    const lock=bulkReceiptViewportLock;if(!lock)return;bulkReceiptViewportLock=null;
+    const html=document.documentElement,body=document.body;html.style.overflow=lock.htmlOverflow;html.style.overscrollBehavior=lock.htmlOverscroll;body.style.overflow=lock.bodyOverflow;body.style.overscrollBehavior=lock.bodyOverscroll;body.style.position=lock.bodyPosition;body.style.top=lock.bodyTop;body.style.left=lock.bodyLeft;body.style.right=lock.bodyRight;body.style.width=lock.bodyWidth;
+    window.requestAnimationFrame(()=>{try{window.scrollTo(lock.x,lock.y);}catch{}});
+  }
   function closeBulkReceipt(immediate=false){
     const layer=root.querySelector('[data-gt-receipt-layer]');
-    if(!layer)return;
-    if(immediate){layer.remove();return;}
+    if(!layer){if(bulkReceiptCloseTimer){window.clearTimeout(bulkReceiptCloseTimer);bulkReceiptCloseTimer=0;}unlockBulkReceiptViewport();return;}
+    if(!immediate&&layer.classList.contains('is-closing'))return;
+    if(bulkReceiptCloseTimer){window.clearTimeout(bulkReceiptCloseTimer);bulkReceiptCloseTimer=0;}
+    const sheet=layer.querySelector('.gt-receipt-sheet');
+    if(immediate){layer.remove();unlockBulkReceiptViewport();return;}
     layer.classList.add('is-closing');
-    window.setTimeout(()=>layer.remove(),180);
+    if(sheet){sheet.style.transition='transform .24s cubic-bezier(.32,.72,0,1)';sheet.style.transform='translate3d(0,calc(100% + 18px),0)';}
+    bulkReceiptCloseTimer=window.setTimeout(()=>{bulkReceiptCloseTimer=0;layer.remove();unlockBulkReceiptViewport();},250);
   }
   function bindBulkReceiptGestures(layer){
-    const sheet=layer?.querySelector('.gt-receipt-sheet'),drag=layer?.querySelector('[data-gt-receipt-drag]');
+    const sheet=layer?.querySelector('.gt-receipt-sheet'),drag=layer?.querySelector('[data-gt-receipt-drag]'),backdrop=layer?.querySelector('.gt-receipt-backdrop');
     if(!sheet||!drag)return;
-    let pointerId=null,startY=0,deltaY=0;
-    const reset=()=>{sheet.style.transform='';sheet.style.transition='';pointerId=null;deltaY=0;};
+    let pointerId=null,pointerStartY=0,pointerLastY=0,pointerLastTs=0,pointerVelocity=0,pointerDelta=0;
+    let touchId=null,touchStartX=0,touchStartY=0,touchLastY=0,touchLastTs=0,touchVelocity=0,touchDelta=0,touchDragging=false;
+    const metrics=()=>{const height=Math.max(220,sheet.offsetHeight||sheet.getBoundingClientRect().height||0);return {height,threshold:Math.max(88,Math.min(150,height*.28))};};
+    const applyOffset=offset=>{const {height}=metrics(),distance=Math.max(0,Math.min(height*.92,Number(offset)||0)),fade=Math.min(.56,(distance/height)*1.2);sheet.style.transition='none';sheet.style.transform=`translate3d(0,${Math.round(distance)}px,0)`;if(backdrop){backdrop.style.transition='none';backdrop.style.opacity=String(Math.max(.44,1-fade));}return distance;};
+    const clearVisuals=()=>{sheet.style.transform='';sheet.style.transition='';sheet.style.willChange='';sheet.style.overflowY='';sheet.classList.remove('is-full-dragging');drag.classList.remove('is-dragging','is-armed');if(backdrop){backdrop.style.opacity='';backdrop.style.transition='';}};
+    const settle=offset=>{const distance=Math.max(0,Number(offset)||0);sheet.style.transition='transform .26s cubic-bezier(.32,.72,0,1)';sheet.style.transform='translate3d(0,0,0)';if(backdrop){backdrop.style.transition='opacity .24s ease';backdrop.style.opacity='1';}window.setTimeout(clearVisuals,275);};
+    const shouldClose=(delta,velocity,cancelled=false)=>{if(cancelled)return false;const {threshold}=metrics();return delta>=threshold||(delta>=threshold*.52&&velocity>.78);};
+    const markArmed=delta=>{const {threshold}=metrics();if(delta>=threshold)drag.classList.add('is-armed');else if(delta<threshold*.86)drag.classList.remove('is-armed');};
+    const touchByIdentifier=(touches,id)=>{for(const touch of Array.from(touches||[])){if(touch.identifier===id)return touch;}return null;};
+    const isInteractiveTarget=target=>target instanceof Element&&!!target.closest('button,a,input,select,textarea,[contenteditable="true"]');
+
     drag.addEventListener('pointerdown',event=>{
-      if(pointerId!==null)return;
-      pointerId=event.pointerId;startY=event.clientY;deltaY=0;sheet.style.transition='none';
+      if(layer.classList.contains('is-closing')||pointerId!==null)return;
+      if(event.pointerType==='mouse'&&event.button!==0)return;
+      event.preventDefault();pointerId=event.pointerId;pointerStartY=Number(event.clientY||0);pointerLastY=pointerStartY;pointerLastTs=performance.now();pointerVelocity=0;pointerDelta=0;sheet.style.willChange='transform';drag.classList.add('is-dragging');
       try{drag.setPointerCapture(pointerId);}catch{}
     });
     drag.addEventListener('pointermove',event=>{
-      if(event.pointerId!==pointerId)return;
-      deltaY=Math.max(0,event.clientY-startY);sheet.style.transform=`translateY(${Math.min(120,deltaY)}px)`;
+      if(event.pointerId!==pointerId||layer.classList.contains('is-closing'))return;
+      event.preventDefault();const currentY=Number(event.clientY||0),nowTs=performance.now(),dt=Math.max(1,nowTs-pointerLastTs),step=currentY-pointerLastY;pointerVelocity=step/dt;pointerLastY=currentY;pointerLastTs=nowTs;pointerDelta=Math.max(0,currentY-pointerStartY);applyOffset(pointerDelta);markArmed(pointerDelta);
     });
-    const finish=event=>{
+    const finishPointer=(event,cancelled=false)=>{
       if(event.pointerId!==pointerId)return;
       try{drag.releasePointerCapture(pointerId);}catch{}
-      if(deltaY>=64){closeBulkReceipt();return;}
-      sheet.style.transition='transform .18s ease';sheet.style.transform='translateY(0)';window.setTimeout(reset,190);
+      const delta=pointerDelta,velocity=Math.max(0,pointerVelocity),close=shouldClose(delta,velocity,cancelled);pointerId=null;pointerStartY=0;pointerLastY=0;pointerLastTs=0;pointerVelocity=0;pointerDelta=0;drag.classList.remove('is-dragging','is-armed');
+      if(close){closeBulkReceipt();return;}settle(delta);
     };
-    drag.addEventListener('pointerup',finish);drag.addEventListener('pointercancel',finish);
+    drag.addEventListener('pointerup',event=>finishPointer(event,false));drag.addEventListener('pointercancel',event=>finishPointer(event,true));
+
+    sheet.addEventListener('touchstart',event=>{
+      if(layer.classList.contains('is-closing')||event.touches?.length!==1)return;
+      if(event.target instanceof Element&&event.target.closest('[data-gt-receipt-drag]'))return;
+      if(isInteractiveTarget(event.target)||(sheet.scrollTop||0)>2)return;
+      const touch=event.touches[0];touchId=touch.identifier;touchStartX=Number(touch.clientX||0);touchStartY=Number(touch.clientY||0);touchLastY=touchStartY;touchLastTs=performance.now();touchVelocity=0;touchDelta=0;touchDragging=false;
+    },{passive:false});
+    sheet.addEventListener('touchmove',event=>{
+      if(touchId==null||layer.classList.contains('is-closing'))return;
+      const touch=touchByIdentifier(event.touches,touchId);if(!touch)return;
+      const currentX=Number(touch.clientX||0),currentY=Number(touch.clientY||0),dy=currentY-touchStartY,dx=currentX-touchStartX,atTop=(sheet.scrollTop||0)<=2,verticalDown=dy>0&&Math.abs(dx)<=Math.max(5,Math.abs(dy)*.9);
+      if(!touchDragging){
+        if(atTop&&verticalDown){event.preventDefault();if(Math.abs(dy)<3)return;touchDragging=true;sheet.scrollTop=0;sheet.style.overflowY='hidden';sheet.style.willChange='transform';sheet.classList.add('is-full-dragging');}
+        else{if(Math.abs(dy)<9)return;touchId=null;return;}
+      }
+      event.preventDefault();const nowTs=performance.now(),dt=Math.max(1,nowTs-touchLastTs),step=currentY-touchLastY;touchVelocity=step/dt;touchLastY=currentY;touchLastTs=nowTs;touchDelta=Math.max(0,dy);applyOffset(touchDelta);markArmed(touchDelta);
+    },{passive:false});
+    const finishTouch=(event,cancelled=false)=>{
+      if(touchId==null)return;
+      const changed=touchByIdentifier(event.changedTouches,touchId);if(!changed&&!cancelled)return;
+      const delta=touchDelta,velocity=Math.max(0,touchVelocity),dragged=touchDragging,close=dragged&&shouldClose(delta,velocity,cancelled);touchId=null;touchStartX=0;touchStartY=0;touchLastY=0;touchLastTs=0;touchVelocity=0;touchDelta=0;touchDragging=false;sheet.classList.remove('is-full-dragging');drag.classList.remove('is-armed');sheet.style.overflowY='';
+      if(close){closeBulkReceipt();return;}if(dragged||delta>0)settle(delta);
+    };
+    sheet.addEventListener('touchend',event=>finishTouch(event,false),{passive:false});sheet.addEventListener('touchcancel',event=>finishTouch(event,true),{passive:false});
   }
   function showBulkReceipt({claimedCount=0,total=0,failedCount=0,rewards=[]}={}){
     if(total<2||claimedCount<1)return false;
@@ -598,8 +647,10 @@
       : `<span class="gt-receipt-reward is-wide">${iconMarkup(TASK_ICONS.done,'gt-receipt-reward-icon')}<b>Начисление подтверждено сервером</b></span>`;
     const left=Math.max(0,total-claimedCount);
     const note=partial?`${left} ${plural(left,'награда осталась','награды остались','наград осталось')} доступно — попробуй ещё раз.`:'Всё начислено и сохранено.';
-    root.insertAdjacentHTML('beforeend',`<div class="gt-receipt-layer" data-gt-receipt-layer><button class="gt-receipt-backdrop" data-gt-receipt-close type="button" aria-label="Закрыть итог наград"></button><section class="gt-receipt-sheet" role="dialog" aria-modal="true" aria-labelledby="gt-receipt-title"><button class="gt-receipt-grabber" data-gt-receipt-drag type="button" aria-label="Смахни вниз, чтобы закрыть"><span></span></button><div class="gt-receipt-head"><span class="gt-receipt-main-icon">${iconMarkup(TASK_ICONS.reward,'gt-receipt-main-img')}</span><span><small>${esc(subtitle)}</small><strong id="gt-receipt-title">${esc(title)}</strong></span></div><div class="gt-receipt-rewards">${rewardsMarkup}${extra?`<span class="gt-receipt-more">Ещё ${extra}</span>`:''}</div><p class="gt-receipt-note${partial?' is-partial':''}">${esc(note)}</p><button class="gt-receipt-done" data-gt-receipt-close type="button">Готово</button></section></div>`);
+    lockBulkReceiptViewport();
+    root.insertAdjacentHTML('beforeend',`<div class="gt-receipt-layer" data-gt-receipt-layer><button class="gt-receipt-backdrop" data-gt-receipt-close type="button" aria-label="Закрыть итог наград"></button><section class="gt-receipt-sheet" role="dialog" aria-modal="true" aria-labelledby="gt-receipt-title"><button class="gt-receipt-grabber" data-gt-receipt-drag type="button" aria-label="Смахни окно вниз, чтобы закрыть"><span></span></button><div class="gt-receipt-head"><span class="gt-receipt-main-icon">${iconMarkup(TASK_ICONS.reward,'gt-receipt-main-img')}</span><span><small>${esc(subtitle)}</small><strong id="gt-receipt-title">${esc(title)}</strong></span></div><div class="gt-receipt-rewards">${rewardsMarkup}${extra?`<span class="gt-receipt-more">Ещё ${extra}</span>`:''}</div><p class="gt-receipt-note${partial?' is-partial':''}">${esc(note)}</p><button class="gt-receipt-done" data-gt-receipt-close type="button">Готово</button></section></div>`);
     const layer=root.querySelector('[data-gt-receipt-layer]');
+    if(!layer){unlockBulkReceiptViewport();return false;}
     bindBulkReceiptGestures(layer);
     window.requestAnimationFrame(()=>layer?.classList.add('is-open'));
     window.setTimeout(()=>layer?.querySelector('.gt-receipt-done')?.focus({preventScroll:true}),80);
