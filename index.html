@@ -32627,23 +32627,23 @@ html &gt; body.zefirok-game-expanded{height:var(--zefirok-visible-height,100dvh)
 #zefirok-maltipoo-runner .gt-next.is-ready .gt-next-status{background:#fff0bd;color:#a46c16}
 
 
-/* Task UX v19: readable bulk-ready summary. */
+/* Task UX v20: compact ready preview; full reward details stay in the server-confirmed receipt. */
 #zefirok-maltipoo-runner .gt-ready-summary{
-  display:grid;grid-template-columns:44px minmax(0,1fr);grid-template-areas:&quot;icon copy&quot; &quot;rewards rewards&quot; &quot;action action&quot;;align-items:center;gap:9px 10px;padding:12px;
-  border:1px solid rgba(224,174,79,.58);border-radius:20px;background:radial-gradient(circle at 92% 12%,rgba(255,228,143,.38),transparent 34%),linear-gradient(145deg,#fffdf8,#fff4d8);box-shadow:0 8px 20px rgba(167,113,28,.09)
+  display:grid;grid-template-columns:40px minmax(0,1fr) auto;grid-template-areas:&quot;icon copy action&quot; &quot;rewards rewards action&quot;;align-items:center;column-gap:9px;row-gap:6px;padding:10px 11px;
+  border:1px solid rgba(224,174,79,.58);border-radius:19px;background:radial-gradient(circle at 92% 12%,rgba(255,228,143,.38),transparent 34%),linear-gradient(145deg,#fffdf8,#fff4d8);box-shadow:0 8px 20px rgba(167,113,28,.09)
 }
-#zefirok-maltipoo-runner .gt-ready-summary-icon{grid-area:icon;width:44px;height:44px;display:grid;place-items:center;border-radius:15px;background:linear-gradient(145deg,#fff4ce,#ffe3a1);box-shadow:inset 0 0 0 1px rgba(220,165,65,.18)}
-#zefirok-maltipoo-runner .gt-ready-summary-icon-img{width:34px;height:34px;display:block;object-fit:contain}
-#zefirok-maltipoo-runner .gt-ready-summary-copy{grid-area:copy;min-width:0;display:grid;gap:2px}
-#zefirok-maltipoo-runner .gt-ready-summary-copy small{color:#a77833;font-size:7.5px;font-weight:950;letter-spacing:.055em;text-transform:uppercase}
-#zefirok-maltipoo-runner .gt-ready-summary-copy strong{color:#765046;font-size:11px;font-weight:950;line-height:1.16}
-#zefirok-maltipoo-runner .gt-ready-summary-copy span{color:#9a7b72;font-size:7.6px;font-weight:760;line-height:1.25}
-#zefirok-maltipoo-runner .gt-ready-summary-rewards{grid-area:rewards;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));align-items:stretch;gap:7px;width:100%;min-width:0;overflow:visible}
-#zefirok-maltipoo-runner .gt-ready-reward{display:flex;align-items:center;gap:7px;min-width:0;min-height:38px;padding:6px 8px;border:1px solid rgba(222,188,172,.62);border-radius:13px;background:rgba(255,255,255,.86);color:#885b52;font-size:7.5px;font-weight:900;box-sizing:border-box}
-#zefirok-maltipoo-runner .gt-ready-reward b{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-#zefirok-maltipoo-runner .gt-ready-reward-icon{width:22px;height:22px;flex:0 0 22px;object-fit:contain}
-#zefirok-maltipoo-runner .gt-ready-more{display:grid;place-items:center;min-height:38px;padding:6px 8px;border:1px solid rgba(225,184,98,.42);border-radius:13px;background:#fff0bd;color:#9b6513;font-size:7.5px;font-weight:950;text-align:center}
-#zefirok-maltipoo-runner .gt-claim-all{grid-area:action;position:relative;z-index:0;overflow:hidden;width:100%;min-height:44px;padding:9px 12px;border:0;border-radius:14px;display:inline-flex;align-items:center;justify-content:center;gap:6px;background:linear-gradient(135deg,#ef8eb4,#d95b90);color:#fff;font-size:9px;font-weight:950;white-space:nowrap;box-shadow:0 7px 15px rgba(190,73,119,.21);cursor:pointer;transition:transform .16s ease,opacity .16s ease,box-shadow .16s ease}
+#zefirok-maltipoo-runner .gt-ready-summary-icon{grid-area:icon;width:40px;height:40px;display:grid;place-items:center;border-radius:14px;background:linear-gradient(145deg,#fff4ce,#ffe3a1);box-shadow:inset 0 0 0 1px rgba(220,165,65,.18)}
+#zefirok-maltipoo-runner .gt-ready-summary-icon-img{width:31px;height:31px;display:block;object-fit:contain}
+#zefirok-maltipoo-runner .gt-ready-summary-copy{grid-area:copy;min-width:0;display:grid;gap:1px;align-self:center}
+#zefirok-maltipoo-runner .gt-ready-summary-copy small{color:#a77833;font-size:7.2px;font-weight:950;letter-spacing:.055em;text-transform:uppercase}
+#zefirok-maltipoo-runner .gt-ready-summary-copy strong{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#765046;font-size:10.4px;font-weight:950;line-height:1.14}
+#zefirok-maltipoo-runner .gt-ready-summary-copy span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#9a7b72;font-size:7.2px;font-weight:760;line-height:1.2}
+#zefirok-maltipoo-runner .gt-ready-summary-rewards{grid-area:rewards;display:flex;align-items:center;gap:5px;min-width:0;min-height:34px;padding:1px 0 3px;overflow:visible}
+#zefirok-maltipoo-runner .gt-ready-reward{position:relative;flex:0 0 32px;width:32px;height:32px;padding:0;display:grid;place-items:center;border:1px solid rgba(222,188,172,.66);border-radius:999px;background:rgba(255,255,255,.92);box-shadow:0 3px 8px rgba(121,77,62,.05);box-sizing:border-box}
+#zefirok-maltipoo-runner .gt-ready-reward b{position:absolute;right:-5px;bottom:-4px;min-width:16px;height:15px;padding:0 4px;display:grid;place-items:center;border:2px solid #fff8e9;border-radius:999px;background:#f2bd4d;color:#7c5211;font-size:6.1px;line-height:1;font-weight:950;white-space:nowrap;box-shadow:0 2px 5px rgba(144,94,22,.15);box-sizing:border-box}
+#zefirok-maltipoo-runner .gt-ready-reward-icon{width:22px;height:22px;display:block;object-fit:contain}
+#zefirok-maltipoo-runner .gt-ready-more{flex:0 0 32px;width:32px;height:32px;display:grid;place-items:center;border:1px solid rgba(225,184,98,.44);border-radius:999px;background:#fff0bd;color:#9b6513;font-size:7px;font-weight:950;text-align:center;box-sizing:border-box}
+#zefirok-maltipoo-runner .gt-claim-all{grid-area:action;position:relative;z-index:0;overflow:hidden;align-self:stretch;width:auto;min-width:122px;max-width:148px;min-height:62px;padding:9px 11px;border:0;border-radius:16px;display:inline-flex;align-items:center;justify-content:center;gap:6px;background:linear-gradient(135deg,#ef8eb4,#d95b90);color:#fff;font-size:8.5px;font-weight:950;white-space:nowrap;box-shadow:0 7px 15px rgba(190,73,119,.21);cursor:pointer;transition:transform .16s ease,opacity .16s ease,box-shadow .16s ease}
 #zefirok-maltipoo-runner .gt-claim-all:active{transform:translateY(1px) scale(.99)}
 #zefirok-maltipoo-runner .gt-claim-all:before{content:&quot;&quot;;position:absolute;z-index:-1;top:-70%;bottom:-70%;left:-55%;width:34%;background:linear-gradient(90deg,transparent,rgba(255,255,255,.48),transparent);transform:skewX(-18deg);animation:gtClaimShimmer 2.7s ease-in-out infinite}
 #zefirok-maltipoo-runner .gt-claim-all:disabled{opacity:.58;box-shadow:none;cursor:default}
@@ -32858,13 +32858,16 @@ html &gt; body.zefirok-game-expanded{height:var(--zefirok-visible-height,100dvh)
   #zefirok-maltipoo-runner .gt-task.is-series-card .gt-task-art:not(.is-category-art){min-height:120px}
   #zefirok-maltipoo-runner .gt-task.is-series-card .gt-task-art:not(.is-category-art) img{height:106px}
   #zefirok-maltipoo-runner .gt-task-badge{max-width:106px;padding:5px 6px;font-size:6.5px}
-  #zefirok-maltipoo-runner .gt-ready-summary{grid-template-columns:40px minmax(0,1fr);gap:8px;padding:10px}
-  #zefirok-maltipoo-runner .gt-ready-summary-icon{width:40px;height:40px}
-  #zefirok-maltipoo-runner .gt-ready-summary-icon-img{width:30px;height:30px}
-  #zefirok-maltipoo-runner .gt-ready-summary-rewards{gap:6px}
-  #zefirok-maltipoo-runner .gt-ready-reward{min-height:36px;padding:5px 7px;font-size:7px}
-  #zefirok-maltipoo-runner .gt-ready-reward-icon{width:20px;height:20px;flex-basis:20px}
-  #zefirok-maltipoo-runner .gt-claim-all{min-height:42px;font-size:8.5px}
+  #zefirok-maltipoo-runner .gt-ready-summary{grid-template-columns:38px minmax(0,1fr) auto;column-gap:7px;row-gap:5px;padding:9px}
+  #zefirok-maltipoo-runner .gt-ready-summary-icon{width:38px;height:38px}
+  #zefirok-maltipoo-runner .gt-ready-summary-icon-img{width:29px;height:29px}
+  #zefirok-maltipoo-runner .gt-ready-summary-copy span{display:none}
+  #zefirok-maltipoo-runner .gt-ready-summary-rewards{gap:4px;min-height:32px}
+  #zefirok-maltipoo-runner .gt-ready-reward,#zefirok-maltipoo-runner .gt-ready-more{flex-basis:30px;width:30px;height:30px}
+  #zefirok-maltipoo-runner .gt-ready-reward-icon{width:21px;height:21px}
+  #zefirok-maltipoo-runner .gt-ready-reward b{right:-4px;bottom:-4px;min-width:15px;height:14px;padding-inline:3px;font-size:5.8px}
+  #zefirok-maltipoo-runner .gt-ready-more{font-size:6.6px}
+  #zefirok-maltipoo-runner .gt-claim-all{min-width:108px;max-width:122px;min-height:56px;padding:8px 9px;font-size:7.9px}
   #zefirok-maltipoo-runner .gt-receipt-sheet{padding-inline:12px;border-radius:22px 22px 0 0}
   #zefirok-maltipoo-runner .gt-receipt-head{grid-template-columns:44px minmax(0,1fr)}
   #zefirok-maltipoo-runner .gt-receipt-main-icon{width:44px;height:44px}
@@ -33255,6 +33258,9 @@ html &gt; body.zefirok-game-expanded{height:var(--zefirok-visible-height,100dvh)
     if(kind===&#x27;coffee&#x27;)return `+${fmt(amount)} кофе`;
     return rewardItemLabel(item);
   }
+  function compactRewardAmount(item){
+    return fmt(Math.max(1,whole(item?.amount||1)));
+  }
   function rewardItemIcon(item){
     const kind=String(item?.kind||&#x27;&#x27;).toLowerCase(),id=String(item?.id||&#x27;&#x27;).toLowerCase();
     if(kind===&#x27;profile_xp&#x27;)return TASK_ICONS.xp;
@@ -33342,12 +33348,12 @@ html &gt; body.zefirok-game-expanded{height:var(--zefirok-visible-height,100dvh)
   function readySummaryMarkup(){
     const tasks=readyTasks();
     if(!tasks.length)return &#x27;&#x27;;
-    const count=tasks.length,items=mergedRewardItems(tasks),shown=items.slice(0,6),extra=Math.max(0,items.length-shown.length);
+    const count=tasks.length,items=mergedRewardItems(tasks),shown=items.slice(0,4),extra=Math.max(0,items.length-shown.length);
     const rewardMarkup=shown.length
-      ? shown.map(item=&gt;`&lt;span class=&quot;gt-ready-reward&quot;&gt;${iconMarkup(rewardItemIcon(item),&#x27;gt-ready-reward-icon&#x27;)}&lt;b&gt;${esc(rewardItemLabel(item))}&lt;/b&gt;&lt;/span&gt;`).join(&#x27;&#x27;)
-      : `&lt;span class=&quot;gt-ready-reward&quot;&gt;${iconMarkup(TASK_ICONS.reward,&#x27;gt-ready-reward-icon&#x27;)}&lt;b&gt;Награды заданий&lt;/b&gt;&lt;/span&gt;`;
+      ? shown.map(item=&gt;{const label=rewardItemLabel(item);return `&lt;span class=&quot;gt-ready-reward&quot; aria-label=&quot;${esc(label)}&quot; title=&quot;${esc(label)}&quot;&gt;${iconMarkup(rewardItemIcon(item),&#x27;gt-ready-reward-icon&#x27;)}&lt;b&gt;${esc(compactRewardAmount(item))}&lt;/b&gt;&lt;/span&gt;`;}).join(&#x27;&#x27;)
+      : `&lt;span class=&quot;gt-ready-reward&quot; aria-label=&quot;Награды заданий&quot;&gt;${iconMarkup(TASK_ICONS.reward,&#x27;gt-ready-reward-icon&#x27;)}&lt;b&gt;1&lt;/b&gt;&lt;/span&gt;`;
     const buttonLabel=claimingAll?&#x27;Получаем…&#x27;:count&gt;1?`Получить всё · ${count}`:&#x27;Получить&#x27;;
-    return `&lt;section class=&quot;gt-ready-summary&quot; aria-label=&quot;Готовые награды&quot;&gt;&lt;span class=&quot;gt-ready-summary-icon&quot;&gt;${iconMarkup(TASK_ICONS.reward,&#x27;gt-ready-summary-icon-img&#x27;)}&lt;/span&gt;&lt;span class=&quot;gt-ready-summary-copy&quot;&gt;&lt;small&gt;Награды готовы&lt;/small&gt;&lt;strong&gt;Выполнено ${count} ${plural(count,&#x27;задание&#x27;,&#x27;задания&#x27;,&#x27;заданий&#x27;)}&lt;/strong&gt;&lt;span&gt;Забери награды за выполненные цели&lt;/span&gt;&lt;/span&gt;&lt;span class=&quot;gt-ready-summary-rewards&quot;&gt;${rewardMarkup}${extra?`&lt;span class=&quot;gt-ready-more&quot;&gt;Ещё ${extra}&lt;/span&gt;`:&#x27;&#x27;}&lt;/span&gt;&lt;button class=&quot;gt-claim-all&quot; data-gt-claim-all type=&quot;button&quot;${claimingAll||claimingKey?&#x27; disabled&#x27;:&#x27;&#x27;}&gt;${iconMarkup(TASK_ICONS.reward,&#x27;gt-button-icon&#x27;)}&lt;span&gt;${esc(buttonLabel)}&lt;/span&gt;&lt;/button&gt;&lt;/section&gt;`;
+    return `&lt;section class=&quot;gt-ready-summary&quot; aria-label=&quot;Готовые награды&quot;&gt;&lt;span class=&quot;gt-ready-summary-icon&quot;&gt;${iconMarkup(TASK_ICONS.reward,&#x27;gt-ready-summary-icon-img&#x27;)}&lt;/span&gt;&lt;span class=&quot;gt-ready-summary-copy&quot;&gt;&lt;small&gt;Награды готовы&lt;/small&gt;&lt;strong&gt;Выполнено ${count} ${plural(count,&#x27;задание&#x27;,&#x27;задания&#x27;,&#x27;заданий&#x27;)}&lt;/strong&gt;&lt;span&gt;Забери награды за выполненные цели&lt;/span&gt;&lt;/span&gt;&lt;span class=&quot;gt-ready-summary-rewards&quot;&gt;${rewardMarkup}${extra?`&lt;span class=&quot;gt-ready-more&quot; aria-label=&quot;Ещё ${extra} типов наград&quot;&gt;+${extra}&lt;/span&gt;`:&#x27;&#x27;}&lt;/span&gt;&lt;button class=&quot;gt-claim-all&quot; data-gt-claim-all type=&quot;button&quot;${claimingAll||claimingKey?&#x27; disabled&#x27;:&#x27;&#x27;}&gt;${iconMarkup(TASK_ICONS.reward,&#x27;gt-button-icon&#x27;)}&lt;span&gt;${esc(buttonLabel)}&lt;/span&gt;&lt;/button&gt;&lt;/section&gt;`;
   }
 
   function nextMarkup(){
