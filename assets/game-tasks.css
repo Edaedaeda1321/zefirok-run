@@ -109,7 +109,7 @@
 #zefirok-maltipoo-runner .gt-next.is-ready .gt-next-status{background:#fff0bd;color:#a46c16}
 
 
-/* Task UX v20: compact ready preview; full reward details stay in the server-confirmed receipt. */
+/* Task UX v21: compact ready preview and compact text-only bulk claim action. */
 #zefirok-maltipoo-runner .gt-ready-summary{
   display:grid;grid-template-columns:40px minmax(0,1fr) auto;grid-template-areas:"icon copy action" "rewards rewards action";align-items:center;column-gap:9px;row-gap:6px;padding:10px 11px;
   border:1px solid rgba(224,174,79,.58);border-radius:19px;background:radial-gradient(circle at 92% 12%,rgba(255,228,143,.38),transparent 34%),linear-gradient(145deg,#fffdf8,#fff4d8);box-shadow:0 8px 20px rgba(167,113,28,.09)
@@ -125,7 +125,7 @@
 #zefirok-maltipoo-runner .gt-ready-reward b{position:absolute;right:-5px;bottom:-4px;min-width:16px;height:15px;padding:0 4px;display:grid;place-items:center;border:2px solid #fff8e9;border-radius:999px;background:#f2bd4d;color:#7c5211;font-size:6.1px;line-height:1;font-weight:950;white-space:nowrap;box-shadow:0 2px 5px rgba(144,94,22,.15);box-sizing:border-box}
 #zefirok-maltipoo-runner .gt-ready-reward-icon{width:22px;height:22px;display:block;object-fit:contain}
 #zefirok-maltipoo-runner .gt-ready-more{flex:0 0 32px;width:32px;height:32px;display:grid;place-items:center;border:1px solid rgba(225,184,98,.44);border-radius:999px;background:#fff0bd;color:#9b6513;font-size:7px;font-weight:950;text-align:center;box-sizing:border-box}
-#zefirok-maltipoo-runner .gt-claim-all{grid-area:action;position:relative;z-index:0;overflow:hidden;align-self:stretch;width:auto;min-width:122px;max-width:148px;min-height:62px;padding:9px 11px;border:0;border-radius:16px;display:inline-flex;align-items:center;justify-content:center;gap:6px;background:linear-gradient(135deg,#ef8eb4,#d95b90);color:#fff;font-size:8.5px;font-weight:950;white-space:nowrap;box-shadow:0 7px 15px rgba(190,73,119,.21);cursor:pointer;transition:transform .16s ease,opacity .16s ease,box-shadow .16s ease}
+#zefirok-maltipoo-runner .gt-claim-all{grid-area:action;position:relative;z-index:0;overflow:hidden;align-self:center;justify-self:end;width:auto;min-width:0;max-width:none;min-height:34px;padding:0 10px;border:0;border-radius:11px;display:inline-flex;align-items:center;justify-content:center;gap:0;background:linear-gradient(135deg,#ef8eb4,#d95b90);color:#fff;font-size:7.8px;font-weight:950;white-space:nowrap;box-shadow:0 5px 12px rgba(190,73,119,.18);cursor:pointer;transition:transform .16s ease,opacity .16s ease,box-shadow .16s ease}
 #zefirok-maltipoo-runner .gt-claim-all:active{transform:translateY(1px) scale(.99)}
 #zefirok-maltipoo-runner .gt-claim-all:before{content:"";position:absolute;z-index:-1;top:-70%;bottom:-70%;left:-55%;width:34%;background:linear-gradient(90deg,transparent,rgba(255,255,255,.48),transparent);transform:skewX(-18deg);animation:gtClaimShimmer 2.7s ease-in-out infinite}
 #zefirok-maltipoo-runner .gt-claim-all:disabled{opacity:.58;box-shadow:none;cursor:default}
@@ -349,7 +349,7 @@
   #zefirok-maltipoo-runner .gt-ready-reward-icon{width:21px;height:21px}
   #zefirok-maltipoo-runner .gt-ready-reward b{right:-4px;bottom:-4px;min-width:15px;height:14px;padding-inline:3px;font-size:5.8px}
   #zefirok-maltipoo-runner .gt-ready-more{font-size:6.6px}
-  #zefirok-maltipoo-runner .gt-claim-all{min-width:108px;max-width:122px;min-height:56px;padding:8px 9px;font-size:7.9px}
+  #zefirok-maltipoo-runner .gt-claim-all{min-width:0;max-width:none;min-height:32px;padding:0 9px;border-radius:10px;font-size:7.4px}
   #zefirok-maltipoo-runner .gt-receipt-sheet{padding-inline:12px;border-radius:22px 22px 0 0}
   #zefirok-maltipoo-runner .gt-receipt-head{grid-template-columns:44px minmax(0,1fr)}
   #zefirok-maltipoo-runner .gt-receipt-main-icon{width:44px;height:44px}

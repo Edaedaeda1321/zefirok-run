@@ -280,7 +280,7 @@
       else if(unread>1)summary.textContent=`${unread} ${plural(unread,'новое выполнение','новых выполнения','новых выполнений')} · ${ready} ${plural(ready,'награда ждёт','награды ждут','наград ждут')}`;
       else if(ready>0)summary.textContent=`${ready} ${plural(ready,'награда ждёт тебя','награды ждут тебя','наград ждут тебя')}`;
       else if(active>0)summary.textContent=`${active} ${plural(active,'активное задание','активных задания','активных заданий')} · продолжай играть`;
-      else summary.textContent='Цели, награды и XP профиля';
+      else summary.textContent='Цели и награды';
     }
     if(fresh){fresh.hidden=unread<=0;fresh.textContent=unread>1?`НОВОЕ ${Math.min(9,unread)} `:'НОВОЕ ';}
     if(badge){badge.hidden=ready<=0;badge.textContent=String(Math.min(99,ready));}
@@ -410,7 +410,7 @@
       ? shown.map(item=>{const label=rewardItemLabel(item);return `<span class="gt-ready-reward" aria-label="${esc(label)}" title="${esc(label)}">${iconMarkup(rewardItemIcon(item),'gt-ready-reward-icon')}<b>${esc(compactRewardAmount(item))}</b></span>`;}).join('')
       : `<span class="gt-ready-reward" aria-label="Награды заданий">${iconMarkup(TASK_ICONS.reward,'gt-ready-reward-icon')}<b>1</b></span>`;
     const buttonLabel=claimingAll?'Получаем…':count>1?`Получить всё · ${count}`:'Получить';
-    return `<section class="gt-ready-summary" aria-label="Готовые награды"><span class="gt-ready-summary-icon">${iconMarkup(TASK_ICONS.reward,'gt-ready-summary-icon-img')}</span><span class="gt-ready-summary-copy"><small>Награды готовы</small><strong>Выполнено ${count} ${plural(count,'задание','задания','заданий')}</strong><span>Забери награды за выполненные цели</span></span><span class="gt-ready-summary-rewards">${rewardMarkup}${extra?`<span class="gt-ready-more" aria-label="Ещё ${extra} типов наград">+${extra}</span>`:''}</span><button class="gt-claim-all" data-gt-claim-all type="button"${claimingAll||claimingKey?' disabled':''}>${iconMarkup(TASK_ICONS.reward,'gt-button-icon')}<span>${esc(buttonLabel)}</span></button></section>`;
+    return `<section class="gt-ready-summary" aria-label="Готовые награды"><span class="gt-ready-summary-icon">${iconMarkup(TASK_ICONS.reward,'gt-ready-summary-icon-img')}</span><span class="gt-ready-summary-copy"><small>Награды готовы</small><strong>Выполнено ${count} ${plural(count,'задание','задания','заданий')}</strong><span>Забери награды за выполненные цели</span></span><span class="gt-ready-summary-rewards">${rewardMarkup}${extra?`<span class="gt-ready-more" aria-label="Ещё ${extra} типов наград">+${extra}</span>`:''}</span><button class="gt-claim-all" data-gt-claim-all type="button"${claimingAll||claimingKey?' disabled':''}><span>${esc(buttonLabel)}</span></button></section>`;
   }
 
   function nextMarkup(){
