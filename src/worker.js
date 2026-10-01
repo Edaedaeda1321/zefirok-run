@@ -14304,6 +14304,76 @@ async function leaderboardSeasonForRunSettlement(env){
   try{const value=await promise;leaderboardRunSeasonEnsureMemory.value=value;leaderboardRunSeasonEnsureMemory.expiresAt=Date.now()+5000;return value;}finally{if(leaderboardRunSeasonEnsureMemory.promise===promise)leaderboardRunSeasonEnsureMemory.promise=null;}
 }
 
+// Public daily streaks: one bounded SELECT for the whole visible leaderboard.
+// Do not call loadDailyLoyaltyConfig/ensureDailyLoyaltySchema here: those are
+// write-capable claim paths. Reading someone else's profile must never claim,
+// repair a streak or spend their protection. Use the same pure streak resolver.
+const LEADERBOARD_PUBLIC_STREAK_LIMIT = 128;
+const LEADERBOARD_PUBLIC_STREAK_BUDGET_MS = 900;
+const LEADERBOARD_PUBLIC_STREAK_SQL = `
+  WITH active_daily AS (
+    SELECT id,timezone_offset_minutes,ends_at
+    FROM daily_loyalty_seasons
+    WHERE enabled=1 AND (starts_at=0 OR starts_at<=?) AND (ends_at=0 OR ends_at>?)
+    ORDER BY updated_at DESC LIMIT 1
+  ), requested AS (
+    SELECT CAST(value AS TEXT) AS telegram_id FROM json_each(?)
+  )
+  SELECT r.telegram_id,s.id AS daily_season_id,s.timezone_offset_minutes,s.ends_at,
+         p.streak,p.best_streak,p.last_active_day_key,i.balance,
+         COALESCE(ds.insurance_enabled,1) AS insurance_enabled,
+         COALESCE(ps.max_balance,ds.insurance_max,3) AS insurance_max
+  FROM requested r CROSS JOIN active_daily s
+  LEFT JOIN daily_loyalty_players p ON p.telegram_id=r.telegram_id AND p.season_id=s.id
+  LEFT JOIN daily_loyalty_insurance i ON i.telegram_id=r.telegram_id AND i.season_id=s.id
+  LEFT JOIN daily_loyalty_settings ds ON ds.season_id=s.id
+  LEFT JOIN daily_loyalty_protection_settings ps ON ps.season_id=s.id`;
+
+function leaderboardPublicStreakView(row, nowMs) {
+  if (!row?.daily_season_id || !Number.isFinite(nowMs)) return null;
+  const offset = Number(row.timezone_offset_minutes || 0);
+  if (!Number.isFinite(offset)) return null;
+  const dayKey = dailyLoyaltyDayKey(nowMs, offset);
+  const settings = {
+    insuranceEnabled: Number(row.insurance_enabled) === 1,
+    insuranceMax: Math.max(0, Math.min(30, Number(row.insurance_max ?? 3)))
+  };
+  const currentDays = Math.max(0, Math.floor(dailyLoyaltyEffectiveStreak(row, dayKey, { balance: row.balance }, settings)));
+  const bestDays = Math.max(currentDays, Math.floor(Number(row.best_streak || 0)));
+  if (!Number.isSafeInteger(currentDays) || !Number.isSafeInteger(bestDays)) return null;
+  // This snapshot is not allowed to survive the next server-day boundary.
+  const nextDayAt = (dailyLoyaltyDayOrdinal(dayKey) + 1) * 86400000 - offset * 60000;
+  const endsAt = Math.max(0, Number(row.ends_at || 0)) * 1000;
+  const validUntil = endsAt > 0 ? Math.min(nextDayAt, endsAt) : nextDayAt;
+  if (!(validUntil > nowMs)) return null;
+  // Deliberate public allowlist. No balance, history, last-login date or rewards.
+  return { currentDays, bestDays, asOf: nowMs, validUntil };
+}
+
+async function leaderboardPublicStreakMap(env, telegramIds, nowMs = Date.now()) {
+  const ids = [...new Set((Array.isArray(telegramIds) ? telegramIds : [])
+    .map(value => String(value || '').trim()).filter(value => /^\d{1,20}$/.test(value)))]
+    .slice(0, LEADERBOARD_PUBLIC_STREAK_LIMIT);
+  if (!ids.length) return new Map();
+  try {
+    const now = Math.floor(nowMs / 1000);
+    const result = await startupBounded('rating public streak',
+      env.DB.prepare(LEADERBOARD_PUBLIC_STREAK_SQL).bind(now, now, JSON.stringify(ids)).all(),
+      LEADERBOARD_PUBLIC_STREAK_BUDGET_MS);
+    if (result?.success === false) throw new Error('Daily streak read failed');
+    const allowed = new Set(ids), entries = [];
+    for (const row of result?.results || []) {
+      const id = String(row.telegram_id || ''), value = leaderboardPublicStreakView(row, nowMs);
+      if (allowed.has(id) && value) entries.push([id, value]);
+    }
+    return new Map(entries);
+  } catch (error) {
+    // Optional decoration must not turn a working rating into an error page.
+    console.warn('Public daily streaks unavailable', String(error?.message || error));
+    return new Map();
+  }
+}
+
 async function leaderboardState(request, env) {
   try {
     requireDatabase(env);
@@ -14379,7 +14449,7 @@ async function leaderboardPlayerProfile(request, env) {
       achievementPoints:Math.max(0,Number(viewerAchievementPreview?.summary?.achievementPoints||0)),
       catalogEarned:Math.max(0,Number(viewerAchievementPreview?.summary?.catalogEarned||0))
     }));
-    const [rankRow,profileRow,caseRow,presenceRow,runsRow,achievementPreview,populationStats,recentBase,viewerSnapshot]=await Promise.all([
+    const [rankRow,profileRow,caseRow,presenceRow,runsRow,achievementPreview,populationStats,recentBase,viewerSnapshot,dailyStreakMap]=await Promise.all([
       rankPromise,
       optionalFirst(env.DB.prepare(`SELECT best_score,profile_xp,created_at FROM admin_profile_state WHERE telegram_id=? LIMIT 1`).bind(targetTelegramId)),
       optionalFirst(env.DB.prepare(`SELECT active_avatar_id,active_frame_id FROM case_player_state WHERE telegram_id=? LIMIT 1`).bind(targetTelegramId)),
@@ -14388,7 +14458,8 @@ async function leaderboardPlayerProfile(request, env) {
       targetAchievementPreviewPromise,
       achievementPopulationStats(env),
       recentAchievementsPromise,
-      viewerSnapshotPromise
+      viewerSnapshotPromise,
+      leaderboardPublicStreakMap(env,[targetTelegramId])
     ]);
 
     const activeAvatarId=normalizeCaseCosmeticId("avatar",caseRow?.active_avatar_id||playerRow.case_avatar_id),activeFrameId=normalizeCaseCosmeticId("frame",caseRow?.active_frame_id||playerRow.case_frame_id);
@@ -14412,7 +14483,8 @@ async function leaderboardPlayerProfile(request, env) {
         name:String(playerRow.display_name||"Гость кафе"),place:Math.max(1,Number(rankRow?.place||0)),level,bestScore,
         caseAvatarId:activeAvatarId,caseAvatarUrl:activeAvatarId?seasonPassCosmeticImage("avatar",activeAvatarId):"",
         caseFrameId:activeFrameId,caseFrameUrl:activeFrameId?seasonPassCosmeticImage("frame",activeFrameId):"",
-        registeredAt,completedRuns
+        registeredAt,completedRuns,
+        dailyStreak:dailyStreakMap.get(targetTelegramId)||null
       },
       achievements:{
         points:achievementPoints,rank:achievementPreview?.summary?.rank||achievementRankForPoints(0),catalogEarned,catalogTotal,completionPercent,
@@ -15405,9 +15477,16 @@ async function buildLeaderboardPayload(env, season, telegramId, mode = "season")
     mode==="season"?leaderboardHistoryForPlayer(env,telegramId,season.id):Promise.resolve([])
   ]);
   const leaderboardPlayerIds=[...top.map((entry)=>entry.telegramId),...nearby.map((entry)=>entry.telegramId),String(telegramId)];
-  const [passTierMap,achievementShowcaseMap]=await Promise.all([leaderboardSeasonPassTierMap(env,leaderboardPlayerIds),achievementPublicShowcaseMap(env,leaderboardPlayerIds)]);
+  const [passTierMap,achievementShowcaseMap,dailyStreakMap]=await Promise.all([
+    leaderboardSeasonPassTierMap(env,leaderboardPlayerIds),
+    achievementPublicShowcaseMap(env,leaderboardPlayerIds),
+    leaderboardPublicStreakMap(env,leaderboardPlayerIds,serverTime)
+  ]);
   for (const entry of [...top,...nearby]) {entry.seasonPassTier = passTierMap.get(String(entry.telegramId || "")) || "none";entry.showcase=achievementShowcaseMap.get(String(entry.telegramId||""))||[];}
   if (myEntry) {myEntry.seasonPassTier = passTierMap.get(String(myEntry.telegramId || "")) || "none";myEntry.showcase=achievementShowcaseMap.get(String(myEntry.telegramId||""))||[];}
+  for (const entry of [...top,...nearby,...(myEntry?[myEntry]:[])]) {
+    entry.dailyStreak=dailyStreakMap.get(String(entry.telegramId||""))||null;
+  }
   const playerAbove=myEntry?nearby.find((entry)=>Number(entry.place)===Number(myEntry.place)-1):null;
   const gapToNext=myEntry&&playerAbove?Math.max(1,Number(playerAbove.score||0)-Number(myEntry.score||0)+1):0;
 
