@@ -288,7 +288,7 @@
   }
 
   function skeleton(){
-    return `<div class="gt-shell"><div class="gt-topbar"><button class="gt-icon-button" data-gt-back type="button" aria-label="Назад">‹</button><div class="gt-heading"><strong>Задания</strong><span>Цели и прогресс профиля</span></div><button class="gt-icon-button gt-refresh is-busy" type="button" aria-label="Обновляем задания" disabled><svg viewBox="0 0 24 24"><path d="M20 11a8 8 0 1 0-2.3 5.7M20 4v7h-7"/></svg></button></div><div class="gt-skeleton" aria-label="Загружаем задания"><i></i><i></i><i></i></div></div>`;
+    return `<div class="gt-shell"><div class="gt-topbar"><button class="gt-icon-button" data-gt-back type="button" aria-label="Назад"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m14 6-6 6 6 6"/></svg></button><div class="gt-heading"><strong>Задания</strong><span>Цели и прогресс профиля</span></div><button class="gt-icon-button gt-refresh is-busy" type="button" aria-label="Обновляем задания" disabled><svg viewBox="0 0 24 24"><path d="M20 11a8 8 0 1 0-2.3 5.7M20 4v7h-7"/></svg></button></div><div class="gt-skeleton" aria-label="Загружаем задания"><i></i><i></i><i></i></div></div>`;
   }
 
   function rewardItemLabel(item){
@@ -520,11 +520,11 @@
     const emptyTitle=filter==='ready'?'Готовых наград пока нет':filter==='all'?'Сейчас активных заданий нет':'В этом разделе пока пусто';
     const emptyCopy=filter==='ready'?'Продолжай выполнять задания — готовые награды появятся здесь автоматически.':filter==='all'?'Загляни позже — новые цели появятся здесь автоматически.':'Переключись на другой тип заданий.';
     const listMarkup=tasks.length?tasks.map(task=>taskMarkup(task,list(payload.tasks).indexOf(task))).join(''):`<div class="gt-empty"><span class="gt-empty-icon">${iconMarkup(filter==='ready'?TASK_ICONS.reward:TASK_ICONS.task,'gt-empty-icon-img')}</span><strong>${emptyTitle}</strong><span>${emptyCopy}</span></div>`;
-    screen.innerHTML=`<div class="gt-shell"><div class="gt-topbar"><button class="gt-icon-button" data-gt-back type="button" aria-label="Назад">‹</button><div class="gt-heading"><strong>Задания</strong><span>Играй, выполняй цели и развивай профиль</span></div><button class="gt-icon-button gt-refresh${loading?' is-busy':''}" data-gt-refresh type="button" aria-label="Обновить задания"${loading?' disabled':''}><svg viewBox="0 0 24 24"><path d="M20 11a8 8 0 1 0-2.3 5.7M20 4v7h-7"/></svg></button></div>${profileMarkup()}${nextMarkup()}${filtersMarkup()}<div class="gt-list" aria-live="polite">${listMarkup}</div>${claimedHistoryMarkup()}${seasonMarkup()}</div><div class="gt-toast" role="status"></div>`;
+    screen.innerHTML=`<div class="gt-shell"><div class="gt-topbar"><button class="gt-icon-button" data-gt-back type="button" aria-label="Назад"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m14 6-6 6 6 6"/></svg></button><div class="gt-heading"><strong>Задания</strong><span>Играй, выполняй цели и развивай профиль</span></div><button class="gt-icon-button gt-refresh${loading?' is-busy':''}" data-gt-refresh type="button" aria-label="Обновить задания"${loading?' disabled':''}><svg viewBox="0 0 24 24"><path d="M20 11a8 8 0 1 0-2.3 5.7M20 4v7h-7"/></svg></button></div>${profileMarkup()}${nextMarkup()}${filtersMarkup()}<div class="gt-list" aria-live="polite">${listMarkup}</div>${claimedHistoryMarkup()}${seasonMarkup()}</div><div class="gt-toast" role="status"></div>`;
   }
 
   function renderError(message){
-    screen.innerHTML=`<div class="gt-shell"><div class="gt-topbar"><button class="gt-icon-button" data-gt-back type="button" aria-label="Назад">‹</button><div class="gt-heading"><strong>Задания</strong><span>Цели и прогресс профиля</span></div><span></span></div><div class="gt-error" role="alert"><span class="gt-empty-icon">${iconMarkup(TASK_ICONS.zefir,'gt-empty-icon-img')}</span><strong>Не удалось загрузить задания</strong><span>${esc(message||'Проверь соединение и попробуй ещё раз.')}</span><button class="gt-retry" data-gt-retry type="button">Повторить</button></div>${seasonMarkup()}</div>`;
+    screen.innerHTML=`<div class="gt-shell"><div class="gt-topbar"><button class="gt-icon-button" data-gt-back type="button" aria-label="Назад"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m14 6-6 6 6 6"/></svg></button><div class="gt-heading"><strong>Задания</strong><span>Цели и прогресс профиля</span></div><span></span></div><div class="gt-error" role="alert"><span class="gt-empty-icon">${iconMarkup(TASK_ICONS.zefir,'gt-empty-icon-img')}</span><strong>Не удалось загрузить задания</strong><span>${esc(message||'Проверь соединение и попробуй ещё раз.')}</span><button class="gt-retry" data-gt-retry type="button">Повторить</button></div>${seasonMarkup()}</div>`;
   }
 
   async function load(force=false){
@@ -557,83 +557,157 @@
     return inflight;
   }
 
-  function lockBulkReceiptViewport(){
-    if(bulkReceiptViewportLock)return;
-    const html=document.documentElement,body=document.body,x=Math.max(0,window.scrollX||0),y=Math.max(0,window.scrollY||0);
-    bulkReceiptViewportLock={x,y,htmlOverflow:html.style.overflow,htmlOverscroll:html.style.overscrollBehavior,bodyOverflow:body.style.overflow,bodyOverscroll:body.style.overscrollBehavior,bodyPosition:body.style.position,bodyTop:body.style.top,bodyLeft:body.style.left,bodyRight:body.style.right,bodyWidth:body.style.width};
-    html.style.overflow='hidden';html.style.overscrollBehavior='none';body.style.overflow='hidden';body.style.overscrollBehavior='none';body.style.position='fixed';body.style.top=`-${y}px`;body.style.left=`-${x}px`;body.style.right='0';body.style.width='100%';
+  // A receipt is presentation only. Lock the runner document, not just its backdrop.
+  function lockBulkReceiptViewport(layer){
+    if(bulkReceiptViewportLock||!layer)return;
+    const html=document.documentElement,body=document.body;
+    const x=window.scrollX||0,y=window.scrollY||0,focus=document.activeElement;
+    const saved=[];
+    const set=(node,property,value)=>{
+      saved.push([node,property,node.style.getPropertyValue(property),node.style.getPropertyPriority(property)]);
+      node.style.setProperty(property,value,'important');
+    };
+    const inert=[];
+    for(const node of root.children){
+      if(node===layer||node.contains(layer)||/^(STYLE|SCRIPT)$/.test(node.tagName))continue;
+      inert.push([node,node.inert]);node.inert=true;
+    }
+    for(const node of [html,body,root]){
+      set(node,'overflow','hidden');set(node,'overscroll-behavior','none');
+    }
+    set(body,'position','fixed');set(body,'top',`-${y}px`);set(body,'left',`-${x}px`);
+    set(body,'right','0');set(body,'width','100%');
+    let lastY=0;
+    const sheet=layer.querySelector('.gt-receipt-sheet');
+    const canScroll=(target,delta)=>{
+      if(!sheet?.contains(target)||!delta)return false;
+      const max=sheet.scrollHeight-sheet.clientHeight;
+      return max>1&&(delta<0?sheet.scrollTop>0:sheet.scrollTop<max-1);
+    };
+    const touchStart=e=>{if(e.touches.length===1)lastY=e.touches[0].clientY;};
+    const touchMove=e=>{
+      if(e.touches.length!==1){if(e.cancelable)e.preventDefault();return;}
+      const y=e.touches[0].clientY,delta=lastY-y;lastY=y;
+      if(!canScroll(e.target,delta)&&e.cancelable)e.preventDefault();
+    };
+    const wheel=e=>{if(!canScroll(e.target,e.deltaY)&&e.cancelable)e.preventDefault();};
+    layer.addEventListener('touchstart',touchStart,{passive:true});
+    layer.addEventListener('touchmove',touchMove,{passive:false});
+    layer.addEventListener('wheel',wheel,{passive:false});
+    bulkReceiptViewportLock={x,y,focus,saved,inert,layer,touchStart,touchMove,wheel};
   }
   function unlockBulkReceiptViewport(){
     const lock=bulkReceiptViewportLock;if(!lock)return;bulkReceiptViewportLock=null;
-    const html=document.documentElement,body=document.body;html.style.overflow=lock.htmlOverflow;html.style.overscrollBehavior=lock.htmlOverscroll;body.style.overflow=lock.bodyOverflow;body.style.overscrollBehavior=lock.bodyOverscroll;body.style.position=lock.bodyPosition;body.style.top=lock.bodyTop;body.style.left=lock.bodyLeft;body.style.right=lock.bodyRight;body.style.width=lock.bodyWidth;
-    window.requestAnimationFrame(()=>{try{window.scrollTo(lock.x,lock.y);}catch{}});
+    lock.layer._gtReceiptDispose?.();lock.layer._gtReceiptDispose=null;
+    lock.layer.removeEventListener('touchstart',lock.touchStart);
+    lock.layer.removeEventListener('touchmove',lock.touchMove);
+    lock.layer.removeEventListener('wheel',lock.wheel);
+    for(const [node,property,value,priority] of lock.saved.reverse()){
+      if(value)node.style.setProperty(property,value,priority);else node.style.removeProperty(property);
+    }
+    for(const [node,value] of lock.inert)node.inert=value;
+    // Restore synchronously: an old animation frame must not move a newly opened sheet.
+    const html=document.documentElement,body=document.body;
+    const behavior=[html,body].map(node=>[node,node.style.getPropertyValue('scroll-behavior'),node.style.getPropertyPriority('scroll-behavior')]);
+    for(const [node] of behavior)node.style.setProperty('scroll-behavior','auto','important');
+    try{window.scrollTo(lock.x,lock.y);}catch{}
+    for(const [node,value,priority] of behavior){if(value)node.style.setProperty('scroll-behavior',value,priority);else node.style.removeProperty('scroll-behavior');}
+    const focus=lock.focus?.isConnected?lock.focus:screen.querySelector('[data-gt-refresh],[data-gt-back]');
+    if(focus&&!focus.closest('[inert]'))try{focus.focus({preventScroll:true});}catch{}
   }
   function closeBulkReceipt(immediate=false){
     const layer=root.querySelector('[data-gt-receipt-layer]');
-    if(!layer){if(bulkReceiptCloseTimer){window.clearTimeout(bulkReceiptCloseTimer);bulkReceiptCloseTimer=0;}unlockBulkReceiptViewport();return;}
-    if(!immediate&&layer.classList.contains('is-closing'))return;
+    if(!immediate&&layer?.classList.contains('is-closing'))return;
     if(bulkReceiptCloseTimer){window.clearTimeout(bulkReceiptCloseTimer);bulkReceiptCloseTimer=0;}
-    const sheet=layer.querySelector('.gt-receipt-sheet');
-    if(immediate){layer.remove();unlockBulkReceiptViewport();return;}
+    if(!layer){unlockBulkReceiptViewport();return;}
+    layer._gtReceiptDispose?.();layer._gtReceiptDispose=null;
+    if(immediate||window.matchMedia?.('(prefers-reduced-motion: reduce)').matches){layer.remove();unlockBulkReceiptViewport();return;}
     layer.classList.add('is-closing');
+    const sheet=layer.querySelector('.gt-receipt-sheet');
     if(sheet){sheet.style.transition='transform .24s cubic-bezier(.32,.72,0,1)';sheet.style.transform='translate3d(0,calc(100% + 18px),0)';}
     bulkReceiptCloseTimer=window.setTimeout(()=>{bulkReceiptCloseTimer=0;layer.remove();unlockBulkReceiptViewport();},250);
   }
   function bindBulkReceiptGestures(layer){
-    const sheet=layer?.querySelector('.gt-receipt-sheet'),drag=layer?.querySelector('[data-gt-receipt-drag]'),backdrop=layer?.querySelector('.gt-receipt-backdrop');
-    if(!sheet||!drag)return;
-    let pointerId=null,pointerStartY=0,pointerLastY=0,pointerLastTs=0,pointerVelocity=0,pointerDelta=0;
-    let touchId=null,touchStartX=0,touchStartY=0,touchLastY=0,touchLastTs=0,touchVelocity=0,touchDelta=0,touchDragging=false;
-    const metrics=()=>{const height=Math.max(220,sheet.offsetHeight||sheet.getBoundingClientRect().height||0);return {height,threshold:Math.max(88,Math.min(150,height*.28))};};
-    const applyOffset=offset=>{const {height}=metrics(),distance=Math.max(0,Math.min(height*.92,Number(offset)||0)),fade=Math.min(.56,(distance/height)*1.2);sheet.style.transition='none';sheet.style.transform=`translate3d(0,${Math.round(distance)}px,0)`;if(backdrop){backdrop.style.transition='none';backdrop.style.opacity=String(Math.max(.44,1-fade));}return distance;};
-    const clearVisuals=()=>{sheet.style.transform='';sheet.style.transition='';sheet.style.willChange='';sheet.style.overflowY='';sheet.classList.remove('is-full-dragging');drag.classList.remove('is-dragging','is-armed');if(backdrop){backdrop.style.opacity='';backdrop.style.transition='';}};
-    const settle=offset=>{const distance=Math.max(0,Number(offset)||0);sheet.style.transition='transform .26s cubic-bezier(.32,.72,0,1)';sheet.style.transform='translate3d(0,0,0)';if(backdrop){backdrop.style.transition='opacity .24s ease';backdrop.style.opacity='1';}window.setTimeout(clearVisuals,275);};
-    const shouldClose=(delta,velocity,cancelled=false)=>{if(cancelled)return false;const {threshold}=metrics();return delta>=threshold||(delta>=threshold*.52&&velocity>.78);};
-    const markArmed=delta=>{const {threshold}=metrics();if(delta>=threshold)drag.classList.add('is-armed');else if(delta<threshold*.86)drag.classList.remove('is-armed');};
-    const touchByIdentifier=(touches,id)=>{for(const touch of Array.from(touches||[])){if(touch.identifier===id)return touch;}return null;};
-    const isInteractiveTarget=target=>target instanceof Element&&!!target.closest('button,a,input,select,textarea,[contenteditable="true"]');
-
-    drag.addEventListener('pointerdown',event=>{
-      if(layer.classList.contains('is-closing')||pointerId!==null)return;
-      if(event.pointerType==='mouse'&&event.button!==0)return;
-      event.preventDefault();pointerId=event.pointerId;pointerStartY=Number(event.clientY||0);pointerLastY=pointerStartY;pointerLastTs=performance.now();pointerVelocity=0;pointerDelta=0;sheet.style.willChange='transform';drag.classList.add('is-dragging');
-      try{drag.setPointerCapture(pointerId);}catch{}
-    });
-    drag.addEventListener('pointermove',event=>{
-      if(event.pointerId!==pointerId||layer.classList.contains('is-closing'))return;
-      event.preventDefault();const currentY=Number(event.clientY||0),nowTs=performance.now(),dt=Math.max(1,nowTs-pointerLastTs),step=currentY-pointerLastY;pointerVelocity=step/dt;pointerLastY=currentY;pointerLastTs=nowTs;pointerDelta=Math.max(0,currentY-pointerStartY);applyOffset(pointerDelta);markArmed(pointerDelta);
-    });
-    const finishPointer=(event,cancelled=false)=>{
-      if(event.pointerId!==pointerId)return;
-      try{drag.releasePointerCapture(pointerId);}catch{}
-      const delta=pointerDelta,velocity=Math.max(0,pointerVelocity),close=shouldClose(delta,velocity,cancelled);pointerId=null;pointerStartY=0;pointerLastY=0;pointerLastTs=0;pointerVelocity=0;pointerDelta=0;drag.classList.remove('is-dragging','is-armed');
-      if(close){closeBulkReceipt();return;}settle(delta);
+    const sheet=layer.querySelector('.gt-receipt-sheet'),grip=layer.querySelector('[data-gt-receipt-drag]'),backdrop=layer.querySelector('.gt-receipt-backdrop');
+    if(!sheet||!grip)return;
+    let gesture=null,frame=0,timer=0,suppressUntil=0,disposed=false;
+    const threshold=()=>Math.max(88,Math.min(150,sheet.offsetHeight*.28));
+    const reset=()=>{
+      clearTimeout(timer);cancelAnimationFrame(frame);timer=frame=0;
+      const old=gesture;gesture=null;
+      if(old?.pointer)try{old.captureNode?.releasePointerCapture(old.id);}catch{}
+      sheet.style.transform='';sheet.style.transition='';sheet.style.willChange='';sheet.style.overflowY='';
+      sheet.classList.remove('is-full-dragging');grip.classList.remove('is-armed');
+      if(backdrop){backdrop.style.opacity='';backdrop.style.transition='';}
     };
-    drag.addEventListener('pointerup',event=>finishPointer(event,false));drag.addEventListener('pointercancel',event=>finishPointer(event,true));
-
-    sheet.addEventListener('touchstart',event=>{
-      if(layer.classList.contains('is-closing')||event.touches?.length!==1)return;
-      if(event.target instanceof Element&&event.target.closest('[data-gt-receipt-drag]'))return;
-      if(isInteractiveTarget(event.target)||(sheet.scrollTop||0)>2)return;
-      const touch=event.touches[0];touchId=touch.identifier;touchStartX=Number(touch.clientX||0);touchStartY=Number(touch.clientY||0);touchLastY=touchStartY;touchLastTs=performance.now();touchVelocity=0;touchDelta=0;touchDragging=false;
-    },{passive:false});
-    sheet.addEventListener('touchmove',event=>{
-      if(touchId==null||layer.classList.contains('is-closing'))return;
-      const touch=touchByIdentifier(event.touches,touchId);if(!touch)return;
-      const currentX=Number(touch.clientX||0),currentY=Number(touch.clientY||0),dy=currentY-touchStartY,dx=currentX-touchStartX,atTop=(sheet.scrollTop||0)<=2,verticalDown=dy>0&&Math.abs(dx)<=Math.max(5,Math.abs(dy)*.9);
-      if(!touchDragging){
-        if(atTop&&verticalDown){event.preventDefault();if(Math.abs(dy)<3)return;touchDragging=true;sheet.scrollTop=0;sheet.style.overflowY='hidden';sheet.style.willChange='transform';sheet.classList.add('is-full-dragging');}
-        else{if(Math.abs(dy)<9)return;touchId=null;return;}
+    const start=(id,x,y,target,pointer=false)=>{
+      if(disposed||gesture||layer.classList.contains('is-closing')||!(target instanceof Element))return false;
+      const handle=!!target.closest('[data-gt-receipt-drag]');
+      if(!handle&&(target.closest('button,a,input,select,textarea,[contenteditable]')||sheet.scrollTop>2))return false;
+      reset();gesture={id,x,y,lastY:y,lastAt:performance.now(),delta:0,velocity:0,drag:false,handle,pointer};return true;
+    };
+    const move=(x,y,event)=>{
+      const g=gesture;if(!g||disposed)return;
+      const dx=x-g.x,dy=y-g.y;
+      if(!g.drag){
+        if(dy<=0||Math.abs(dx)>Math.max(6,dy*.85)||(!g.handle&&sheet.scrollTop>2)){
+          if(Math.max(Math.abs(dx),Math.abs(dy))>8)reset();return;
+        }
+        if(!event.cancelable){reset();return;}
+        event.preventDefault();if(dy<4)return;
+        g.drag=true;sheet.style.overflowY='hidden';sheet.style.willChange='transform';sheet.classList.add('is-full-dragging');
       }
-      event.preventDefault();const nowTs=performance.now(),dt=Math.max(1,nowTs-touchLastTs),step=currentY-touchLastY;touchVelocity=step/dt;touchLastY=currentY;touchLastTs=nowTs;touchDelta=Math.max(0,dy);applyOffset(touchDelta);markArmed(touchDelta);
-    },{passive:false});
-    const finishTouch=(event,cancelled=false)=>{
-      if(touchId==null)return;
-      const changed=touchByIdentifier(event.changedTouches,touchId);if(!changed&&!cancelled)return;
-      const delta=touchDelta,velocity=Math.max(0,touchVelocity),dragged=touchDragging,close=dragged&&shouldClose(delta,velocity,cancelled);touchId=null;touchStartX=0;touchStartY=0;touchLastY=0;touchLastTs=0;touchVelocity=0;touchDelta=0;touchDragging=false;sheet.classList.remove('is-full-dragging');drag.classList.remove('is-armed');sheet.style.overflowY='';
-      if(close){closeBulkReceipt();return;}if(dragged||delta>0)settle(delta);
+      if(event.cancelable)event.preventDefault();
+      const now=performance.now();g.velocity=(y-g.lastY)/Math.max(1,now-g.lastAt);g.lastY=y;g.lastAt=now;g.delta=Math.max(0,dy);
+      grip.classList.toggle('is-armed',g.delta>=threshold());
+      if(!frame)frame=requestAnimationFrame(()=>{
+        frame=0;if(!gesture||disposed)return;
+        const distance=Math.min(sheet.offsetHeight*.92,gesture.delta);
+        sheet.style.transition='none';sheet.style.transform=`translate3d(0,${distance}px,0)`;
+        if(backdrop){backdrop.style.transition='none';backdrop.style.opacity=String(Math.max(.44,1-distance/Math.max(1,sheet.offsetHeight)));}
+      });
     };
-    sheet.addEventListener('touchend',event=>finishTouch(event,false),{passive:false});sheet.addEventListener('touchcancel',event=>finishTouch(event,true),{passive:false});
+    const finish=(cancelled=false)=>{
+      const g=gesture;if(!g)return;gesture=null;cancelAnimationFrame(frame);frame=0;
+      if(g.pointer)try{g.captureNode?.releasePointerCapture(g.id);}catch{}
+      if(!g.drag){reset();return;}
+      suppressUntil=performance.now()+400;
+      const velocity=performance.now()-g.lastAt<100?g.velocity:0;
+      if(!cancelled&&(g.delta>=threshold()||(g.delta>=threshold()*.55&&velocity>.8))){closeBulkReceipt();return;}
+      sheet.style.transition='transform .24s cubic-bezier(.32,.72,0,1)';sheet.style.transform='translate3d(0,0,0)';
+      if(backdrop){backdrop.style.transition='opacity .24s ease';backdrop.style.opacity='1';}
+      timer=setTimeout(reset,250);
+    };
+    sheet.addEventListener('touchstart',e=>{if(e.touches.length!==1){finish(true);return;}const t=e.touches[0];start(t.identifier,t.clientX,t.clientY,e.target);},{passive:true});
+    sheet.addEventListener('touchmove',e=>{if(!gesture||gesture.pointer)return;if(e.touches.length!==1){finish(true);return;}const t=Array.from(e.touches).find(x=>x.identifier===gesture.id);if(t)move(t.clientX,t.clientY,e);},{passive:false});
+    sheet.addEventListener('touchend',e=>{if(gesture&&!gesture.pointer&&Array.from(e.changedTouches).some(t=>t.identifier===gesture.id))finish();},{passive:true});
+    sheet.addEventListener('touchcancel',()=>finish(true),{passive:true});
+    sheet.addEventListener('pointerdown',e=>{
+      if(e.pointerType==='touch'||e.button!==0||e.isPrimary===false)return;
+      if(start(e.pointerId,e.clientX,e.clientY,e.target,true)){
+        const captureNode=e.target.closest('[data-gt-receipt-drag]')||sheet;gesture.captureNode=captureNode;
+        // Capturing a grip click on its parent would retarget it away from the button.
+        e.preventDefault();try{captureNode.setPointerCapture(e.pointerId);}catch{}
+      }
+    });
+    sheet.addEventListener('pointermove',e=>{if(gesture?.pointer&&gesture.id===e.pointerId)move(e.clientX,e.clientY,e);});
+    sheet.addEventListener('pointerup',e=>{if(gesture?.pointer&&gesture.id===e.pointerId)finish();});
+    for(const name of ['pointercancel','lostpointercapture'])sheet.addEventListener(name,e=>{if(gesture?.pointer&&gesture.id===e.pointerId)finish(true);});
+    layer.addEventListener('click',e=>{if(performance.now()<suppressUntil){e.preventDefault();e.stopImmediatePropagation();}},true);
+    grip.addEventListener('click',e=>{e.preventDefault();closeBulkReceipt();});
+    layer.addEventListener('keydown',e=>{
+      if(e.key==='Escape'){e.preventDefault();e.stopPropagation();closeBulkReceipt();return;}
+      if(e.key!=='Tab')return;
+      const nodes=[...sheet.querySelectorAll('button:not(:disabled),a[href],input,[tabindex="0"]')].filter(n=>n.getClientRects().length);
+      if(!nodes.length)return;
+      const active=document.activeElement,first=nodes[0],last=nodes[nodes.length-1];
+      if(e.shiftKey&&(active===first||!sheet.contains(active))){e.preventDefault();last.focus({preventScroll:true});}
+      else if(!e.shiftKey&&(active===last||!sheet.contains(active))){e.preventDefault();first.focus({preventScroll:true});}
+    });
+    const cancel=()=>{if(gesture)finish(true);};
+    const visibility=()=>{if(document.hidden)cancel();};
+    window.addEventListener('blur',cancel);document.addEventListener('visibilitychange',visibility);
+    layer._gtReceiptDispose=()=>{disposed=true;reset();window.removeEventListener('blur',cancel);document.removeEventListener('visibilitychange',visibility);};
   }
   function showBulkReceipt({claimedCount=0,total=0,failedCount=0,rewards=[]}={}){
     if(total<2||claimedCount<1)return false;
@@ -647,13 +721,13 @@
       : `<span class="gt-receipt-reward is-wide">${iconMarkup(TASK_ICONS.done,'gt-receipt-reward-icon')}<b>Начисление подтверждено сервером</b></span>`;
     const left=Math.max(0,total-claimedCount);
     const note=partial?`${left} ${plural(left,'награда осталась','награды остались','наград осталось')} доступно — попробуй ещё раз.`:'Всё начислено и сохранено.';
-    lockBulkReceiptViewport();
-    root.insertAdjacentHTML('beforeend',`<div class="gt-receipt-layer" data-gt-receipt-layer><button class="gt-receipt-backdrop" data-gt-receipt-close type="button" aria-label="Закрыть итог наград"></button><section class="gt-receipt-sheet" role="dialog" aria-modal="true" aria-labelledby="gt-receipt-title"><button class="gt-receipt-grabber" data-gt-receipt-drag type="button" aria-label="Смахни окно вниз, чтобы закрыть"><span></span></button><div class="gt-receipt-head"><span class="gt-receipt-main-icon">${iconMarkup(TASK_ICONS.reward,'gt-receipt-main-img')}</span><span><small>${esc(subtitle)}</small><strong id="gt-receipt-title">${esc(title)}</strong></span></div><div class="gt-receipt-rewards">${rewardsMarkup}${extra?`<span class="gt-receipt-more">Ещё ${extra}</span>`:''}</div><p class="gt-receipt-note${partial?' is-partial':''}">${esc(note)}</p><button class="gt-receipt-done" data-gt-receipt-close type="button">Готово</button></section></div>`);
+    root.insertAdjacentHTML('beforeend',`<div class="gt-receipt-layer" data-gt-receipt-layer><button class="gt-receipt-backdrop" data-gt-receipt-close type="button" tabindex="-1" aria-label="Закрыть итог наград"></button><section class="gt-receipt-sheet" role="dialog" aria-modal="true" aria-labelledby="gt-receipt-title"><button class="gt-receipt-grabber" data-gt-receipt-drag type="button" aria-label="Смахни окно вниз, чтобы закрыть"><span></span></button><div class="gt-receipt-head"><span class="gt-receipt-main-icon">${iconMarkup(TASK_ICONS.reward,'gt-receipt-main-img')}</span><span><small>${esc(subtitle)}</small><strong id="gt-receipt-title">${esc(title)}</strong></span></div><div class="gt-receipt-rewards">${rewardsMarkup}${extra?`<span class="gt-receipt-more">Ещё ${extra}</span>`:''}</div><p class="gt-receipt-note${partial?' is-partial':''}">${esc(note)}</p><button class="gt-receipt-done" data-gt-receipt-close type="button">Готово</button></section></div>`);
     const layer=root.querySelector('[data-gt-receipt-layer]');
     if(!layer){unlockBulkReceiptViewport();return false;}
     bindBulkReceiptGestures(layer);
+    lockBulkReceiptViewport(layer);
     window.requestAnimationFrame(()=>layer?.classList.add('is-open'));
-    window.setTimeout(()=>layer?.querySelector('.gt-receipt-done')?.focus({preventScroll:true}),80);
+    window.setTimeout(()=>{if(layer.isConnected&&!layer.classList.contains('is-closing'))layer.querySelector('.gt-receipt-done')?.focus({preventScroll:true});},80);
     return true;
   }
 

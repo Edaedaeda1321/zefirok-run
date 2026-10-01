@@ -7016,9 +7016,9 @@ html&gt;body{padding:
     padding: 16px 16px 17px;
   }
   #zefirok-maltipoo-runner .release-dialog.is-release-center .release-image-wrap {
-    width: min(42%, 148px);
-    aspect-ratio: 941 / 1672;
-    max-height: 244px;
+    width: 100%;
+    aspect-ratio: auto;
+    max-height: none;
     margin: 0 auto 12px;
     padding: 5px;
     border-radius: 18px;
@@ -7162,7 +7162,7 @@ html&gt;body{padding:
   #zefirok-maltipoo-runner .release-history-chip img { width: 18px; height: 18px; object-fit: contain; display: block; }
   #zefirok-maltipoo-runner .release-history-back { margin-top: 1px; }
   @media (max-height: 720px) {
-    #zefirok-maltipoo-runner .release-dialog.is-release-center .release-image-wrap { width: min(31%, 112px); max-height: 198px; margin-bottom: 8px; }
+    #zefirok-maltipoo-runner .release-dialog.is-release-center .release-image-wrap { width: 100%; max-height: none; margin-bottom: 10px; }
     #zefirok-maltipoo-runner .release-center-highlight { padding: 7px 9px; }
     #zefirok-maltipoo-runner .release-center-highlight-icon { width: 36px; height: 36px; }
     #zefirok-maltipoo-runner .release-center-highlight-icon img { width: 29px; height: 29px; }
@@ -9120,6 +9120,9 @@ html&gt;body{padding:
 @keyframes case-final-effect-glow{from{filter:brightness(1.02) saturate(1.02) drop-shadow(0 0 12px rgba(255,214,145,.24));opacity:.88}to{filter:brightness(1.24) saturate(1.16) drop-shadow(0 0 22px rgba(255,214,145,.46));opacity:1}}
 #zefirok-maltipoo-runner .release-image-wrap{aspect-ratio:1/1;max-height:min(58dvh,470px);padding:6px}
 #zefirok-maltipoo-runner .release-image{object-fit:contain;object-position:center;background:transparent}
+/* News art is a full-width image, not an inventory thumbnail. */
+#zefirok-maltipoo-runner .release-dialog .release-image-wrap{box-sizing:border-box;width:100%;height:auto;max-height:none;aspect-ratio:auto;padding:5px;margin:0 auto 12px}
+#zefirok-maltipoo-runner .release-dialog .release-image{display:block;width:100%;height:auto;max-height:none;object-fit:contain;object-position:center}
 &lt;/style&gt;
 
 &lt;style id=&quot;shop-case-cards-v020&quot;&gt;
@@ -13036,7 +13039,7 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
 
 &lt;div aria-hidden=&quot;true&quot; class=&quot;release-layer&quot; data-release-layer hidden&gt;
   &lt;div aria-labelledby=&quot;release-dialog-title&quot; aria-modal=&quot;true&quot; class=&quot;release-dialog&quot; role=&quot;dialog&quot; tabindex=&quot;-1&quot;&gt;
-    &lt;div class=&quot;release-image-wrap&quot; data-release-image-wrap aria-hidden=&quot;true&quot; style=&quot;aspect-ratio:1672/941&quot; hidden&gt;
+    &lt;div class=&quot;release-image-wrap&quot; data-release-image-wrap aria-hidden=&quot;true&quot; hidden&gt;
       &lt;img class=&quot;release-image&quot; data-release-image src=&quot;/assets/news/news_pick_v_1.2.5.webp?v=f8d4c9b50c00&quot; alt=&quot;Сладкий Забег — обновление 1.2.5&quot; width=&quot;1672&quot; height=&quot;941&quot; decoding=&quot;async&quot; loading=&quot;lazy&quot; fetchpriority=&quot;low&quot;/&gt;
     &lt;/div&gt;
     &lt;div class=&quot;release-kicker&quot; data-release-kicker&gt;Новое обновление&lt;/div&gt;
@@ -32986,15 +32989,17 @@ html &gt; body.zefirok-game-expanded{height:var(--zefirok-visible-height,100dvh)
 @keyframes gtTaskNewPulse{0%,100%{box-shadow:0 3px 8px rgba(177,121,29,.10)}50%{box-shadow:0 4px 12px rgba(177,121,29,.24)}}
 
 #zefirok-maltipoo-runner .gt-shell{display:grid;gap:11px}
-#zefirok-maltipoo-runner .gt-topbar{display:grid;grid-template-columns:40px minmax(0,1fr) 40px;align-items:center;gap:8px;padding:2px 1px 0}
-#zefirok-maltipoo-runner .gt-icon-button{
-  width:40px;height:40px;display:grid;place-items:center;border:1px solid var(--gt-line);border-radius:14px;
-  background:rgba(255,255,255,.92);color:#a5486d;font-size:20px;font-weight:950;box-shadow:0 6px 16px rgba(107,62,78,.07);cursor:pointer
+#zefirok-maltipoo-runner .gt-topbar{display:grid;grid-template-columns:34px minmax(0,1fr) 34px;align-items:center;gap:7px;padding:1px 1px 0}
+#zefirok-maltipoo-runner .gt-topbar .gt-icon-button{
+  box-sizing:border-box;width:34px;min-width:34px;max-width:34px;height:34px;min-height:34px;max-height:34px;
+  padding:0;margin:0;appearance:none;-webkit-appearance:none;line-height:1;align-self:center;justify-self:center;
+  display:grid;place-items:center;border:1px solid var(--gt-line);border-radius:10px;
+  background:rgba(255,255,255,.92);color:#a5486d;font-size:17px;font-weight:950;box-shadow:0 4px 11px rgba(107,62,78,.06);cursor:pointer
 }
 #zefirok-maltipoo-runner .gt-heading{min-width:0;text-align:center}
 #zefirok-maltipoo-runner .gt-heading strong{display:block;font-size:20px;line-height:1.08;font-weight:950;color:#6b3650}
 #zefirok-maltipoo-runner .gt-heading span{display:block;margin-top:3px;color:var(--gt-muted);font-size:9px;font-weight:750}
-#zefirok-maltipoo-runner .gt-refresh svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+#zefirok-maltipoo-runner .gt-icon-button svg{width:15px;height:15px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
 #zefirok-maltipoo-runner .gt-refresh.is-busy svg{animation:gtSpin .8s linear infinite}
 @keyframes gtSpin{to{transform:rotate(360deg)}}
 
@@ -33232,16 +33237,23 @@ html &gt; body.zefirok-game-expanded{height:var(--zefirok-visible-height,100dvh)
 #zefirok-maltipoo-runner .gt-toast.show{transform:translate(-50%,0);opacity:1}
 
 
-/* Task UX v19: compact server-confirmed bulk reward receipt. */
+/* Task UX v30: scoped controls, guarded scroll and confirmed bulk receipt. */
 #zefirok-maltipoo-runner .gt-receipt-layer{position:fixed;z-index:2147483300;inset:0;display:grid;align-items:end;pointer-events:auto;opacity:0;transition:opacity .2s ease}
 #zefirok-maltipoo-runner .gt-receipt-layer.is-open{opacity:1}
-#zefirok-maltipoo-runner .gt-receipt-layer.is-closing{opacity:0;pointer-events:none}
-#zefirok-maltipoo-runner .gt-receipt-backdrop{position:absolute;inset:0;width:100%;height:100%;padding:0;border:0;background:rgba(68,38,50,.28);backdrop-filter:blur(2px);-webkit-backdrop-filter:blur(2px);cursor:pointer}
-#zefirok-maltipoo-runner .gt-receipt-sheet{position:relative;width:min(100%,520px);max-height:min(62vh,560px);margin:0 auto;padding:8px 14px calc(14px + env(safe-area-inset-bottom));display:grid;gap:10px;overflow:auto;border:1px solid rgba(225,181,197,.68);border-bottom:0;border-radius:24px 24px 0 0;background:linear-gradient(180deg,#fffdfb 0%,#fff6f8 100%);box-shadow:0 -16px 40px rgba(74,41,52,.20);box-sizing:border-box;transform:translateY(24px);transition:transform .24s cubic-bezier(.2,.75,.25,1)}
+#zefirok-maltipoo-runner .gt-receipt-layer.is-closing{opacity:0;pointer-events:auto}
+#zefirok-maltipoo-runner .gt-receipt-backdrop{position:absolute;inset:0;width:100%;height:100%;min-height:0;padding:0;border:0;border-radius:0;box-shadow:none;background:rgba(68,38,50,.28);backdrop-filter:blur(2px);-webkit-backdrop-filter:blur(2px);cursor:pointer;touch-action:none;transition:opacity .2s ease}
+#zefirok-maltipoo-runner .gt-receipt-sheet{position:relative;width:min(100%,520px);max-height:min(62vh,560px);margin:0 auto;padding:8px 14px calc(14px + env(safe-area-inset-bottom));display:grid;gap:10px;overflow:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;touch-action:pan-y;border:1px solid rgba(225,181,197,.68);border-bottom:0;border-radius:24px 24px 0 0;background:linear-gradient(180deg,#fffdfb 0%,#fff6f8 100%);box-shadow:0 -16px 40px rgba(74,41,52,.20);box-sizing:border-box;transform:translateY(24px);transition:transform .24s cubic-bezier(.2,.75,.25,1);cursor:grab}
 #zefirok-maltipoo-runner .gt-receipt-layer.is-open .gt-receipt-sheet{transform:translateY(0)}
-#zefirok-maltipoo-runner .gt-receipt-layer.is-closing .gt-receipt-sheet{transform:translateY(18px)}
-#zefirok-maltipoo-runner .gt-receipt-grabber{justify-self:center;width:54px;height:18px;padding:5px 0;border:0;background:transparent;touch-action:none;cursor:grab}
-#zefirok-maltipoo-runner .gt-receipt-grabber span{display:block;width:38px;height:4px;margin:auto;border-radius:999px;background:#e6cdd6}
+#zefirok-maltipoo-runner .gt-receipt-sheet.is-full-dragging{cursor:grabbing;user-select:none;-webkit-user-select:none}
+#zefirok-maltipoo-runner .gt-receipt-grabber{
+  appearance:none;-webkit-appearance:none;box-sizing:border-box;display:flex;align-items:center;justify-content:center;justify-self:center;
+  width:90px;min-width:90px;height:28px;min-height:28px;max-height:28px;margin:0 auto;padding:0;
+  border:0;border-radius:0;background:transparent;box-shadow:none;line-height:1;touch-action:none;cursor:grab;
+}
+#zefirok-maltipoo-runner .gt-receipt-grabber::before,#zefirok-maltipoo-runner .gt-receipt-grabber::after{content:none}
+#zefirok-maltipoo-runner .gt-receipt-grabber span{display:block;width:38px;height:4px;margin:auto;border-radius:999px;background:#e6cdd6;transition:width .16s ease,background .16s ease}
+#zefirok-maltipoo-runner .gt-receipt-grabber.is-dragging span{width:42px}
+#zefirok-maltipoo-runner .gt-receipt-grabber.is-armed span{width:46px;background:#d77199}
 #zefirok-maltipoo-runner .gt-receipt-head{display:grid;grid-template-columns:48px minmax(0,1fr);align-items:center;gap:10px}
 #zefirok-maltipoo-runner .gt-receipt-main-icon{width:48px;height:48px;display:grid;place-items:center;border-radius:16px;background:linear-gradient(145deg,#fff2c3,#ffd985);box-shadow:inset 0 0 0 1px rgba(211,151,42,.18)}
 #zefirok-maltipoo-runner .gt-receipt-main-img{width:37px;height:37px;object-fit:contain}
@@ -33368,7 +33380,7 @@ html &gt; body.zefirok-game-expanded{height:var(--zefirok-visible-height,100dvh)
   const CACHE_MS=15000;
   const REQUEST_TIMEOUT_MS=12000;
   const FILTERS=new Set([&#x27;all&#x27;,&#x27;daily&#x27;,&#x27;weekly&#x27;,&#x27;event&#x27;,&#x27;series&#x27;,&#x27;ready&#x27;]);
-  let payload=null,filter=&#x27;all&#x27;,loading=false,inflight=null,readInflight=null,readQueued=false,lastFreshAt=0,serverOffsetMs=0,claimingKey=&#x27;&#x27;,claimSuccessKey=&#x27;&#x27;,claimingAll=false,claimedOpen=false,toastTimer=0,timerTick=0,completionNoticeTimer=0,completionNoticePoll=0;
+  let payload=null,filter=&#x27;all&#x27;,loading=false,inflight=null,readInflight=null,readQueued=false,lastFreshAt=0,serverOffsetMs=0,claimingKey=&#x27;&#x27;,claimSuccessKey=&#x27;&#x27;,claimingAll=false,claimedOpen=false,toastTimer=0,timerTick=0,completionNoticeTimer=0,completionNoticePoll=0,bulkReceiptViewportLock=null,bulkReceiptCloseTimer=0;
   const committedClaims=new Set();
   const completionNoticeSeen=new Set();
   const completionNoticeQueue=[];
@@ -33642,7 +33654,7 @@ html &gt; body.zefirok-game-expanded{height:var(--zefirok-visible-height,100dvh)
   }
 
   function skeleton(){
-    return `&lt;div class=&quot;gt-shell&quot;&gt;&lt;div class=&quot;gt-topbar&quot;&gt;&lt;button class=&quot;gt-icon-button&quot; data-gt-back type=&quot;button&quot; aria-label=&quot;Назад&quot;&gt;‹&lt;/button&gt;&lt;div class=&quot;gt-heading&quot;&gt;&lt;strong&gt;Задания&lt;/strong&gt;&lt;span&gt;Цели и прогресс профиля&lt;/span&gt;&lt;/div&gt;&lt;button class=&quot;gt-icon-button gt-refresh is-busy&quot; type=&quot;button&quot; aria-label=&quot;Обновляем задания&quot; disabled&gt;&lt;svg viewBox=&quot;0 0 24 24&quot;&gt;&lt;path d=&quot;M20 11a8 8 0 1 0-2.3 5.7M20 4v7h-7&quot;/&gt;&lt;/svg&gt;&lt;/button&gt;&lt;/div&gt;&lt;div class=&quot;gt-skeleton&quot; aria-label=&quot;Загружаем задания&quot;&gt;&lt;i&gt;&lt;/i&gt;&lt;i&gt;&lt;/i&gt;&lt;i&gt;&lt;/i&gt;&lt;/div&gt;&lt;/div&gt;`;
+    return `&lt;div class=&quot;gt-shell&quot;&gt;&lt;div class=&quot;gt-topbar&quot;&gt;&lt;button class=&quot;gt-icon-button&quot; data-gt-back type=&quot;button&quot; aria-label=&quot;Назад&quot;&gt;&lt;svg viewBox=&quot;0 0 24 24&quot; aria-hidden=&quot;true&quot;&gt;&lt;path d=&quot;m14 6-6 6 6 6&quot;/&gt;&lt;/svg&gt;&lt;/button&gt;&lt;div class=&quot;gt-heading&quot;&gt;&lt;strong&gt;Задания&lt;/strong&gt;&lt;span&gt;Цели и прогресс профиля&lt;/span&gt;&lt;/div&gt;&lt;button class=&quot;gt-icon-button gt-refresh is-busy&quot; type=&quot;button&quot; aria-label=&quot;Обновляем задания&quot; disabled&gt;&lt;svg viewBox=&quot;0 0 24 24&quot;&gt;&lt;path d=&quot;M20 11a8 8 0 1 0-2.3 5.7M20 4v7h-7&quot;/&gt;&lt;/svg&gt;&lt;/button&gt;&lt;/div&gt;&lt;div class=&quot;gt-skeleton&quot; aria-label=&quot;Загружаем задания&quot;&gt;&lt;i&gt;&lt;/i&gt;&lt;i&gt;&lt;/i&gt;&lt;i&gt;&lt;/i&gt;&lt;/div&gt;&lt;/div&gt;`;
   }
 
   function rewardItemLabel(item){
@@ -33874,11 +33886,11 @@ html &gt; body.zefirok-game-expanded{height:var(--zefirok-visible-height,100dvh)
     const emptyTitle=filter===&#x27;ready&#x27;?&#x27;Готовых наград пока нет&#x27;:filter===&#x27;all&#x27;?&#x27;Сейчас активных заданий нет&#x27;:&#x27;В этом разделе пока пусто&#x27;;
     const emptyCopy=filter===&#x27;ready&#x27;?&#x27;Продолжай выполнять задания — готовые награды появятся здесь автоматически.&#x27;:filter===&#x27;all&#x27;?&#x27;Загляни позже — новые цели появятся здесь автоматически.&#x27;:&#x27;Переключись на другой тип заданий.&#x27;;
     const listMarkup=tasks.length?tasks.map(task=&gt;taskMarkup(task,list(payload.tasks).indexOf(task))).join(&#x27;&#x27;):`&lt;div class=&quot;gt-empty&quot;&gt;&lt;span class=&quot;gt-empty-icon&quot;&gt;${iconMarkup(filter===&#x27;ready&#x27;?TASK_ICONS.reward:TASK_ICONS.task,&#x27;gt-empty-icon-img&#x27;)}&lt;/span&gt;&lt;strong&gt;${emptyTitle}&lt;/strong&gt;&lt;span&gt;${emptyCopy}&lt;/span&gt;&lt;/div&gt;`;
-    screen.innerHTML=`&lt;div class=&quot;gt-shell&quot;&gt;&lt;div class=&quot;gt-topbar&quot;&gt;&lt;button class=&quot;gt-icon-button&quot; data-gt-back type=&quot;button&quot; aria-label=&quot;Назад&quot;&gt;‹&lt;/button&gt;&lt;div class=&quot;gt-heading&quot;&gt;&lt;strong&gt;Задания&lt;/strong&gt;&lt;span&gt;Играй, выполняй цели и развивай профиль&lt;/span&gt;&lt;/div&gt;&lt;button class=&quot;gt-icon-button gt-refresh${loading?&#x27; is-busy&#x27;:&#x27;&#x27;}&quot; data-gt-refresh type=&quot;button&quot; aria-label=&quot;Обновить задания&quot;${loading?&#x27; disabled&#x27;:&#x27;&#x27;}&gt;&lt;svg viewBox=&quot;0 0 24 24&quot;&gt;&lt;path d=&quot;M20 11a8 8 0 1 0-2.3 5.7M20 4v7h-7&quot;/&gt;&lt;/svg&gt;&lt;/button&gt;&lt;/div&gt;${profileMarkup()}${nextMarkup()}${filtersMarkup()}&lt;div class=&quot;gt-list&quot; aria-live=&quot;polite&quot;&gt;${listMarkup}&lt;/div&gt;${claimedHistoryMarkup()}${seasonMarkup()}&lt;/div&gt;&lt;div class=&quot;gt-toast&quot; role=&quot;status&quot;&gt;&lt;/div&gt;`;
+    screen.innerHTML=`&lt;div class=&quot;gt-shell&quot;&gt;&lt;div class=&quot;gt-topbar&quot;&gt;&lt;button class=&quot;gt-icon-button&quot; data-gt-back type=&quot;button&quot; aria-label=&quot;Назад&quot;&gt;&lt;svg viewBox=&quot;0 0 24 24&quot; aria-hidden=&quot;true&quot;&gt;&lt;path d=&quot;m14 6-6 6 6 6&quot;/&gt;&lt;/svg&gt;&lt;/button&gt;&lt;div class=&quot;gt-heading&quot;&gt;&lt;strong&gt;Задания&lt;/strong&gt;&lt;span&gt;Играй, выполняй цели и развивай профиль&lt;/span&gt;&lt;/div&gt;&lt;button class=&quot;gt-icon-button gt-refresh${loading?&#x27; is-busy&#x27;:&#x27;&#x27;}&quot; data-gt-refresh type=&quot;button&quot; aria-label=&quot;Обновить задания&quot;${loading?&#x27; disabled&#x27;:&#x27;&#x27;}&gt;&lt;svg viewBox=&quot;0 0 24 24&quot;&gt;&lt;path d=&quot;M20 11a8 8 0 1 0-2.3 5.7M20 4v7h-7&quot;/&gt;&lt;/svg&gt;&lt;/button&gt;&lt;/div&gt;${profileMarkup()}${nextMarkup()}${filtersMarkup()}&lt;div class=&quot;gt-list&quot; aria-live=&quot;polite&quot;&gt;${listMarkup}&lt;/div&gt;${claimedHistoryMarkup()}${seasonMarkup()}&lt;/div&gt;&lt;div class=&quot;gt-toast&quot; role=&quot;status&quot;&gt;&lt;/div&gt;`;
   }
 
   function renderError(message){
-    screen.innerHTML=`&lt;div class=&quot;gt-shell&quot;&gt;&lt;div class=&quot;gt-topbar&quot;&gt;&lt;button class=&quot;gt-icon-button&quot; data-gt-back type=&quot;button&quot; aria-label=&quot;Назад&quot;&gt;‹&lt;/button&gt;&lt;div class=&quot;gt-heading&quot;&gt;&lt;strong&gt;Задания&lt;/strong&gt;&lt;span&gt;Цели и прогресс профиля&lt;/span&gt;&lt;/div&gt;&lt;span&gt;&lt;/span&gt;&lt;/div&gt;&lt;div class=&quot;gt-error&quot; role=&quot;alert&quot;&gt;&lt;span class=&quot;gt-empty-icon&quot;&gt;${iconMarkup(TASK_ICONS.zefir,&#x27;gt-empty-icon-img&#x27;)}&lt;/span&gt;&lt;strong&gt;Не удалось загрузить задания&lt;/strong&gt;&lt;span&gt;${esc(message||&#x27;Проверь соединение и попробуй ещё раз.&#x27;)}&lt;/span&gt;&lt;button class=&quot;gt-retry&quot; data-gt-retry type=&quot;button&quot;&gt;Повторить&lt;/button&gt;&lt;/div&gt;${seasonMarkup()}&lt;/div&gt;`;
+    screen.innerHTML=`&lt;div class=&quot;gt-shell&quot;&gt;&lt;div class=&quot;gt-topbar&quot;&gt;&lt;button class=&quot;gt-icon-button&quot; data-gt-back type=&quot;button&quot; aria-label=&quot;Назад&quot;&gt;&lt;svg viewBox=&quot;0 0 24 24&quot; aria-hidden=&quot;true&quot;&gt;&lt;path d=&quot;m14 6-6 6 6 6&quot;/&gt;&lt;/svg&gt;&lt;/button&gt;&lt;div class=&quot;gt-heading&quot;&gt;&lt;strong&gt;Задания&lt;/strong&gt;&lt;span&gt;Цели и прогресс профиля&lt;/span&gt;&lt;/div&gt;&lt;span&gt;&lt;/span&gt;&lt;/div&gt;&lt;div class=&quot;gt-error&quot; role=&quot;alert&quot;&gt;&lt;span class=&quot;gt-empty-icon&quot;&gt;${iconMarkup(TASK_ICONS.zefir,&#x27;gt-empty-icon-img&#x27;)}&lt;/span&gt;&lt;strong&gt;Не удалось загрузить задания&lt;/strong&gt;&lt;span&gt;${esc(message||&#x27;Проверь соединение и попробуй ещё раз.&#x27;)}&lt;/span&gt;&lt;button class=&quot;gt-retry&quot; data-gt-retry type=&quot;button&quot;&gt;Повторить&lt;/button&gt;&lt;/div&gt;${seasonMarkup()}&lt;/div&gt;`;
   }
 
   async function load(force=false){
@@ -33911,34 +33923,157 @@ html &gt; body.zefirok-game-expanded{height:var(--zefirok-visible-height,100dvh)
     return inflight;
   }
 
+  // A receipt is presentation only. Lock the runner document, not just its backdrop.
+  function lockBulkReceiptViewport(layer){
+    if(bulkReceiptViewportLock||!layer)return;
+    const html=document.documentElement,body=document.body;
+    const x=window.scrollX||0,y=window.scrollY||0,focus=document.activeElement;
+    const saved=[];
+    const set=(node,property,value)=&gt;{
+      saved.push([node,property,node.style.getPropertyValue(property),node.style.getPropertyPriority(property)]);
+      node.style.setProperty(property,value,&#x27;important&#x27;);
+    };
+    const inert=[];
+    for(const node of root.children){
+      if(node===layer||node.contains(layer)||/^(STYLE|SCRIPT)$/.test(node.tagName))continue;
+      inert.push([node,node.inert]);node.inert=true;
+    }
+    for(const node of [html,body,root]){
+      set(node,&#x27;overflow&#x27;,&#x27;hidden&#x27;);set(node,&#x27;overscroll-behavior&#x27;,&#x27;none&#x27;);
+    }
+    set(body,&#x27;position&#x27;,&#x27;fixed&#x27;);set(body,&#x27;top&#x27;,`-${y}px`);set(body,&#x27;left&#x27;,`-${x}px`);
+    set(body,&#x27;right&#x27;,&#x27;0&#x27;);set(body,&#x27;width&#x27;,&#x27;100%&#x27;);
+    let lastY=0;
+    const sheet=layer.querySelector(&#x27;.gt-receipt-sheet&#x27;);
+    const canScroll=(target,delta)=&gt;{
+      if(!sheet?.contains(target)||!delta)return false;
+      const max=sheet.scrollHeight-sheet.clientHeight;
+      return max&gt;1&amp;&amp;(delta&lt;0?sheet.scrollTop&gt;0:sheet.scrollTop&lt;max-1);
+    };
+    const touchStart=e=&gt;{if(e.touches.length===1)lastY=e.touches[0].clientY;};
+    const touchMove=e=&gt;{
+      if(e.touches.length!==1){if(e.cancelable)e.preventDefault();return;}
+      const y=e.touches[0].clientY,delta=lastY-y;lastY=y;
+      if(!canScroll(e.target,delta)&amp;&amp;e.cancelable)e.preventDefault();
+    };
+    const wheel=e=&gt;{if(!canScroll(e.target,e.deltaY)&amp;&amp;e.cancelable)e.preventDefault();};
+    layer.addEventListener(&#x27;touchstart&#x27;,touchStart,{passive:true});
+    layer.addEventListener(&#x27;touchmove&#x27;,touchMove,{passive:false});
+    layer.addEventListener(&#x27;wheel&#x27;,wheel,{passive:false});
+    bulkReceiptViewportLock={x,y,focus,saved,inert,layer,touchStart,touchMove,wheel};
+  }
+  function unlockBulkReceiptViewport(){
+    const lock=bulkReceiptViewportLock;if(!lock)return;bulkReceiptViewportLock=null;
+    lock.layer._gtReceiptDispose?.();lock.layer._gtReceiptDispose=null;
+    lock.layer.removeEventListener(&#x27;touchstart&#x27;,lock.touchStart);
+    lock.layer.removeEventListener(&#x27;touchmove&#x27;,lock.touchMove);
+    lock.layer.removeEventListener(&#x27;wheel&#x27;,lock.wheel);
+    for(const [node,property,value,priority] of lock.saved.reverse()){
+      if(value)node.style.setProperty(property,value,priority);else node.style.removeProperty(property);
+    }
+    for(const [node,value] of lock.inert)node.inert=value;
+    // Restore synchronously: an old animation frame must not move a newly opened sheet.
+    const html=document.documentElement,body=document.body;
+    const behavior=[html,body].map(node=&gt;[node,node.style.getPropertyValue(&#x27;scroll-behavior&#x27;),node.style.getPropertyPriority(&#x27;scroll-behavior&#x27;)]);
+    for(const [node] of behavior)node.style.setProperty(&#x27;scroll-behavior&#x27;,&#x27;auto&#x27;,&#x27;important&#x27;);
+    try{window.scrollTo(lock.x,lock.y);}catch{}
+    for(const [node,value,priority] of behavior){if(value)node.style.setProperty(&#x27;scroll-behavior&#x27;,value,priority);else node.style.removeProperty(&#x27;scroll-behavior&#x27;);}
+    const focus=lock.focus?.isConnected?lock.focus:screen.querySelector(&#x27;[data-gt-refresh],[data-gt-back]&#x27;);
+    if(focus&amp;&amp;!focus.closest(&#x27;[inert]&#x27;))try{focus.focus({preventScroll:true});}catch{}
+  }
   function closeBulkReceipt(immediate=false){
     const layer=root.querySelector(&#x27;[data-gt-receipt-layer]&#x27;);
-    if(!layer)return;
-    if(immediate){layer.remove();return;}
+    if(!immediate&amp;&amp;layer?.classList.contains(&#x27;is-closing&#x27;))return;
+    if(bulkReceiptCloseTimer){window.clearTimeout(bulkReceiptCloseTimer);bulkReceiptCloseTimer=0;}
+    if(!layer){unlockBulkReceiptViewport();return;}
+    layer._gtReceiptDispose?.();layer._gtReceiptDispose=null;
+    if(immediate||window.matchMedia?.(&#x27;(prefers-reduced-motion: reduce)&#x27;).matches){layer.remove();unlockBulkReceiptViewport();return;}
     layer.classList.add(&#x27;is-closing&#x27;);
-    window.setTimeout(()=&gt;layer.remove(),180);
+    const sheet=layer.querySelector(&#x27;.gt-receipt-sheet&#x27;);
+    if(sheet){sheet.style.transition=&#x27;transform .24s cubic-bezier(.32,.72,0,1)&#x27;;sheet.style.transform=&#x27;translate3d(0,calc(100% + 18px),0)&#x27;;}
+    bulkReceiptCloseTimer=window.setTimeout(()=&gt;{bulkReceiptCloseTimer=0;layer.remove();unlockBulkReceiptViewport();},250);
   }
   function bindBulkReceiptGestures(layer){
-    const sheet=layer?.querySelector(&#x27;.gt-receipt-sheet&#x27;),drag=layer?.querySelector(&#x27;[data-gt-receipt-drag]&#x27;);
-    if(!sheet||!drag)return;
-    let pointerId=null,startY=0,deltaY=0;
-    const reset=()=&gt;{sheet.style.transform=&#x27;&#x27;;sheet.style.transition=&#x27;&#x27;;pointerId=null;deltaY=0;};
-    drag.addEventListener(&#x27;pointerdown&#x27;,event=&gt;{
-      if(pointerId!==null)return;
-      pointerId=event.pointerId;startY=event.clientY;deltaY=0;sheet.style.transition=&#x27;none&#x27;;
-      try{drag.setPointerCapture(pointerId);}catch{}
-    });
-    drag.addEventListener(&#x27;pointermove&#x27;,event=&gt;{
-      if(event.pointerId!==pointerId)return;
-      deltaY=Math.max(0,event.clientY-startY);sheet.style.transform=`translateY(${Math.min(120,deltaY)}px)`;
-    });
-    const finish=event=&gt;{
-      if(event.pointerId!==pointerId)return;
-      try{drag.releasePointerCapture(pointerId);}catch{}
-      if(deltaY&gt;=64){closeBulkReceipt();return;}
-      sheet.style.transition=&#x27;transform .18s ease&#x27;;sheet.style.transform=&#x27;translateY(0)&#x27;;window.setTimeout(reset,190);
+    const sheet=layer.querySelector(&#x27;.gt-receipt-sheet&#x27;),grip=layer.querySelector(&#x27;[data-gt-receipt-drag]&#x27;),backdrop=layer.querySelector(&#x27;.gt-receipt-backdrop&#x27;);
+    if(!sheet||!grip)return;
+    let gesture=null,frame=0,timer=0,suppressUntil=0,disposed=false;
+    const threshold=()=&gt;Math.max(88,Math.min(150,sheet.offsetHeight*.28));
+    const reset=()=&gt;{
+      clearTimeout(timer);cancelAnimationFrame(frame);timer=frame=0;
+      const old=gesture;gesture=null;
+      if(old?.pointer)try{old.captureNode?.releasePointerCapture(old.id);}catch{}
+      sheet.style.transform=&#x27;&#x27;;sheet.style.transition=&#x27;&#x27;;sheet.style.willChange=&#x27;&#x27;;sheet.style.overflowY=&#x27;&#x27;;
+      sheet.classList.remove(&#x27;is-full-dragging&#x27;);grip.classList.remove(&#x27;is-armed&#x27;);
+      if(backdrop){backdrop.style.opacity=&#x27;&#x27;;backdrop.style.transition=&#x27;&#x27;;}
     };
-    drag.addEventListener(&#x27;pointerup&#x27;,finish);drag.addEventListener(&#x27;pointercancel&#x27;,finish);
+    const start=(id,x,y,target,pointer=false)=&gt;{
+      if(disposed||gesture||layer.classList.contains(&#x27;is-closing&#x27;)||!(target instanceof Element))return false;
+      const handle=!!target.closest(&#x27;[data-gt-receipt-drag]&#x27;);
+      if(!handle&amp;&amp;(target.closest(&#x27;button,a,input,select,textarea,[contenteditable]&#x27;)||sheet.scrollTop&gt;2))return false;
+      reset();gesture={id,x,y,lastY:y,lastAt:performance.now(),delta:0,velocity:0,drag:false,handle,pointer};return true;
+    };
+    const move=(x,y,event)=&gt;{
+      const g=gesture;if(!g||disposed)return;
+      const dx=x-g.x,dy=y-g.y;
+      if(!g.drag){
+        if(dy&lt;=0||Math.abs(dx)&gt;Math.max(6,dy*.85)||(!g.handle&amp;&amp;sheet.scrollTop&gt;2)){
+          if(Math.max(Math.abs(dx),Math.abs(dy))&gt;8)reset();return;
+        }
+        if(!event.cancelable){reset();return;}
+        event.preventDefault();if(dy&lt;4)return;
+        g.drag=true;sheet.style.overflowY=&#x27;hidden&#x27;;sheet.style.willChange=&#x27;transform&#x27;;sheet.classList.add(&#x27;is-full-dragging&#x27;);
+      }
+      if(event.cancelable)event.preventDefault();
+      const now=performance.now();g.velocity=(y-g.lastY)/Math.max(1,now-g.lastAt);g.lastY=y;g.lastAt=now;g.delta=Math.max(0,dy);
+      grip.classList.toggle(&#x27;is-armed&#x27;,g.delta&gt;=threshold());
+      if(!frame)frame=requestAnimationFrame(()=&gt;{
+        frame=0;if(!gesture||disposed)return;
+        const distance=Math.min(sheet.offsetHeight*.92,gesture.delta);
+        sheet.style.transition=&#x27;none&#x27;;sheet.style.transform=`translate3d(0,${distance}px,0)`;
+        if(backdrop){backdrop.style.transition=&#x27;none&#x27;;backdrop.style.opacity=String(Math.max(.44,1-distance/Math.max(1,sheet.offsetHeight)));}
+      });
+    };
+    const finish=(cancelled=false)=&gt;{
+      const g=gesture;if(!g)return;gesture=null;cancelAnimationFrame(frame);frame=0;
+      if(g.pointer)try{g.captureNode?.releasePointerCapture(g.id);}catch{}
+      if(!g.drag){reset();return;}
+      suppressUntil=performance.now()+400;
+      const velocity=performance.now()-g.lastAt&lt;100?g.velocity:0;
+      if(!cancelled&amp;&amp;(g.delta&gt;=threshold()||(g.delta&gt;=threshold()*.55&amp;&amp;velocity&gt;.8))){closeBulkReceipt();return;}
+      sheet.style.transition=&#x27;transform .24s cubic-bezier(.32,.72,0,1)&#x27;;sheet.style.transform=&#x27;translate3d(0,0,0)&#x27;;
+      if(backdrop){backdrop.style.transition=&#x27;opacity .24s ease&#x27;;backdrop.style.opacity=&#x27;1&#x27;;}
+      timer=setTimeout(reset,250);
+    };
+    sheet.addEventListener(&#x27;touchstart&#x27;,e=&gt;{if(e.touches.length!==1){finish(true);return;}const t=e.touches[0];start(t.identifier,t.clientX,t.clientY,e.target);},{passive:true});
+    sheet.addEventListener(&#x27;touchmove&#x27;,e=&gt;{if(!gesture||gesture.pointer)return;if(e.touches.length!==1){finish(true);return;}const t=Array.from(e.touches).find(x=&gt;x.identifier===gesture.id);if(t)move(t.clientX,t.clientY,e);},{passive:false});
+    sheet.addEventListener(&#x27;touchend&#x27;,e=&gt;{if(gesture&amp;&amp;!gesture.pointer&amp;&amp;Array.from(e.changedTouches).some(t=&gt;t.identifier===gesture.id))finish();},{passive:true});
+    sheet.addEventListener(&#x27;touchcancel&#x27;,()=&gt;finish(true),{passive:true});
+    sheet.addEventListener(&#x27;pointerdown&#x27;,e=&gt;{
+      if(e.pointerType===&#x27;touch&#x27;||e.button!==0||e.isPrimary===false)return;
+      if(start(e.pointerId,e.clientX,e.clientY,e.target,true)){
+        const captureNode=e.target.closest(&#x27;[data-gt-receipt-drag]&#x27;)||sheet;gesture.captureNode=captureNode;
+        // Capturing a grip click on its parent would retarget it away from the button.
+        e.preventDefault();try{captureNode.setPointerCapture(e.pointerId);}catch{}
+      }
+    });
+    sheet.addEventListener(&#x27;pointermove&#x27;,e=&gt;{if(gesture?.pointer&amp;&amp;gesture.id===e.pointerId)move(e.clientX,e.clientY,e);});
+    sheet.addEventListener(&#x27;pointerup&#x27;,e=&gt;{if(gesture?.pointer&amp;&amp;gesture.id===e.pointerId)finish();});
+    for(const name of [&#x27;pointercancel&#x27;,&#x27;lostpointercapture&#x27;])sheet.addEventListener(name,e=&gt;{if(gesture?.pointer&amp;&amp;gesture.id===e.pointerId)finish(true);});
+    layer.addEventListener(&#x27;click&#x27;,e=&gt;{if(performance.now()&lt;suppressUntil){e.preventDefault();e.stopImmediatePropagation();}},true);
+    grip.addEventListener(&#x27;click&#x27;,e=&gt;{e.preventDefault();closeBulkReceipt();});
+    layer.addEventListener(&#x27;keydown&#x27;,e=&gt;{
+      if(e.key===&#x27;Escape&#x27;){e.preventDefault();e.stopPropagation();closeBulkReceipt();return;}
+      if(e.key!==&#x27;Tab&#x27;)return;
+      const nodes=[...sheet.querySelectorAll(&#x27;button:not(:disabled),a[href],input,[tabindex=&quot;0&quot;]&#x27;)].filter(n=&gt;n.getClientRects().length);
+      if(!nodes.length)return;
+      const active=document.activeElement,first=nodes[0],last=nodes[nodes.length-1];
+      if(e.shiftKey&amp;&amp;(active===first||!sheet.contains(active))){e.preventDefault();last.focus({preventScroll:true});}
+      else if(!e.shiftKey&amp;&amp;(active===last||!sheet.contains(active))){e.preventDefault();first.focus({preventScroll:true});}
+    });
+    const cancel=()=&gt;{if(gesture)finish(true);};
+    const visibility=()=&gt;{if(document.hidden)cancel();};
+    window.addEventListener(&#x27;blur&#x27;,cancel);document.addEventListener(&#x27;visibilitychange&#x27;,visibility);
+    layer._gtReceiptDispose=()=&gt;{disposed=true;reset();window.removeEventListener(&#x27;blur&#x27;,cancel);document.removeEventListener(&#x27;visibilitychange&#x27;,visibility);};
   }
   function showBulkReceipt({claimedCount=0,total=0,failedCount=0,rewards=[]}={}){
     if(total&lt;2||claimedCount&lt;1)return false;
@@ -33952,11 +34087,13 @@ html &gt; body.zefirok-game-expanded{height:var(--zefirok-visible-height,100dvh)
       : `&lt;span class=&quot;gt-receipt-reward is-wide&quot;&gt;${iconMarkup(TASK_ICONS.done,&#x27;gt-receipt-reward-icon&#x27;)}&lt;b&gt;Начисление подтверждено сервером&lt;/b&gt;&lt;/span&gt;`;
     const left=Math.max(0,total-claimedCount);
     const note=partial?`${left} ${plural(left,&#x27;награда осталась&#x27;,&#x27;награды остались&#x27;,&#x27;наград осталось&#x27;)} доступно — попробуй ещё раз.`:&#x27;Всё начислено и сохранено.&#x27;;
-    root.insertAdjacentHTML(&#x27;beforeend&#x27;,`&lt;div class=&quot;gt-receipt-layer&quot; data-gt-receipt-layer&gt;&lt;button class=&quot;gt-receipt-backdrop&quot; data-gt-receipt-close type=&quot;button&quot; aria-label=&quot;Закрыть итог наград&quot;&gt;&lt;/button&gt;&lt;section class=&quot;gt-receipt-sheet&quot; role=&quot;dialog&quot; aria-modal=&quot;true&quot; aria-labelledby=&quot;gt-receipt-title&quot;&gt;&lt;button class=&quot;gt-receipt-grabber&quot; data-gt-receipt-drag type=&quot;button&quot; aria-label=&quot;Смахни вниз, чтобы закрыть&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/button&gt;&lt;div class=&quot;gt-receipt-head&quot;&gt;&lt;span class=&quot;gt-receipt-main-icon&quot;&gt;${iconMarkup(TASK_ICONS.reward,&#x27;gt-receipt-main-img&#x27;)}&lt;/span&gt;&lt;span&gt;&lt;small&gt;${esc(subtitle)}&lt;/small&gt;&lt;strong id=&quot;gt-receipt-title&quot;&gt;${esc(title)}&lt;/strong&gt;&lt;/span&gt;&lt;/div&gt;&lt;div class=&quot;gt-receipt-rewards&quot;&gt;${rewardsMarkup}${extra?`&lt;span class=&quot;gt-receipt-more&quot;&gt;Ещё ${extra}&lt;/span&gt;`:&#x27;&#x27;}&lt;/div&gt;&lt;p class=&quot;gt-receipt-note${partial?&#x27; is-partial&#x27;:&#x27;&#x27;}&quot;&gt;${esc(note)}&lt;/p&gt;&lt;button class=&quot;gt-receipt-done&quot; data-gt-receipt-close type=&quot;button&quot;&gt;Готово&lt;/button&gt;&lt;/section&gt;&lt;/div&gt;`);
+    root.insertAdjacentHTML(&#x27;beforeend&#x27;,`&lt;div class=&quot;gt-receipt-layer&quot; data-gt-receipt-layer&gt;&lt;button class=&quot;gt-receipt-backdrop&quot; data-gt-receipt-close type=&quot;button&quot; tabindex=&quot;-1&quot; aria-label=&quot;Закрыть итог наград&quot;&gt;&lt;/button&gt;&lt;section class=&quot;gt-receipt-sheet&quot; role=&quot;dialog&quot; aria-modal=&quot;true&quot; aria-labelledby=&quot;gt-receipt-title&quot;&gt;&lt;button class=&quot;gt-receipt-grabber&quot; data-gt-receipt-drag type=&quot;button&quot; aria-label=&quot;Смахни окно вниз, чтобы закрыть&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/button&gt;&lt;div class=&quot;gt-receipt-head&quot;&gt;&lt;span class=&quot;gt-receipt-main-icon&quot;&gt;${iconMarkup(TASK_ICONS.reward,&#x27;gt-receipt-main-img&#x27;)}&lt;/span&gt;&lt;span&gt;&lt;small&gt;${esc(subtitle)}&lt;/small&gt;&lt;strong id=&quot;gt-receipt-title&quot;&gt;${esc(title)}&lt;/strong&gt;&lt;/span&gt;&lt;/div&gt;&lt;div class=&quot;gt-receipt-rewards&quot;&gt;${rewardsMarkup}${extra?`&lt;span class=&quot;gt-receipt-more&quot;&gt;Ещё ${extra}&lt;/span&gt;`:&#x27;&#x27;}&lt;/div&gt;&lt;p class=&quot;gt-receipt-note${partial?&#x27; is-partial&#x27;:&#x27;&#x27;}&quot;&gt;${esc(note)}&lt;/p&gt;&lt;button class=&quot;gt-receipt-done&quot; data-gt-receipt-close type=&quot;button&quot;&gt;Готово&lt;/button&gt;&lt;/section&gt;&lt;/div&gt;`);
     const layer=root.querySelector(&#x27;[data-gt-receipt-layer]&#x27;);
+    if(!layer){unlockBulkReceiptViewport();return false;}
     bindBulkReceiptGestures(layer);
+    lockBulkReceiptViewport(layer);
     window.requestAnimationFrame(()=&gt;layer?.classList.add(&#x27;is-open&#x27;));
-    window.setTimeout(()=&gt;layer?.querySelector(&#x27;.gt-receipt-done&#x27;)?.focus({preventScroll:true}),80);
+    window.setTimeout(()=&gt;{if(layer.isConnected&amp;&amp;!layer.classList.contains(&#x27;is-closing&#x27;))layer.querySelector(&#x27;.gt-receipt-done&#x27;)?.focus({preventScroll:true});},80);
     return true;
   }
 
