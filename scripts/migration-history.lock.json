@@ -111,6 +111,6 @@
     "0108_game_task_content_v2.sql": "320ff1507a85ac7a1fc2d2ef386f31104a556857d1c7f111bfb857f59c818152",
     "0109_game_task_reward_engine_v2.sql": "bfceb3c32c4c254b1cdc8b0d61784d9f30cce5d13b24ced0d99628b073f51266",
     "0110_player_directory_integrity.sql": "b18f61f4b68d5074bfe5dbf5ac637686b4e7509f1da137e1163193e0dcfebb5f",
-    "0111_game_task_daily_logins.sql": "4ba1862acb79df26ee9eceb8b37361062708d3d111fd432a6b1d6204668849b3"
+    "0111_game_task_daily_logins.sql": "98111df93297937c022ade8825688732e8e13fee8bab4a4763053e3bd7aabf35"
   }
 }
