@@ -1,8 +1,8 @@
 {
   "version": 2,
   "hashAlgorithm": "sha256",
-  "catalogHash": "2df91eb17cf7662d",
-  "count": 569,
+  "catalogHash": "d3523c02d0e703bf",
+  "count": 570,
   "images": [
     {
       "fileName": "achievements/background_achivment_panel.webp",
@@ -1635,6 +1635,14 @@
       "path": "/assets/news/news_post_final_season1.webp",
       "hash": "be8a47cadd0f",
       "size": 311232
+    },
+    {
+      "fileName": "news/news_update_1.2.8.webp",
+      "label": "News update 1.2.8",
+      "folder": "news",
+      "path": "/assets/news/news_update_1.2.8.webp",
+      "hash": "0d7f0306cdad",
+      "size": 230352
     },
     {
       "fileName": "news/news.webp",

@@ -1,7 +1,7 @@
 {
   "version": 1,
-  "catalogHash": "1c03ba6f6b8df040",
-  "count": 13,
+  "catalogHash": "dc2893ac396401b7",
+  "count": 14,
   "images": [
     {
       "fileName": "cases-5.0.1.webp",
@@ -37,6 +37,13 @@
       "path": "/assets/news/news_post_final_season1.webp",
       "hash": "be8a47cadd0f",
       "size": 311232
+    },
+    {
+      "fileName": "news_update_1.2.8.webp",
+      "label": "News update 1.2.8",
+      "path": "/assets/news/news_update_1.2.8.webp",
+      "hash": "0d7f0306cdad",
+      "size": 230352
     },
     {
       "fileName": "news.webp",
