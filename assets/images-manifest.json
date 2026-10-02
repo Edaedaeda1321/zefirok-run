@@ -1,8 +1,8 @@
 {
   "version": 2,
   "hashAlgorithm": "sha256",
-  "catalogHash": "4fd01e2bc8b0e8d5",
-  "count": 567,
+  "catalogHash": "2df91eb17cf7662d",
+  "count": 569,
   "images": [
     {
       "fileName": "achievements/background_achivment_panel.webp",
@@ -3997,6 +3997,14 @@
       "size": 146384
     },
     {
+      "fileName": "tasks/task_days.webp",
+      "label": "Task days",
+      "folder": "tasks",
+      "path": "/assets/tasks/task_days.webp",
+      "hash": "cfe09fb360cf",
+      "size": 256484
+    },
+    {
       "fileName": "tasks/task_event.webp",
       "label": "Task event",
       "folder": "tasks",
@@ -4323,6 +4331,14 @@
       "path": "/assets/ui/icon_profile_button.webp",
       "hash": "61e694ea60e2",
       "size": 152350
+    },
+    {
+      "fileName": "ui/icon_quest_day.webp",
+      "label": "Icon quest day",
+      "folder": "ui",
+      "path": "/assets/ui/icon_quest_day.webp",
+      "hash": "0da2e71207f3",
+      "size": 253772
     },
     {
       "fileName": "ui/icon_quest_game.webp",

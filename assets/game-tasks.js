@@ -34,7 +34,7 @@
     series:'/assets/ui/icon_series_protection.webp',
     event:'/assets/ui/icon_goal.webp',
     weekly:'/assets/ui/icon_timer.webp',
-    daily:'/assets/ui/icon_quest_game.webp',
+    daily:'/assets/ui/icon_quest_day.webp',
     runs:'/assets/cases/avatars/achievements/achievement_runs.webp',
     zefir:'/assets/season-pass/zefir_currency.webp',
     coffee:'/assets/optimized/v0.79.5/iconCoffee.webp',
@@ -86,6 +86,7 @@
     const type=String(task?.triggerType||'');
     if(type==='collect_zefir')return TASK_ICONS.zefir;
     if(type==='collect_coffee')return TASK_ICONS.coffee;
+    if(type==='daily_logins')return TASK_ICONS.daily;
     if(['opened_cases','case_purchases','open_specific_case'].includes(type))return TASK_ICONS.cases;
     if(['single_run_score','total_score','total_run_score','best_score'].includes(type))return TASK_ICONS.score;
     if(type==='new_records')return TASK_ICONS.record;
@@ -137,6 +138,7 @@
     if(['total_score','total_run_score'].includes(type))return `${fmt(current)} / ${fmt(goal)} очков`;
     if(type==='level_reached')return `Уровень ${fmt(current)} / ${fmt(goal)}`;
     if(['accepted_runs','completed_runs','runs_with_skin','runs_with_booster','runs_without_boosters'].includes(type))return `${fmt(current)} / ${fmt(goal)} ${plural(goal,'забег','забега','забегов')}`;
+    if(type==='daily_logins')return `${fmt(current)} / ${fmt(goal)} ${plural(goal,'вход','входа','входов')}`;
     if(['opened_cases','case_purchases','open_specific_case'].includes(type))return `${fmt(current)} / ${fmt(goal)} ${plural(goal,'кейс','кейса','кейсов')}`;
     if(type==='collect_zefir')return `${fmt(current)} / ${fmt(goal)} зефирок`;
     if(type==='collect_coffee')return `${fmt(current)} / ${fmt(goal)} кофе`;

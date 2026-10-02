@@ -17472,6 +17472,7 @@ const GAME_TASK_TRIGGER_REGISTRY = Object.freeze({
   single_run_score: Object.freeze({ label:"Очки за один забег", repeatable:true, progressFormat:"number", source:"run_ledger", metric:"singleRunScore", customValue:true, presets:Object.freeze([["1 000 очков",1000],["2 000 очков",2000],["5 000 очков",5000],["10 000 очков",10000]]) }),
   collect_zefir: Object.freeze({ label:"Собрать зефир", repeatable:true, progressFormat:"number", source:"run_ledger", metric:"zefir", customValue:true, presets:Object.freeze([["10 зефирок",10],["30 зефирок",30],["50 зефирок",50],["100 зефирок",100]]) }),
   collect_coffee: Object.freeze({ label:"Собрать кофе", repeatable:true, progressFormat:"number", source:"run_ledger", metric:"coffee", customValue:true, presets:Object.freeze([["3 кофе",3],["5 кофе",5],["10 кофе",10],["20 кофе",20]]) }),
+  daily_logins: Object.freeze({ label:"Входы в игру", repeatable:true, progressFormat:"number", source:"daily_loyalty", customValue:true, artKey:"days", presets:Object.freeze([["1 вход",1],["3 входа",3],["5 входов",5],["7 входов",7],["14 входов",14],["30 входов",30]]) }),
   single_run_duration: Object.freeze({ label:"Время одного забега", repeatable:true, progressFormat:"duration", source:"run_ledger", metric:"singleRunDuration", customValue:true, presets:Object.freeze([["30 секунд",30],["60 секунд",60],["90 секунд",90],["120 секунд",120]]) }),
   play_time: Object.freeze({ label:"Время в забегах", repeatable:true, progressFormat:"duration", source:"run_ledger", metric:"playTime", customValue:true, presets:Object.freeze([["5 минут",300],["10 минут",600],["20 минут",1200],["30 минут",1800]]) }),
   new_records: Object.freeze({ label:"Новые рекорды", repeatable:true, progressFormat:"number", source:"run_ledger", metric:"newRecords", customValue:true, presets:Object.freeze([["1 рекорд",1],["2 рекорда",2],["3 рекорда",3],["5 рекордов",5]]) }),
@@ -17552,6 +17553,7 @@ const GAME_TASK_ART_FALLBACK = Object.freeze({
   singleScore:"/assets/tasks/task_single_run_score.webp",
   zefir:"/assets/tasks/task_zefir.webp",
   coffee:"/assets/tasks/task_coffee.webp",
+  days:"/assets/tasks/task_days.webp",
   time:"/assets/tasks/task_time.webp",
   records:"/assets/tasks/task_record.webp",
   case:"/assets/tasks/task_cases.webp",
@@ -17710,6 +17712,12 @@ async function gameTaskFilteredRunCount(env, telegramId, start, now, triggerType
   return 0;
 }
 
+async function gameTaskDailyLoginCount(env, telegramId, start, now) {
+  await ensureDailyLoyaltySchema(env);
+  const row = await env.DB.prepare(`SELECT COUNT(DISTINCT day_key) AS value FROM daily_loyalty_activity WHERE telegram_id=? AND applied=1 AND created_at>=? AND created_at<=?`).bind(String(telegramId), start, now).first().catch(() => null);
+  return Math.max(0, Number(row?.value || 0));
+}
+
 async function gameTaskSpecificCaseProgress(env, telegramId, start, now, params = {}) {
   const caseType=normalizeCaseType(params.caseType);
   if(!caseType)return 0;
@@ -17742,6 +17750,8 @@ async function v71TaskProgress(env, row, telegramId, now = Math.floor(Date.now()
     value = await gameTaskFilteredRunCount(env,telegramId,start,now,triggerType,gameTaskParams(row));
   } else if (definition?.source === "case_filter") {
     value = await gameTaskSpecificCaseProgress(env,telegramId,start,now,gameTaskParams(row));
+  } else if (definition?.source === "daily_loyalty") {
+    value = await gameTaskDailyLoginCount(env,telegramId,start,now);
   } else if (triggerType === "accepted_runs") {
     const result = await env.DB.prepare(`SELECT COUNT(*) AS value FROM leaderboard_runs WHERE telegram_id=? AND accepted=1 AND created_at>=? AND created_at<=?`).bind(String(telegramId),start,now).first();
     value = Number(result?.value || 0);
@@ -17888,6 +17898,14 @@ async function gameTaskProgressCached(env, row, telegramId, now, context = null)
       pending=definition.source==='run_ledger_filter'
         ? gameTaskFilteredRunCount(env,telegramId,start,now,triggerType,params)
         : gameTaskSpecificCaseProgress(env,telegramId,start,now,params);
+      context.progressCache.set(cacheKey,pending);
+    }
+    value=await pending;
+  } else if (definition?.source === 'daily_loyalty') {
+    const cacheKey = `daily_loyalty:${start}`;
+    let pending=context.progressCache.get(cacheKey);
+    if(!pending){
+      pending=gameTaskDailyLoginCount(env,telegramId,start,now);
       context.progressCache.set(cacheKey,pending);
     }
     value=await pending;

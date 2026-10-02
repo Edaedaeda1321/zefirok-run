@@ -12765,15 +12765,6 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
   &lt;/section&gt;
 
 
-
-  &lt;section class=&quot;profile-section profile-section--daily&quot; aria-label=&quot;Ежедневная активность&quot;&gt;
-    &lt;button class=&quot;zdl-profile-entry&quot; type=&quot;button&quot; data-daily-activity-open&gt;
-      &lt;img src=&quot;/assets/ui/icone_return_player.webp&quot; alt=&quot;&quot; loading=&quot;lazy&quot; decoding=&quot;async&quot;&gt;
-      &lt;span&gt;&lt;strong&gt;Ежедневная активность&lt;/strong&gt;&lt;small data-daily-activity-summary&gt;Награда дня, серия и история&lt;/small&gt;&lt;/span&gt;
-      &lt;b aria-hidden=&quot;true&quot;&gt;›&lt;/b&gt;
-    &lt;/button&gt;
-  &lt;/section&gt;
-
   &lt;section class=&quot;profile-section profile-section--newcomer&quot; data-newcomer-section aria-labelledby=&quot;profile-newcomer-title&quot; hidden&gt;
     &lt;div class=&quot;profile-section-head&quot;&gt;&lt;div&gt;&lt;h3 id=&quot;profile-newcomer-title&quot;&gt;Первые 3 дня с Зеффи&lt;/h3&gt;&lt;span data-newcomer-subtitle&gt;Небольшой маршрут по главным возможностям игры.&lt;/span&gt;&lt;/div&gt;&lt;/div&gt;
     &lt;div class=&quot;newcomer-profile-card&quot; data-newcomer-list&gt;&lt;/div&gt;
@@ -20998,6 +20989,7 @@ function createTutorialDeck(layer, mount, options, words) {
               streak:Math.max(0, Math.floor(Number(raw.streak || 0))),
               bestStreak:Math.max(0, Math.floor(Number(raw.bestStreak || 0)))
             };
+            writeProfileCoreStateCache();
             if (isScreenVisible(&quot;profile&quot;)) renderProfile();
           }
           return;
@@ -21251,10 +21243,52 @@ function createTutorialDeck(layer, mount, options, words) {
         return sanitizeGameNumber(PROFILE_XP_PER_PURCHASE * profileXpMultiplier());
       }
 
+      const PROFILE_CORE_STATE_CACHE_KEY = &quot;zefirok-profile-core-state-v1&quot;;
+      function readProfileCoreStateCache() {
+        try {
+          const raw = localStorage.getItem(PROFILE_CORE_STATE_CACHE_KEY);
+          const parsed = raw ? JSON.parse(raw) : null;
+          if (!parsed || typeof parsed !== &quot;object&quot;) return null;
+          return {
+            seasonPassProfileTier: String(parsed.seasonPassProfileTier || &quot;none&quot;),
+            seasonPassProfileLevel: Math.max(0, Math.floor(Number(parsed.seasonPassProfileLevel || 0))),
+            seasonPassProfileStatus: String(parsed.seasonPassProfileStatus || &quot;&quot;),
+            profileDailyStreakState: parsed.profileDailyStreakState &amp;&amp; typeof parsed.profileDailyStreakState === &quot;object&quot;
+              ? parsed.profileDailyStreakState
+              : null
+          };
+        } catch (error) {
+          return null;
+        }
+      }
+      function writeProfileCoreStateCache() {
+        try {
+          localStorage.setItem(PROFILE_CORE_STATE_CACHE_KEY, JSON.stringify({
+            seasonPassProfileTier,
+            seasonPassProfileLevel: Math.max(0, Math.floor(Number(seasonPassProfileLevel || 0))),
+            seasonPassProfileStatus: String(seasonPassProfileStatus || &quot;&quot;),
+            profileDailyStreakState: profileDailyStreakState &amp;&amp; typeof profileDailyStreakState === &quot;object&quot;
+              ? {
+                  streak: Math.max(0, Math.floor(Number(profileDailyStreakState.streak || 0))),
+                  bestStreak: Math.max(0, Math.floor(Number(profileDailyStreakState.bestStreak || 0)))
+                }
+              : null
+          }));
+        } catch (error) {}
+      }
       let seasonPassProfileTier = &quot;none&quot;;
       let seasonPassProfileLevel = 0;
       let seasonPassProfileStatus = &quot;&quot;;
       let profileDailyStreakState = null;
+      const cachedProfileCoreState = readProfileCoreStateCache();
+      if (cachedProfileCoreState) {
+        seasonPassProfileTier = cachedProfileCoreState.seasonPassProfileTier === &quot;elite_plus&quot;
+          ? &quot;elite_plus&quot;
+          : (cachedProfileCoreState.seasonPassProfileTier === &quot;elite&quot; ? &quot;elite&quot; : &quot;none&quot;);
+        seasonPassProfileLevel = Math.max(0, Math.floor(Number(cachedProfileCoreState.seasonPassProfileLevel || 0)));
+        seasonPassProfileStatus = String(cachedProfileCoreState.seasonPassProfileStatus || &quot;&quot;);
+        profileDailyStreakState = cachedProfileCoreState.profileDailyStreakState || null;
+      }
 
       function profileCoreStreakTier(days) {
         return Math.max(0, Math.min(10, Math.floor(Math.max(0, Number(days || 0)) / 10)));
@@ -21297,6 +21331,7 @@ function createTutorialDeck(layer, mount, options, words) {
           profileCorePassEl.title = passVisible ? `Пропуск · уровень ${formatter.format(passLevel)}${tierLabel ? ` · ${tierLabel}` : &quot;&quot;}` : (tierLabel ? `Сезонный пропуск · ${tierLabel}` : &quot;Сезонный пропуск&quot;);
         }
         renderProfilePassTierBadge();
+        writeProfileCoreStateCache();
       }
 
       function renderProfilePassTierBadge(rawTier) {
@@ -21334,6 +21369,7 @@ function createTutorialDeck(layer, mount, options, words) {
         state.seasonProfileXpMultiplier = active ? 2 : 1;
         state.seasonProfileXpEndsAt = String(data.endsAt || &quot;&quot;);
         state.seasonPassAttentionCount = Math.max(0, Math.floor(Number(data.claimableCount || 0)));
+        writeProfileCoreStateCache();
         if (data.tierActivationNotice &amp;&amp; data.tierActivationNotice.id) {
           try { window.parent.postMessage({ type:&quot;zefirok-tier-activation-notice&quot;, notice:data.tierActivationNotice }, &quot;*&quot;); } catch (error) {}
         }
@@ -33478,8 +33514,7 @@ html &gt; body.zefirok-game-expanded{height:var(--zefirok-visible-height,100dvh)
 #zefirok-maltipoo-runner .gt-history-done-icon{width:14px;height:14px;object-fit:contain}
 #zefirok-maltipoo-runner .gt-series-node-done{width:18px;height:18px;object-fit:contain}
 &lt;/style&gt;
-&lt;script id=&quot;zefirok-game-tasks-inline-runtime-v18&quot;&gt;
-(()=&gt;{
+&lt;script id=&quot;zefirok-game-tasks-inline-runtime-v18&quot;&gt;(()=&gt;{
   &#x27;use strict&#x27;;
   if(window.__ZEFIROK_GAME_TASKS_UI_V18__)return;
   window.__ZEFIROK_GAME_TASKS_UI_V18__=true;
@@ -33515,7 +33550,7 @@ html &gt; body.zefirok-game-expanded{height:var(--zefirok-visible-height,100dvh)
     series:&#x27;/assets/ui/icon_series_protection.webp&#x27;,
     event:&#x27;/assets/ui/icon_goal.webp&#x27;,
     weekly:&#x27;/assets/ui/icon_timer.webp&#x27;,
-    daily:&#x27;/assets/ui/icon_quest_game.webp&#x27;,
+    daily:&#x27;/assets/ui/icon_quest_day.webp&#x27;,
     runs:&#x27;/assets/cases/avatars/achievements/achievement_runs.webp&#x27;,
     zefir:&#x27;/assets/season-pass/zefir_currency.webp&#x27;,
     coffee:&#x27;/assets/optimized/v0.79.5/iconCoffee.webp&#x27;,
@@ -33567,6 +33602,7 @@ html &gt; body.zefirok-game-expanded{height:var(--zefirok-visible-height,100dvh)
     const type=String(task?.triggerType||&#x27;&#x27;);
     if(type===&#x27;collect_zefir&#x27;)return TASK_ICONS.zefir;
     if(type===&#x27;collect_coffee&#x27;)return TASK_ICONS.coffee;
+    if(type===&#x27;daily_logins&#x27;)return TASK_ICONS.daily;
     if([&#x27;opened_cases&#x27;,&#x27;case_purchases&#x27;,&#x27;open_specific_case&#x27;].includes(type))return TASK_ICONS.cases;
     if([&#x27;single_run_score&#x27;,&#x27;total_score&#x27;,&#x27;total_run_score&#x27;,&#x27;best_score&#x27;].includes(type))return TASK_ICONS.score;
     if(type===&#x27;new_records&#x27;)return TASK_ICONS.record;
@@ -33618,6 +33654,7 @@ html &gt; body.zefirok-game-expanded{height:var(--zefirok-visible-height,100dvh)
     if([&#x27;total_score&#x27;,&#x27;total_run_score&#x27;].includes(type))return `${fmt(current)} / ${fmt(goal)} очков`;
     if(type===&#x27;level_reached&#x27;)return `Уровень ${fmt(current)} / ${fmt(goal)}`;
     if([&#x27;accepted_runs&#x27;,&#x27;completed_runs&#x27;,&#x27;runs_with_skin&#x27;,&#x27;runs_with_booster&#x27;,&#x27;runs_without_boosters&#x27;].includes(type))return `${fmt(current)} / ${fmt(goal)} ${plural(goal,&#x27;забег&#x27;,&#x27;забега&#x27;,&#x27;забегов&#x27;)}`;
+    if(type===&#x27;daily_logins&#x27;)return `${fmt(current)} / ${fmt(goal)} ${plural(goal,&#x27;вход&#x27;,&#x27;входа&#x27;,&#x27;входов&#x27;)}`;
     if([&#x27;opened_cases&#x27;,&#x27;case_purchases&#x27;,&#x27;open_specific_case&#x27;].includes(type))return `${fmt(current)} / ${fmt(goal)} ${plural(goal,&#x27;кейс&#x27;,&#x27;кейса&#x27;,&#x27;кейсов&#x27;)}`;
     if(type===&#x27;collect_zefir&#x27;)return `${fmt(current)} / ${fmt(goal)} зефирок`;
     if(type===&#x27;collect_coffee&#x27;)return `${fmt(current)} / ${fmt(goal)} кофе`;
