@@ -40,6 +40,10 @@ ok(index.includes("model=data;lastSuccessAt=Date.now();lastError='';publishProfi
 ok(index.includes("frame.addEventListener('load',()=>{publishProfileStreakSummary();updateEntry();syncVisibility();}"), 'cached streak republishes after game frame reload');
 ok(index.includes('window.parent.postMessage({ type: &quot;zefirok-open-daily-loyalty&quot; }'), 'compact streak segment opens existing daily activity');
 ok(index.includes('data-profile-core-pass data-battle-pass-open'), 'compact pass segment reuses existing battle pass navigation');
+ok(index.includes('zefirok-profile-hero-first-paint-v36'), 'profile hero parser-time hydrator exists');
+ok(index.includes("localStorage.getItem(&#x27;zefirok-profile-core-state-v1&#x27;)"), 'first paint reads cached profile core state synchronously');
+ok(index.includes('profile-mail-shortcut{position:absolute;right:12px;top:12px;z-index:6;display:grid;place-items:center;width:36px;height:36px'), 'critical mail shortcut size is available before profile markup');
+ok(index.includes("if (!initData) {\n          // Telegram initData can appear a moment after the srcdoc starts parsing."), 'missing initData does not clear cached pass tier during boot');
 
 const bonusSection = worker.slice(worker.indexOf('async function getSeasonPassProfileBonusForUser'), worker.indexOf('async function getSeasonPassProfileBonus(request,env)'));
 ok((bonusSection.match(/passLevel:/g) || []).length === 3, 'all profile-bonus season branches expose passLevel');

@@ -8896,10 +8896,17 @@ html&gt;body{padding:
 @media(max-width:390px){#zefirok-maltipoo-runner .player-mail-dialog{padding-left:11px;padding-right:11px}#zefirok-maltipoo-runner .player-mail-head{grid-template-columns:82px minmax(0,1fr);gap:10px}#zefirok-maltipoo-runner .player-mail-symbol{width:78px;height:78px}#zefirok-maltipoo-runner .player-mail-artbox,#zefirok-maltipoo-runner .player-mail-art{max-height:min(34dvh,280px)}#zefirok-maltipoo-runner .player-mail-content h2{font-size:19px}#zefirok-maltipoo-runner .player-mail-body{font-size:11px}}
 @media(prefers-reduced-motion:reduce){#zefirok-maltipoo-runner .player-mail-layer,#zefirok-maltipoo-runner .player-mail-dialog,#zefirok-maltipoo-runner .player-mail-loading::before{animation:none!important;transition:none!important}}
 #zefirok-maltipoo-runner .profile-hero{position:relative}
-#zefirok-maltipoo-runner .profile-mail-shortcut{position:absolute;right:10px;top:10px;z-index:6;display:grid;place-items:center;width:42px;height:42px;border:1px solid rgba(224,145,176,.42);border-radius:14px;background:linear-gradient(145deg,#fff,#ffe9f1);color:#a94b70;font-size:21px;box-shadow:0 6px 15px rgba(144,66,96,.12)}
-#zefirok-maltipoo-runner .profile-mail-shortcut&gt;img{display:block;width:27px;height:27px;object-fit:contain}
-#zefirok-maltipoo-runner .profile-mail-shortcut&gt;span{position:absolute;right:-5px;top:-6px;display:inline-flex;align-items:center;justify-content:center;min-width:19px;height:19px;padding:0 4px;border:2px solid #fff;border-radius:999px;background:#e65e91;color:#fff;font-size:8px;font-weight:950;box-sizing:border-box}
+/* Critical Profile Hero first-paint rules live before the profile markup so the
+   Mini App never flashes the legacy mail control or an unstyled paid-tier badge. */
+#zefirok-maltipoo-runner .profile-mail-shortcut{position:absolute;right:12px;top:12px;z-index:6;display:grid;place-items:center;width:36px;height:36px;border:1px solid rgba(222,137,169,.24);border-radius:12px;background:rgba(255,255,255,.94);color:#a94b70;font-size:21px;box-shadow:0 5px 12px rgba(123,65,87,.07)}
+#zefirok-maltipoo-runner .profile-mail-shortcut&gt;img{display:block;width:22px;height:22px;object-fit:contain}
+#zefirok-maltipoo-runner .profile-mail-shortcut&gt;span{position:absolute;right:-4px;top:-5px;display:inline-flex;align-items:center;justify-content:center;min-width:17px;height:17px;padding:0 4px;border:2px solid #fff;border-radius:999px;background:#e65e91;color:#fff;font-size:7px;font-weight:950;box-sizing:border-box}
 #zefirok-maltipoo-runner .profile-mail-shortcut&gt;span[hidden]{display:none!important}
+#zefirok-maltipoo-runner .profile-pass-tier-badge{flex:0 0 30px;display:grid;place-items:center;width:30px;height:30px;margin:0;padding:0;border:0;border-radius:0;background:transparent;box-shadow:none}
+#zefirok-maltipoo-runner .profile-pass-tier-badge[hidden]{display:none!important}
+#zefirok-maltipoo-runner .profile-pass-tier-badge img{display:block;width:30px;height:30px;object-fit:contain;pointer-events:none}
+#zefirok-maltipoo-runner .profile-core-pass-tier-icon{display:block;flex:0 0 auto;width:16px;height:16px;object-fit:contain}
+#zefirok-maltipoo-runner .profile-core-pass-tier-icon[hidden]{display:none!important}
 #zefirok-maltipoo-runner .profile-identity{padding-right:42px}
 @media(max-width:390px){#zefirok-maltipoo-runner .player-mail-card{grid-template-columns:38px minmax(0,1fr)}#zefirok-maltipoo-runner .player-mail-card-icon{width:38px;height:38px}#zefirok-maltipoo-runner .player-mail-open{grid-column:1/-1;width:100%}}
 #zefirok-maltipoo-runner .case-result-actions{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:8px;margin-top:15px;align-items:stretch}
@@ -12692,6 +12699,43 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
       &lt;button class=&quot;profile-rank profile-rank--button&quot; data-profile-rank data-profile-level-guide type=&quot;button&quot; title=&quot;Посмотреть все уровни и звания&quot;&gt;Новичок&lt;/button&gt;
     &lt;/div&gt;
   &lt;/div&gt;
+  &lt;script id=&quot;zefirok-profile-hero-first-paint-v36&quot;&gt;(()=&gt;{
+  &#x27;use strict&#x27;;
+  try{
+    const cached=JSON.parse(localStorage.getItem(&#x27;zefirok-profile-core-state-v1&#x27;)||&#x27;null&#x27;);
+    if(!cached||typeof cached!==&#x27;object&#x27;)return;
+    const currentUserId=String(window.Telegram?.WebApp?.initDataUnsafe?.user?.id||&#x27;&#x27;);
+    const cachedUserId=String(cached.telegramId||&#x27;&#x27;);
+    if(cachedUserId&amp;&amp;currentUserId&amp;&amp;cachedUserId!==currentUserId)return;
+    const tier=String(cached.seasonPassProfileTier||&#x27;none&#x27;).toLowerCase();
+    const activeTier=tier===&#x27;elite&#x27;||tier===&#x27;elite_plus&#x27;;
+    const plus=tier===&#x27;elite_plus&#x27;;
+    const label=plus?&#x27;Элитный+&#x27;:&#x27;Элитный&#x27;;
+    const icon=plus?&#x27;/assets/ui/icon_player_elit+.webp&#x27;:&#x27;/assets/ui/icon_player_elit.webp&#x27;;
+    const level=Math.max(0,Math.floor(Number(cached.seasonPassProfileLevel||0)));
+    const status=String(cached.seasonPassProfileStatus||&#x27;&#x27;);
+    const badge=document.querySelector(&#x27;[data-profile-pass-tier-badge]&#x27;);
+    const badgeImage=document.querySelector(&#x27;[data-profile-pass-tier-image]&#x27;);
+    if(activeTier&amp;&amp;badge&amp;&amp;badgeImage){
+      badge.hidden=false;badge.dataset.tier=tier;badge.title=`${label} активирован`;
+      badgeImage.src=icon;badgeImage.alt=label;
+    }
+    const pass=document.querySelector(&#x27;[data-profile-core-pass]&#x27;);
+    const passImage=document.querySelector(&#x27;[data-profile-core-pass-tier-image]&#x27;);
+    const passValue=document.querySelector(&#x27;[data-profile-core-pass-value]&#x27;);
+    if(pass)pass.dataset.tier=tier;
+    if(activeTier&amp;&amp;passImage){passImage.hidden=false;passImage.src=icon;passImage.alt=label;}
+    if(passValue&amp;&amp;level&gt;0&amp;&amp;status!==&#x27;upcoming&#x27;)passValue.textContent=level.toLocaleString(&#x27;ru-RU&#x27;);
+    const streakValue=Number(cached.profileDailyStreakState?.streak);
+    if(Number.isFinite(streakValue)){
+      const streak=Math.max(0,Math.floor(streakValue));
+      const streakButton=document.querySelector(&#x27;[data-profile-streak-open]&#x27;);
+      const streakText=document.querySelector(&#x27;[data-profile-core-streak-value]&#x27;);
+      if(streakText)streakText.textContent=streak.toLocaleString(&#x27;ru-RU&#x27;);
+      if(streakButton){streakButton.dataset.streakTier=String(Math.max(0,Math.min(10,Math.floor(streak/10))));streakButton.classList.add(&#x27;is-known&#x27;);}
+    }
+  }catch{}
+})();&lt;/script&gt;
 
   &lt;div class=&quot;profile-v2-quickbar&quot; aria-label=&quot;Быстрый доступ&quot;&gt;
     &lt;button class=&quot;profile-v2-quick profile-v2-quick--rating&quot; data-leaderboard-open type=&quot;button&quot;&gt;&lt;span class=&quot;profile-v2-quick-icon&quot; aria-hidden=&quot;true&quot;&gt;&lt;img src=&quot;/assets/ui/icon_reiting.webp&quot; alt=&quot;&quot;&gt;&lt;/span&gt;&lt;span class=&quot;profile-v2-quick-copy&quot;&gt;&lt;span class=&quot;profile-v2-quick-head&quot;&gt;&lt;strong&gt;Рейтинг&lt;/strong&gt;&lt;span class=&quot;profile-v2-quick-status is-rating&quot; data-profile-v2-rating-status data-tier=&quot;none&quot;&gt;—&lt;/span&gt;&lt;/span&gt;&lt;small data-profile-v2-rating-meta&gt;Загрузка рейтинга…&lt;/small&gt;&lt;/span&gt;&lt;b aria-hidden=&quot;true&quot;&gt;›&lt;/b&gt;&lt;/button&gt;
@@ -21250,6 +21294,7 @@ function createTutorialDeck(layer, mount, options, words) {
           const parsed = raw ? JSON.parse(raw) : null;
           if (!parsed || typeof parsed !== &quot;object&quot;) return null;
           return {
+            telegramId: String(parsed.telegramId || &quot;&quot;),
             seasonPassProfileTier: String(parsed.seasonPassProfileTier || &quot;none&quot;),
             seasonPassProfileLevel: Math.max(0, Math.floor(Number(parsed.seasonPassProfileLevel || 0))),
             seasonPassProfileStatus: String(parsed.seasonPassProfileStatus || &quot;&quot;),
@@ -21264,6 +21309,7 @@ function createTutorialDeck(layer, mount, options, words) {
       function writeProfileCoreStateCache() {
         try {
           localStorage.setItem(PROFILE_CORE_STATE_CACHE_KEY, JSON.stringify({
+            telegramId: String(telegramProfile?.id || window.Telegram?.WebApp?.initDataUnsafe?.user?.id || &quot;&quot;),
             seasonPassProfileTier,
             seasonPassProfileLevel: Math.max(0, Math.floor(Number(seasonPassProfileLevel || 0))),
             seasonPassProfileStatus: String(seasonPassProfileStatus || &quot;&quot;),
@@ -21281,7 +21327,10 @@ function createTutorialDeck(layer, mount, options, words) {
       let seasonPassProfileStatus = &quot;&quot;;
       let profileDailyStreakState = null;
       const cachedProfileCoreState = readProfileCoreStateCache();
-      if (cachedProfileCoreState) {
+      const currentProfileCoreTelegramId = String(telegramProfile?.id || window.Telegram?.WebApp?.initDataUnsafe?.user?.id || &quot;&quot;);
+      const cachedProfileCoreTelegramId = String(cachedProfileCoreState?.telegramId || &quot;&quot;);
+      const profileCoreCacheMatchesPlayer = !cachedProfileCoreTelegramId || !currentProfileCoreTelegramId || cachedProfileCoreTelegramId === currentProfileCoreTelegramId;
+      if (cachedProfileCoreState &amp;&amp; profileCoreCacheMatchesPlayer) {
         seasonPassProfileTier = cachedProfileCoreState.seasonPassProfileTier === &quot;elite_plus&quot;
           ? &quot;elite_plus&quot;
           : (cachedProfileCoreState.seasonPassProfileTier === &quot;elite&quot; ? &quot;elite&quot; : &quot;none&quot;);
@@ -21382,7 +21431,9 @@ function createTutorialDeck(layer, mount, options, words) {
       async function loadSeasonPassProfileBonus() {
         const initData = String(telegramProfile?.initData || &quot;&quot;);
         if (!initData) {
-          applySeasonPassProfileBonus({ active: false, multiplier: 1, premiumTier: &quot;none&quot;, passLevel: 0, status: &quot;&quot; });
+          // Telegram initData can appear a moment after the srcdoc starts parsing.
+          // Keep the last authoritative cached tier/level instead of flashing a fake Free state.
+          if (isScreenVisible(&quot;profile&quot;)) renderProfile();
           return false;
         }
         try {
