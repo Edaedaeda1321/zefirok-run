@@ -28,6 +28,15 @@ for (const text of [source, runner]) for (const m of text.matchAll(/<script\b([^
   new vm.Script(m[2], {filename: 'task-modal-inline-' + (++parsed)});
 }
 new vm.Script(js, {filename:'assets/game-tasks.js'});
+check(js.includes("const FILTERS=new Set(['all','daily','weekly','permanent','event','series','ready']);"), 'Permanent task filter is registered');
+check(js.includes("function isPermanent(task){return !isSeries(task)&&String(task?.mode||'')==='one_time';}"), 'one_time tasks map to the permanent section');
+check(js.includes("if(filter==='permanent')return isPermanent(task);"), 'Permanent filter routes one-time tasks');
+check(js.includes("chip('permanent','Постоянные',counts.permanent)"), 'Permanent filter chip is rendered');
+check(js.includes("if(isPermanent(task))return 'Постоянное';"), 'Permanent tasks use the permanent label');
+const permanentRewardMigration=fs.readFileSync('migrations/0112_game_task_permanent_rewards.sql','utf8');
+check(permanentRewardMigration.includes('"id":"legendary","amount":1,"profileXp":0,"reason":"Ветеран сезона"'), 'Level 50 reward is Legendary with no profile XP');
+check(permanentRewardMigration.includes('"id":"mythic","amount":1,"profileXp":0,"reason":"Путь игрока"'), 'Player Path final reward is Mythic with no profile XP');
+check(permanentRewardMigration.includes("task_key='task_once_level_50'") && permanentRewardMigration.includes("task_key='series_player_path'"), 'Unclaimed completion snapshots are rebalanced too');
 check(parsed > 10, 'Real host and embedded scripts parse');
 const nav = css.match(/\.gt-topbar \.gt-icon-button\{([^}]+)\}/)?.[1] || '';
 for (const rule of ['width:34px', 'min-width:34px', 'max-width:34px', 'height:34px', 'min-height:34px', 'max-height:34px', 'padding:0', 'box-sizing:border-box']) check(nav.includes(rule), 'Navigation overrides generic buttons: ' + rule);

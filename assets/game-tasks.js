@@ -13,7 +13,7 @@
   const API_READ='/api/tasks/read';
   const CACHE_MS=15000;
   const REQUEST_TIMEOUT_MS=12000;
-  const FILTERS=new Set(['all','daily','weekly','event','series','ready']);
+  const FILTERS=new Set(['all','daily','weekly','permanent','event','series','ready']);
   let payload=null,filter='all',loading=false,inflight=null,readInflight=null,readQueued=false,lastFreshAt=0,serverOffsetMs=0,claimingKey='',claimSuccessKey='',claimingAll=false,claimedOpen=false,toastTimer=0,timerTick=0,completionNoticeTimer=0,completionNoticePoll=0,bulkReceiptViewportLock=null,bulkReceiptCloseTimer=0;
   const committedClaims=new Set();
   const completionNoticeSeen=new Set();
@@ -78,7 +78,8 @@
   function isDaily(task){return !isSeries(task)&&String(task?.mode||'')==='daily';}
   function isWeekly(task){return !isSeries(task)&&String(task?.mode||'')==='weekly';}
   function isEvent(task){return !isSeries(task)&&String(task?.mode||'')==='event';}
-  function taskKindLabel(task){if(isSeries(task))return 'Цепочка';if(isDaily(task))return 'Ежедневное';if(isWeekly(task))return 'Еженедельное';if(isEvent(task))return 'Событие';return 'Одноразовое';}
+  function isPermanent(task){return !isSeries(task)&&String(task?.mode||'')==='one_time';}
+  function taskKindLabel(task){if(isSeries(task))return 'Цепочка';if(isDaily(task))return 'Ежедневное';if(isWeekly(task))return 'Еженедельное';if(isPermanent(task))return 'Постоянное';if(isEvent(task))return 'Событие';return 'Задание';}
   function taskIconSrc(task){
     if(isSeries(task))return TASK_ICONS.series;
     if(isEvent(task))return TASK_ICONS.event;
@@ -201,6 +202,7 @@
   function matchesFilter(task){
     if(filter==='daily')return isDaily(task);
     if(filter==='weekly')return isWeekly(task);
+    if(filter==='permanent')return isPermanent(task);
     if(filter==='event')return isEvent(task);
     if(filter==='series')return isSeries(task);
     if(filter==='ready')return isReady(task);
@@ -505,9 +507,9 @@
 
   function filtersMarkup(){
     const tasks=list(payload?.tasks).filter(task=>!task?.claimed);
-    const counts={all:tasks.length,daily:tasks.filter(isDaily).length,weekly:tasks.filter(isWeekly).length,event:tasks.filter(isEvent).length,series:tasks.filter(isSeries).length,ready:tasks.filter(isReady).length};
+    const counts={all:tasks.length,daily:tasks.filter(isDaily).length,weekly:tasks.filter(isWeekly).length,permanent:tasks.filter(isPermanent).length,event:tasks.filter(isEvent).length,series:tasks.filter(isSeries).length,ready:tasks.filter(isReady).length};
     const chip=(key,label,count,extra='')=>`<button class="gt-filter${extra}" data-gt-filter="${key}" role="tab" aria-selected="${filter===key}" type="button">${label}<span class="gt-filter-count">${count}</span></button>`;
-    return `<div class="gt-filter-row" role="tablist" aria-label="Фильтры заданий">${chip('all','Все',counts.all)}${chip('daily','Ежедневные',counts.daily)}${chip('weekly','Еженедельные',counts.weekly)}${chip('event','События',counts.event)}${chip('series','Цепочки',counts.series)}${counts.ready?chip('ready','Готово',counts.ready,' is-ready-filter'):''}</div>`;
+    return `<div class="gt-filter-row" role="tablist" aria-label="Фильтры заданий">${chip('all','Все',counts.all)}${chip('daily','Ежедневные',counts.daily)}${chip('weekly','Еженедельные',counts.weekly)}${chip('permanent','Постоянные',counts.permanent)}${chip('event','События',counts.event)}${chip('series','Цепочки',counts.series)}${counts.ready?chip('ready','Готово',counts.ready,' is-ready-filter'):''}</div>`;
   }
 
   function seasonMarkup(){
