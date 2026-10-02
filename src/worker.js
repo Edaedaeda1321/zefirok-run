@@ -36923,16 +36923,20 @@ async function seasonPassAttentionForPlayer(env,season,telegramId,player=null){
   return {claimableCount:rewardCount+taskCount+overflowCount+seasonalCaseCount,rewardCount,taskCount,overflowCount,seasonalCaseCount};
 }
 
+function seasonPassProfileDisplayLevel(player){
+  return player?seasonPassLevelFromXp(Math.max(0,Number(player?.xp)||0)):0;
+}
+
 async function getSeasonPassProfileBonusForUser(env,telegramId){
   const forcedClosure=await getSeasonPassForcedClosure(env);
   if(forcedClosure){
-    return {ok:true,active:false,multiplier:1,premiumTier:'none',seasonId:forcedClosure.nextSeasonId||'',status:'upcoming',startsAt:forcedClosure.startsAt,endsAt:forcedClosure.endsAt,claimWindowOpen:false,forceClosed:true,claimableCount:0,rewardClaimableCount:0,taskClaimableCount:0,overflowClaimableCount:0,seasonalCaseClaimableCount:0};
+    return {ok:true,active:false,multiplier:1,premiumTier:'none',passLevel:0,seasonId:forcedClosure.nextSeasonId||'',status:'upcoming',startsAt:forcedClosure.startsAt,endsAt:forcedClosure.endsAt,claimWindowOpen:false,forceClosed:true,claimableCount:0,rewardClaimableCount:0,taskClaimableCount:0,overflowClaimableCount:0,seasonalCaseClaimableCount:0};
   }
   const season=await loadSeasonPassSeason(env);
   if(season.status==='ended'){
     const player=season.claimWindowOpen?await ensureSeasonPassPlayer(env,season,String(telegramId)):null;
     const [attention,tierActivationNotice]=player?await Promise.all([seasonPassAttentionForPlayer(env,season,String(telegramId),player),pendingSeasonPassTierActivationNotice(env,String(telegramId),season)]):[{claimableCount:0,rewardCount:0,taskCount:0,overflowCount:0},null];
-    return {ok:true,active:false,multiplier:1,premiumTier:String(player?.premium_tier||'none'),seasonId:season.id,status:season.status,endsAt:season.endsAt,claimWindowOpen:Boolean(season.claimWindowOpen),tierActivationNotice,claimableCount:attention.claimableCount,rewardClaimableCount:attention.rewardCount,taskClaimableCount:attention.taskCount,overflowClaimableCount:attention.overflowCount,seasonalCaseClaimableCount:attention.seasonalCaseCount||0};
+    return {ok:true,active:false,multiplier:1,premiumTier:String(player?.premium_tier||'none'),passLevel:seasonPassProfileDisplayLevel(player),seasonId:season.id,status:season.status,endsAt:season.endsAt,claimWindowOpen:Boolean(season.claimWindowOpen),tierActivationNotice,claimableCount:attention.claimableCount,rewardClaimableCount:attention.rewardCount,taskClaimableCount:attention.taskCount,overflowClaimableCount:attention.overflowCount,seasonalCaseClaimableCount:attention.seasonalCaseCount||0};
   }
   const player=await ensureSeasonPassPlayer(env,season,String(telegramId));
   const [active,attention,tierActivationNotice]=await Promise.all([
@@ -36940,7 +36944,7 @@ async function getSeasonPassProfileBonusForUser(env,telegramId){
     seasonPassAttentionForPlayer(env,season,String(telegramId),player),
     pendingSeasonPassTierActivationNotice(env,String(telegramId),season)
   ]);
-  return {ok:true,active,multiplier:active?2:1,premiumTier:String(player?.premium_tier||'none'),seasonId:season.id,status:season.status,endsAt:season.endsAt,claimWindowOpen:false,tierActivationNotice,claimableCount:attention.claimableCount,rewardClaimableCount:attention.rewardCount,taskClaimableCount:attention.taskCount,overflowClaimableCount:attention.overflowCount,seasonalCaseClaimableCount:attention.seasonalCaseCount||0};
+  return {ok:true,active,multiplier:active?2:1,premiumTier:String(player?.premium_tier||'none'),passLevel:seasonPassProfileDisplayLevel(player),seasonId:season.id,status:season.status,endsAt:season.endsAt,claimWindowOpen:false,tierActivationNotice,claimableCount:attention.claimableCount,rewardClaimableCount:attention.rewardCount,taskClaimableCount:attention.taskCount,overflowClaimableCount:attention.overflowCount,seasonalCaseClaimableCount:attention.seasonalCaseCount||0};
 }
 
 async function getSeasonPassProfileBonus(request,env){
@@ -48183,7 +48187,7 @@ async function testProjectSandboxGameData(env, ctx) {
 
   if(path==="/api/battle-pass/access")return response({ok:true,allowed:true,canPreviewUpcoming:true,accessRole:"owner_test_project",season:testProjectSandboxPassPayload(state,snapshot).season,state:testProjectSandboxPassPayload(state,snapshot)});
   if(path==="/api/battle-pass/state")return response(testProjectSandboxPassPayload(state,snapshot));
-  if(path==="/api/battle-pass/profile-bonus"){const active=Number(state.seasonXpBoosts||0)>0||state.passTier==="elite_plus";return response({ok:true,active,multiplier:active?2:1,premiumTier:String(state.passTier||"none"),tierActivationNotice:null,claimableCount:testProjectSandboxPassPayload(state,snapshot).taskClaimableCount});}
+  if(path==="/api/battle-pass/profile-bonus"){const active=Number(state.seasonXpBoosts||0)>0||state.passTier==="elite_plus";return response({ok:true,active,multiplier:active?2:1,premiumTier:String(state.passTier||"none"),passLevel:testProjectSeasonPassLevelFromXp(state.passXp),status:"active",tierActivationNotice:null,claimableCount:testProjectSandboxPassPayload(state,snapshot).taskClaimableCount});}
   if(path==="/api/battle-pass/tier-activation/claim")return response({ok:true,claimed:false,notice:null,testOnly:true});
   if(path==="/api/battle-pass/task-notices/pending")return response({ok:true,pending:false,notice:null});
   if(path==="/api/battle-pass/task-notices/read")return response({ok:true});

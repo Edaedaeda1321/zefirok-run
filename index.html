@@ -12681,14 +12681,15 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
         &lt;h2 data-profile-name&gt;Гость кафе&lt;/h2&gt;
         &lt;button class=&quot;profile-pass-tier-badge&quot; data-profile-pass-tier-badge data-battle-pass-open type=&quot;button&quot; hidden aria-label=&quot;Открыть сезонный пропуск&quot;&gt;&lt;img data-profile-pass-tier-image src=&quot;&quot; alt=&quot;&quot;&gt;&lt;/button&gt;
       &lt;/div&gt;
-      &lt;div class=&quot;profile-status-row&quot;&gt;
-        &lt;span class=&quot;profile-source-badge is-guest&quot; data-profile-source-badge&gt;Гостевой профиль&lt;/span&gt;
-        &lt;span class=&quot;profile-premium-badge&quot; data-profile-premium-badge hidden&gt;Telegram Premium&lt;/span&gt;
+      &lt;div class=&quot;profile-core-stats&quot; aria-label=&quot;Главный прогресс игрока&quot;&gt;
+        &lt;button class=&quot;profile-core-stat profile-core-stat--level&quot; data-profile-core-level data-profile-level-guide type=&quot;button&quot; aria-label=&quot;Открыть уровни профиля&quot;&gt;&lt;small&gt;Уровень&lt;/small&gt;&lt;strong data-profile-core-level-value&gt;1&lt;/strong&gt;&lt;/button&gt;
+        &lt;button class=&quot;profile-core-stat profile-core-stat--streak&quot; data-profile-streak-open data-streak-tier=&quot;0&quot; type=&quot;button&quot; aria-label=&quot;Открыть ежедневную активность&quot;&gt;&lt;small&gt;Серия&lt;/small&gt;&lt;strong&gt;&lt;svg class=&quot;profile-core-flame&quot; viewBox=&quot;0 0 24 28&quot; aria-hidden=&quot;true&quot;&gt;&lt;path d=&quot;M13.3 1.6c1.2 5.8-4.3 7.3-4.3 12 0 2.5 1.2 4 3.5 4 2.4 0 3.7-2.4 2.5-5.8 4.8 2.6 6 5.4 4.8 8.8-2.2 6.4-11.2 7.8-15.5 2.3-4.8-6.2.4-12 9-21.3Z&quot;/&gt;&lt;path class=&quot;profile-core-flame-core&quot; d=&quot;M12.2 13.4c3 3.2 4.2 5.2 3.3 7.6-1.1 3.1-5.9 3.2-7.1.2-.9-2.4 1.4-4.8 3.8-7.8Z&quot;/&gt;&lt;/svg&gt;&lt;span data-profile-core-streak-value&gt;—&lt;/span&gt;&lt;/strong&gt;&lt;/button&gt;
+        &lt;button class=&quot;profile-core-stat profile-core-stat--pass&quot; data-profile-core-pass data-battle-pass-open type=&quot;button&quot; aria-label=&quot;Открыть сезонный пропуск&quot;&gt;&lt;small&gt;Пропуск&lt;/small&gt;&lt;strong data-profile-core-pass-value&gt;—&lt;/strong&gt;&lt;/button&gt;
       &lt;/div&gt;
       &lt;span class=&quot;profile-username&quot; data-profile-username&gt;Имя пользователя: не подключено&lt;/span&gt;
       &lt;span class=&quot;profile-id&quot; data-profile-id&gt;Источник данных: локальный профиль&lt;/span&gt;
       &lt;span class=&quot;profile-avatar-note&quot; data-profile-avatar-note&gt;Telegram не передал данные — используется аватар Зефи.&lt;/span&gt;
-      &lt;button class=&quot;profile-rank profile-rank--button&quot; data-profile-rank data-profile-level-guide type=&quot;button&quot; title=&quot;Посмотреть все уровни и звания&quot;&gt;Новичок · уровень 1&lt;/button&gt;
+      &lt;button class=&quot;profile-rank profile-rank--button&quot; data-profile-rank data-profile-level-guide type=&quot;button&quot; title=&quot;Посмотреть все уровни и звания&quot;&gt;Новичок&lt;/button&gt;
     &lt;/div&gt;
   &lt;/div&gt;
 
@@ -13464,6 +13465,12 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
       const profilePassTierImageEl = root.querySelector(&quot;[data-profile-pass-tier-image]&quot;);
       const profileUsernameEl = root.querySelector(&quot;[data-profile-username]&quot;);
       const profileIdEl = root.querySelector(&quot;[data-profile-id]&quot;);
+      const profileCoreLevelEl = root.querySelector(&quot;[data-profile-core-level]&quot;);
+      const profileCoreLevelValueEl = root.querySelector(&quot;[data-profile-core-level-value]&quot;);
+      const profileCoreStreakEl = root.querySelector(&quot;[data-profile-streak-open]&quot;);
+      const profileCoreStreakValueEl = root.querySelector(&quot;[data-profile-core-streak-value]&quot;);
+      const profileCorePassEl = root.querySelector(&quot;[data-profile-core-pass]&quot;);
+      const profileCorePassValueEl = root.querySelector(&quot;[data-profile-core-pass-value]&quot;);
       const profileRankEl = root.querySelector(&quot;[data-profile-rank]&quot;);
       const profileRankShortEl = root.querySelector(&quot;[data-profile-rank-short]&quot;);
       const profileLevelEl = root.querySelector(&quot;[data-profile-level]&quot;);
@@ -20982,6 +20989,19 @@ function createTutorialDeck(layer, mount, options, words) {
           return;
         }
 
+        if (message.type === &quot;zefirok-daily-streak-summary&quot;) {
+          if (event.source !== window.parent) return;
+          const raw = message.state &amp;&amp; typeof message.state === &quot;object&quot; ? message.state : null;
+          if (raw) {
+            profileDailyStreakState = {
+              streak:Math.max(0, Math.floor(Number(raw.streak || 0))),
+              bestStreak:Math.max(0, Math.floor(Number(raw.bestStreak || 0)))
+            };
+            if (isScreenVisible(&quot;profile&quot;)) renderProfile();
+          }
+          return;
+        }
+
         if (message.type === &quot;zefirok-daily-loyalty-panel&quot;) {
           if (event.source !== window.parent) return;
           if (message.open === true &amp;&amp; state.running &amp;&amp; !state.paused &amp;&amp; !state.over) togglePause();
@@ -21231,6 +21251,40 @@ function createTutorialDeck(layer, mount, options, words) {
       }
 
       let seasonPassProfileTier = &quot;none&quot;;
+      let seasonPassProfileLevel = 0;
+      let seasonPassProfileStatus = &quot;&quot;;
+      let profileDailyStreakState = null;
+
+      function profileCoreStreakTier(days) {
+        return Math.max(0, Math.min(10, Math.floor(Math.max(0, Number(days || 0)) / 10)));
+      }
+
+      function renderProfileCoreStats(levelState) {
+        const level = Math.max(1, Math.floor(Number(levelState?.level || 1)));
+        if (profileCoreLevelValueEl) profileCoreLevelValueEl.textContent = formatter.format(level);
+        if (profileCoreLevelEl) profileCoreLevelEl.setAttribute(&quot;aria-label&quot;, `Уровень профиля ${level}. Открыть уровни и звания`);
+
+        const hasStreak = profileDailyStreakState &amp;&amp; Number.isFinite(Number(profileDailyStreakState.streak));
+        const streak = hasStreak ? Math.max(0, Math.floor(Number(profileDailyStreakState.streak || 0))) : 0;
+        if (profileCoreStreakValueEl) profileCoreStreakValueEl.textContent = hasStreak ? formatter.format(streak) : &quot;—&quot;;
+        if (profileCoreStreakEl) {
+          profileCoreStreakEl.dataset.streakTier = String(profileCoreStreakTier(streak));
+          profileCoreStreakEl.classList.toggle(&quot;is-known&quot;, hasStreak);
+          profileCoreStreakEl.setAttribute(&quot;aria-label&quot;, hasStreak ? `Серия входов ${streak} дней. Открыть ежедневную активность` : &quot;Открыть ежедневную активность&quot;);
+          profileCoreStreakEl.title = hasStreak ? `Серия входов · ${formatter.format(streak)} дней` : &quot;Ежедневная активность&quot;;
+        }
+
+        const passLevel = Math.max(0, Math.floor(Number(seasonPassProfileLevel || 0)));
+        const passVisible = passLevel &gt; 0 &amp;&amp; seasonPassProfileStatus !== &quot;upcoming&quot;;
+        if (profileCorePassValueEl) profileCorePassValueEl.textContent = passVisible ? formatter.format(passLevel) : &quot;—&quot;;
+        if (profileCorePassEl) {
+          profileCorePassEl.dataset.tier = seasonPassProfileTier;
+          profileCorePassEl.classList.toggle(&quot;is-known&quot;, passVisible);
+          const tierLabel = seasonPassProfileTier === &quot;elite_plus&quot; ? &quot;Элитный+&quot; : seasonPassProfileTier === &quot;elite&quot; ? &quot;Элитный&quot; : &quot;&quot;;
+          profileCorePassEl.setAttribute(&quot;aria-label&quot;, passVisible ? `Уровень сезонного пропуска ${passLevel}${tierLabel ? `. ${tierLabel}` : &quot;&quot;}. Открыть сезонный пропуск` : &quot;Открыть сезонный пропуск&quot;);
+          profileCorePassEl.title = passVisible ? `Пропуск · уровень ${formatter.format(passLevel)}${tierLabel ? ` · ${tierLabel}` : &quot;&quot;}` : &quot;Сезонный пропуск&quot;;
+        }
+      }
 
       function renderProfilePassTierBadge(rawTier) {
         if (rawTier !== undefined &amp;&amp; rawTier !== null) {
@@ -21260,6 +21314,8 @@ function createTutorialDeck(layer, mount, options, words) {
         const data = payload &amp;&amp; typeof payload === &quot;object&quot; ? payload : {};
         if (Object.prototype.hasOwnProperty.call(data, &quot;premiumTier&quot;)) renderProfilePassTierBadge(data.premiumTier);
         else renderProfilePassTierBadge();
+        if (Object.prototype.hasOwnProperty.call(data, &quot;passLevel&quot;)) seasonPassProfileLevel = Math.max(0, Math.floor(Number(data.passLevel || 0)));
+        if (Object.prototype.hasOwnProperty.call(data, &quot;status&quot;)) seasonPassProfileStatus = String(data.status || &quot;&quot;);
         const active = Boolean(data.active) &amp;&amp; Number(data.multiplier || 1) &gt;= 2;
         state.seasonProfileXpBonusActive = active;
         state.seasonProfileXpMultiplier = active ? 2 : 1;
@@ -21277,7 +21333,7 @@ function createTutorialDeck(layer, mount, options, words) {
       async function loadSeasonPassProfileBonus() {
         const initData = String(telegramProfile?.initData || &quot;&quot;);
         if (!initData) {
-          applySeasonPassProfileBonus({ active: false, multiplier: 1, premiumTier: &quot;none&quot; });
+          applySeasonPassProfileBonus({ active: false, multiplier: 1, premiumTier: &quot;none&quot;, passLevel: 0, status: &quot;&quot; });
           return false;
         }
         try {
@@ -21397,7 +21453,8 @@ function createTutorialDeck(layer, mount, options, words) {
         if (profileIdEl) {
           profileIdEl.textContent = profile ? `ID Telegram: ${profile.id}` : &quot;Источник данных: локальный профиль&quot;;
         }
-        if (profileRankEl) profileRankEl.textContent = `${rank} · уровень ${levelState.level}`;
+        if (profileRankEl) profileRankEl.textContent = rank;
+        renderProfileCoreStats(levelState);
         if (profileRankShortEl) profileRankShortEl.textContent = rank;
         if (profileLevelEl) profileLevelEl.textContent = formatter.format(levelState.level);
         if (profileXpTotalEl) profileXpTotalEl.textContent = `${formatter.format(levelState.totalXp)} XP всего`;
@@ -30544,6 +30601,14 @@ function createTutorialDeck(layer, mount, options, words) {
           }, 4500);
         });
       }
+      for (const streakTrigger of root.querySelectorAll(&quot;[data-profile-streak-open]&quot;)) {
+        streakTrigger.addEventListener(&quot;click&quot;, (event) =&gt; {
+          event.preventDefault();
+          event.stopPropagation();
+          try { window.parent.postMessage({ type: &quot;zefirok-open-daily-loyalty&quot; }, &quot;*&quot;); } catch (error) {}
+        });
+      }
+
       for (const guideTrigger of root.querySelectorAll(&quot;[data-profile-level-guide]&quot;)) {
         guideTrigger.addEventListener(&quot;click&quot;, (event) =&gt; {
           event.preventDefault();
@@ -31951,6 +32016,33 @@ function createTutorialDeck(layer, mount, options, words) {
 #zefirok-maltipoo-runner .profile-rank--button{position:relative;display:flex;align-items:center;justify-content:center;width:100%;max-width:100%;box-sizing:border-box;padding-left:28px;padding-right:28px;text-align:center;overflow:hidden;text-overflow:ellipsis}
 #zefirok-maltipoo-runner .profile-rank--button::after{position:absolute;right:12px;flex:0 0 auto;margin-left:0}
 #zefirok-maltipoo-runner .profile-mail-shortcut{width:44px;height:44px;border-radius:10px;border-color:rgba(222,137,169,.26);background:rgba(255,255,255,.92);box-shadow:0 5px 14px rgba(123,65,87,.08)}
+#zefirok-maltipoo-runner .profile-core-stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));height:50px;min-height:50px;margin-top:1px;overflow:hidden;border:1px solid rgba(222,174,193,.40);border-radius:15px;background:linear-gradient(145deg,rgba(255,255,255,.94),rgba(255,244,248,.86));box-shadow:inset 0 1px 0 rgba(255,255,255,.92)}
+#zefirok-maltipoo-runner .profile-core-stat{position:relative;min-width:0;height:48px;display:grid;align-content:center;justify-items:center;gap:3px;padding:4px 5px;border:0;border-right:1px solid rgba(226,191,204,.42);border-radius:0;background:transparent;color:#714757;font:inherit;text-align:center;cursor:pointer;-webkit-tap-highlight-color:transparent;transition:background .14s ease,transform .14s ease}
+#zefirok-maltipoo-runner .profile-core-stat:last-child{border-right:0}
+#zefirok-maltipoo-runner .profile-core-stat:active{transform:scale(.97);background:rgba(255,255,255,.45)}
+#zefirok-maltipoo-runner .profile-core-stat:focus-visible{outline:2px solid rgba(213,102,145,.42);outline-offset:-3px;border-radius:11px}
+#zefirok-maltipoo-runner .profile-core-stat small{display:block;color:#9d7887;font-size:7px;font-weight:900;line-height:1;letter-spacing:.055em;text-transform:uppercase;white-space:nowrap}
+#zefirok-maltipoo-runner .profile-core-stat strong{min-width:0;display:flex;align-items:center;justify-content:center;gap:3px;color:#87455f;font-size:17px;font-weight:950;line-height:1;white-space:nowrap}
+#zefirok-maltipoo-runner .profile-core-stat--level{background:linear-gradient(145deg,rgba(255,244,248,.25),rgba(255,235,243,.54))}
+#zefirok-maltipoo-runner .profile-core-stat--level strong{color:#b04f74}
+#zefirok-maltipoo-runner .profile-core-stat--streak{--profile-streak:#c88744;--profile-streak-core:#f4bd67;background:linear-gradient(145deg,rgba(255,251,244,.36),rgba(255,244,226,.56))}
+#zefirok-maltipoo-runner .profile-core-stat--streak strong{color:var(--profile-streak)}
+#zefirok-maltipoo-runner .profile-core-flame{width:15px;height:18px;overflow:visible;fill:var(--profile-streak);filter:drop-shadow(0 2px 3px color-mix(in srgb,var(--profile-streak) 26%,transparent))}
+#zefirok-maltipoo-runner .profile-core-flame-core{fill:var(--profile-streak-core)}
+#zefirok-maltipoo-runner .profile-core-stat--streak[data-streak-tier=&quot;1&quot;],#zefirok-maltipoo-runner .profile-core-stat--streak[data-streak-tier=&quot;2&quot;]{--profile-streak:#cf7a46;--profile-streak-core:#f5c568}
+#zefirok-maltipoo-runner .profile-core-stat--streak[data-streak-tier=&quot;3&quot;],#zefirok-maltipoo-runner .profile-core-stat--streak[data-streak-tier=&quot;4&quot;],#zefirok-maltipoo-runner .profile-core-stat--streak[data-streak-tier=&quot;5&quot;]{--profile-streak:#c75f76;--profile-streak-core:#f0ad69;background:linear-gradient(145deg,rgba(255,244,244,.40),rgba(255,232,239,.62))}
+#zefirok-maltipoo-runner .profile-core-stat--streak[data-streak-tier=&quot;6&quot;]{--profile-streak:#b76f67;--profile-streak-core:#eab479;background:linear-gradient(145deg,#fff7f1,#f8e3df)}
+#zefirok-maltipoo-runner .profile-core-stat--streak[data-streak-tier=&quot;7&quot;]{--profile-streak:#7c6ca5;--profile-streak-core:#cbb9ed;background:linear-gradient(145deg,#faf8ff,#ece8f7)}
+#zefirok-maltipoo-runner .profile-core-stat--streak[data-streak-tier=&quot;8&quot;]{--profile-streak:#a6435b;--profile-streak-core:#e0b553;background:linear-gradient(145deg,#fff4f4,#f4e5d2)}
+#zefirok-maltipoo-runner .profile-core-stat--streak[data-streak-tier=&quot;9&quot;]{--profile-streak:#695a9c;--profile-streak-core:#d6c478;background:linear-gradient(145deg,#f8f5ff,#eae6f8)}
+#zefirok-maltipoo-runner .profile-core-stat--streak[data-streak-tier=&quot;10&quot;]{--profile-streak:#64758a;--profile-streak-core:#d9e3ec;background:linear-gradient(145deg,#fbfdff,#e7edf2)}
+#zefirok-maltipoo-runner .profile-core-stat--pass{background:linear-gradient(145deg,rgba(255,252,242,.35),rgba(255,245,220,.58))}
+#zefirok-maltipoo-runner .profile-core-stat--pass strong{color:#a67524}
+#zefirok-maltipoo-runner .profile-core-stat--pass[data-tier=&quot;elite&quot;]{background:linear-gradient(145deg,#fff7fb,#fbe4ee)}
+#zefirok-maltipoo-runner .profile-core-stat--pass[data-tier=&quot;elite&quot;] strong{color:#b85078}
+#zefirok-maltipoo-runner .profile-core-stat--pass[data-tier=&quot;elite_plus&quot;]{background:linear-gradient(145deg,#fffaf0,#f6e9c7)}
+#zefirok-maltipoo-runner .profile-core-stat--pass[data-tier=&quot;elite_plus&quot;] strong{color:#987022}
+#zefirok-maltipoo-runner .profile-rank--button{min-height:31px!important;padding-top:5px!important;padding-bottom:5px!important}
 
 #zefirok-maltipoo-runner .profile-v2-quickbar{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
 #zefirok-maltipoo-runner .profile-v2-quick{position:relative;min-width:0;min-height:76px;display:grid;grid-template-columns:42px minmax(0,1fr) 13px;align-items:center;gap:9px;padding:10px 11px;border:1px solid rgba(226,185,199,.48);border-radius:19px;background:linear-gradient(145deg,rgba(255,255,255,.97),rgba(255,250,248,.94));color:#684553;box-shadow:0 8px 20px rgba(108,66,81,.06),inset 0 1px 0 rgba(255,255,255,.94);font:inherit;text-align:left;-webkit-tap-highlight-color:transparent;transition:transform .15s ease,border-color .15s ease,box-shadow .15s ease}
@@ -32048,6 +32140,11 @@ function createTutorialDeck(layer, mount, options, words) {
 
 @media(max-width:390px){
   #zefirok-maltipoo-runner .profile-hero{padding:12px}
+  #zefirok-maltipoo-runner .profile-core-stats{height:48px;min-height:48px;border-radius:14px}
+  #zefirok-maltipoo-runner .profile-core-stat{height:46px;padding-inline:3px}
+  #zefirok-maltipoo-runner .profile-core-stat small{font-size:6.5px}
+  #zefirok-maltipoo-runner .profile-core-stat strong{font-size:16px}
+  #zefirok-maltipoo-runner .profile-core-flame{width:14px;height:17px}
   #zefirok-maltipoo-runner .profile-v2-quickbar{gap:6px}
   #zefirok-maltipoo-runner .profile-v2-quick{min-height:72px;grid-template-columns:36px minmax(0,1fr) 11px;gap:7px;padding:8px 9px;border-radius:17px}
   #zefirok-maltipoo-runner .profile-v2-quick-icon{width:36px;height:36px;border-radius:12px;font-size:17px}
@@ -35078,8 +35175,14 @@ function updateEntry(){
   copy.textContent=completedToday()?`Сегодня вход учтён · серия ${fmt(model.state.streak)} ${plural(model.state.streak)}`:'Награда дня, серия и история';
  }catch{}
 }
+function publishProfileStreakSummary(){
+ const target=gameFrame()?.contentWindow,state=model?.state;
+ if(!target||!state)return;
+ try{target.postMessage({type:'zefirok-daily-streak-summary',state:{streak:whole(state.streak),bestStreak:whole(state.bestStreak)}},'*');}catch{}
+}
 function refreshGameAccount(){
  const target=gameFrame()?.contentWindow;
+ publishProfileStreakSummary();
  try{target?.postMessage?.({type:'zefirok-season-pass-account-updated'},'*');}catch{}
  try{target?.postMessage?.({type:'zefirok-daily-loyalty-updated'},'*');}catch{}
  try{window.zefirokSyncAccountRevision?.('daily',true);}catch{}
@@ -35104,7 +35207,7 @@ async function claim(force=false){
   if(!data?.state||typeof data.state.todayCompleted!=='boolean'||!/^\d{4}-\d{2}-\d{2}$/.test(String(data.serverDayKey||'')))throw new Error('Сервер не вернул полное состояние активности. Повтори проверку.');
   if(epoch!==requestEpoch)return;
   const previousDay=String(model?.serverDayKey||'');
-  model=data;lastSuccessAt=Date.now();lastError='';
+  model=data;lastSuccessAt=Date.now();lastError='';publishProfileStreakSummary();
   if(data.comebackEvent?.reward)lastComeback=data.comebackEvent;else if(previousDay!==data.serverDayKey)lastComeback=null;
   lastInsuranceEvent=data.insuranceEvent||null;
   const repeated=Boolean(data.repeated),granted=list(data.grantedRewards),notice=[];
@@ -35142,7 +35245,7 @@ function bindGameFrameObserver(){
  const frame=gameFrame();if(!frame||frame===watchedFrame)return;
  frameObserver?.disconnect();watchedFrame=frame;
  frameObserver=new MutationObserver(syncVisibility);frameObserver.observe(frame,{attributes:true,attributeFilter:['class','data-activated']});
- frame.addEventListener('load',()=>{updateEntry();syncVisibility();},{once:true});
+ frame.addEventListener('load',()=>{publishProfileStreakSummary();updateEntry();syncVisibility();},{once:true});
 }
 function syncVisibility(){
  bindGameFrameObserver();resetForNewServerDay();updateEntry();
