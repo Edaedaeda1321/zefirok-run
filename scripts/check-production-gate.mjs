@@ -65,6 +65,7 @@ const steps = [
   ['index srcdoc integrity', 'node', ['scripts/check-index-srcdoc.mjs']],
   ['task modal UI', 'node', ['scripts/check-task-modal-ui.mjs']],
   ['daily prestige materials', 'node', ['scripts/check-daily-prestige-v31.mjs']],
+  ['daily streak admin setter', 'node', ['scripts/check-daily-streak-admin-set.mjs']],
   ['profile hero core status', 'node', ['scripts/check-profile-hero-core-status-v32.mjs']],
   ['progress info stability', 'node', ['scripts/check-progress-info-stability.mjs']],
   // Protect the exact regression that previously made rating/profile reads hang:

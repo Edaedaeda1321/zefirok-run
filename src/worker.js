@@ -4282,7 +4282,6 @@ async function ownerPanelRestoreDailyStreak(env, ctx) {
   const dayKey = dailyLoyaltyDayKey(Date.now(), config.season.timezoneOffsetMinutes);
   const todayCompleted = String(row.last_active_day_key || '') === dayKey;
   const effectiveBefore = dailyLoyaltyEffectiveStreak(row, dayKey, bundle.insurance, config.settings);
-  if (desired < effectiveBefore) throw new ApiError(400, 'Восстановление не может уменьшать текущую серию.');
   const restoredLastDay = todayCompleted ? dayKey : dailyLoyaltyPreviousDayKey(dayKey);
   const now = Math.floor(Date.now() / 1000);
   await env.DB.prepare(`UPDATE daily_loyalty_players SET streak=?,best_streak=MAX(best_streak,?),last_active_day_key=?,updated_at=? WHERE telegram_id=? AND season_id=?`).bind(
@@ -4290,11 +4289,11 @@ async function ownerPanelRestoreDailyStreak(env, ctx) {
   ).run();
   try {
     await logStaffAction(env, ctx.user, ctx.access, 'owner_panel_daily_streak_restore', telegramId, 'daily_loyalty', effectiveBefore, desired, {
-      seasonId:config.season.id,reason,todayCompleted,lastActiveDayKeyBefore:String(row.last_active_day_key||''),lastActiveDayKeyAfter:restoredLastDay,progressDays:Number(row.progress_days||0)
+      seasonId:config.season.id,reason,direction:desired<effectiveBefore?'decrease':desired>effectiveBefore?'increase':'same',todayCompleted,lastActiveDayKeyBefore:String(row.last_active_day_key||''),lastActiveDayKeyAfter:restoredLastDay,progressDays:Number(row.progress_days||0)
     });
   } catch (error) { console.error('daily streak restore audit failed', error); }
   const fresh = await readDailyLoyaltyBundle(env, telegramId, config.season.id);
-  return { ok:true, dailyLoyalty:dailyLoyaltyModel(config,fresh,dayKey).state };
+  return { ok:true, message:`Серия установлена: ${effectiveBefore} → ${desired}.`, dailyLoyalty:dailyLoyaltyModel(config,fresh,dayKey).state };
 }
 
 // -----------------------------------------------------------------------------
