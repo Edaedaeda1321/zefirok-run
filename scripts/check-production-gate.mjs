@@ -64,6 +64,7 @@ const steps = [
   ['worker strict module syntax', 'node', ['--no-warnings', '--experimental-vm-modules', 'scripts/check-worker-module-syntax.mjs']],
   ['index srcdoc integrity', 'node', ['scripts/check-index-srcdoc.mjs']],
   ['task modal UI', 'node', ['scripts/check-task-modal-ui.mjs']],
+  ['daily prestige materials', 'node', ['scripts/check-daily-prestige-v31.mjs']],
   ['progress info stability', 'node', ['scripts/check-progress-info-stability.mjs']],
   // Protect the exact regression that previously made rating/profile reads hang:
   // public leaderboard reads must remain read-only and first paint must stay lazy.

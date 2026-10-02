@@ -10143,13 +10143,33 @@ body { min-height: var(--zefirok-app-height, 100dvh); }
 .rating-streak-surface[data-streak-tier="2"]{--paper:linear-gradient(150deg,#fff5d9,#ffeac9 45%,#ffedf5);--ink:#986018;--metal:#c68e22;--line:#dca841}
 .rating-streak-surface[data-streak-tier="3"]{--paper:radial-gradient(ellipse at 20% 20%,#ffe4b8,#f8b7c9 62%,#eaaaac);--ink:#883952;--metal:#a96f18;--line:#c0802d;--muted:#884b5b}
 .rating-streak-surface[data-streak-tier="4"]{--paper:radial-gradient(ellipse at 20% 24%,#a85867,#692d4c 65%,#472137);--ink:#ffedc7;--muted:#edd0ce;--metal:#efc87b;--line:#d8a647;--hot:#ffb357}
-.rating-streak-surface:is([data-streak-tier="5"],[data-streak-tier="6"],[data-streak-tier="7"],[data-streak-tier="8"],[data-streak-tier="9"]){--paper:radial-gradient(ellipse at 20% 24%,#87554a,#472642 58%,#2d1b37);--ink:#fff0c9;--muted:#e5cbd7;--metal:#f3d88d;--line:#e9c66d;--hot:#ffd369}
-.rating-streak-surface[data-streak-tier="10"]{--paper:radial-gradient(ellipse at 20% 23%,#fffef6,#f9df9e 55%,#eec777);--ink:#8c5620;--muted:#855f3a;--metal:#bd8224;--line:#b47723;--hot:#ffb251}
+.rating-streak-surface[data-streak-tier="5"]{--paper:radial-gradient(ellipse at 20% 24%,#87554a,#472642 58%,#2d1b37);--ink:#fff0c9;--muted:#e5cbd7;--metal:#f3d88d;--line:#e9c66d;--hot:#ffd369}
+/* V31 material palettes follow the shared flame defaults below. */
 .rating-streak-surface .zdl-prestige-flame{position:relative;display:block;flex:none;line-height:0}
 .rating-streak-surface .zdl-prestige-flame svg{display:block;width:100%;height:100%;overflow:visible}
 .rating-streak-surface .zdl-flame-outer{fill:#f4ad4d}
 .rating-streak-surface .zdl-flame-core{fill:#ffdf84}
 .rating-streak-surface .zdl-flame-light{fill:#fff9dd}
+.rating-streak-surface[data-streak-tier="6"]{--paper:radial-gradient(ellipse at 50% 25%,#fff8ee 0%,#fce9e7 42%,#ebc5c3 100%);--ink:#713a4a;--muted:#83565e;--metal:#bd8670;--hot:#e9b197;--line:#c39182;}
+.rating-streak-surface[data-streak-tier="6"] .zdl-flame-outer{fill:#cc775b}
+.rating-streak-surface[data-streak-tier="6"] .zdl-flame-core{fill:#ffe0ad}
+.rating-streak-surface[data-streak-tier="6"] .zdl-flame-light{fill:#fff8ee}
+.rating-streak-surface[data-streak-tier="7"]{--paper:radial-gradient(ellipse at 48% 18%,#fcfdff 2%,#f0e8ff 44%,#dfd8f5 76%,#e4f4fa);--ink:#5b427e;--muted:#756084;--metal:#a393c3;--hot:#d4c4ff;--line:#baaed6;}
+.rating-streak-surface[data-streak-tier="7"] .zdl-flame-outer{fill:#9f83d1}
+.rating-streak-surface[data-streak-tier="7"] .zdl-flame-core{fill:#dcd9ff}
+.rating-streak-surface[data-streak-tier="7"] .zdl-flame-light{fill:#fff}
+.rating-streak-surface[data-streak-tier="8"]{--paper:radial-gradient(ellipse at 50% 24%,#9b3457,#651735 55%,#3d1226);--ink:#ffefc1;--muted:#e9c3cc;--metal:#e2ba62;--hot:#f0b461;--line:#ccab67;}
+.rating-streak-surface[data-streak-tier="8"] .zdl-flame-outer{fill:#f5b552}
+.rating-streak-surface[data-streak-tier="8"] .zdl-flame-core{fill:#ffe699}
+.rating-streak-surface[data-streak-tier="8"] .zdl-flame-light{fill:#ffffed}
+.rating-streak-surface[data-streak-tier="9"]{--paper:radial-gradient(ellipse at 52% 22%,#5a4d84,#32294f 55%,#1b1832);--ink:#f7edda;--muted:#d7d1e9;--metal:#d5be92;--hot:#b4a0ff;--line:#9b8bad;}
+.rating-streak-surface[data-streak-tier="9"] .zdl-flame-outer{fill:#c2a5f1}
+.rating-streak-surface[data-streak-tier="9"] .zdl-flame-core{fill:#e5dafb}
+.rating-streak-surface[data-streak-tier="9"] .zdl-flame-light{fill:#fffbed}
+.rating-streak-surface[data-streak-tier="10"]{--paper:radial-gradient(ellipse at 50% 24%,#fff 0%,#edf2f9 46%,#d6dfea 78%,#ece2f1);--ink:#39475d;--muted:#59647b;--metal:#899bb5;--hot:#bbd5f2;--line:#a3b0c3;}
+.rating-streak-surface[data-streak-tier="10"] .zdl-flame-outer{fill:#92a8cf}
+.rating-streak-surface[data-streak-tier="10"] .zdl-flame-core{fill:#d1e6ff}
+.rating-streak-surface[data-streak-tier="10"] .zdl-flame-light{fill:#fff}
 #zefirok-maltipoo-runner .rating-v6-row-result{display:grid;justify-items:end;align-content:center;gap:4px;min-width:0}
 #zefirok-maltipoo-runner .rating-streak-slot{display:flex;justify-content:flex-end;line-height:1}
 #zefirok-maltipoo-runner .rating-streak-slot:empty{display:none}
@@ -11453,8 +11473,11 @@ body { min-height: var(--zefirok-app-height, 100dvh); }
   const whole = value => Math.max(0, Math.floor(Number(value) || 0));
 function streakTone(streak){
  const days=whole(streak),rank=Math.min(10,Math.floor(days/10));
- const names=['Серия набирает ход','Верный гость','Хранитель тепла','Мастер ритма','Легенда кафе','Сладкая легенда','Золотое сердце','Звезда кафе','Огонь вдохновения','Хранитель легенд','Абсолютная легенда'];
- return {rank,title:names[rank],milestone:days>=10&&days%10===0,next:(Math.floor(days/10)+1)*10};
+ const names=['Серия набирает ход','Верный гость','Хранитель тепла','Мастер ритма','Легенда кафе','Сладкая легенда','Розовое золото','Хрустальная серия','Королевская серия','Звёздная серия','Платиновая легенда'];
+ const themes=['','','','','','','rose','crystal','royal','celestial','platinum'];
+ const materials=['','','','','','','Розовое золото · жемчужный блеск','Сахарный хрусталь · перламутр','Рубиновый бархат · золото','Лиловый космос · созвездия','Платина · белый перламутр'];
+ const mottos=['','','','','','','Тепло, которое ты сохраняешь каждый день.','Твоя серия обретает новые грани.','Особое место в сердце кафе — твоё.','Твой ритм зажигает звёзды.','Ты уже часть истории «Сладкого Забега».'];
+ return {rank,title:names[rank],milestone:days>=10&&days%10===0,next:(Math.floor(days/10)+1)*10,theme:themes[rank],material:materials[rank],motto:mottos[rank]};
 }
 function streakFlame(){
  return '<span class="zdl-prestige-flame" aria-hidden="true"><svg viewBox="0 0 70 88"><path class="zdl-flame-outer" d="M38 3C47 22 35 28 46 39C52 34 52 26 52 26C67 43 69 59 58 73C48 88 20 90 10 73C-4 52 13 36 23 26C19 41 25 46 29 42C35 36 22 20 38 3Z"/><path class="zdl-flame-core" d="M35 39C40 50 49 53 47 66C44 80 23 81 22 66C21 55 31 51 35 39Z"/><path class="zdl-flame-light" d="M35 61C46 72 35 79 30 73C27 69 32 65 35 61Z"/></svg></span>';
