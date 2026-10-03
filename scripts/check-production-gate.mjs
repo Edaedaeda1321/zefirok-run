@@ -78,6 +78,7 @@ const steps = [
   ['player collection sheet', 'node', ['scripts/check-player-collection-stage2.mjs']],
   ['player collection item details', 'node', ['scripts/check-player-collection-stage3.mjs']],
   ['player collection discovery metadata', 'node', ['scripts/check-player-collection-stage4.mjs']],
+  ['player collection prestige motion', 'node', ['scripts/check-player-collection-stage5.mjs']],
   ['rating dethrone delivery', 'node', ['scripts/check-rating-dethrone-delivery.mjs']],
   ['player directory integrity', 'node', ['scripts/check-player-directory-integrity.mjs']],
   ['case opening stability', 'node', ['scripts/check-case-stability.mjs']],

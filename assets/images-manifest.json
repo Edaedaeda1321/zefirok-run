@@ -1,8 +1,8 @@
 {
   "version": 2,
   "hashAlgorithm": "sha256",
-  "catalogHash": "d3523c02d0e703bf",
-  "count": 570,
+  "catalogHash": "9a31d61cc783dff0",
+  "count": 571,
   "images": [
     {
       "fileName": "achievements/background_achivment_panel.webp",
@@ -4451,6 +4451,14 @@
       "path": "/assets/ui/icon_timer.webp",
       "hash": "60a917fb9bd1",
       "size": 139508
+    },
+    {
+      "fileName": "ui/icon_user_collectible.webp",
+      "label": "Icon user collectible",
+      "folder": "ui",
+      "path": "/assets/ui/icon_user_collectible.webp",
+      "hash": "7c0e502c40c4",
+      "size": 161518
     },
     {
       "fileName": "ui/icon_vitrina.webp",
