@@ -14562,17 +14562,39 @@ async function leaderboardPlayerCollection(request, env) {
       ? await env.DB.prepare(`SELECT telegram_id,display_name FROM leaderboard_all_time WHERE telegram_id=? AND hidden=0 LIMIT 1`).bind(targetTelegramId).first()
       : await env.DB.prepare(`SELECT telegram_id,display_name FROM leaderboard_entries WHERE season_id=? AND telegram_id=? AND hidden=0 LIMIT 1`).bind(String(season.id),targetTelegramId).first();
     if(!publicRow)throw new ApiError(404,"Игрок сейчас не отображается в этом рейтинге.");
-    const caseRow=await env.DB.prepare(`SELECT owned_avatars_json,active_avatar_id,owned_frames_json,active_frame_id,owned_trails_json,active_trail_id,owned_skins_json,active_skin_id,owned_music_json,active_music_id FROM case_player_state WHERE telegram_id=? LIMIT 1`).bind(targetTelegramId).first();
-    const collection=await playerPublicCollection(env,caseStateFromRow(caseRow||{}));
+    const collectionStateSql=`SELECT owned_avatars_json,active_avatar_id,owned_frames_json,active_frame_id,owned_trails_json,active_trail_id,owned_skins_json,active_skin_id,owned_music_json,active_music_id FROM case_player_state WHERE telegram_id=? LIMIT 1`;
+    const targetCaseRow=await env.DB.prepare(collectionStateSql).bind(targetTelegramId).first();
+    const targetState=caseStateFromRow(targetCaseRow||{});
+    const collection=await playerPublicCollection(env,targetState);
+    const isSelf=viewerTelegramId===targetTelegramId;
+    let viewerState=targetState;
+    if(!isSelf){
+      const viewerCaseRow=await env.DB.prepare(collectionStateSql).bind(viewerTelegramId).first();
+      viewerState=caseStateFromRow(viewerCaseRow||{});
+    }
+    const viewerOwnedByKind=new Map(PLAYER_COLLECTION_KINDS.map((kind)=>[
+      kind,
+      new Set(playerCollectionOwnedIds(viewerState,kind).map((itemId)=>normalizeCaseCosmeticId(kind,itemId)).filter(Boolean))
+    ]));
+    const items=collection.items.map((item)=>{
+      const kind=String(item?.kind||"");
+      const itemId=normalizeCaseCosmeticId(kind,item?.itemId);
+      return {
+        ...item,
+        viewerOwned:Boolean(itemId&&viewerOwnedByKind.get(kind)?.has(itemId)),
+        viewerEquipped:Boolean(itemId&&playerCollectionActiveId(viewerState,kind)===itemId)
+      };
+    });
     return jsonResponse({
       ok:true,
       serverAuthoritative:true,
       generatedAt:Date.now(),
       mode,
       viewerTelegramId,
+      viewer:{ isSelf },
       player:{ telegramId:targetTelegramId, name:String(publicRow?.display_name||"Гость кафе") },
       summary:collection.summary,
-      items:collection.items
+      items
     });
   } catch(error) {
     if(error instanceof ApiError)return jsonResponse({ok:false,error:error.message},error.status);

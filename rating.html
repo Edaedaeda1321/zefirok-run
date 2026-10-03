@@ -9123,11 +9123,13 @@ body { min-height: var(--zefirok-app-height, 100dvh); }
 .rating-player-collection-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}.rating-player-collection-item{position:relative;display:grid;grid-template-rows:112px auto auto 1fr;gap:4px;min-width:0;padding:9px;border:1px solid rgba(225,190,201,.66);border-radius:18px;background:linear-gradient(155deg,rgba(255,255,255,.91),rgba(255,247,249,.84));box-shadow:0 7px 18px rgba(103,60,75,.055);overflow:hidden}.rating-player-collection-art{position:relative;display:grid;place-items:center;overflow:hidden;border-radius:14px;background:radial-gradient(circle at 50% 35%,rgba(255,255,255,.96),rgba(250,233,239,.82));box-shadow:inset 0 0 0 1px rgba(226,192,204,.45)}.rating-player-collection-art img{display:block;width:96px;height:96px;object-fit:contain;filter:drop-shadow(0 5px 8px rgba(99,58,72,.12))}.rating-player-collection-equipped{position:absolute;top:7px;right:7px;display:inline-flex;align-items:center;min-height:22px;padding:4px 7px;border:1px solid rgba(255,255,255,.64);border-radius:999px;background:linear-gradient(145deg,#e96f9c,#c94d7a);box-shadow:0 4px 10px rgba(167,57,96,.20);color:#fff;font-size:6.5px;font-weight:950;line-height:1}.rating-player-collection-kind{position:absolute;left:7px;bottom:7px;padding:4px 6px;border-radius:999px;background:rgba(255,255,255,.86);color:#9a7080;font-size:6px;font-weight:900;box-shadow:0 2px 7px rgba(96,57,72,.08)}
 .rating-player-collection-item>strong{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#70424f;font-size:10px;font-weight:950}.rating-player-collection-rarity{width:max-content;max-width:100%;padding:3px 6px;border-radius:999px;background:#f4e9ed;color:#8f6c78;font-size:6.5px;font-weight:900}.rating-player-collection-source{min-width:0;color:#a0808a;font-size:6.5px;font-weight:780;line-height:1.25;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden}
 .rating-player-collection-item[data-rarity="rare"]{border-color:rgba(89,157,207,.42);background:linear-gradient(155deg,#fbfeff,#eef9ff)}.rating-player-collection-item[data-rarity="rare"] .rating-player-collection-rarity{background:#e7f5ff;color:#4e83a8}.rating-player-collection-item[data-rarity="superrare"],.rating-player-collection-item[data-rarity="epic"]{border-color:rgba(153,101,201,.42);background:linear-gradient(155deg,#fffefe,#f7efff)}.rating-player-collection-item[data-rarity="superrare"] .rating-player-collection-rarity,.rating-player-collection-item[data-rarity="epic"] .rating-player-collection-rarity{background:#f2e8ff;color:#7a56a0}.rating-player-collection-item[data-rarity="mythic"]{border-color:rgba(210,96,128,.52);background:linear-gradient(155deg,#fffefe,#fff0f5)}.rating-player-collection-item[data-rarity="mythic"] .rating-player-collection-rarity{background:#ffe3ed;color:#a84668}.rating-player-collection-item[data-rarity="legendary"]{border-color:rgba(215,155,45,.56);background:radial-gradient(circle at 85% 0,rgba(255,238,166,.55),transparent 44%),linear-gradient(155deg,#fffefa,#fff8df)}.rating-player-collection-item[data-rarity="legendary"] .rating-player-collection-rarity{background:#fff0b7;color:#83560f}
+.rating-player-collection-item{width:100%;font:inherit;color:inherit;text-align:left;appearance:none;-webkit-appearance:none;cursor:pointer;-webkit-tap-highlight-color:transparent;touch-action:manipulation;transition:transform .15s ease,box-shadow .15s ease,filter .15s ease}.rating-player-collection-item:active{transform:scale(.985);filter:brightness(.995)}.rating-player-collection-item:focus-visible{outline:2px solid rgba(204,79,128,.38);outline-offset:2px}.rating-player-collection-viewer-owned{position:absolute;right:7px;bottom:7px;display:inline-flex;align-items:center;min-height:20px;padding:4px 6px;border:1px solid rgba(255,255,255,.74);border-radius:999px;background:rgba(111,180,129,.92);box-shadow:0 3px 9px rgba(55,119,72,.16);color:#fff;font-size:6px;font-weight:950;line-height:1;white-space:nowrap}
+.rating-player-collection-detail{position:absolute;inset:0;z-index:8;display:flex;align-items:flex-end;justify-content:center;background:rgba(65,35,47,.39);backdrop-filter:blur(7px);-webkit-backdrop-filter:blur(7px);animation:rating-player-collection-backdrop-in .18s ease both}.rating-player-collection-detail[hidden]{display:none!important}.rating-player-collection-detail-backdrop{position:absolute;inset:0}.rating-player-collection-detail-card{position:relative;z-index:1;width:100%;max-height:88%;overflow-y:auto;overscroll-behavior:contain;padding:16px max(16px,var(--zefirok-content-safe-right,0px)) max(22px,calc(var(--zefirok-content-safe-bottom,0px) + 10px)) max(16px,var(--zefirok-content-safe-left,0px));border:1px solid rgba(228,186,201,.88);border-bottom:0;border-radius:28px 28px 0 0;background:radial-gradient(circle at 84% 0,rgba(255,225,238,.74),transparent 38%),linear-gradient(165deg,#fffdfb,#fff4f7);box-shadow:0 -18px 56px rgba(66,33,46,.24);scrollbar-width:none;animation:rating-player-collection-sheet-in .24s cubic-bezier(.22,.86,.28,1) both}.rating-player-collection-detail-card::-webkit-scrollbar{display:none}.rating-player-collection-detail-close{position:absolute;top:13px;right:max(13px,var(--zefirok-content-safe-right,0px));z-index:2;display:grid;place-items:center;width:36px;height:36px;padding:0;border:1px solid rgba(224,183,198,.62);border-radius:13px;background:rgba(255,255,255,.88);color:#975e71;font:900 23px/1 var(--font-sans);appearance:none;-webkit-appearance:none;cursor:pointer;-webkit-tap-highlight-color:transparent}.rating-player-collection-detail-close:focus-visible{outline:2px solid rgba(204,79,128,.4);outline-offset:2px}.rating-player-collection-detail-content{display:grid;gap:12px}.rating-player-collection-detail-art{position:relative;display:grid;place-items:center;width:min(100%,270px);min-height:218px;margin:5px auto 0;border:1px solid rgba(226,188,201,.72);border-radius:24px;background:radial-gradient(circle at 50% 34%,#fff 0,#fff8fa 45%,#f8e7ee 100%);overflow:hidden}.rating-player-collection-detail-art img{display:block;width:184px;height:184px;object-fit:contain;filter:drop-shadow(0 9px 14px rgba(96,55,70,.14))}.rating-player-collection-detail-equipped{position:absolute;top:11px;left:11px;padding:6px 9px;border-radius:999px;background:linear-gradient(145deg,#e96f9c,#c94d7a);color:#fff;font-size:7px;font-weight:950;box-shadow:0 5px 12px rgba(167,57,96,.18)}.rating-player-collection-detail-copy{display:grid;justify-items:center;gap:6px;text-align:center}.rating-player-collection-detail-copy h3{margin:0;max-width:100%;color:#6b3b4b;font-size:21px;font-weight:950;line-height:1.08}.rating-player-collection-detail-chips{display:flex;flex-wrap:wrap;justify-content:center;gap:5px}.rating-player-collection-detail-chip{padding:5px 8px;border-radius:999px;background:#f5e8ed;color:#8e6776;font-size:7px;font-weight:900}.rating-player-collection-detail-chip.is-rarity{background:#fff0cf;color:#96652a}.rating-player-collection-detail-source{display:grid;grid-template-columns:32px minmax(0,1fr);gap:9px;align-items:center;padding:10px 11px;border:1px solid rgba(226,189,201,.62);border-radius:16px;background:rgba(255,255,255,.72)}.rating-player-collection-detail-source-icon{display:grid;place-items:center;width:32px;height:32px;border-radius:11px;background:#f8e8ee;color:#c2527a;font-size:16px;font-weight:950}.rating-player-collection-detail-source span{display:grid;gap:2px;min-width:0}.rating-player-collection-detail-source small{color:#aa8491;font-size:6.5px;font-weight:900;text-transform:uppercase;letter-spacing:.05em}.rating-player-collection-detail-source b{overflow:hidden;text-overflow:ellipsis;color:#764b59;font-size:9px;font-weight:900;line-height:1.25}.rating-player-collection-detail-statuses{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.rating-player-collection-detail-statuses.is-self{grid-template-columns:1fr}.rating-player-collection-detail-status{display:grid;gap:5px;min-height:66px;padding:10px 11px;border:1px solid rgba(224,188,199,.62);border-radius:16px;background:rgba(255,255,255,.76)}.rating-player-collection-detail-status small{color:#a37d89;font-size:6.5px;font-weight:950;text-transform:uppercase;letter-spacing:.05em}.rating-player-collection-detail-status strong{color:#6e4452;font-size:9px;font-weight:950;line-height:1.3}.rating-player-collection-detail-status.is-owned strong{color:#4e865d}.rating-player-collection-detail-status.is-missing strong{color:#9a7884}
 .rating-player-collection-empty,.rating-player-collection-error{display:grid;justify-items:center;gap:8px;padding:44px 18px;text-align:center}.rating-player-collection-empty img{display:block;width:76px;height:76px;object-fit:contain;opacity:.72}.rating-player-collection-empty strong,.rating-player-collection-error strong{color:#714653;font-size:15px;font-weight:950}.rating-player-collection-empty span,.rating-player-collection-error span{max-width:310px;color:#9a7883;font-size:9px;font-weight:780;line-height:1.45}.rating-player-collection-retry{min-height:40px;padding:9px 15px;border:0;border-radius:13px;background:linear-gradient(145deg,#e986a8,#cb537f);color:#fff;font:900 10px/1 var(--font-sans);cursor:pointer}
 .rating-player-collection-loading{display:grid;gap:11px}.rating-player-collection-loading-head{height:76px;border-radius:18px;background:linear-gradient(90deg,#f8e9ed 20%,#fff8fa 45%,#f8e9ed 70%);background-size:220% 100%;animation:rating-profile-shimmer 1.15s linear infinite}.rating-player-collection-loading-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}.rating-player-collection-loading-card{height:174px;border-radius:18px;background:linear-gradient(90deg,#f8e9ed 20%,#fff8fa 45%,#f8e9ed 70%);background-size:220% 100%;animation:rating-profile-shimmer 1.15s linear infinite}
 @keyframes rating-player-collection-backdrop-in{from{background:rgba(62,35,47,0);backdrop-filter:blur(0);-webkit-backdrop-filter:blur(0)}to{background:rgba(62,35,47,.42);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px)}}@keyframes rating-player-collection-sheet-in{from{transform:translateY(34px);opacity:.5}to{transform:translateY(0);opacity:1}}
 @media(max-width:360px){.rating-player-collection-grid,.rating-player-collection-loading-grid{gap:7px}.rating-player-collection-item{grid-template-rows:102px auto auto 1fr;padding:8px}.rating-player-collection-art img{width:86px;height:86px}.rating-player-collection-topbar{grid-template-columns:46px minmax(0,1fr) 38px}.rating-player-collection-hero-icon{width:46px;height:46px}.rating-player-collection-hero-icon img{width:38px;height:38px}}
-@media(prefers-reduced-motion:reduce){.rating-player-collection-layer,.rating-player-collection-sheet,.rating-player-collection-summary,.rating-player-collection-tab,.rating-player-collection-loading-head,.rating-player-collection-loading-card{animation:none!important;transition:none!important}}
+@media(prefers-reduced-motion:reduce){.rating-player-collection-layer,.rating-player-collection-sheet,.rating-player-collection-summary,.rating-player-collection-tab,.rating-player-collection-item,.rating-player-collection-detail,.rating-player-collection-detail-card,.rating-player-collection-loading-head,.rating-player-collection-loading-card{animation:none!important;transition:none!important}}
 
 
 </style>
@@ -10346,6 +10348,13 @@ body { min-height: var(--zefirok-app-height, 100dvh); }
       <button class="rating-player-collection-close" data-rating-player-collection-close type="button" aria-label="Закрыть коллекцию">×</button>
     </header>
     <div class="rating-player-collection-body" data-rating-player-collection-content></div>
+    <div class="rating-player-collection-detail" data-rating-player-collection-detail hidden aria-hidden="true">
+      <div class="rating-player-collection-detail-backdrop" data-rating-player-collection-detail-close aria-hidden="true"></div>
+      <section class="rating-player-collection-detail-card" data-rating-player-collection-detail-card role="dialog" aria-modal="true" aria-labelledby="rating-player-collection-detail-title" tabindex="-1">
+        <button class="rating-player-collection-detail-close" data-rating-player-collection-detail-close type="button" aria-label="Закрыть карточку предмета">×</button>
+        <div class="rating-player-collection-detail-content" data-rating-player-collection-detail-content></div>
+      </section>
+    </div>
   </div>
 </section>
 <script>(() => {
@@ -10503,6 +10512,9 @@ body { min-height: var(--zefirok-app-height, 100dvh); }
   const playerCollectionBody = document.querySelector("[data-rating-player-collection-content]");
   const playerCollectionTitle = document.querySelector("[data-rating-player-collection-title]");
   const playerCollectionSubtitle = document.querySelector("[data-rating-player-collection-subtitle]");
+  const playerCollectionDetail = document.querySelector("[data-rating-player-collection-detail]");
+  const playerCollectionDetailCard = document.querySelector("[data-rating-player-collection-detail-card]");
+  const playerCollectionDetailContent = document.querySelector("[data-rating-player-collection-detail-content]");
   const cache = { season: null, all_time: null };
   const requestSerial = { season: 0, all_time: 0 };
   const requestControllers = { season: null, all_time: null };
@@ -10518,6 +10530,7 @@ body { min-height: var(--zefirok-app-height, 100dvh); }
   let playerCollectionTrigger = null;
   let playerCollectionData = null;
   let playerCollectionTab = "all";
+  let playerCollectionItemTrigger = null;
   let playerProfileRequest = null;
   let playerProfileTargetId = "";
   let playerProfileTrigger = null;
@@ -10670,6 +10683,7 @@ body { min-height: var(--zefirok-app-height, 100dvh); }
 
   function closeRating() {
     if (window.ZefirokPageGuide?.closeIfOpen()) return;
+    if(playerCollectionDetail&&!playerCollectionDetail.hidden){ratingSelectHaptic();closePlayerCollectionItem();return;}
     if(playerCollectionLayer&&!playerCollectionLayer.hidden){ratingSelectHaptic();closePlayerCollection();return;}
     if(playerProfileLayer&&!playerProfileLayer.hidden){ratingSelectHaptic();closePlayerProfile();return;}
     ratingSelectHaptic();
@@ -11826,8 +11840,36 @@ function streakLaurel(){
   }
 
   function playerCollectionItemMarkup(item) {
-    const rarity=String(item?.rarity||"common"),title=String(item?.title||"Предмет"),imageUrl=String(item?.imageUrl||IMAGE_ERROR_FALLBACK),source=String(item?.source?.label||"Игровая коллекция"),kind=String(item?.kind||"");
-    return `<article class="rating-player-collection-item" data-rarity="${escapeHtml(rarity)}"><span class="rating-player-collection-art"><img data-rating-player-collection-image src="${escapeHtml(imageUrl)}" alt="" loading="lazy" decoding="async" data-fallback="${escapeHtml(IMAGE_ERROR_FALLBACK)}">${item?.equipped===true?'<span class="rating-player-collection-equipped">Выбрано</span>':""}<span class="rating-player-collection-kind">${escapeHtml(playerCollectionKindLabel(kind))}</span></span><strong title="${escapeHtml(title)}">${escapeHtml(title)}</strong><span class="rating-player-collection-rarity">${escapeHtml(String(item?.rarityLabel||"Особый"))}</span><span class="rating-player-collection-source">${escapeHtml(source)}</span></article>`;
+    const rarity=String(item?.rarity||"common"),title=String(item?.title||"Предмет"),imageUrl=String(item?.imageUrl||IMAGE_ERROR_FALLBACK),source=String(item?.source?.label||"Игровая коллекция"),kind=String(item?.kind||""),itemId=String(item?.itemId||"");
+    const showViewerOwned=playerCollectionData?.viewer?.isSelf!==true&&item?.viewerOwned===true;
+    return `<button class="rating-player-collection-item" data-rating-player-collection-item data-item-kind="${escapeHtml(kind)}" data-item-id="${escapeHtml(itemId)}" data-rarity="${escapeHtml(rarity)}" type="button" aria-label="Открыть ${escapeHtml(title)}"><span class="rating-player-collection-art"><img data-rating-player-collection-image src="${escapeHtml(imageUrl)}" alt="" loading="lazy" decoding="async" data-fallback="${escapeHtml(IMAGE_ERROR_FALLBACK)}">${item?.equipped===true?'<span class="rating-player-collection-equipped">Выбрано</span>':""}<span class="rating-player-collection-kind">${escapeHtml(playerCollectionKindLabel(kind))}</span>${showViewerOwned?'<span class="rating-player-collection-viewer-owned">Есть у тебя</span>':""}</span><strong title="${escapeHtml(title)}">${escapeHtml(title)}</strong><span class="rating-player-collection-rarity">${escapeHtml(String(item?.rarityLabel||"Особый"))}</span><span class="rating-player-collection-source">${escapeHtml(source)}</span></button>`;
+  }
+
+  function playerCollectionStatusMarkup(label,text,stateClass="is-owned") {
+    return `<span class="rating-player-collection-detail-status ${escapeHtml(stateClass)}"><small>${escapeHtml(label)}</small><strong>${escapeHtml(text)}</strong></span>`;
+  }
+
+  function openPlayerCollectionItem(item,trigger=null) {
+    if(!item||!playerCollectionDetail||!playerCollectionDetailContent)return;
+    const title=String(item?.title||"Предмет"),kind=String(item?.kind||""),rarity=String(item?.rarityLabel||"Особый"),source=String(item?.source?.label||"Игровая коллекция"),imageUrl=String(item?.imageUrl||IMAGE_ERROR_FALLBACK);
+    const isSelf=playerCollectionData?.viewer?.isSelf===true;
+    const playerStatus=item?.equipped===true?"✓ Сейчас выбрано":"✓ Есть в коллекции";
+    const viewerStatus=item?.viewerEquipped===true?"✓ Сейчас выбрано":item?.viewerOwned===true?"✓ Есть в твоей коллекции":"○ У тебя этого предмета нет";
+    const statuses=isSelf
+      ? `<div class="rating-player-collection-detail-statuses is-self">${playerCollectionStatusMarkup("Твоя коллекция",playerStatus,"is-owned")}</div>`
+      : `<div class="rating-player-collection-detail-statuses">${playerCollectionStatusMarkup("Игрок",playerStatus,"is-owned")}${playerCollectionStatusMarkup("У тебя",viewerStatus,item?.viewerOwned===true?"is-owned":"is-missing")}</div>`;
+    playerCollectionDetailContent.innerHTML=`<div class="rating-player-collection-detail-art"><img data-rating-player-collection-image src="${escapeHtml(imageUrl)}" alt="" decoding="async" data-fallback="${escapeHtml(IMAGE_ERROR_FALLBACK)}">${item?.equipped===true?'<span class="rating-player-collection-detail-equipped">Сейчас выбрано</span>':""}</div><div class="rating-player-collection-detail-copy"><h3 id="rating-player-collection-detail-title">${escapeHtml(title)}</h3><div class="rating-player-collection-detail-chips"><span class="rating-player-collection-detail-chip">${escapeHtml(playerCollectionKindLabel(kind))}</span><span class="rating-player-collection-detail-chip is-rarity">${escapeHtml(rarity)}</span></div></div><div class="rating-player-collection-detail-source"><span class="rating-player-collection-detail-source-icon" aria-hidden="true">✦</span><span><small>Источник</small><b>${escapeHtml(source)}</b></span></div>${statuses}`;
+    playerCollectionItemTrigger=trigger instanceof HTMLElement?trigger:null;
+    playerCollectionDetail.hidden=false;playerCollectionDetail.setAttribute("aria-hidden","false");ratingImpactHaptic("light");
+    try{playerCollectionDetailCard?.focus?.({preventScroll:true});}catch{}
+  }
+
+  function closePlayerCollectionItem(options={}) {
+    if(!playerCollectionDetail||playerCollectionDetail.hidden)return false;
+    const trigger=playerCollectionItemTrigger;playerCollectionItemTrigger=null;playerCollectionDetail.hidden=true;playerCollectionDetail.setAttribute("aria-hidden","true");
+    if(playerCollectionDetailContent)playerCollectionDetailContent.innerHTML="";
+    if(options?.returnFocus!==false){try{trigger?.focus?.({preventScroll:true});}catch{}}
+    return true;
   }
 
   function renderPlayerCollectionLoading(playerName="Игрок") {
@@ -11882,8 +11924,9 @@ function streakLaurel(){
 
   function closePlayerCollection(options={}) {
     if(!playerCollectionLayer||playerCollectionLayer.hidden)return;
+    closePlayerCollectionItem({returnFocus:false});
     playerCollectionRequest?.abort?.();playerCollectionRequest=null;
-    const trigger=playerCollectionTrigger;playerCollectionTrigger=null;playerCollectionTargetId="";playerCollectionData=null;playerCollectionTab="all";playerCollectionLayer.hidden=true;
+    const trigger=playerCollectionTrigger;playerCollectionTrigger=null;playerCollectionTargetId="";playerCollectionData=null;playerCollectionTab="all";playerCollectionItemTrigger=null;playerCollectionLayer.hidden=true;
     if(playerCollectionContent)playerCollectionContent.innerHTML="";
     if(options?.returnFocus!==false){try{trigger?.focus?.({preventScroll:true});}catch{}}
   }
@@ -12185,8 +12228,15 @@ function streakLaurel(){
   playerCollectionLayer?.addEventListener("click",event=>{
     if(event.target===playerCollectionLayer){ratingSelectHaptic();closePlayerCollection();return;}
     const target=event.target instanceof Element?event.target:null;if(!target)return;
+    if(target.closest("[data-rating-player-collection-detail-close]")){ratingSelectHaptic();closePlayerCollectionItem();return;}
     if(target.closest("[data-rating-player-collection-close]")){ratingSelectHaptic();closePlayerCollection();return;}
     if(target.closest("[data-rating-player-collection-retry]")&&playerCollectionTargetId){ratingImpactHaptic("light");renderPlayerCollectionLoading(String(playerCollectionData?.player?.name||playerProfileContent?.querySelector("#rating-player-profile-title")?.textContent||"Игрок"));void loadPlayerCollection(playerCollectionTargetId,true);return;}
+    const itemTrigger=target.closest("[data-rating-player-collection-item]");
+    if(itemTrigger&&playerCollectionData){
+      const itemKind=String(itemTrigger.dataset.itemKind||""),itemId=String(itemTrigger.dataset.itemId||"");
+      const item=(Array.isArray(playerCollectionData?.items)?playerCollectionData.items:[]).find((entry)=>String(entry?.kind||"")===itemKind&&String(entry?.itemId||"")===itemId);
+      if(item){openPlayerCollectionItem(item,itemTrigger);}return;
+    }
     const tab=target.closest("[data-rating-player-collection-tab]");if(tab&&playerCollectionData){const next=String(tab.dataset.ratingPlayerCollectionTab||"all");if(next!==playerCollectionTab){ratingSelectHaptic();renderPlayerCollection(playerCollectionData,next);}return;}
   });
   playerCollectionLayer?.addEventListener("error",event=>{const image=event.target;if(!(image instanceof HTMLImageElement)||!image.matches("[data-rating-player-collection-image]"))return;const fallback=String(image.dataset.fallback||IMAGE_ERROR_FALLBACK);if(fallback&&image.getAttribute("src")!==fallback)image.src=fallback;},true);
@@ -12294,6 +12344,7 @@ function streakLaurel(){
   document.addEventListener("keydown", event => {
     if((event.key==="Enter"||event.key===" ")&&document.activeElement instanceof HTMLElement&&document.activeElement.matches("[data-player-profile-id]")){event.preventDefault();openPlayerProfile(document.activeElement.dataset.playerProfileId,document.activeElement);return;}
     if (event.key !== "Escape") return;
+    if(playerCollectionDetail&&!playerCollectionDetail.hidden){closePlayerCollectionItem();return;}
     if(playerCollectionLayer&&!playerCollectionLayer.hidden){closePlayerCollection();return;}
     if(playerProfileLayer&&!playerProfileLayer.hidden){closePlayerProfile();return;}
     if (ratingFinaleLayer && !ratingFinaleLayer.hidden) { closeRatingFinale(); return; }

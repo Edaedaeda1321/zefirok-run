@@ -76,6 +76,7 @@ const steps = [
   ['rating public streaks', 'node', ['scripts/check-rating-public-streak.mjs']],
   ['player public collection', 'node', ['scripts/check-player-collection-stage1.mjs']],
   ['player collection sheet', 'node', ['scripts/check-player-collection-stage2.mjs']],
+  ['player collection item details', 'node', ['scripts/check-player-collection-stage3.mjs']],
   ['rating dethrone delivery', 'node', ['scripts/check-rating-dethrone-delivery.mjs']],
   ['player directory integrity', 'node', ['scripts/check-player-directory-integrity.mjs']],
   ['case opening stability', 'node', ['scripts/check-case-stability.mjs']],
