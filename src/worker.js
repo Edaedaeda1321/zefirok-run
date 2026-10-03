@@ -1050,6 +1050,12 @@ const DEFAULT_REWARD_TTL_SECONDS = 24 * 60 * 60;
 const DEFAULT_LIMIT_WINDOW_SECONDS = 24 * 60 * 60;
 const DEFAULT_LIMIT_MAX = 2;
 const DEFAULT_INIT_DATA_MAX_AGE_SECONDS = 24 * 60 * 60;
+const PLAYER_SESSION_VERSION = 1;
+const PLAYER_SESSION_ISSUER = "sweet-run";
+const PLAYER_SESSION_AUDIENCE = "player";
+const DEFAULT_PLAYER_SESSION_TTL_SECONDS = 30 * 60;
+const MAX_PLAYER_SESSION_TTL_SECONDS = 2 * 60 * 60;
+const PLAYER_SESSION_PROVIDERS = new Set(["telegram-miniapp", "telegram-ios", "apple-ios"]);
 const STAFF_SESSION_TTL_SECONDS = 12 * 60 * 60;
 const SUPPORT_USERNAME = "ve4n0_em";
 const SUPPORT_URL = `https://t.me/${SUPPORT_USERNAME}`;
@@ -2103,6 +2109,15 @@ export default {
       // every protected endpoint still verifies a short-lived signed owner session.
       if (url.pathname === "/api/owner/auth" && request.method === "POST") {
         return await ownerPanelFastAuth(request, env);
+      }
+      // Multi-platform player session foundation. Telegram Mini App remains the
+      // production login path; these routes are dormant until PLAYER_SESSION_SECRET
+      // is configured and are used by future native clients without changing D1 IDs.
+      if (url.pathname === "/api/auth/session/bootstrap" && request.method === "POST") {
+        return await bootstrapPlayerSession(request, env);
+      }
+      if (url.pathname === "/api/auth/session/verify" && request.method === "POST") {
+        return await verifyPlayerSession(request, env);
       }
       // Cold-start access bootstrap combines maintenance + legal in one round trip.
       // It intentionally runs before the broad runtime compatibility audit.
@@ -6596,11 +6611,8 @@ async function readPlayerAccountRevision(env, telegramId) {
 async function getPlayerAccountRevisionResponse(request, env) {
   try {
     const body = await readJson(request);
-    const initData = String(body.initData || '');
-    if (!initData) throw new ApiError(401, 'Telegram initData отсутствует.');
-    requireBotToken(env);
-    const auth = await validateTelegramInitData(initData, env);
-    return jsonResponse({ ok:true, accountRevision:await readPlayerAccountRevision(env,String(auth.user.id)), generatedAt:Date.now() });
+    const auth = await resolvePlayerAuth(request, body, env, { missingMessage:'Telegram initData отсутствует.' });
+    return jsonResponse({ ok:true, accountRevision:await readPlayerAccountRevision(env,String(auth.user.id)), generatedAt:Date.now(), authProvider:String(auth.provider || 'telegram-miniapp') });
   } catch (error) {
     if (error instanceof ApiError) return jsonResponse({ ok:false, error:error.message }, error.status);
     console.error('getPlayerAccountRevisionResponse failed', error);
@@ -7885,8 +7897,9 @@ async function getGameStartupPackage(request, env, ctx = null) {
       }
       return fallback;
     });
-    const initData = String(body.initData || "");
-    if (!initData) {
+    const initData = String(body.initData || body.init_data || "");
+    const authCandidate = playerAuthCandidate(request, body);
+    if (!authCandidate.present) {
       const publicConfig = await publicConfigPromise;
       return jsonResponse({
         ok: true,
@@ -7897,11 +7910,12 @@ async function getGameStartupPackage(request, env, ctx = null) {
       });
     }
 
-    requireBotToken(env);
-    // Public config and Telegram/D1 identity are independent cold-start work.
+    // Public config and player identity are independent cold-start work. Telegram
+    // Mini App still validates initData exactly as before; native clients can later
+    // present the signed Sweet Run bearer session without changing player IDs.
     const [publicConfig, auth] = await Promise.all([
       publicConfigPromise,
-      validateTelegramInitData(initData, env)
+      resolvePlayerAuth(request, body, env)
     ]);
     const internalBody = {
       initData,
@@ -8003,6 +8017,7 @@ async function getGameStartupPackage(request, env, ctx = null) {
     return jsonResponse({
       ok: true,
       authenticated: true,
+      authProvider: String(auth.provider || "telegram-miniapp"),
       workerBuild: WORKER_BUILD,
       generatedAt: Date.now(),
       publicConfig: playerPublicConfig,
@@ -31643,8 +31658,7 @@ async function acceptLegalDocuments(request, env) {
 async function enforceLegalAcceptanceForRequest(request, env) {
   try {
     const body = await readJson(request.clone());
-    const initData = String(body?.initData || body?.init_data || '');
-    const auth = await validateTelegramInitDataSignature(initData, env);
+    const auth = await resolvePlayerAuth(request, body, env, { applyAdminControl:false });
     const state = await legalAcceptanceState(env, String(auth.user.id), false);
     if (state.complete) return null;
     return jsonResponse({
@@ -31696,6 +31710,150 @@ async function validateTelegramInitData(initData, env) {
   const auth = await validateTelegramInitDataSignature(initData, env);
   const user = await applyPlayerAdminControl(auth.user, env);
   return { ...auth, user };
+}
+
+function playerSessionSecret(env) {
+  const secret = String(env.PLAYER_SESSION_SECRET || "");
+  if (secret.length < 32) throw new ApiError(503, "Серверная сессия приложения пока не активирована.");
+  return secret;
+}
+
+function playerSessionTtlSeconds(env) {
+  return Math.min(MAX_PLAYER_SESSION_TTL_SECONDS, positiveInt(env.PLAYER_SESSION_TTL_SECONDS, DEFAULT_PLAYER_SESSION_TTL_SECONDS));
+}
+
+function base64UrlEncodeBytes(bytes) {
+  let binary = "";
+  for (const byte of bytes) binary += String.fromCharCode(byte);
+  return btoa(binary).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/g, "");
+}
+
+function base64UrlEncodeUtf8(value) {
+  return base64UrlEncodeBytes(encoder.encode(String(value || "")));
+}
+
+function base64UrlDecodeUtf8(value) {
+  let encoded = String(value || "").replace(/-/g, "+").replace(/_/g, "/");
+  while (encoded.length % 4) encoded += "=";
+  let binary;
+  try { binary = atob(encoded); } catch { throw new ApiError(401, "Сессия приложения повреждена."); }
+  const bytes = new Uint8Array(binary.length);
+  for (let index = 0; index < binary.length; index += 1) bytes[index] = binary.charCodeAt(index);
+  try { return new TextDecoder().decode(bytes); } catch { throw new ApiError(401, "Сессия приложения повреждена."); }
+}
+
+function sanitizePlayerSessionUser(user) {
+  if (!user?.id) throw new ApiError(401, "Профиль игрока отсутствует в сессии.");
+  return {
+    id: String(user.id),
+    first_name: String(user.first_name || "").slice(0, 128),
+    last_name: String(user.last_name || "").slice(0, 128),
+    username: String(user.username || "").slice(0, 64),
+    language_code: String(user.language_code || "").slice(0, 16),
+    is_premium: Boolean(user.is_premium)
+  };
+}
+
+async function issuePlayerSession(auth, env, provider = "telegram-miniapp") {
+  const normalizedProvider = PLAYER_SESSION_PROVIDERS.has(String(provider || "")) ? String(provider) : "telegram-miniapp";
+  const user = sanitizePlayerSessionUser(auth?.user);
+  const telegramId = String(user.id);
+  if (!/^\d{4,20}$/.test(telegramId)) throw new ApiError(401, "Некорректный идентификатор игрока.");
+  const now = Math.floor(Date.now() / 1000);
+  const ttl = playerSessionTtlSeconds(env);
+  const payload = {
+    v: PLAYER_SESSION_VERSION,
+    iss: PLAYER_SESSION_ISSUER,
+    aud: PLAYER_SESSION_AUDIENCE,
+    sub: `tg:${telegramId}`,
+    telegramId,
+    provider: normalizedProvider,
+    iat: now,
+    exp: now + ttl,
+    nonce: crypto.randomUUID().replaceAll("-", ""),
+    user
+  };
+  const payloadPart = base64UrlEncodeUtf8(JSON.stringify(payload));
+  const signingInput = `sr${PLAYER_SESSION_VERSION}.${payloadPart}`;
+  const signature = await hmacSha256(encoder.encode(playerSessionSecret(env)), signingInput);
+  return {
+    accessToken: `${signingInput}.${base64UrlEncodeBytes(signature)}`,
+    expiresAt: payload.exp * 1000,
+    issuedAt: payload.iat * 1000,
+    provider: normalizedProvider,
+    user
+  };
+}
+
+async function validatePlayerSessionToken(token, env, options = {}) {
+  const raw = String(token || "").trim();
+  if (!raw || raw.length > 4096) throw new ApiError(401, "Сессия приложения отсутствует.");
+  const parts = raw.split(".");
+  if (parts.length !== 3 || parts[0] !== `sr${PLAYER_SESSION_VERSION}` || !/^[A-Za-z0-9_-]+$/.test(parts[1]) || !/^[A-Za-z0-9_-]+$/.test(parts[2])) {
+    throw new ApiError(401, "Сессия приложения не прошла проверку.");
+  }
+  const signingInput = `${parts[0]}.${parts[1]}`;
+  const expectedSignature = base64UrlEncodeBytes(await hmacSha256(encoder.encode(playerSessionSecret(env)), signingInput));
+  if (!timingSafeEqualString(parts[2], expectedSignature)) throw new ApiError(401, "Сессия приложения не прошла проверку.");
+  let payload;
+  try { payload = JSON.parse(base64UrlDecodeUtf8(parts[1])); } catch (error) {
+    if (error instanceof ApiError) throw error;
+    throw new ApiError(401, "Сессия приложения повреждена.");
+  }
+  const now = Math.floor(Date.now() / 1000);
+  const issuedAt = Math.floor(Number(payload?.iat || 0));
+  const expiresAt = Math.floor(Number(payload?.exp || 0));
+  const telegramId = String(payload?.telegramId || "");
+  if (Number(payload?.v) !== PLAYER_SESSION_VERSION || payload?.iss !== PLAYER_SESSION_ISSUER || payload?.aud !== PLAYER_SESSION_AUDIENCE) throw new ApiError(401, "Сессия приложения несовместима.");
+  if (!PLAYER_SESSION_PROVIDERS.has(String(payload?.provider || ""))) throw new ApiError(401, "Источник сессии приложения неизвестен.");
+  if (!/^\d{4,20}$/.test(telegramId) || String(payload?.sub || "") !== `tg:${telegramId}`) throw new ApiError(401, "Сессия приложения содержит некорректный профиль.");
+  if (!issuedAt || !expiresAt || issuedAt > now + 60 || expiresAt <= now || expiresAt - issuedAt > MAX_PLAYER_SESSION_TTL_SECONDS) throw new ApiError(401, "Сессия приложения устарела. Войдите снова.");
+  const rawUser = sanitizePlayerSessionUser({ ...(payload?.user || {}), id: telegramId });
+  const user = options.applyAdminControl === false ? rawUser : await applyPlayerAdminControl(rawUser, env);
+  return { user, authDate: issuedAt, provider: String(payload.provider), credential: "player-session", telegramId, sessionExpiresAt: expiresAt };
+}
+
+function playerAuthCandidate(request, body = {}) {
+  const sessionToken = bearerToken(request?.headers?.get?.("Authorization"));
+  const initData = String(body?.initData || body?.init_data || "");
+  return { sessionToken, initData, present: Boolean(sessionToken || initData) };
+}
+
+async function resolvePlayerAuth(request, body, env, options = {}) {
+  const candidate = playerAuthCandidate(request, body);
+  if (candidate.sessionToken) return validatePlayerSessionToken(candidate.sessionToken, env, options);
+  if (!candidate.initData) throw new ApiError(401, options.missingMessage || "Откройте игру внутри Telegram или войдите в приложение.");
+  requireBotToken(env);
+  const auth = options.applyAdminControl === false
+    ? await validateTelegramInitDataSignature(candidate.initData, env)
+    : await validateTelegramInitData(candidate.initData, env);
+  return { ...auth, provider: "telegram-miniapp", credential: "telegram-init-data", telegramId: String(auth.user.id) };
+}
+
+async function bootstrapPlayerSession(request, env) {
+  try {
+    const body = await readJson(request);
+    requireBotToken(env);
+    const auth = await validateTelegramInitData(String(body.initData || body.init_data || ""), env);
+    const session = await issuePlayerSession(auth, env, "telegram-miniapp");
+    return jsonResponse({ ok:true, tokenType:"Bearer", ...session });
+  } catch (error) {
+    if (error instanceof ApiError) return jsonResponse({ ok:false, error:error.message }, error.status);
+    console.error("player session bootstrap failed", error);
+    return jsonResponse({ ok:false, error:"Не удалось создать сессию приложения." }, 500);
+  }
+}
+
+async function verifyPlayerSession(request, env) {
+  try {
+    const token = bearerToken(request.headers.get("Authorization"));
+    const auth = await validatePlayerSessionToken(token, env);
+    return jsonResponse({ ok:true, provider:auth.provider, telegramId:auth.telegramId, expiresAt:auth.sessionExpiresAt * 1000, user:sanitizePlayerSessionUser(auth.user) });
+  } catch (error) {
+    if (error instanceof ApiError) return jsonResponse({ ok:false, error:error.message }, error.status);
+    console.error("player session verify failed", error);
+    return jsonResponse({ ok:false, error:"Не удалось проверить сессию приложения." }, 500);
+  }
 }
 
 async function hmacSha256(rawKey, data) {
@@ -32429,10 +32587,11 @@ async function getAccessBootstrap(request, env) {
   try {
     const body = await readJson(request);
     const initData = String(body?.initData || body?.init_data || '');
+    const authCandidate = playerAuthCandidate(request, body);
     const [settings, authResult] = await Promise.all([
       getMaintenanceSettings(env),
-      initData
-        ? validateTelegramInitDataSignature(initData, env).then((auth) => ({ ok:true, auth })).catch((error) => ({ ok:false, error }))
+      authCandidate.present
+        ? resolvePlayerAuth(request, body, env, { applyAdminControl:false, missingMessage:'Откройте игру внутри Telegram.' }).then((auth) => ({ ok:true, auth })).catch((error) => ({ ok:false, error }))
         : Promise.resolve({ ok:false, error:new ApiError(401, 'Откройте игру внутри Telegram.') })
     ]);
 
@@ -32446,9 +32605,9 @@ async function getAccessBootstrap(request, env) {
       : Promise.resolve(null);
     const [identity, legalState] = await Promise.all([identityPromise, legalPromise]);
 
-    // A Telegram startapp referral must be bound during the first ordinary game
-    // bootstrap, not only after the player opens the referrals page later.
-    if (authResult.ok) {
+    // Referral binding is specific to Telegram Mini App start_param. A native
+    // bearer session never fabricates or replays this Telegram-only signal.
+    if (authResult.ok && initData) {
       const signedReferralCode = referralCodeFromStartParam(initData);
       if (signedReferralCode) {
         try {
@@ -32480,7 +32639,7 @@ async function getAccessBootstrap(request, env) {
 
     let legal;
     if (authResult.ok) {
-      legal = { ok:true, telegramId, ...legalState };
+      legal = { ok:true, telegramId, authProvider:String(authResult.auth?.provider || 'telegram-miniapp'), ...legalState };
     } else {
       const error = authResult.error;
       legal = {

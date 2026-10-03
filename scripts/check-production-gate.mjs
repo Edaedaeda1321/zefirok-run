@@ -62,6 +62,7 @@ const steps = [
   ['repository hygiene', 'node', ['scripts/check-repo-hygiene.mjs']],
   ['worker syntax', 'node', ['--check', 'src/worker.js']],
   ['worker strict module syntax', 'node', ['--no-warnings', '--experimental-vm-modules', 'scripts/check-worker-module-syntax.mjs']],
+  ['multi-platform foundation', 'node', ['scripts/check-multiplatform-foundation.mjs']],
   ['index srcdoc integrity', 'node', ['scripts/check-index-srcdoc.mjs']],
   ['task modal UI', 'node', ['scripts/check-task-modal-ui.mjs']],
   ['daily prestige materials', 'node', ['scripts/check-daily-prestige-v31.mjs']],
