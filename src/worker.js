@@ -14610,15 +14610,17 @@ function playerCollectionAcquisitionView(item, acquisition) {
   const hasCurrent=sources.some((source)=>["active","conditional"].includes(source.availability));
   const hasPaused=sources.some((source)=>source.availability==="paused");
   const hasHistorical=sources.some((source)=>source.availability==="historical");
+  const provenanceKnown=sources.length>0;
   let status="unknown";
   if(archivedByRelease)status="archived";
   else if(hasCurrent)status="available";
   else if(hasPaused)status="paused";
   else if(sources.length&&hasHistorical)status="archived";
   else if(acquisition?.complete===true)status="unavailable";
-  const labels={available:"Можно получить",paused:"Временно недоступно",archived:"Архивный предмет",unavailable:"Сейчас недоступно",unknown:"Доступность уточняется"};
+  else if(provenanceKnown)status="known";
+  const labels={available:"Можно получить",paused:"Временно недоступно",archived:"Архивный предмет",unavailable:"Сейчас недоступно",known:"Источники подтверждены",unknown:"Доступность уточняется"};
   const sourceSummary=[...new Set(sources.map((source)=>String(source?.label||"").trim()).filter(Boolean))].slice(0,3).join(" · ");
-  return {status,label:labels[status]||labels.unknown,canObtainNow:status==="available",sourcesComplete:acquisition?.complete===true,sourceSummary,sources};
+  return {status,label:labels[status]||labels.unknown,canObtainNow:status==="available",provenanceKnown,currentAvailabilityKnown:!["known","unknown"].includes(status),sourcesComplete:acquisition?.complete===true,sourceSummary,sources};
 }
 
 function playerCollectionPublicSource(kind, itemId, definition, future) {
@@ -50428,7 +50430,7 @@ function albumAcquisitionBaselineSources(){
     result.set(key,(rows||[]).map(source=>({
       ...source,
       availability:"unknown",
-      note:String(source?.note||"\u0418\u0441\u0442\u043e\u0447\u043d\u0438\u043a \u043f\u043e\u0434\u0442\u0432\u0435\u0440\u0436\u0434\u0451\u043d \u0431\u0430\u0437\u043e\u0432\u044b\u043c \u0438\u0433\u0440\u043e\u0432\u044b\u043c \u043a\u0430\u0442\u0430\u043b\u043e\u0433\u043e\u043c; \u0430\u043a\u0442\u0443\u0430\u043b\u044c\u043d\u0430\u044f \u0434\u043e\u0441\u0442\u0443\u043f\u043d\u043e\u0441\u0442\u044c \u043a\u0435\u0439\u0441\u0430 \u043f\u0440\u043e\u0432\u0435\u0440\u044f\u0435\u0442\u0441\u044f LiveOps.")
+      note:String(source?.note||"Источник подтверждён игровым каталогом. LiveOps может временно отключить сам кейс, не меняя происхождение предмета.")
     })));
   }
   // Built-in skins are shop products even when optional discovery metadata times out.
