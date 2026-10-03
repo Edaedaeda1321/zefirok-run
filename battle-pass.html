@@ -87,7 +87,7 @@
     if(requestBody==null&&sourceRequest&&method!=="GET"&&method!=="HEAD"){try{requestBody=await sourceRequest.clone().text()}catch{requestBody=null}}
     const payload=await bodyValue(requestBody);
     let ownerSession="";try{ownerSession=String(localStorage.getItem(SESSION_KEY)||"")}catch{}
-    const initData=String(payload?.initData||window.Telegram?.WebApp?.initData||"");
+    const initData=String(payload?.initData||window.SweetRunPlatform?.auth?.legacyInitData?.() || window.Telegram?.WebApp?.initData||"");
     const controllerSignal=init.signal||sourceRequest?.signal;
     const proxyResponse=await nativeFetch(proxyUrl,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({initData,ownerSession,path:url.pathname,method,query:Object.fromEntries(url.searchParams.entries()),payload}),cache:"no-store",credentials:"same-origin",signal:controllerSignal});
     const envelope=await proxyResponse.json().catch(()=>({ok:false,error:"Test Project proxy вернул некорректный ответ."}));
@@ -5568,7 +5568,7 @@ img[src$="/xp.webp"]{
   }
 
   function telegramInitData() {
-    const direct = String(window.Telegram?.WebApp?.initData || "");
+    const direct = String(window.SweetRunPlatform?.auth?.legacyInitData?.() || window.Telegram?.WebApp?.initData || "");
     if (direct) {
       try { sessionStorage.setItem("zefirok-telegram-init-data", direct); } catch {}
       return direct;

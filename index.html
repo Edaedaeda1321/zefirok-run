@@ -703,7 +703,7 @@ body.zefirok-run-expanded>iframe[data-run-expanded="true"]{width:100%!important;
   async function legalApi(path, payload = {}) {
     const localResult = legalApiFromLocalBuild(path, payload);
     if (localResult) return localResult;
-    const initData = String(window.Telegram?.WebApp?.initData || "");
+    const initData = String(window.SweetRunPlatform?.auth?.legacyInitData?.() || window.Telegram?.WebApp?.initData || "");
     if (!initData) {
       const fallback = legalApiFromLocalBuild(path, payload);
       if (fallback) return fallback;
@@ -928,7 +928,7 @@ body.zefirok-run-expanded>iframe[data-run-expanded="true"]{width:100%!important;
     try {
       const platformAuth = window.SweetRunPlatform?.auth;
       const authSnapshot = platformAuth?.snapshot?.() || null;
-      const initData = String(authSnapshot?.initData || window.Telegram?.WebApp?.initData || "");
+      const initData = String(authSnapshot?.initData || window.SweetRunPlatform?.auth?.legacyInitData?.() || window.Telegram?.WebApp?.initData || "");
       const requestHeaders = platformAuth?.headers?.({ "Content-Type": "application/json" }) || { "Content-Type": "application/json" };
       const requestBody = platformAuth?.body?.({ initData }) || { initData };
       const response = await hostFetchWithTimeout(ACCESS_BOOTSTRAP_PATH, {
@@ -997,7 +997,7 @@ body.zefirok-run-expanded>iframe[data-run-expanded="true"]{width:100%!important;
   }
 
   async function testProjectOwnerRequest(path, payload = {}) {
-    const initData = String(window.Telegram?.WebApp?.initData || "");
+    const initData = String(window.SweetRunPlatform?.auth?.legacyInitData?.() || window.Telegram?.WebApp?.initData || "");
     if (TEST_PROJECT_MODE) window.__ZEFIROK_TP_OWNER_SESSION__ = testProjectReadOwnerSession();
     const response = await hostFetchWithTimeout(path, {
       method:"POST", headers:{"Content-Type":"application/json"},
@@ -1235,7 +1235,7 @@ body.zefirok-run-expanded>iframe[data-run-expanded="true"]{width:100%!important;
         isPremium: Boolean(user.is_premium),
         telegramPlatform: String(platform?.kind?.() || window.Telegram?.WebApp?.platform || ""),
         telegramVersion: String(window.Telegram?.WebApp?.version || ""),
-        initData: String(platform?.auth?.telegramInitData?.() || window.Telegram?.WebApp?.initData || "")
+        initData: String(platform?.auth?.telegramInitData?.() || window.SweetRunPlatform?.auth?.legacyInitData?.() || window.Telegram?.WebApp?.initData || "")
       };
     } catch (error) {
       return { available: false };
@@ -1271,7 +1271,7 @@ body.zefirok-run-expanded>iframe[data-run-expanded="true"]{width:100%!important;
     let requested = "";
     try { requested = String(new URLSearchParams(window.location.search).get("open") || ""); } catch {}
     if (!requested) return;
-    const initData = String(window.Telegram?.WebApp?.initData || "");
+    const initData = String(window.SweetRunPlatform?.auth?.legacyInitData?.() || window.Telegram?.WebApp?.initData || "");
     if (requested === "season-pass") {
       initialRequestedOverlayDelivered = true;
       openSeasonPassOverlay(initData);
@@ -1759,7 +1759,7 @@ body.zefirok-run-expanded>iframe[data-run-expanded="true"]{width:100%!important;
   async function readHostAccountRevision() {
     const platformAuth = window.SweetRunPlatform?.auth;
     const authSnapshot = platformAuth?.snapshot?.() || null;
-    const initData = String(authSnapshot?.initData || window.Telegram?.WebApp?.initData || "");
+    const initData = String(authSnapshot?.initData || window.SweetRunPlatform?.auth?.legacyInitData?.() || window.Telegram?.WebApp?.initData || "");
     if ((!initData && !authSnapshot?.sessionToken) || TEST_PROJECT_MODE) return 0;
     const controller = new AbortController();
     const timer = window.setTimeout(() => controller.abort(), 4000);
@@ -1820,7 +1820,7 @@ body.zefirok-run-expanded>iframe[data-run-expanded="true"]{width:100%!important;
     tierActivationLayer = null;
     if (!openPass) return;
     let initData="";
-    try { initData=String(window.Telegram?.WebApp?.initData||tpHostSessionGet("zefirok-telegram-init-data")||""); } catch {}
+    try { initData=String(window.SweetRunPlatform?.auth?.legacyInitData?.() || window.Telegram?.WebApp?.initData||tpHostSessionGet("zefirok-telegram-init-data")||""); } catch {}
     openSeasonPassOverlay(initData);
   }
 
@@ -1871,7 +1871,7 @@ body.zefirok-run-expanded>iframe[data-run-expanded="true"]{width:100%!important;
       return true;
     }
     if(blocked){scheduleTierActivationRetry();return false;}
-    const initData=String(window.Telegram?.WebApp?.initData||buildTelegramProfile()?.initData||"");
+    const initData=String(window.SweetRunPlatform?.auth?.legacyInitData?.() || window.Telegram?.WebApp?.initData||buildTelegramProfile()?.initData||"");
     if(!initData){scheduleTierActivationRetry();return false;}
     tierActivationClaimingId=id;
     try{
@@ -2012,7 +2012,7 @@ body.zefirok-run-expanded>iframe[data-run-expanded="true"]{width:100%!important;
         if (!requestedTier) return;
         let initData = "";
         try {
-          initData = String(window.Telegram?.WebApp?.initData || tpHostSessionGet("zefirok-telegram-init-data") || "");
+          initData = String(window.SweetRunPlatform?.auth?.legacyInitData?.() || window.Telegram?.WebApp?.initData || tpHostSessionGet("zefirok-telegram-init-data") || "");
           if (initData) tpHostSessionSet("zefirok-telegram-init-data", initData);
         } catch {}
         closeRatingOverlay();
@@ -2039,7 +2039,7 @@ body.zefirok-run-expanded>iframe[data-run-expanded="true"]{width:100%!important;
       let initData = "";
       try {
         tpHostSessionSet("zefirok-return-screen", "profile");
-        initData = String(window.Telegram?.WebApp?.initData || tpHostSessionGet("zefirok-telegram-init-data") || "");
+        initData = String(window.SweetRunPlatform?.auth?.legacyInitData?.() || window.Telegram?.WebApp?.initData || tpHostSessionGet("zefirok-telegram-init-data") || "");
         if (initData) tpHostSessionSet("zefirok-telegram-init-data", initData);
       } catch (error) {}
       openAlbumOverlay(initData);
@@ -2047,7 +2047,7 @@ body.zefirok-run-expanded>iframe[data-run-expanded="true"]{width:100%!important;
       let initData = "";
       try {
         tpHostSessionSet("zefirok-return-screen", "profile");
-        initData = String(window.Telegram?.WebApp?.initData || tpHostSessionGet("zefirok-telegram-init-data") || "");
+        initData = String(window.SweetRunPlatform?.auth?.legacyInitData?.() || window.Telegram?.WebApp?.initData || tpHostSessionGet("zefirok-telegram-init-data") || "");
         if (initData) tpHostSessionSet("zefirok-telegram-init-data", initData);
       } catch (error) {}
       openReferralsOverlay(initData);
@@ -2055,7 +2055,7 @@ body.zefirok-run-expanded>iframe[data-run-expanded="true"]{width:100%!important;
       let initData = "";
       try {
         tpHostSessionSet("zefirok-return-screen", "profile");
-        initData = String(window.Telegram?.WebApp?.initData || tpHostSessionGet("zefirok-telegram-init-data") || "");
+        initData = String(window.SweetRunPlatform?.auth?.legacyInitData?.() || window.Telegram?.WebApp?.initData || tpHostSessionGet("zefirok-telegram-init-data") || "");
         if (initData) tpHostSessionSet("zefirok-telegram-init-data", initData);
       } catch (error) {}
       openAchievementsOverlay(initData, String(message.view || "goals"));
@@ -2067,7 +2067,7 @@ body.zefirok-run-expanded>iframe[data-run-expanded="true"]{width:100%!important;
       let initData = "";
       try {
         tpHostSessionSet("zefirok-return-screen", "profile");
-        initData = String(window.Telegram?.WebApp?.initData || "");
+        initData = String(window.SweetRunPlatform?.auth?.legacyInitData?.() || window.Telegram?.WebApp?.initData || "");
         if (initData) tpHostSessionSet("zefirok-telegram-init-data", initData);
       } catch (error) {}
       openSeasonPassOverlay(initData, String(message.view || ""));
@@ -2079,7 +2079,7 @@ body.zefirok-run-expanded>iframe[data-run-expanded="true"]{width:100%!important;
       let initData = "";
       try {
         tpHostSessionSet("zefirok-return-screen", "profile");
-        initData = String(window.Telegram?.WebApp?.initData || "");
+        initData = String(window.SweetRunPlatform?.auth?.legacyInitData?.() || window.Telegram?.WebApp?.initData || "");
         if (initData) tpHostSessionSet("zefirok-telegram-init-data", initData);
       } catch (error) {}
       openRatingOverlay(initData);
@@ -2144,7 +2144,7 @@ body.zefirok-run-expanded>iframe[data-run-expanded="true"]{width:100%!important;
   let gamePollOverlay = null;
 
   async function gamePollApi(path, payload = {}) {
-    const initData = String(window.Telegram?.WebApp?.initData || "");
+    const initData = String(window.SweetRunPlatform?.auth?.legacyInitData?.() || window.Telegram?.WebApp?.initData || "");
     if (!initData && !TEST_PROJECT_MODE) return null;
     if (TEST_PROJECT_MODE) {
       const proxied = await testProjectOwnerRequest("/api/owner/test-project/game", {
@@ -2402,7 +2402,7 @@ body.zefirok-run-expanded>iframe[data-run-expanded="true"]{width:100%!important;
 
 
   async function checkGamePollAfterOpen() {
-    if (gamePollCheckStarted || gamePollOverlay || (!TEST_PROJECT_MODE && !window.Telegram?.WebApp?.initData)) return;
+    if (gamePollCheckStarted || gamePollOverlay || (!TEST_PROJECT_MODE && !window.SweetRunPlatform?.auth?.legacyInitData?.() || window.Telegram?.WebApp?.initData)) return;
     gamePollCheckStarted = true;
     try {
       const data = await gamePollApi(GAME_POLL_NEXT_PATH);
@@ -31883,7 +31883,7 @@ function createTutorialDeck(layer, mount, options, words) {
 &lt;script id=&quot;zefirok-profile-overview-client-v2&quot;&gt;
 (()=&gt;{
   const PREFIX=&quot;zefirok-ui-stale-v1&quot;,MAX_AGE=6*60*60*1000,MAX_CHARS=900000;let value=null,loadedAt=0,inflight=null;
-  const auth=()=&gt;{let initData=&quot;&quot;;try{initData=String(window.Telegram?.WebApp?.initData||sessionStorage.getItem(&quot;zefirok-telegram-init-data&quot;)||&quot;&quot;);}catch{}return initData;};
+  const auth=()=&gt;{let initData=&quot;&quot;;try{initData=String(window.SweetRunPlatform?.auth?.legacyInitData?.() || window.Telegram?.WebApp?.initData||sessionStorage.getItem(&quot;zefirok-telegram-init-data&quot;)||&quot;&quot;);}catch{}return initData;};
   const userId=(initData)=&gt;{try{const raw=new URLSearchParams(String(initData||&quot;&quot;)).get(&quot;user&quot;),user=raw?JSON.parse(raw):null;return String(user?.id||&quot;&quot;).trim();}catch{return &quot;&quot;;}};
   const key=(initData)=&gt;{const id=userId(initData);return id?`${PREFIX}:profile-overview:${id}`:&quot;&quot;;};
   const read=(initData)=&gt;{const storageKey=key(initData);if(!storageKey)return null;try{const envelope=JSON.parse(localStorage.getItem(storageKey)||&quot;null&quot;),savedAt=Number(envelope?.savedAt||0);if(Number(envelope?.v||0)!==1||!savedAt||Date.now()-savedAt&gt;MAX_AGE||!envelope?.data||typeof envelope.data!==&quot;object&quot;){if(envelope)localStorage.removeItem(storageKey);return null;}return {...envelope.data,_uiStale:true};}catch{return null;}};
@@ -31897,7 +31897,7 @@ function createTutorialDeck(layer, mount, options, words) {
 (() =&gt; {
   const albumScreen=document.querySelector(&#x27;[data-screen=&quot;profile&quot;]&#x27;),status=document.querySelector(&#x27;[data-profile-v2-album-status]&#x27;),meta=document.querySelector(&#x27;[data-profile-v2-album-meta]&#x27;);
   let loadedAt=0,loading=false;
-  const initData=()=&gt;{let value=&quot;&quot;;try{value=String(window.Telegram?.WebApp?.initData||sessionStorage.getItem(&quot;zefirok-telegram-init-data&quot;)||&quot;&quot;);}catch{}return value;};
+  const initData=()=&gt;{let value=&quot;&quot;;try{value=String(window.SweetRunPlatform?.auth?.legacyInitData?.() || window.Telegram?.WebApp?.initData||sessionStorage.getItem(&quot;zefirok-telegram-init-data&quot;)||&quot;&quot;);}catch{}return value;};
   const fallback=()=&gt;{if(status)status.textContent=&quot;Альбом&quot;;if(meta)meta.textContent=&quot;Коллекции и воспоминания&quot;;};
   const refreshAlbumQuick=async(force=false)=&gt;{if(loading||(!force&amp;&amp;Date.now()-loadedAt&lt;120000))return;if(albumScreen?.hidden)return;const auth=initData();if(!auth){fallback();return;}loading=true;const controller=new AbortController(),timer=window.setTimeout(()=&gt;controller.abort(),6500);try{const data=await window.zefirokProfileOverview?.(force);if(!data?.ok)throw new Error(&quot;album-summary&quot;);const summary=data?.album||{},owned=Math.max(0,Number(summary.ownedRequired||0)),total=Math.max(0,Number(summary.requiredTotal||0)),percent=Math.max(0,Math.min(100,Math.round(Number(summary.progressPercent||0))));if(status)status.textContent=total?`${percent}%`:&quot;Новый&quot;;if(meta)meta.textContent=total?`${owned} из ${total} собрано`:&quot;Коллекции и воспоминания&quot;;loadedAt=Date.now();}catch{fallback();}finally{window.clearTimeout(timer);loading=false;}};
   const observer=albumScreen?new MutationObserver(()=&gt;{if(!albumScreen.hidden)window.setTimeout(()=&gt;refreshAlbumQuick(),120);}):null;if(observer)observer.observe(albumScreen,{attributes:true,attributeFilter:[&quot;hidden&quot;]});if(albumScreen&amp;&amp;!albumScreen.hidden)window.setTimeout(()=&gt;refreshAlbumQuick(),350);
@@ -31913,7 +31913,7 @@ function createTutorialDeck(layer, mount, options, words) {
 &lt;/script&gt;
 &lt;script id=&quot;zefirok-referrals-profile-entry-v2&quot;&gt;
 (() =&gt; {
-  const referralInitData=()=&gt;{let value=&quot;&quot;;try{value=String(window.Telegram?.WebApp?.initData||sessionStorage.getItem(&quot;zefirok-telegram-init-data&quot;)||&quot;&quot;);}catch{}return value;};
+  const referralInitData=()=&gt;{let value=&quot;&quot;;try{value=String(window.SweetRunPlatform?.auth?.legacyInitData?.() || window.Telegram?.WebApp?.initData||sessionStorage.getItem(&quot;zefirok-telegram-init-data&quot;)||&quot;&quot;);}catch{}return value;};
   const refreshReferralSummary=async()=&gt;{const badge=document.querySelector(&quot;[data-referrals-badge]&quot;),meta=document.querySelector(&quot;[data-profile-v2-friends-meta]&quot;);if(!badge)return;const setMeta=(value)=&gt;{if(meta)meta.textContent=value;};const friendWord=(count)=&gt;{const n=Math.abs(Number(count||0)),m100=n%100,m10=n%10;return m100&gt;=11&amp;&amp;m100&lt;=14?&quot;друзей&quot;:m10===1?&quot;друг&quot;:(m10&gt;=2&amp;&amp;m10&lt;=4)?&quot;друга&quot;:&quot;друзей&quot;;};const giftWord=(count)=&gt;{const n=Math.abs(Number(count||0)),m100=n%100,m10=n%10;return m100&gt;=11&amp;&amp;m100&lt;=14?&quot;подарков&quot;:m10===1?&quot;подарок&quot;:(m10&gt;=2&amp;&amp;m10&lt;=4)?&quot;подарка&quot;:&quot;подарков&quot;;};const initData=referralInitData();if(!initData){badge.textContent=&quot;—&quot;;badge.classList.remove(&quot;is-boost&quot;);badge.hidden=false;setMeta(&quot;Играть вместе&quot;);return;}const controller=new AbortController();const timer=window.setTimeout(()=&gt;controller.abort(),6500);try{const overview=await window.zefirokProfileOverview?.();const data=overview?.referrals;if(!overview?.ok||!data)throw new Error(&quot;summary&quot;);const pending=Math.max(0,Number(data.pendingCount||0)),friends=Math.max(0,Number(data.activeFriends||0));badge.textContent=friends?`${friends} ${friendWord(friends)}`:&quot;Нет друзей&quot;;badge.classList.toggle(&quot;is-boost&quot;,Boolean(data?.boost?.active&amp;&amp;pending===0));badge.hidden=false;if(pending&gt;0)setMeta(`${pending} ${giftWord(pending)} ${pending===1?&quot;ждёт&quot;:&quot;ждут&quot;}`);else if(data?.boost?.active){const multiplier=Number(data.boost.multiplier||2);setMeta(`Совместный XP ×${multiplier} активен`);}else setMeta(friends?&quot;Играть и получать награды вместе&quot;:&quot;Пригласи друга в кафе&quot;);}catch{badge.textContent=&quot;—&quot;;badge.classList.remove(&quot;is-boost&quot;);badge.hidden=false;setMeta(&quot;Играть вместе&quot;);}finally{window.clearTimeout(timer);}};
   document.addEventListener(&quot;click&quot;, (event) =&gt; {
     const button = event.target?.closest?.(&quot;[data-referrals-open]&quot;);
@@ -31972,7 +31972,7 @@ function createTutorialDeck(layer, mount, options, words) {
 &lt;script id=&quot;zefirok-achievements-profile-entry-v5&quot;&gt;
 (() =&gt; {
   const escapeHtml=(value)=&gt;String(value??&quot;&quot;).replace(/[&amp;&lt;&gt;&quot;&#x27;]/g,(char)=&gt;char===&quot;&amp;&quot;?&quot;&amp;amp;&quot;:char===&quot;&lt;&quot;?&quot;&amp;lt;&quot;:char===&quot;&gt;&quot;?&quot;&amp;gt;&quot;:char.charCodeAt(0)===34?&quot;&amp;quot;&quot;:&quot;&amp;#39;&quot;);
-  const initData=()=&gt;{let value=&quot;&quot;;try{value=String(window.Telegram?.WebApp?.initData||window.parent?.Telegram?.WebApp?.initData||sessionStorage.getItem(&quot;zefirok-telegram-init-data&quot;)||&quot;&quot;);}catch{try{value=String(window.Telegram?.WebApp?.initData||&quot;&quot;);}catch{}}return value;};
+  const initData=()=&gt;{let value=&quot;&quot;;try{value=String(window.SweetRunPlatform?.auth?.legacyInitData?.() || window.Telegram?.WebApp?.initData||window.parent?.Telegram?.WebApp?.initData||sessionStorage.getItem(&quot;zefirok-telegram-init-data&quot;)||&quot;&quot;);}catch{try{value=String(window.SweetRunPlatform?.auth?.legacyInitData?.() || window.Telegram?.WebApp?.initData||&quot;&quot;);}catch{}}return value;};
   const SHOWCASE_CACHE_PREFIX=&quot;zefirok-achievement-showcase-profile-v1&quot;,SHOWCASE_CACHE_MAX_AGE=6*60*60*1000;
   const telegramUserId=(auth)=&gt;{try{const rawUser=new URLSearchParams(String(auth||&quot;&quot;)).get(&quot;user&quot;),user=rawUser?JSON.parse(rawUser):null;return String(user?.id||&quot;&quot;).trim();}catch{return &quot;&quot;;}};
   const showcaseCacheKey=(auth)=&gt;{const id=telegramUserId(auth);return id?`${SHOWCASE_CACHE_PREFIX}:${id}`:&quot;&quot;;};
@@ -32336,7 +32336,7 @@ function createTutorialDeck(layer, mount, options, words) {
   const POINTS_ICON=&quot;/assets/ui/icon_score_acivment.webp&quot;;
   const queue=[],seen=new Set();let active=null,timer=0,busy=false;
   const esc=(value)=&gt;String(value??&quot;&quot;).replace(/[&amp;&lt;&gt;&quot;&#x27;]/g,(char)=&gt;({&quot;&amp;&quot;:&quot;&amp;amp;&quot;,&quot;&lt;&quot;:&quot;&amp;lt;&quot;,&quot;&gt;&quot;:&quot;&amp;gt;&quot;,&quot;\&quot;&quot;:&quot;&amp;quot;&quot;,&quot;&#x27;&quot;:&quot;&amp;#39;&quot;})[char]);
-  const initData=()=&gt;{try{return String(window.Telegram?.WebApp?.initData||sessionStorage.getItem(&quot;zefirok-telegram-init-data&quot;)||&quot;&quot;);}catch{return String(window.Telegram?.WebApp?.initData||&quot;&quot;);}};
+  const initData=()=&gt;{try{return String(window.SweetRunPlatform?.auth?.legacyInitData?.() || window.Telegram?.WebApp?.initData||sessionStorage.getItem(&quot;zefirok-telegram-init-data&quot;)||&quot;&quot;);}catch{return String(window.SweetRunPlatform?.auth?.legacyInitData?.() || window.Telegram?.WebApp?.initData||&quot;&quot;);}};
   const requestId=()=&gt;{try{return crypto.randomUUID();}catch{return `achievement_${Date.now()}_${Math.random().toString(36).slice(2,10)}`;}};
   const ensureLayer=()=&gt;{let layer=document.getElementById(&quot;achievementUnlockLayer&quot;);if(layer)return layer;layer=document.createElement(&quot;div&quot;);layer.id=&quot;achievementUnlockLayer&quot;;layer.hidden=true;layer.setAttribute(&quot;aria-live&quot;,&quot;polite&quot;);document.body.appendChild(layer);return layer;};
   const art=(item)=&gt;{const url=String(item?.artUrl||&quot;&quot;).trim();return url?`&lt;img src=&quot;${esc(url)}&quot; alt=&quot;&quot; decoding=&quot;async&quot;&gt;`:esc(item?.icon||&quot;🏅&quot;);};
@@ -33641,7 +33641,7 @@ html &gt; body.zefirok-game-expanded{height:var(--zefirok-visible-height,100dvh)
   let entryNotice={readyCount:0,unreadCount:0,activeCount:0};
 
   const host=()=&gt;window.zefirokTaskHost||{};
-  const auth=()=&gt;String(host().auth?.()||window.Telegram?.WebApp?.initData||&#x27;&#x27;);
+  const auth=()=&gt;String(host().auth?.()||window.SweetRunPlatform?.auth?.legacyInitData?.() || window.Telegram?.WebApp?.initData||&#x27;&#x27;);
   const esc=value=&gt;String(value??&#x27;&#x27;).replace(/[&amp;&lt;&gt;&quot;&#x27;]/g,ch=&gt;({&#x27;&amp;&#x27;:&#x27;&amp;amp;&#x27;,&#x27;&lt;&#x27;:&#x27;&amp;lt;&#x27;,&#x27;&gt;&#x27;:&#x27;&amp;gt;&#x27;,&#x27;&quot;&#x27;:&#x27;&amp;quot;&#x27;,&quot;&#x27;&quot;:&#x27;&amp;#39;&#x27;}[ch]));
   const num=value=&gt;Number.isFinite(Number(value))?Number(value):0;
   const whole=value=&gt;Math.max(0,Math.floor(num(value)));
@@ -35498,7 +35498,7 @@ async function claim(force=false){
  resetForNewServerDay();
  if(!force&&completedToday())return;
  autoClaimStarted=true;
- const initData=String(window.Telegram?.WebApp?.initData||'');
+ const initData=String(window.SweetRunPlatform?.auth?.legacyInitData?.() || window.Telegram?.WebApp?.initData||'');
  if(!initData){lastError='Открой игру через Telegram, чтобы проверить ежедневную активность.';if(force||!hasBlockingOverlay())openLayer();return;}
  busy=true;lastError='';
  const epoch=++requestEpoch,closedAt=closeEpoch;

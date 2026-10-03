@@ -1,0 +1,348 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 56;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		A00000000000000000000001 /* SweetRunApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = B00000000000000000000001 /* SweetRunApp.swift */; };
+		A00000000000000000000002 /* AppState.swift in Sources */ = {isa = PBXBuildFile; fileRef = B00000000000000000000002 /* AppState.swift */; };
+		A00000000000000000000003 /* RootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B00000000000000000000003 /* RootView.swift */; };
+		A00000000000000000000004 /* PlayerSession.swift in Sources */ = {isa = PBXBuildFile; fileRef = B00000000000000000000004 /* PlayerSession.swift */; };
+		A00000000000000000000005 /* KeychainStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = B00000000000000000000005 /* KeychainStore.swift */; };
+		A00000000000000000000006 /* SessionStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = B00000000000000000000006 /* SessionStore.swift */; };
+		A00000000000000000000007 /* TelegramAuth.swift in Sources */ = {isa = PBXBuildFile; fileRef = B00000000000000000000007 /* TelegramAuth.swift */; };
+		A00000000000000000000008 /* SweetRunAPI.swift in Sources */ = {isa = PBXBuildFile; fileRef = B00000000000000000000008 /* SweetRunAPI.swift */; };
+		A00000000000000000000009 /* SweetRunConfig.swift in Sources */ = {isa = PBXBuildFile; fileRef = B00000000000000000000009 /* SweetRunConfig.swift */; };
+		A0000000000000000000000A /* Haptics.swift in Sources */ = {isa = PBXBuildFile; fileRef = B0000000000000000000000A /* Haptics.swift */; };
+		A0000000000000000000000B /* NativeBridge.swift in Sources */ = {isa = PBXBuildFile; fileRef = B0000000000000000000000B /* NativeBridge.swift */; };
+		A0000000000000000000000C /* GameWebView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B0000000000000000000000C /* GameWebView.swift */; };
+		A0000000000000000000000D /* TelegramLogin in Frameworks */ = {isa = PBXBuildFile; productRef = E000000000000000000000002 /* TelegramLogin */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXFileReference section */
+		B00000000000000000000001 /* SweetRunApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SweetRunApp.swift; sourceTree = "<group>"; };
+		B00000000000000000000002 /* AppState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppState.swift; sourceTree = "<group>"; };
+		B00000000000000000000003 /* RootView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RootView.swift; sourceTree = "<group>"; };
+		B00000000000000000000004 /* PlayerSession.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlayerSession.swift; sourceTree = "<group>"; };
+		B00000000000000000000005 /* KeychainStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeychainStore.swift; sourceTree = "<group>"; };
+		B00000000000000000000006 /* SessionStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionStore.swift; sourceTree = "<group>"; };
+		B00000000000000000000007 /* TelegramAuth.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TelegramAuth.swift; sourceTree = "<group>"; };
+		B00000000000000000000008 /* SweetRunAPI.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SweetRunAPI.swift; sourceTree = "<group>"; };
+		B00000000000000000000009 /* SweetRunConfig.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SweetRunConfig.swift; sourceTree = "<group>"; };
+		B0000000000000000000000A /* Haptics.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Haptics.swift; sourceTree = "<group>"; };
+		B0000000000000000000000B /* NativeBridge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NativeBridge.swift; sourceTree = "<group>"; };
+		B0000000000000000000000C /* GameWebView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GameWebView.swift; sourceTree = "<group>"; };
+		B0000000000000000000000D /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		B0000000000000000000000E /* SweetRun.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = SweetRun.app; sourceTree = BUILT_PRODUCTS_DIR; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		C00000000000000000000001 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				A0000000000000000000000D /* TelegramLogin in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		C00000000000000000000002 = {
+			isa = PBXGroup;
+			children = (
+				C00000000000000000000003 /* SweetRun */,
+				C00000000000000000000009 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		C00000000000000000000003 /* SweetRun */ = {
+			isa = PBXGroup;
+			children = (
+				C00000000000000000000004 /* App */,
+				C00000000000000000000005 /* Auth */,
+				C00000000000000000000006 /* Config */,
+				C00000000000000000000007 /* Platform */,
+				C00000000000000000000008 /* Web */,
+				B0000000000000000000000D /* Info.plist */,
+			);
+			path = SweetRun;
+			sourceTree = "<group>";
+		};
+		C00000000000000000000004 /* App */ = {
+			isa = PBXGroup;
+			children = (
+				B00000000000000000000001 /* SweetRunApp.swift */,
+				B00000000000000000000002 /* AppState.swift */,
+				B00000000000000000000003 /* RootView.swift */,
+			);
+			path = App;
+			sourceTree = "<group>";
+		};
+		C00000000000000000000005 /* Auth */ = {
+			isa = PBXGroup;
+			children = (
+				B00000000000000000000004 /* PlayerSession.swift */,
+				B00000000000000000000005 /* KeychainStore.swift */,
+				B00000000000000000000006 /* SessionStore.swift */,
+				B00000000000000000000007 /* TelegramAuth.swift */,
+				B00000000000000000000008 /* SweetRunAPI.swift */,
+			);
+			path = Auth;
+			sourceTree = "<group>";
+		};
+		C00000000000000000000006 /* Config */ = {
+			isa = PBXGroup;
+			children = (
+				B00000000000000000000009 /* SweetRunConfig.swift */,
+			);
+			path = Config;
+			sourceTree = "<group>";
+		};
+		C00000000000000000000007 /* Platform */ = {
+			isa = PBXGroup;
+			children = (
+				B0000000000000000000000A /* Haptics.swift */,
+			);
+			path = Platform;
+			sourceTree = "<group>";
+		};
+		C00000000000000000000008 /* Web */ = {
+			isa = PBXGroup;
+			children = (
+				B0000000000000000000000B /* NativeBridge.swift */,
+				B0000000000000000000000C /* GameWebView.swift */,
+			);
+			path = Web;
+			sourceTree = "<group>";
+		};
+		C00000000000000000000009 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				B0000000000000000000000E /* SweetRun.app */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		D00000000000000000000001 /* SweetRun */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = D00000000000000000000004 /* Build configuration list for PBXNativeTarget "SweetRun" */;
+			buildPhases = (
+				D00000000000000000000002 /* Sources */,
+				C00000000000000000000001 /* Frameworks */,
+				D00000000000000000000003 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = SweetRun;
+			packageProductDependencies = (
+				E000000000000000000000002 /* TelegramLogin */,
+			);
+			productName = SweetRun;
+			productReference = B0000000000000000000000E /* SweetRun.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		D00000000000000000000005 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = 1;
+				LastSwiftUpdateCheck = 1600;
+				LastUpgradeCheck = 1600;
+				TargetAttributes = {
+					D00000000000000000000001 = {
+						CreatedOnToolsVersion = 16.0;
+					};
+				};
+			};
+			buildConfigurationList = D00000000000000000000006 /* Build configuration list for PBXProject "SweetRun" */;
+			compatibilityVersion = "Xcode 14.0";
+			developmentRegion = ru;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				ru,
+				en,
+				Base,
+			);
+			mainGroup = C00000000000000000000002;
+			packageReferences = (
+				E000000000000000000000001 /* XCRemoteSwiftPackageReference "telegram-login-ios" */,
+			);
+			productRefGroup = C00000000000000000000009 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				D00000000000000000000001 /* SweetRun */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		D00000000000000000000003 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		D00000000000000000000002 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				A00000000000000000000001 /* SweetRunApp.swift in Sources */,
+				A00000000000000000000002 /* AppState.swift in Sources */,
+				A00000000000000000000003 /* RootView.swift in Sources */,
+				A00000000000000000000004 /* PlayerSession.swift in Sources */,
+				A00000000000000000000005 /* KeychainStore.swift in Sources */,
+				A00000000000000000000006 /* SessionStore.swift in Sources */,
+				A00000000000000000000007 /* TelegramAuth.swift in Sources */,
+				A00000000000000000000008 /* SweetRunAPI.swift in Sources */,
+				A00000000000000000000009 /* SweetRunConfig.swift in Sources */,
+				A0000000000000000000000A /* Haptics.swift in Sources */,
+				A0000000000000000000000B /* NativeBridge.swift in Sources */,
+				A0000000000000000000000C /* GameWebView.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		F000000000000000000000001 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ENABLE_MODULES = YES;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_TESTABILITY = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				IPHONEOS_DEPLOYMENT_TARGET = 15.0;
+				ONLY_ACTIVE_ARCH = YES;
+				SDKROOT = iphoneos;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+			};
+			name = Debug;
+		};
+		F000000000000000000000002 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ENABLE_MODULES = YES;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				IPHONEOS_DEPLOYMENT_TARGET = 15.0;
+				SDKROOT = iphoneos;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+			};
+			name = Release;
+		};
+		F000000000000000000000003 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = "";
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = SweetRun/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 15.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 0.1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.sweetrun.game.dev;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				SWEET_RUN_GAME_URL = "https://zefirok-run.patokad6.workers.dev/";
+				SWEET_RUN_TELEGRAM_CLIENT_ID = "";
+				SWEET_RUN_TELEGRAM_REDIRECT_URI = "sweetrun://tglogin";
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Debug;
+		};
+		F000000000000000000000004 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = "";
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = SweetRun/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 15.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 0.1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.sweetrun.game;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				SWEET_RUN_GAME_URL = "https://zefirok-run.patokad6.workers.dev/";
+				SWEET_RUN_TELEGRAM_CLIENT_ID = "";
+				SWEET_RUN_TELEGRAM_REDIRECT_URI = "sweetrun://tglogin";
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		D00000000000000000000004 /* Build configuration list for PBXNativeTarget "SweetRun" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				F000000000000000000000003 /* Debug */,
+				F000000000000000000000004 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		D00000000000000000000006 /* Build configuration list for PBXProject "SweetRun" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				F000000000000000000000001 /* Debug */,
+				F000000000000000000000002 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		E000000000000000000000001 /* XCRemoteSwiftPackageReference "telegram-login-ios" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/TelegramMessenger/telegram-login-ios";
+			requirement = {
+				kind = revision;
+				revision = 215851df7e3cd32787a0054e5d1a97d7aa62796e;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		E000000000000000000000002 /* TelegramLogin */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = E000000000000000000000001 /* XCRemoteSwiftPackageReference "telegram-login-ios" */;
+			productName = TelegramLogin;
+		};
+/* End XCSwiftPackageProductDependency section */
+	};
+	rootObject = D00000000000000000000005 /* Project object */;
+}

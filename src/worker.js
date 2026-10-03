@@ -1056,6 +1056,13 @@ const PLAYER_SESSION_AUDIENCE = "player";
 const DEFAULT_PLAYER_SESSION_TTL_SECONDS = 30 * 60;
 const MAX_PLAYER_SESSION_TTL_SECONDS = 2 * 60 * 60;
 const PLAYER_SESSION_PROVIDERS = new Set(["telegram-miniapp", "telegram-ios", "apple-ios"]);
+const PLAYER_SESSION_BODY_PREFIX = "sr-session:";
+const TELEGRAM_OIDC_ISSUER = "https://oauth.telegram.org";
+const TELEGRAM_OIDC_JWKS_URL = "https://oauth.telegram.org/.well-known/jwks.json";
+const TELEGRAM_OIDC_ALLOWED_ALGORITHMS = new Set(["RS256"]);
+const DEFAULT_TELEGRAM_OIDC_MAX_TOKEN_AGE_SECONDS = 10 * 60;
+const TELEGRAM_OIDC_JWKS_CACHE_MS = 5 * 60 * 1000;
+let telegramOidcJwksCache = { expiresAt:0, keys:[] };
 const STAFF_SESSION_TTL_SECONDS = 12 * 60 * 60;
 const SUPPORT_USERNAME = "ve4n0_em";
 const SUPPORT_URL = `https://t.me/${SUPPORT_USERNAME}`;
@@ -2118,6 +2125,9 @@ export default {
       }
       if (url.pathname === "/api/auth/session/verify" && request.method === "POST") {
         return await verifyPlayerSession(request, env);
+      }
+      if (url.pathname === "/api/auth/telegram-ios" && request.method === "POST") {
+        return await loginTelegramIos(request, env);
       }
       // Cold-start access bootstrap combines maintenance + legal in one round trip.
       // It intentionally runs before the broad runtime compatibility audit.
@@ -31674,8 +31684,13 @@ async function enforceLegalAcceptanceForRequest(request, env) {
 }
 
 async function validateTelegramInitDataSignature(initData, env) {
-  if (!initData) throw new ApiError(401, "Откройте игру внутри Telegram, чтобы получить настоящий код.");
-  const params = new URLSearchParams(initData);
+  const rawInitData = String(initData || "");
+  if (rawInitData.startsWith(PLAYER_SESSION_BODY_PREFIX)) {
+    const token = rawInitData.slice(PLAYER_SESSION_BODY_PREFIX.length).trim();
+    return await validatePlayerSessionToken(token, env, { applyAdminControl:false });
+  }
+  if (!rawInitData) throw new ApiError(401, "Откройте игру внутри Telegram, чтобы получить настоящий код.");
+  const params = new URLSearchParams(rawInitData);
   const receivedHash = String(params.get("hash") || "").toLowerCase();
   if (!/^[a-f0-9]{64}$/.test(receivedHash)) throw new ApiError(401, "Данные Telegram не прошли проверку.");
 
@@ -31732,14 +31747,22 @@ function base64UrlEncodeUtf8(value) {
   return base64UrlEncodeBytes(encoder.encode(String(value || "")));
 }
 
-function base64UrlDecodeUtf8(value) {
+function base64UrlDecodeBytes(value, message = "Сессия приложения повреждена.") {
   let encoded = String(value || "").replace(/-/g, "+").replace(/_/g, "/");
   while (encoded.length % 4) encoded += "=";
   let binary;
-  try { binary = atob(encoded); } catch { throw new ApiError(401, "Сессия приложения повреждена."); }
+  try { binary = atob(encoded); } catch { throw new ApiError(401, message); }
   const bytes = new Uint8Array(binary.length);
   for (let index = 0; index < binary.length; index += 1) bytes[index] = binary.charCodeAt(index);
-  try { return new TextDecoder().decode(bytes); } catch { throw new ApiError(401, "Сессия приложения повреждена."); }
+  return bytes;
+}
+
+function base64UrlDecodeUtf8(value) {
+  try { return new TextDecoder().decode(base64UrlDecodeBytes(value)); }
+  catch (error) {
+    if (error instanceof ApiError) throw error;
+    throw new ApiError(401, "Сессия приложения повреждена.");
+  }
 }
 
 function sanitizePlayerSessionUser(user) {
@@ -31749,6 +31772,7 @@ function sanitizePlayerSessionUser(user) {
     first_name: String(user.first_name || "").slice(0, 128),
     last_name: String(user.last_name || "").slice(0, 128),
     username: String(user.username || "").slice(0, 64),
+    photo_url: String(user.photo_url || "").slice(0, 2048),
     language_code: String(user.language_code || "").slice(0, 16),
     is_premium: Boolean(user.is_premium)
   };
@@ -31841,6 +31865,105 @@ async function bootstrapPlayerSession(request, env) {
     if (error instanceof ApiError) return jsonResponse({ ok:false, error:error.message }, error.status);
     console.error("player session bootstrap failed", error);
     return jsonResponse({ ok:false, error:"Не удалось создать сессию приложения." }, 500);
+  }
+}
+
+function telegramLoginClientId(env) {
+  const clientId = String(env.TELEGRAM_LOGIN_CLIENT_ID || "").trim();
+  if (!/^\d{4,20}$/.test(clientId)) throw new ApiError(503, "Telegram Login для приложения пока не настроен.");
+  return clientId;
+}
+
+async function telegramOidcKeys(force = false) {
+  const now = Date.now();
+  if (!force && telegramOidcJwksCache.expiresAt > now && telegramOidcJwksCache.keys.length) return telegramOidcJwksCache.keys;
+  let response;
+  try { response = await fetch(TELEGRAM_OIDC_JWKS_URL, { headers:{ Accept:"application/json" } }); }
+  catch { throw new ApiError(503, "Не удалось проверить Telegram Login. Попробуйте позже."); }
+  if (!response.ok) throw new ApiError(503, "Не удалось проверить Telegram Login. Попробуйте позже.");
+  let payload;
+  try { payload = await response.json(); } catch { payload = null; }
+  const keys = Array.isArray(payload?.keys) ? payload.keys.filter(Boolean) : [];
+  if (!keys.length) throw new ApiError(503, "Telegram Login временно недоступен.");
+  telegramOidcJwksCache = { expiresAt:now + TELEGRAM_OIDC_JWKS_CACHE_MS, keys };
+  return keys;
+}
+
+function parseTelegramOidcJson(part) {
+  try { return JSON.parse(new TextDecoder().decode(base64UrlDecodeBytes(part, "Telegram ID token повреждён."))); }
+  catch (error) {
+    if (error instanceof ApiError) throw error;
+    throw new ApiError(401, "Telegram ID token повреждён.");
+  }
+}
+
+async function telegramOidcVerificationKey(header) {
+  const algorithm = String(header?.alg || "");
+  const keyId = String(header?.kid || "");
+  if (!TELEGRAM_OIDC_ALLOWED_ALGORITHMS.has(algorithm) || !keyId) throw new ApiError(401, "Алгоритм Telegram Login не поддерживается.");
+  let keys = await telegramOidcKeys(false);
+  let jwk = keys.find((key) => String(key?.kid || "") === keyId && String(key?.alg || algorithm) === algorithm && key?.kty === "RSA");
+  if (!jwk) {
+    keys = await telegramOidcKeys(true);
+    jwk = keys.find((key) => String(key?.kid || "") === keyId && String(key?.alg || algorithm) === algorithm && key?.kty === "RSA");
+  }
+  if (!jwk) throw new ApiError(401, "Ключ Telegram Login не найден.");
+  try { return await crypto.subtle.importKey("jwk", jwk, { name:"RSASSA-PKCS1-v1_5", hash:"SHA-256" }, false, ["verify"]); }
+  catch { throw new ApiError(503, "Не удалось подготовить проверку Telegram Login."); }
+}
+
+async function validateTelegramIosIdToken(idToken, env) {
+  const raw = String(idToken || "").trim();
+  if (!raw || raw.length > 16384) throw new ApiError(401, "Telegram ID token отсутствует.");
+  const parts = raw.split(".");
+  if (parts.length !== 3 || parts.some((part) => !/^[A-Za-z0-9_-]+$/.test(part))) throw new ApiError(401, "Telegram ID token повреждён.");
+  const header = parseTelegramOidcJson(parts[0]);
+  const claims = parseTelegramOidcJson(parts[1]);
+  const key = await telegramOidcVerificationKey(header);
+  let verified = false;
+  try {
+    verified = await crypto.subtle.verify(
+      { name:"RSASSA-PKCS1-v1_5" },
+      key,
+      base64UrlDecodeBytes(parts[2], "Подпись Telegram ID token повреждена."),
+      encoder.encode(`${parts[0]}.${parts[1]}`)
+    );
+  } catch { verified = false; }
+  if (!verified) throw new ApiError(401, "Telegram ID token не прошёл проверку подписи.");
+
+  const clientId = telegramLoginClientId(env);
+  const audience = Array.isArray(claims?.aud) ? claims.aud.map(String) : [String(claims?.aud || "")];
+  const now = Math.floor(Date.now() / 1000);
+  const issuedAt = Math.floor(Number(claims?.iat || 0));
+  const expiresAt = Math.floor(Number(claims?.exp || 0));
+  const maxAge = Math.min(60 * 60, positiveInt(env.TELEGRAM_LOGIN_MAX_TOKEN_AGE_SECONDS, DEFAULT_TELEGRAM_OIDC_MAX_TOKEN_AGE_SECONDS));
+  if (claims?.iss !== TELEGRAM_OIDC_ISSUER || !audience.includes(clientId)) throw new ApiError(401, "Telegram ID token выпущен не для этого приложения.");
+  if (!issuedAt || !expiresAt || issuedAt > now + 60 || expiresAt <= now || now - issuedAt > maxAge) throw new ApiError(401, "Telegram Login устарел. Войдите снова.");
+  const telegramId = String(claims?.id || "");
+  if (!/^\d{4,20}$/.test(telegramId) || !String(claims?.sub || "").trim()) throw new ApiError(401, "Telegram не передал корректный профиль.");
+  const user = {
+    id: telegramId,
+    first_name: String(claims?.given_name || claims?.name || "").slice(0, 128),
+    last_name: String(claims?.family_name || "").slice(0, 128),
+    username: String(claims?.preferred_username || "").replace(/^@/, "").slice(0, 64),
+    photo_url: String(claims?.picture || "").slice(0, 2048),
+    language_code: "",
+    is_premium: false
+  };
+  return { user, authDate:issuedAt, provider:"telegram-ios", credential:"telegram-oidc", telegramId };
+}
+
+async function loginTelegramIos(request, env) {
+  try {
+    const body = await readJson(request);
+    const oidcAuth = await validateTelegramIosIdToken(String(body.idToken || body.id_token || ""), env);
+    const controlledUser = await applyPlayerAdminControl(oidcAuth.user, env);
+    const session = await issuePlayerSession({ ...oidcAuth, user:controlledUser }, env, "telegram-ios");
+    return jsonResponse({ ok:true, tokenType:"Bearer", ...session });
+  } catch (error) {
+    if (error instanceof ApiError) return jsonResponse({ ok:false, error:error.message }, error.status);
+    console.error("telegram iOS login failed", error);
+    return jsonResponse({ ok:false, error:"Не удалось войти через Telegram." }, 500);
   }
 }
 

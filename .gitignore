@@ -25,3 +25,8 @@ node_modules/
 
 # Git history is the only commit identity source
 /BASE_COMMIT.txt
+
+# iOS local build state
+/ios/**/xcuserdata/
+/ios/**/DerivedData/
+/ios/**/.swiftpm/

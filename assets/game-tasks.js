@@ -21,7 +21,7 @@
   let entryNotice={readyCount:0,unreadCount:0,activeCount:0};
 
   const host=()=>window.zefirokTaskHost||{};
-  const auth=()=>String(host().auth?.()||window.Telegram?.WebApp?.initData||'');
+  const auth=()=>String(host().auth?.()||window.SweetRunPlatform?.auth?.legacyInitData?.() || window.Telegram?.WebApp?.initData||'');
   const esc=value=>String(value??'').replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
   const num=value=>Number.isFinite(Number(value))?Number(value):0;
   const whole=value=>Math.max(0,Math.floor(num(value)));

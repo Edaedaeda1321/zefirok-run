@@ -2,7 +2,8 @@
 'use strict';
 if(window.SweetRunPlatform)return;
 
-const VERSION='1.0.0';
+const VERSION='1.1.0';
+const LEGACY_SESSION_PREFIX='sr-session:';
 const SESSION_KEY='sweet-run-player-session-v1';
 const NATIVE_BOOTSTRAP_KEY='__SWEET_RUN_NATIVE_BOOTSTRAP__';
 const NATIVE_HANDLER='sweetRunBridge';
@@ -36,6 +37,12 @@ function sessionToken(){
   const injected=String(bootstrap?.sessionToken||bootstrap?.accessToken||'').trim();
   if(injected)return injected;
   try{return String(sessionStorage.getItem(SESSION_KEY)||'').trim();}catch{return '';}
+}
+function legacyInitData(){
+  const initData=telegramInitData();
+  if(initData)return initData;
+  const token=sessionToken();
+  return token?`${LEGACY_SESSION_PREFIX}${token}`:'';
 }
 function normalizedUser(raw){
   if(!raw||typeof raw!=='object'||raw.id==null)return null;
@@ -73,8 +80,9 @@ function headers(base={}){
 }
 function body(base={}){
   const output=base&&typeof base==='object'&&!Array.isArray(base)?{...base}:{};
-  const initData=telegramInitData();
-  if(initData&&!Object.prototype.hasOwnProperty.call(output,'initData')&&!Object.prototype.hasOwnProperty.call(output,'init_data'))output.initData=initData;
+  const credential=legacyInitData();
+  const current=String(output.initData??output.init_data??'').trim();
+  if(credential&&!current)output.initData=credential;
   return output;
 }
 function setSession(value=''){
@@ -109,7 +117,7 @@ window.SweetRunPlatform=Object.freeze({
   isNativeIOS:()=>kind()==='ios',
   isTelegram:()=>kind()==='telegram',
   identity:Object.freeze({user:playerUser}),
-  auth:Object.freeze({snapshot,telegramInitData,sessionToken,headers,body,setSession,hasPlayerAuth:()=>snapshot().authenticated}),
+  auth:Object.freeze({snapshot,telegramInitData,legacyInitData,sessionToken,headers,body,setSession,hasPlayerAuth:()=>snapshot().authenticated}),
   haptic,
   postNative
 });
