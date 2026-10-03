@@ -14454,12 +14454,12 @@ const PLAYER_COLLECTION_SHOWCASE_LIMIT = 5;
 const PLAYER_COLLECTION_STATE_SQL = `SELECT owned_avatars_json,active_avatar_id,owned_frames_json,active_frame_id,owned_trails_json,active_trail_id,owned_skins_json,active_skin_id,owned_music_json,active_music_id FROM case_player_state WHERE telegram_id=? LIMIT 1`;
 const PLAYER_COLLECTION_SEASON_ORDER = Object.freeze(["season4","season3","season2"]);
 const PLAYER_COLLECTION_COLLECTOR_ACHIEVEMENTS = Object.freeze([
-  Object.freeze({id:"collector-skins-10",title:"Гардероб на зависть",description:"Собери 10 скинов в коллекции.",metric:"skins",target:10,rarity:"rare",preview:true}),
-  Object.freeze({id:"collector-items-50",title:"Большая коллекция",description:"Собери 50 коллекционных предметов.",metric:"totalItems",target:50,rarity:"epic",preview:true}),
-  Object.freeze({id:"collector-legendary-5",title:"Золотая полка",description:"Собери 5 легендарных предметов.",metric:"legendaryCount",target:5,rarity:"legendary",preview:true}),
-  Object.freeze({id:"collector-archive-5",title:"Хранитель истории",description:"Собери 5 архивных предметов.",metric:"archivedCount",target:5,rarity:"epic",preview:true}),
-  Object.freeze({id:"collector-season-complete",title:"Сезон закрыт",description:"Собери 100% хотя бы одного сезонного альбома.",metric:"completedSeasons",target:1,rarity:"legendary",preview:false}),
-  Object.freeze({id:"collector-legendary-under-1",title:"Один на сотню",description:"Получи легендарный предмет, который есть не более чем у 1% игроков.",metric:"legendaryUnderOne",target:1,rarity:"legendary",preview:false})
+  Object.freeze({id:"collector-skins-10",title:"Гардероб на зависть",description:"Собери 10 скинов в коллекции.",metric:"skins",target:10,rarity:"rare",preview:true,imageUrl:"/assets/ui/collector-status/collector_wardrobe.webp"}),
+  Object.freeze({id:"collector-items-50",title:"Большая коллекция",description:"Собери 50 коллекционных предметов.",metric:"totalItems",target:50,rarity:"epic",preview:true,imageUrl:"/assets/ui/collector-status/collector_large_collection.webp"}),
+  Object.freeze({id:"collector-legendary-5",title:"Золотая полка",description:"Собери 5 легендарных предметов.",metric:"legendaryCount",target:5,rarity:"legendary",preview:true,imageUrl:"/assets/ui/collector-status/collector_golden_shelf.webp"}),
+  Object.freeze({id:"collector-archive-5",title:"Хранитель истории",description:"Собери 5 архивных предметов.",metric:"archivedCount",target:5,rarity:"epic",preview:true,imageUrl:"/assets/ui/collector-status/collector_keeper_history.webp"}),
+  Object.freeze({id:"collector-season-complete",title:"Сезон закрыт",description:"Собери 100% хотя бы одного сезонного альбома.",metric:"completedSeasons",target:1,rarity:"legendary",preview:false,imageUrl:"/assets/ui/collector-status/collector_season_closed.webp"}),
+  Object.freeze({id:"collector-legendary-under-1",title:"Один на сотню",description:"Получи легендарный предмет, который есть не более чем у 1% игроков.",metric:"legendaryUnderOne",target:1,rarity:"legendary",preview:false,imageUrl:"/assets/ui/collector-status/collector_one_in_hundred.webp"})
 ]);
 const playerCollectionRarityCache = new WeakMap();
 
@@ -14595,13 +14595,9 @@ function playerCollectionCollectorAchievementMetrics(summary = {}, albums = [], 
 
 function playerCollectionCollectorAchievementItem(definition, metrics) {
   const progress=Math.max(0,Number(metrics?.[definition.metric]||0)),target=Math.max(1,Number(definition?.target||1)),earned=progress>=target;
-  let imageUrl=SYSTEM_IMAGE_FALLBACK,detail="";
-  if(definition.id==="collector-skins-10")imageUrl=String(metrics?.skinItem?.imageUrl||SYSTEM_IMAGE_FALLBACK);
-  else if(definition.id==="collector-items-50")imageUrl="/assets/ui/icon_user_collectible.webp";
-  else if(definition.id==="collector-legendary-5")imageUrl=String(metrics?.legendaryItem?.imageUrl||"/assets/ui/icon_user_collectible.webp");
-  else if(definition.id==="collector-archive-5")imageUrl=String(metrics?.archivedItem?.imageUrl||"/assets/ui/icon_user_collectible.webp");
-  else if(definition.id==="collector-season-complete"){imageUrl=String(metrics?.completedAlbum?.imageUrl||"/assets/ui/icon_user_collectible.webp");detail=String(metrics?.completedAlbum?.label||"");}
-  else if(definition.id==="collector-legendary-under-1"){imageUrl=String(metrics?.rareLegendary?.imageUrl||"/assets/ui/icon_user_collectible.webp");const percent=Number(metrics?.rareLegendary?.playerRarity?.ownershipPercent);detail=metrics?.rareLegendary?`${String(metrics.rareLegendary.title||"Легендарный предмет")} · ${Number.isFinite(percent)?percent.toLocaleString("ru-RU",{maximumFractionDigits:1}):"≤1"}% игроков`:"";}
+  let imageUrl=String(definition?.imageUrl||SYSTEM_IMAGE_FALLBACK),detail="";
+  if(definition.id==="collector-season-complete")detail=String(metrics?.completedAlbum?.label||"");
+  else if(definition.id==="collector-legendary-under-1"){const percent=Number(metrics?.rareLegendary?.playerRarity?.ownershipPercent);detail=metrics?.rareLegendary?`${String(metrics.rareLegendary.title||"Легендарный предмет")} · ${Number.isFinite(percent)?percent.toLocaleString("ru-RU",{maximumFractionDigits:1}):"≤1"}% игроков`:"";}
   return {
     id:String(definition.id),title:String(definition.title),description:String(definition.description),rarity:String(definition.rarity||"common"),rarityLabel:String(PLAYER_COLLECTION_RARITY_LABELS[String(definition.rarity||"common")]||"Особое"),
     target,progress:Math.min(progress,target),rawProgress:progress,earned,statusOnly:true,reward:null,imageUrl,detail,progressPercent:Math.max(0,Math.min(100,Math.round((Math.min(progress,target)/target)*1000)/10))

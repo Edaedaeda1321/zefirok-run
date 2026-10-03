@@ -13,6 +13,9 @@ const endpoint=between(worker,'async function leaderboardPlayerCollection(reques
 const profileEndpoint=between(worker,'async function leaderboardPlayerProfile(request, env) {','const FAST_RUN_SETTLEMENT_VERSION');
 
 for(const id of ['collector-skins-10','collector-items-50','collector-legendary-5','collector-archive-5','collector-season-complete','collector-legendary-under-1'])check(`collector definition ${id} exists`,definitions.includes(`id:"${id}"`));
+const collectorIconPaths=['/assets/ui/collector-status/collector_wardrobe.webp','/assets/ui/collector-status/collector_large_collection.webp','/assets/ui/collector-status/collector_golden_shelf.webp','/assets/ui/collector-status/collector_keeper_history.webp','/assets/ui/collector-status/collector_season_closed.webp','/assets/ui/collector-status/collector_one_in_hundred.webp'];
+for(const assetPath of collectorIconPaths){check(`collector status icon ${assetPath} is wired`,definitions.includes(`imageUrl:"${assetPath}"`));check(`collector status icon ${assetPath} exists`,fs.existsSync(path.join(root,assetPath.replace(/^\//,''))));}
+check('collector status icons are fixed status artwork rather than dynamic owned-item thumbnails',collector.includes('definition?.imageUrl')&&!collector.includes('metrics?.skinItem?.imageUrl')&&!collector.includes('metrics?.legendaryItem?.imageUrl')&&!collector.includes('metrics?.archivedItem?.imageUrl'));
 check('collector milestones are status-only with no reward grant',collector.includes('statusOnly:true')&&collector.includes('reward:null'));
 check('10 skins milestone uses authoritative owned skin count',collector.includes('skins:Math.max(0,Number(summary?.categories?.skin||0))'));
 check('50 items milestone uses public collection total',collector.includes('totalItems:Math.max(0,Number(summary?.totalItems||0))'));
