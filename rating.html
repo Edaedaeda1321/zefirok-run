@@ -10403,6 +10403,58 @@ body { min-height: var(--zefirok-app-height, 100dvh); }
 @media(prefers-reduced-motion:reduce){.rating-player-streak,.rating-player-streak *,.rating-player-streak::before,.rating-player-streak::after{animation:none!important;transition:none!important}}
 </style>
 
+
+<style id="rating-player-collection-stage14-15">
+/* Stage 14: each legendary cosmetic type gets its own prestige motion language. */
+.rating-player-collection-legendary-kind-fx{position:absolute;z-index:3;inset:0;overflow:hidden;border-radius:inherit;pointer-events:none}
+.rating-player-collection-legendary-kind-fx i{position:absolute;display:block;opacity:0;will-change:transform,opacity}
+.rating-player-collection-legendary-kind-fx.is-skin i{width:7px;height:7px;color:#ffd96d;font:900 10px/1 Georgia,serif;text-shadow:0 0 8px rgba(255,218,105,.85)}
+.rating-player-collection-legendary-kind-fx.is-skin i::before{content:"✦"}.rating-player-collection-legendary-kind-fx.is-skin i:nth-child(1){left:11%;bottom:17%}.rating-player-collection-legendary-kind-fx.is-skin i:nth-child(2){right:13%;top:18%;animation-delay:.65s}.rating-player-collection-legendary-kind-fx.is-skin i:nth-child(3){left:48%;top:9%;animation-delay:1.35s}
+.rating-player-collection-item.is-rarity-active[data-rarity="legendary"][data-item-kind="skin"] .rating-player-collection-legendary-kind-fx.is-skin i,.rating-player-collection-detail-card[data-rarity="legendary"][data-kind="skin"] .rating-player-collection-legendary-kind-fx.is-skin i{animation:rating-player-collection-legendary-skin-star 3.9s ease-in-out infinite}
+.rating-player-collection-item[data-rarity="legendary"][data-item-kind="skin"] .rating-player-collection-art::before,.rating-player-collection-detail-card[data-rarity="legendary"][data-kind="skin"] .rating-player-collection-detail-art::after{content:"";position:absolute;z-index:0;inset:-24%;pointer-events:none;background:repeating-conic-gradient(from -16deg at 50% 74%,rgba(255,232,126,.0) 0 12deg,rgba(255,232,126,.16) 13deg 19deg,rgba(255,232,126,0) 20deg 34deg);transform-origin:50% 74%;animation:rating-player-collection-legendary-skin-rays 8.5s linear infinite}
+
+.rating-player-collection-legendary-kind-fx.is-avatar::before{content:"";position:absolute;left:50%;top:50%;width:72%;aspect-ratio:1;border:1px solid rgba(255,217,92,.58);border-radius:50%;box-shadow:0 0 0 5px rgba(255,237,168,.10),0 0 18px rgba(222,156,29,.22);transform:translate(-50%,-50%) scale(.88);opacity:.3}
+.rating-player-collection-item.is-rarity-active[data-rarity="legendary"][data-item-kind="avatar"] .rating-player-collection-legendary-kind-fx.is-avatar::before,.rating-player-collection-detail-card[data-rarity="legendary"][data-kind="avatar"] .rating-player-collection-legendary-kind-fx.is-avatar::before{animation:rating-player-collection-legendary-avatar-halo 3.6s ease-in-out infinite}
+.rating-player-collection-legendary-kind-fx.is-avatar i{width:8px;height:8px;color:#ffb2cf;font:900 11px/1 Georgia,serif;text-shadow:0 0 8px rgba(255,179,207,.75)}.rating-player-collection-legendary-kind-fx.is-avatar i::before{content:"♡"}.rating-player-collection-legendary-kind-fx.is-avatar i:nth-child(1){left:14%;top:22%}.rating-player-collection-legendary-kind-fx.is-avatar i:nth-child(2){right:12%;bottom:22%;animation-delay:1.25s}
+.rating-player-collection-item.is-rarity-active[data-rarity="legendary"][data-item-kind="avatar"] .rating-player-collection-legendary-kind-fx.is-avatar i,.rating-player-collection-detail-card[data-rarity="legendary"][data-kind="avatar"] .rating-player-collection-legendary-kind-fx.is-avatar i{animation:rating-player-collection-legendary-avatar-heart 4.1s ease-in-out infinite}
+
+.rating-player-collection-legendary-kind-fx.is-frame::before,.rating-player-collection-legendary-kind-fx.is-frame::after{content:"";position:absolute;inset:7px;border:1px solid rgba(255,211,76,.52);border-radius:12px;opacity:.36;box-shadow:inset 0 0 10px rgba(255,220,111,.22),0 0 10px rgba(211,143,23,.11)}
+.rating-player-collection-legendary-kind-fx.is-frame::after{inset:11px;border-color:rgba(255,246,200,.68);opacity:.22}
+.rating-player-collection-item.is-rarity-active[data-rarity="legendary"][data-item-kind="frame"] .rating-player-collection-legendary-kind-fx.is-frame::before,.rating-player-collection-detail-card[data-rarity="legendary"][data-kind="frame"] .rating-player-collection-legendary-kind-fx.is-frame::before{animation:rating-player-collection-legendary-frame-border 3.5s ease-in-out infinite}
+.rating-player-collection-legendary-kind-fx.is-frame i{width:9px;height:9px;color:#fff0a7;font:900 12px/1 Georgia,serif;text-shadow:0 0 7px #f7bd3b}.rating-player-collection-legendary-kind-fx.is-frame i::before{content:"✦"}.rating-player-collection-legendary-kind-fx.is-frame i:nth-child(1){left:4px;top:4px}.rating-player-collection-legendary-kind-fx.is-frame i:nth-child(2){right:5px;top:5px;animation-delay:.75s}.rating-player-collection-legendary-kind-fx.is-frame i:nth-child(3){right:5px;bottom:5px;animation-delay:1.5s}.rating-player-collection-legendary-kind-fx.is-frame i:nth-child(4){left:4px;bottom:4px;animation-delay:2.25s}
+.rating-player-collection-item.is-rarity-active[data-rarity="legendary"][data-item-kind="frame"] .rating-player-collection-legendary-kind-fx.is-frame i,.rating-player-collection-detail-card[data-rarity="legendary"][data-kind="frame"] .rating-player-collection-legendary-kind-fx.is-frame i{animation:rating-player-collection-legendary-frame-corner 3s ease-in-out infinite}
+
+.rating-player-collection-legendary-kind-fx.is-trail i{left:-18%;bottom:14%;width:34%;height:5px;border-radius:999px;background:linear-gradient(90deg,transparent,rgba(255,247,195,.85),rgba(255,194,76,.95),transparent);filter:blur(.2px);transform:rotate(-9deg)}.rating-player-collection-legendary-kind-fx.is-trail i:nth-child(2){bottom:28%;animation-delay:.9s;opacity:.0}.rating-player-collection-legendary-kind-fx.is-trail i:nth-child(3){bottom:42%;animation-delay:1.8s;opacity:.0}
+.rating-player-collection-item.is-rarity-active[data-rarity="legendary"][data-item-kind="trail"] .rating-player-collection-legendary-kind-fx.is-trail i,.rating-player-collection-detail-card[data-rarity="legendary"][data-kind="trail"] .rating-player-collection-legendary-kind-fx.is-trail i{animation:rating-player-collection-legendary-trail-comet 4.4s ease-in-out infinite}
+.rating-player-collection-item[data-rarity="legendary"][data-item-kind="trail"] .rating-player-collection-art img,.rating-player-collection-detail-card[data-rarity="legendary"][data-kind="trail"] .rating-player-collection-detail-art img{filter:drop-shadow(0 6px 8px rgba(210,141,25,.18)) drop-shadow(0 0 8px rgba(255,220,119,.12))}
+
+.rating-player-collection-legendary-kind-fx.is-music{display:flex;align-items:flex-end;justify-content:center;gap:3px;padding:0 24% 10px}
+.rating-player-collection-legendary-kind-fx.is-music i{position:relative;flex:1 1 0;height:9px;min-width:3px;border-radius:999px 999px 2px 2px;background:linear-gradient(180deg,#fff7c9,#f1b92f);opacity:.32;transform-origin:50% 100%;box-shadow:0 0 7px rgba(239,177,43,.26)}
+.rating-player-collection-item.is-rarity-active[data-rarity="legendary"][data-item-kind="music"] .rating-player-collection-legendary-kind-fx.is-music i,.rating-player-collection-detail-card[data-rarity="legendary"][data-kind="music"] .rating-player-collection-legendary-kind-fx.is-music i{animation:rating-player-collection-legendary-music-bars 1.8s ease-in-out infinite}.rating-player-collection-legendary-kind-fx.is-music i:nth-child(2){animation-delay:-.55s}.rating-player-collection-legendary-kind-fx.is-music i:nth-child(3){animation-delay:-1.05s}.rating-player-collection-legendary-kind-fx.is-music i:nth-child(4){animation-delay:-.25s}.rating-player-collection-legendary-kind-fx.is-music i:nth-child(5){animation-delay:-.8s}
+.rating-player-collection-detail-card.is-music-preview-playing[data-rarity="legendary"][data-kind="music"] .rating-player-collection-legendary-kind-fx.is-music i{animation-duration:.72s;opacity:.75}
+
+/* Stage 15: explicit, lazy 15-second music previews. */
+.rating-player-collection-music-preview{display:grid;gap:9px;padding:11px;border:1px solid rgba(218,183,196,.68);border-radius:17px;background:linear-gradient(145deg,rgba(255,255,255,.84),rgba(255,245,249,.78));box-shadow:inset 0 1px 0 rgba(255,255,255,.85)}
+.rating-player-collection-music-preview-head{display:flex;align-items:center;justify-content:space-between;gap:10px}.rating-player-collection-music-preview-head span{display:grid;gap:2px}.rating-player-collection-music-preview-head small{color:#aa7f8e;font-size:6px;font-weight:950;letter-spacing:.06em;text-transform:uppercase}.rating-player-collection-music-preview-head strong{color:#744855;font-size:10px;font-weight:950}.rating-player-collection-music-preview-head b{color:#b56d23;font-size:6.5px;font-weight:950;white-space:nowrap}
+.rating-player-collection-music-preview-button{display:grid;grid-template-columns:38px minmax(0,1fr);gap:10px;align-items:center;width:100%;padding:9px;border:1px solid rgba(210,167,184,.66);border-radius:14px;background:rgba(255,255,255,.88);color:#764b59;text-align:left;font:inherit;appearance:none;-webkit-appearance:none;cursor:pointer;-webkit-tap-highlight-color:transparent}.rating-player-collection-music-preview-button:focus-visible{outline:2px solid rgba(204,79,128,.38);outline-offset:2px}.rating-player-collection-music-preview-button:disabled{opacity:.58;cursor:default}
+.rating-player-collection-music-preview-play{display:grid;place-items:center;width:38px;height:38px;border-radius:12px;background:linear-gradient(145deg,#e979a2,#c84e7b);box-shadow:0 5px 12px rgba(174,57,98,.18);color:#fff;font-size:13px;font-weight:950}.rating-player-collection-music-preview-button.is-playing .rating-player-collection-music-preview-play{background:linear-gradient(145deg,#d6a52a,#b97b18);box-shadow:0 5px 15px rgba(180,123,23,.22)}
+.rating-player-collection-music-preview-copy{display:grid;gap:5px;min-width:0}.rating-player-collection-music-preview-copy>span:first-child{display:flex;align-items:center;justify-content:space-between;gap:8px}.rating-player-collection-music-preview-copy strong{color:#734653;font-size:9px;font-weight:950}.rating-player-collection-music-preview-copy em{color:#a57e8b;font-size:6px;font-style:normal;font-weight:850;white-space:nowrap}
+.rating-player-collection-music-wave{display:flex;align-items:center;gap:2px;height:18px;overflow:hidden}.rating-player-collection-music-wave i{display:block;width:3px;height:6px;border-radius:999px;background:linear-gradient(180deg,#e782a7,#c6537f);opacity:.45;transform:scaleY(.55);transform-origin:50% 50%}.rating-player-collection-music-wave i:nth-child(2n){height:12px}.rating-player-collection-music-wave i:nth-child(3n){height:16px}.rating-player-collection-music-preview-button.is-playing .rating-player-collection-music-wave i{opacity:.88;animation:rating-player-collection-music-wave .78s ease-in-out infinite alternate}.rating-player-collection-music-preview-button.is-playing .rating-player-collection-music-wave i:nth-child(2){animation-delay:-.28s}.rating-player-collection-music-preview-button.is-playing .rating-player-collection-music-wave i:nth-child(3){animation-delay:-.48s}.rating-player-collection-music-preview-button.is-playing .rating-player-collection-music-wave i:nth-child(4){animation-delay:-.16s}.rating-player-collection-music-preview-button.is-playing .rating-player-collection-music-wave i:nth-child(5){animation-delay:-.38s}.rating-player-collection-music-preview-button.is-playing .rating-player-collection-music-wave i:nth-child(6){animation-delay:-.62s}.rating-player-collection-music-preview-button.is-playing .rating-player-collection-music-wave i:nth-child(7){animation-delay:-.21s}.rating-player-collection-music-preview-button.is-playing .rating-player-collection-music-wave i:nth-child(8){animation-delay:-.55s}
+.rating-player-collection-music-preview-progress{display:block;height:4px;border-radius:999px;background:#f0e3e8;overflow:hidden}.rating-player-collection-music-preview-progress i{display:block;width:var(--music-preview-progress,0%);height:100%;border-radius:inherit;background:linear-gradient(90deg,#d85d89,#e6a33a);transition:width .12s linear}.rating-player-collection-music-preview-note{color:#a7838e;font-size:6.2px;font-weight:780;line-height:1.35}.rating-player-collection-music-preview.is-error .rating-player-collection-music-preview-note{color:#b14e66}
+.rating-player-collection-detail-card[data-kind="music"] .rating-player-collection-detail-source-icon{background:linear-gradient(145deg,#f5e9ff,#ffe6f0);color:#8f63bd}.rating-player-collection-detail-card[data-rarity="legendary"][data-kind="music"] .rating-player-collection-music-preview{border-color:rgba(218,162,48,.55);background:radial-gradient(circle at 92% 0,rgba(255,225,112,.25),transparent 42%),linear-gradient(145deg,#fffefb,#fff7df)}
+
+@keyframes rating-player-collection-legendary-skin-star{0%,12%,100%{opacity:0;transform:translateY(4px) scale(.35) rotate(0)}20%{opacity:1;transform:translateY(0) scale(1.18) rotate(28deg)}34%{opacity:0;transform:translateY(-5px) scale(.55) rotate(60deg)}}
+@keyframes rating-player-collection-legendary-skin-rays{to{transform:rotate(360deg)}}
+@keyframes rating-player-collection-legendary-avatar-halo{0%,100%{opacity:.24;transform:translate(-50%,-50%) scale(.84)}50%{opacity:.72;transform:translate(-50%,-50%) scale(1.03)}}
+@keyframes rating-player-collection-legendary-avatar-heart{0%,14%,100%{opacity:0;transform:translateY(4px) scale(.45)}22%{opacity:.92;transform:translateY(0) scale(1.05)}35%{opacity:0;transform:translateY(-6px) scale(.72)}}
+@keyframes rating-player-collection-legendary-frame-border{0%,100%{opacity:.28;box-shadow:inset 0 0 8px rgba(255,220,111,.18),0 0 7px rgba(211,143,23,.08)}50%{opacity:.72;box-shadow:inset 0 0 14px rgba(255,231,151,.35),0 0 15px rgba(211,143,23,.18)}}
+@keyframes rating-player-collection-legendary-frame-corner{0%,12%,100%{opacity:.16;transform:scale(.5) rotate(0)}22%{opacity:1;transform:scale(1.15) rotate(35deg)}36%{opacity:.16;transform:scale(.65) rotate(70deg)}}
+@keyframes rating-player-collection-legendary-trail-comet{0%,34%,100%{left:-22%;opacity:0;transform:rotate(-9deg) scaleX(.7)}43%{opacity:.86}68%{left:92%;opacity:.14;transform:rotate(-9deg) scaleX(1)}72%{opacity:0}}
+@keyframes rating-player-collection-legendary-music-bars{0%,100%{opacity:.28;transform:scaleY(.38)}50%{opacity:.68;transform:scaleY(1)}}
+@keyframes rating-player-collection-music-wave{from{transform:scaleY(.35)}to{transform:scaleY(1)}}
+@media(prefers-reduced-motion:reduce){.rating-player-collection-legendary-kind-fx i,.rating-player-collection-legendary-kind-fx::before,.rating-player-collection-legendary-kind-fx::after,.rating-player-collection-item[data-rarity="legendary"] .rating-player-collection-art::before,.rating-player-collection-detail-card[data-rarity="legendary"] .rating-player-collection-detail-art::after,.rating-player-collection-music-wave i{animation:none!important;transition:none!important}}
+</style>
+
 </head>
 <body>
 <div id="zefirok-maltipoo-runner">
@@ -10550,6 +10602,7 @@ body { min-height: var(--zefirok-app-height, 100dvh); }
   const PLAYER_COLLECTION_SHOWCASE_PATH = "/api/leaderboard/player-collection/showcase";
   const PLAYER_COLLECTION_CACHE_TTL_MS = 5 * 60 * 1000;
   const PLAYER_COLLECTION_SHOWCASE_LIMIT = 5;
+  const PLAYER_COLLECTION_MUSIC_PREVIEW_MAX_SECONDS = 15;
   const PLAYER_COLLECTION_ICON = "/assets/ui/new_avatars_game.webp";
   const PLAYER_COLLECTION_BUTTON_ICON = "/assets/ui/icon_user_collectible.webp";
   const PLAYER_COLLECTION_TABS = Object.freeze([{id:"all",label:"Все"},{id:"skin",label:"Скины"},{id:"avatar",label:"Аватары"},{id:"frame",label:"Рамки"},{id:"trail",label:"Следы"},{id:"music",label:"Музыка"}]);
@@ -10707,6 +10760,10 @@ body { min-height: var(--zefirok-app-height, 100dvh); }
   let playerCollectionShowcaseNotice = "";
   let playerCollectionItemTrigger = null;
   let playerCollectionRarityObserver = null;
+  let playerCollectionMusicPreviewAudio = null;
+  let playerCollectionMusicPreviewUrl = "";
+  let playerCollectionMusicPreviewLimit = PLAYER_COLLECTION_MUSIC_PREVIEW_MAX_SECONDS;
+  let playerCollectionMusicPreviewRaf = 0;
   let playerProfileRequest = null;
   let playerProfileTargetId = "";
   let playerProfileTrigger = null;
@@ -12196,6 +12253,74 @@ function streakLaurel(){
     return `<span class="rating-player-collection-prestige-fx is-${escapeHtml(key)}" aria-hidden="true">${"<i></i>".repeat(count)}</span>`;
   }
 
+  function playerCollectionLegendaryKindFxMarkup(kind,rarity) {
+    if(String(rarity||"")!=="legendary")return "";
+    const key=String(kind||"");
+    const counts={skin:3,avatar:2,frame:4,trail:3,music:5};
+    const count=Number(counts[key]||0);if(!count)return "";
+    return `<span class="rating-player-collection-legendary-kind-fx is-${escapeHtml(key)}" aria-hidden="true">${"<i></i>".repeat(count)}</span>`;
+  }
+
+  function playerCollectionMusicPreviewSafeUrl(item) {
+    const url=String(item?.previewUrl||"").trim();
+    return /^\/assets\/sounds\/previews\/[A-Za-z0-9._-]+\.mp3(?:[?#].*)?$/.test(url)?url:"";
+  }
+
+  function playerCollectionMusicPreviewMarkup(item) {
+    if(String(item?.kind||"")!=="music")return "";
+    const url=playerCollectionMusicPreviewSafeUrl(item);if(!url)return "";
+    const seconds=Math.max(1,Math.min(PLAYER_COLLECTION_MUSIC_PREVIEW_MAX_SECONDS,Number(item?.previewDurationSeconds||PLAYER_COLLECTION_MUSIC_PREVIEW_MAX_SECONDS)||PLAYER_COLLECTION_MUSIC_PREVIEW_MAX_SECONDS));
+    const wave="<i></i>".repeat(8);
+    return `<section class="rating-player-collection-music-preview" data-rating-player-collection-music-preview><div class="rating-player-collection-music-preview-head"><span><small>Музыкальный предмет</small><strong>Послушать фрагмент</strong></span><b>${formatter.format(seconds)} сек.</b></div><button class="rating-player-collection-music-preview-button" data-rating-player-collection-music-preview-toggle data-preview-url="${escapeHtml(url)}" data-preview-seconds="${escapeHtml(String(seconds))}" type="button" aria-pressed="false"><span class="rating-player-collection-music-preview-play" data-rating-player-collection-music-preview-icon aria-hidden="true">▶</span><span class="rating-player-collection-music-preview-copy"><span><strong data-rating-player-collection-music-preview-label>Прослушать</strong><em data-rating-player-collection-music-preview-time>0:00 / 0:${String(Math.round(seconds)).padStart(2,"0")}</em></span><span class="rating-player-collection-music-wave" aria-hidden="true">${wave}</span><span class="rating-player-collection-music-preview-progress" aria-hidden="true"><i></i></span></span></button><span class="rating-player-collection-music-preview-note" data-rating-player-collection-music-preview-note>Аудио загрузится только после нажатия. В коллекции заранее музыка не скачивается.</span></section>`;
+  }
+
+  function playerCollectionMusicPreviewButton() {return playerCollectionDetailContent?.querySelector?.("[data-rating-player-collection-music-preview-toggle]")||null;}
+  function playerCollectionMusicPreviewClock(seconds){const value=Math.max(0,Math.floor(Number(seconds)||0));return `${Math.floor(value/60)}:${String(value%60).padStart(2,"0")}`;}
+  function playerCollectionMusicPreviewSetUi(state="idle",message="") {
+    const button=playerCollectionMusicPreviewButton(),box=playerCollectionDetailContent?.querySelector?.("[data-rating-player-collection-music-preview]");if(!button)return;
+    const label=button.querySelector("[data-rating-player-collection-music-preview-label]"),icon=button.querySelector("[data-rating-player-collection-music-preview-icon]"),note=playerCollectionDetailContent?.querySelector?.("[data-rating-player-collection-music-preview-note]");
+    const playing=state==="playing",paused=state==="paused",loading=state==="loading",error=state==="error";
+    button.classList.toggle("is-playing",playing);button.classList.toggle("is-loading",loading);button.setAttribute("aria-pressed",playing?"true":"false");button.disabled=loading;
+    if(label)label.textContent=playing?"Пауза":paused?"Продолжить":loading?"Загружаем…":error?"Повторить":"Прослушать";
+    if(icon)icon.textContent=playing?"Ⅱ":"▶";
+    box?.classList?.toggle("is-error",error);playerCollectionDetailCard?.classList?.toggle("is-music-preview-playing",playing);
+    if(note)note.textContent=(message||error)?String(message||"Не удалось загрузить музыкальный preview."):"Аудио загрузится только после нажатия. В коллекции заранее музыка не скачивается.";
+  }
+
+  function playerCollectionMusicPreviewUpdateProgress() {
+    const audio=playerCollectionMusicPreviewAudio,button=playerCollectionMusicPreviewButton();if(!audio||!button)return;
+    const limit=Math.max(1,Number(playerCollectionMusicPreviewLimit)||PLAYER_COLLECTION_MUSIC_PREVIEW_MAX_SECONDS),current=Math.max(0,Math.min(limit,Number(audio.currentTime)||0)),percent=Math.max(0,Math.min(100,(current/limit)*100));
+    button.style.setProperty("--music-preview-progress",`${percent.toFixed(2)}%`);
+    const time=button.querySelector("[data-rating-player-collection-music-preview-time]");if(time)time.textContent=`${playerCollectionMusicPreviewClock(current)} / ${playerCollectionMusicPreviewClock(limit)}`;
+    if(current>=limit-.04){stopPlayerCollectionMusicPreview({reset:true});return;}
+    if(!audio.paused&&!audio.ended)playerCollectionMusicPreviewRaf=requestAnimationFrame(playerCollectionMusicPreviewUpdateProgress);
+  }
+
+  function stopPlayerCollectionMusicPreview(options={}) {
+    if(playerCollectionMusicPreviewRaf){cancelAnimationFrame(playerCollectionMusicPreviewRaf);playerCollectionMusicPreviewRaf=0;}
+    const audio=playerCollectionMusicPreviewAudio,reset=options?.reset!==false;
+    if(audio){try{audio.pause();}catch{}if(reset){try{audio.currentTime=0;}catch{}}}
+    if(options?.release===true&&audio){playerCollectionMusicPreviewAudio=null;playerCollectionMusicPreviewUrl="";try{audio.removeAttribute("src");audio.load();}catch{}}
+    const button=playerCollectionMusicPreviewButton();if(button&&reset){button.style.setProperty("--music-preview-progress","0%");const time=button.querySelector("[data-rating-player-collection-music-preview-time]");if(time)time.textContent=`0:00 / ${playerCollectionMusicPreviewClock(playerCollectionMusicPreviewLimit)}`;}
+    playerCollectionMusicPreviewSetUi(reset?"idle":"paused");
+  }
+
+  async function togglePlayerCollectionMusicPreview(button) {
+    if(!(button instanceof HTMLElement))return;
+    const url=String(button.dataset.previewUrl||"").trim(),limit=Math.max(1,Math.min(PLAYER_COLLECTION_MUSIC_PREVIEW_MAX_SECONDS,Number(button.dataset.previewSeconds||PLAYER_COLLECTION_MUSIC_PREVIEW_MAX_SECONDS)||PLAYER_COLLECTION_MUSIC_PREVIEW_MAX_SECONDS));
+    if(!/^\/assets\/sounds\/previews\/[A-Za-z0-9._-]+\.mp3(?:[?#].*)?$/.test(url))return;
+    if(playerCollectionMusicPreviewAudio&&playerCollectionMusicPreviewUrl===url){
+      if(!playerCollectionMusicPreviewAudio.paused){try{playerCollectionMusicPreviewAudio.pause();}catch{}if(playerCollectionMusicPreviewRaf){cancelAnimationFrame(playerCollectionMusicPreviewRaf);playerCollectionMusicPreviewRaf=0;}playerCollectionMusicPreviewSetUi("paused");ratingSelectHaptic();return;}
+      try{playerCollectionMusicPreviewSetUi("loading");await playerCollectionMusicPreviewAudio.play();playerCollectionMusicPreviewSetUi("playing");playerCollectionMusicPreviewRaf=requestAnimationFrame(playerCollectionMusicPreviewUpdateProgress);ratingImpactHaptic("light");}catch(error){playerCollectionMusicPreviewSetUi("error","Не удалось воспроизвести preview. Попробуй ещё раз.");}
+      return;
+    }
+    stopPlayerCollectionMusicPreview({reset:true,release:true});
+    const audio=new Audio();audio.preload="none";audio.volume=.78;audio.src=url;playerCollectionMusicPreviewAudio=audio;playerCollectionMusicPreviewUrl=url;playerCollectionMusicPreviewLimit=limit;
+    audio.addEventListener("ended",()=>{if(playerCollectionMusicPreviewAudio===audio)stopPlayerCollectionMusicPreview({reset:true});},{once:false});
+    audio.addEventListener("error",()=>{if(playerCollectionMusicPreviewAudio===audio)playerCollectionMusicPreviewSetUi("error","Не удалось загрузить preview этого трека.");},{once:false});
+    try{playerCollectionMusicPreviewSetUi("loading");await audio.play();playerCollectionMusicPreviewSetUi("playing");playerCollectionMusicPreviewRaf=requestAnimationFrame(playerCollectionMusicPreviewUpdateProgress);ratingImpactHaptic("light");}catch(error){playerCollectionMusicPreviewSetUi("error","Браузер не разрешил воспроизведение. Нажми ещё раз.");}
+  }
+
   function disconnectPlayerCollectionRarityMotion() {
     try{playerCollectionRarityObserver?.disconnect?.();}catch{}
     playerCollectionRarityObserver=null;
@@ -12219,7 +12344,7 @@ function streakLaurel(){
     const selectionBadge=selected?'<span class="rating-player-collection-showcase-selected">В витрине</span>':"";
     const missingBadge=missingTarget?'<span class="rating-player-collection-missing">Не собрано</span>':"";
     const equippedBadge=equipped?`<span class="rating-player-collection-equipped">${viewerOnly?"Выбрано у тебя":"Выбрано"}</span>`:"";
-    return `<button class="${classes}" style="--collection-enter-delay:${delay}ms" data-rating-player-collection-item data-item-kind="${escapeHtml(kind)}" data-item-id="${escapeHtml(itemId)}" data-rarity="${escapeHtml(rarity)}" data-availability="${escapeHtml(availability)}" type="button" aria-label="${playerCollectionShowcaseEditing?(selected?"Убрать из витрины":"Добавить в витрину"):"Открыть"} ${escapeHtml(title)}"${playerCollectionShowcaseEditing?` aria-pressed="${selected?"true":"false"}"`:""}><span class="rating-player-collection-art"><img data-rating-player-collection-image src="${escapeHtml(imageUrl)}" alt="" loading="lazy" decoding="async" data-fallback="${escapeHtml(IMAGE_ERROR_FALLBACK)}">${playerCollectionPrestigeFxMarkup(rarity)}${selectionBadge}${missingBadge}${archived?'<span class="rating-player-collection-archive">Архив</span>':""}${equippedBadge}<span class="rating-player-collection-kind">${escapeHtml(playerCollectionKindLabel(kind))}</span>${viewerOnly?'<span class="rating-player-collection-viewer-only">Только у тебя</span>':showViewerOwned?'<span class="rating-player-collection-viewer-owned">Есть у тебя</span>':""}</span><strong title="${escapeHtml(title)}">${escapeHtml(title)}</strong><span class="rating-player-collection-rarity">${escapeHtml(String(item?.rarityLabel||"Особый"))}</span><span class="rating-player-collection-source">${escapeHtml(source)}</span></button>`;
+    return `<button class="${classes}" style="--collection-enter-delay:${delay}ms" data-rating-player-collection-item data-item-kind="${escapeHtml(kind)}" data-item-id="${escapeHtml(itemId)}" data-rarity="${escapeHtml(rarity)}" data-availability="${escapeHtml(availability)}" type="button" aria-label="${playerCollectionShowcaseEditing?(selected?"Убрать из витрины":"Добавить в витрину"):"Открыть"} ${escapeHtml(title)}"${playerCollectionShowcaseEditing?` aria-pressed="${selected?"true":"false"}"`:""}><span class="rating-player-collection-art"><img data-rating-player-collection-image src="${escapeHtml(imageUrl)}" alt="" loading="lazy" decoding="async" data-fallback="${escapeHtml(IMAGE_ERROR_FALLBACK)}">${playerCollectionPrestigeFxMarkup(rarity)}${playerCollectionLegendaryKindFxMarkup(kind,rarity)}${selectionBadge}${missingBadge}${archived?'<span class="rating-player-collection-archive">Архив</span>':""}${equippedBadge}<span class="rating-player-collection-kind">${escapeHtml(playerCollectionKindLabel(kind))}</span>${viewerOnly?'<span class="rating-player-collection-viewer-only">Только у тебя</span>':showViewerOwned?'<span class="rating-player-collection-viewer-owned">Есть у тебя</span>':""}</span><strong title="${escapeHtml(title)}">${escapeHtml(title)}</strong><span class="rating-player-collection-rarity">${escapeHtml(String(item?.rarityLabel||"Особый"))}</span><span class="rating-player-collection-source">${escapeHtml(source)}</span></button>`;
   }
 
   function playerCollectionStatusMarkup(label,text,stateClass="is-owned") {
@@ -12270,8 +12395,9 @@ function streakLaurel(){
       : `<div class="rating-player-collection-detail-statuses">${playerCollectionStatusMarkup("Игрок",playerStatus,targetOwned?"is-owned":"is-missing")}${playerCollectionStatusMarkup("У тебя",viewerStatus,item?.viewerOwned===true?"is-owned":"is-missing")}</div>`;
     const chips=`<span class="rating-player-collection-detail-chip">${escapeHtml(playerCollectionKindLabel(kind))}</span><span class="rating-player-collection-detail-chip is-rarity">${escapeHtml(rarity)}</span><span class="rating-player-collection-detail-chip is-availability is-${escapeHtml(availabilityStatus)}">${escapeHtml(availabilityChip)}</span>`;
     const legendaryFlare=rarityId==="legendary"?'<span class="rating-player-collection-legendary-flare" aria-hidden="true"></span>':"";
-    playerCollectionDetailContent.innerHTML=`<div class="rating-player-collection-detail-art"><img data-rating-player-collection-image src="${escapeHtml(imageUrl)}" alt="" decoding="async" data-fallback="${escapeHtml(IMAGE_ERROR_FALLBACK)}">${playerCollectionPrestigeFxMarkup(rarityId)}${legendaryFlare}${(targetOwned?item?.equipped:item?.viewerEquipped)===true?`<span class="rating-player-collection-detail-equipped">${targetOwned?"Сейчас выбрано":"Выбрано у тебя"}</span>`:""}${archived?'<span class="rating-player-collection-detail-archive">Архив</span>':""}</div><div class="rating-player-collection-detail-copy"><h3 id="rating-player-collection-detail-title">${escapeHtml(title)}</h3><div class="rating-player-collection-detail-chips">${chips}</div></div><div class="rating-player-collection-detail-source"><span class="rating-player-collection-detail-source-icon" aria-hidden="true">✦</span><span><small>${escapeHtml(sourceHeading)}</small><b>${escapeHtml(source)}</b></span></div>${playerCollectionHistoryMarkup(item)}${playerCollectionHowToGetMarkup(item)}${playerCollectionPopulationMarkup(item)}${statuses}`;
-    if(playerCollectionDetailCard)playerCollectionDetailCard.dataset.rarity=rarityId;
+    playerCollectionDetailContent.innerHTML=`<div class="rating-player-collection-detail-art"><img data-rating-player-collection-image src="${escapeHtml(imageUrl)}" alt="" decoding="async" data-fallback="${escapeHtml(IMAGE_ERROR_FALLBACK)}">${playerCollectionPrestigeFxMarkup(rarityId)}${playerCollectionLegendaryKindFxMarkup(kind,rarityId)}${legendaryFlare}${(targetOwned?item?.equipped:item?.viewerEquipped)===true?`<span class="rating-player-collection-detail-equipped">${targetOwned?"Сейчас выбрано":"Выбрано у тебя"}</span>`:""}${archived?'<span class="rating-player-collection-detail-archive">Архив</span>':""}</div><div class="rating-player-collection-detail-copy"><h3 id="rating-player-collection-detail-title">${escapeHtml(title)}</h3><div class="rating-player-collection-detail-chips">${chips}</div></div><div class="rating-player-collection-detail-source"><span class="rating-player-collection-detail-source-icon" aria-hidden="true">✦</span><span><small>${escapeHtml(sourceHeading)}</small><b>${escapeHtml(source)}</b></span></div>${playerCollectionHistoryMarkup(item)}${playerCollectionMusicPreviewMarkup(item)}${playerCollectionHowToGetMarkup(item)}${playerCollectionPopulationMarkup(item)}${statuses}`;
+    stopPlayerCollectionMusicPreview({reset:true,release:true});
+    if(playerCollectionDetailCard){playerCollectionDetailCard.dataset.rarity=rarityId;playerCollectionDetailCard.dataset.kind=kind;}
     playerCollectionItemTrigger=trigger instanceof HTMLElement?trigger:null;
     playerCollectionDetail.hidden=false;playerCollectionDetail.setAttribute("aria-hidden","false");ratingImpactHaptic(rarityId==="legendary"?"medium":"light");
     try{playerCollectionDetailCard?.focus?.({preventScroll:true});}catch{}
@@ -12280,7 +12406,8 @@ function streakLaurel(){
   function closePlayerCollectionItem(options={}) {
     if(!playerCollectionDetail||playerCollectionDetail.hidden)return false;
     const trigger=playerCollectionItemTrigger;playerCollectionItemTrigger=null;playerCollectionDetail.hidden=true;playerCollectionDetail.setAttribute("aria-hidden","true");
-    if(playerCollectionDetailCard)delete playerCollectionDetailCard.dataset.rarity;
+    stopPlayerCollectionMusicPreview({reset:true,release:true});
+    if(playerCollectionDetailCard){delete playerCollectionDetailCard.dataset.rarity;delete playerCollectionDetailCard.dataset.kind;playerCollectionDetailCard.classList.remove("is-music-preview-playing");}
     if(playerCollectionDetailContent)playerCollectionDetailContent.innerHTML="";
     if(options?.returnFocus!==false){try{trigger?.focus?.({preventScroll:true});}catch{}}
     return true;
@@ -12405,6 +12532,7 @@ function streakLaurel(){
   function closePlayerCollection(options={}) {
     if(!playerCollectionLayer||playerCollectionLayer.hidden)return;
     closePlayerCollectionItem({returnFocus:false});
+    stopPlayerCollectionMusicPreview({reset:true,release:true});
     disconnectPlayerCollectionRarityMotion();
     playerCollectionRequest?.abort?.();playerCollectionRequest=null;
     const trigger=playerCollectionTrigger;playerCollectionTrigger=null;playerCollectionTargetId="";playerCollectionData=null;playerCollectionTab="all";playerCollectionFilter="all";playerCollectionSort="rarity";playerCollectionCompareMode="all";playerCollectionSeasonKey="";playerCollectionShowcaseEditing=false;playerCollectionShowcaseDraft=[];playerCollectionShowcaseSaving=false;playerCollectionShowcaseNotice="";playerCollectionItemTrigger=null;playerCollectionLayer.hidden=true;
@@ -12710,6 +12838,7 @@ function streakLaurel(){
     if(event.target===playerCollectionLayer){ratingSelectHaptic();closePlayerCollection();return;}
     const target=event.target instanceof Element?event.target:null;if(!target)return;
     if(target.closest("[data-rating-player-collection-detail-close]")){ratingSelectHaptic();closePlayerCollectionItem();return;}
+    const musicPreviewToggle=target.closest("[data-rating-player-collection-music-preview-toggle]");if(musicPreviewToggle){event.preventDefault();event.stopPropagation();void togglePlayerCollectionMusicPreview(musicPreviewToggle);return;}
     if(target.closest("[data-rating-player-collection-close]")){ratingSelectHaptic();closePlayerCollection();return;}
     if(target.closest("[data-rating-player-collection-retry]")&&playerCollectionTargetId){ratingImpactHaptic("light");renderPlayerCollectionLoading(String(playerCollectionData?.player?.name||playerProfileContent?.querySelector("#rating-player-profile-title")?.textContent||"Игрок"));void loadPlayerCollection(playerCollectionTargetId,true);return;}
     if(target.closest("[data-rating-player-collection-showcase-edit]")){beginPlayerCollectionShowcaseEdit();return;}

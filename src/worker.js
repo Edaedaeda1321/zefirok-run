@@ -239,13 +239,13 @@ const CASE_SKINS = Object.freeze({
 
 const CASE_MUSIC_TRACKS = Object.freeze({
   cafe_run: Object.freeze({ id: "cafe_run", title: "Зефирное кафе", rarity: "common", weight: 0, defaultOwned: true, src: "/assets/sounds/marshmallow_cafe_run_main.ogg" }),
-  legendary_cafe_run: Object.freeze({ id: "legendary_cafe_run", title: "Легендарный забег", rarity: "legendary", weight: 1, legendaryOnly: true, isNew: true, src: "/assets/sounds/marshmallow_cafe_run_legendary.ogg", imageUrl: "/assets/sounds/covers/music_legendary_cafe_run.webp" }),
-  legendary_marshmallow_dash_1: Object.freeze({ id: "legendary_marshmallow_dash_1", title: "Зефирный рывок I", rarity: "legendary", weight: 1, legendaryOnly: true, isNew: true, src: "/assets/sounds/marshmallow_dash_1.ogg", imageUrl: "/assets/sounds/covers/music_marshmallow_dash_1.webp" }),
-  legendary_marshmallow_dash_2: Object.freeze({ id: "legendary_marshmallow_dash_2", title: "Зефирный рывок II", rarity: "legendary", weight: 1, legendaryOnly: true, isNew: true, src: "/assets/sounds/marshmallow_dash_2.ogg", imageUrl: "/assets/sounds/covers/music_marshmallow_dash_2.webp" }),
-  legendary_marshmallow_cafe_dash_1: Object.freeze({ id: "legendary_marshmallow_cafe_dash_1", title: "Кафейный рывок I", rarity: "legendary", weight: 1, legendaryOnly: true, isNew: true, src: "/assets/sounds/marshmallow_cafe_dash_1.ogg?v=0.79.8", imageUrl: "/assets/sounds/covers/music_cafe_dash_1.webp" }),
-  legendary_marshmallow_cafe_dash_2: Object.freeze({ id: "legendary_marshmallow_cafe_dash_2", title: "Кафейный рывок II", rarity: "legendary", weight: 1, legendaryOnly: true, isNew: true, src: "/assets/sounds/marshmallow_cafe_dash_2.ogg?v=0.79.8", imageUrl: "/assets/sounds/covers/music_cafe_dash_2.webp" }),
-  legendary_marshmallow_dash_3: Object.freeze({ id: "legendary_marshmallow_dash_3", title: "Зефирный рывок III", rarity: "legendary", weight: 1, legendaryOnly: true, isNew: true, src: "/assets/sounds/marshmallow_dash_3.ogg?v=0.79.8", imageUrl: "/assets/sounds/covers/music_marshmallow_dash_3.webp" }),
-  legendary_marshmallow_dash_4: Object.freeze({ id: "legendary_marshmallow_dash_4", title: "Зефирный рывок IV", rarity: "legendary", weight: 1, legendaryOnly: true, isNew: true, src: "/assets/sounds/marshmallow_dash_4.ogg?v=0.79.8", imageUrl: "/assets/sounds/covers/music_marshmallow_dash_4.webp" })
+  legendary_cafe_run: Object.freeze({ id: "legendary_cafe_run", title: "Легендарный забег", rarity: "legendary", weight: 1, legendaryOnly: true, isNew: true, src: "/assets/sounds/marshmallow_cafe_run_legendary.ogg", imageUrl: "/assets/sounds/covers/music_legendary_cafe_run.webp", previewUrl: "/assets/sounds/previews/legendary_cafe_run.mp3" }),
+  legendary_marshmallow_dash_1: Object.freeze({ id: "legendary_marshmallow_dash_1", title: "Зефирный рывок I", rarity: "legendary", weight: 1, legendaryOnly: true, isNew: true, src: "/assets/sounds/marshmallow_dash_1.ogg", imageUrl: "/assets/sounds/covers/music_marshmallow_dash_1.webp", previewUrl: "/assets/sounds/previews/legendary_marshmallow_dash_1.mp3" }),
+  legendary_marshmallow_dash_2: Object.freeze({ id: "legendary_marshmallow_dash_2", title: "Зефирный рывок II", rarity: "legendary", weight: 1, legendaryOnly: true, isNew: true, src: "/assets/sounds/marshmallow_dash_2.ogg", imageUrl: "/assets/sounds/covers/music_marshmallow_dash_2.webp", previewUrl: "/assets/sounds/previews/legendary_marshmallow_dash_2.mp3" }),
+  legendary_marshmallow_cafe_dash_1: Object.freeze({ id: "legendary_marshmallow_cafe_dash_1", title: "Кафейный рывок I", rarity: "legendary", weight: 1, legendaryOnly: true, isNew: true, src: "/assets/sounds/marshmallow_cafe_dash_1.ogg?v=0.79.8", imageUrl: "/assets/sounds/covers/music_cafe_dash_1.webp", previewUrl: "/assets/sounds/previews/legendary_marshmallow_cafe_dash_1.mp3" }),
+  legendary_marshmallow_cafe_dash_2: Object.freeze({ id: "legendary_marshmallow_cafe_dash_2", title: "Кафейный рывок II", rarity: "legendary", weight: 1, legendaryOnly: true, isNew: true, src: "/assets/sounds/marshmallow_cafe_dash_2.ogg?v=0.79.8", imageUrl: "/assets/sounds/covers/music_cafe_dash_2.webp", previewUrl: "/assets/sounds/previews/legendary_marshmallow_cafe_dash_2.mp3" }),
+  legendary_marshmallow_dash_3: Object.freeze({ id: "legendary_marshmallow_dash_3", title: "Зефирный рывок III", rarity: "legendary", weight: 1, legendaryOnly: true, isNew: true, src: "/assets/sounds/marshmallow_dash_3.ogg?v=0.79.8", imageUrl: "/assets/sounds/covers/music_marshmallow_dash_3.webp", previewUrl: "/assets/sounds/previews/legendary_marshmallow_dash_3.mp3" }),
+  legendary_marshmallow_dash_4: Object.freeze({ id: "legendary_marshmallow_dash_4", title: "Зефирный рывок IV", rarity: "legendary", weight: 1, legendaryOnly: true, isNew: true, src: "/assets/sounds/marshmallow_dash_4.ogg?v=0.79.8", imageUrl: "/assets/sounds/covers/music_marshmallow_dash_4.webp", previewUrl: "/assets/sounds/previews/legendary_marshmallow_dash_4.mp3" })
 });
 
 // Скрытый сезонный каталог нескольких сезонов. Часть исторических itemId имеет
@@ -319,15 +319,15 @@ const FUTURE_SEASON_CONTENT = Object.freeze({
   }),
   skin: Object.freeze({}),
   music: Object.freeze({
-    season3_music_moon_cafe_epic: Object.freeze({ id:"season3_music_moon_cafe_epic", seasonKey:"season2", title:"Лунное зефирное кафе", rarity:"epic", imageUrl:"/assets/sounds/covers/season3_lunar_music.webp", audioUrl:"/assets/sounds/moon_marshmallow_cafe_epic.mp3" }),
-    season3_music_moon_cafe_epic_2: Object.freeze({ id:"season3_music_moon_cafe_epic_2", seasonKey:"season2", title:"Лунное зефирное кафе II", rarity:"epic", imageUrl:"/assets/sounds/covers/season3_lunar_music.webp", audioUrl:"/assets/sounds/moon_marshmallow_cafe_2_epic.mp3" }),
-    season3_music_lunar_run_legendary: Object.freeze({ id:"season3_music_lunar_run_legendary", seasonKey:"season2", title:"Лунный забег", rarity:"legendary", imageUrl:"/assets/sounds/covers/season3_lunar_music.webp", audioUrl:"/assets/sounds/new_song_season2(Legendary).mp3" }),
-    season3_music_lunar_run_mythic: Object.freeze({ id:"season3_music_lunar_run_mythic", seasonKey:"season2", title:"Лунный забег II", rarity:"mythic", imageUrl:"/assets/sounds/covers/season3_lunar_music.webp", audioUrl:"/assets/sounds/new_song_season2_2(Mifik).mp3" }),
-    season3_music_puppy_parade_epic: Object.freeze({ id:"season3_music_puppy_parade_epic", title:"Belkino Puppy Parade", rarity:"epic", imageUrl:"/assets/sounds/covers/img_sound_s3.webp", audioUrl:"/assets/sounds/season3/belkino_puppy_parade.mp3" }),
-    season3_music_puppy_trails_mythic: Object.freeze({ id:"season3_music_puppy_trails_mythic", title:"Belkino Puppy Trails I", rarity:"mythic", imageUrl:"/assets/sounds/covers/img_sound_s3.webp", audioUrl:"/assets/sounds/season3/belkino_puppy_trails_1.mp3" }),
-    season3_music_puppy_trails_legendary: Object.freeze({ id:"season3_music_puppy_trails_legendary", title:"Belkino Puppy Trails II", rarity:"legendary", imageUrl:"/assets/sounds/covers/img_sound_s3.webp", audioUrl:"/assets/sounds/season3/belkino_puppy_trails_2.mp3" }),
-    season4_music_magical_run_epic: Object.freeze({ id:"season4_music_magical_run_epic", seasonKey:"season4", title:"Magical Run", rarity:"epic", imageUrl:"/assets/sounds/covers/season4_white_rabbit_soundtrack.webp", audioUrl:"/assets/sounds/season4/magical_run_epic.ogg" }),
-    season4_music_following_rabbit_mythic: Object.freeze({ id:"season4_music_following_rabbit_mythic", seasonKey:"season4", title:"Following the Rabbit", rarity:"mythic", imageUrl:"/assets/sounds/covers/season4_white_rabbit_soundtrack.webp", audioUrl:"/assets/sounds/season4/following_the_rabbit_mythic.ogg" })
+    season3_music_moon_cafe_epic: Object.freeze({ id:"season3_music_moon_cafe_epic", seasonKey:"season2", title:"Лунное зефирное кафе", rarity:"epic", imageUrl:"/assets/sounds/covers/season3_lunar_music.webp", audioUrl:"/assets/sounds/moon_marshmallow_cafe_epic.mp3", previewUrl: "/assets/sounds/previews/season3_music_moon_cafe_epic.mp3" }),
+    season3_music_moon_cafe_epic_2: Object.freeze({ id:"season3_music_moon_cafe_epic_2", seasonKey:"season2", title:"Лунное зефирное кафе II", rarity:"epic", imageUrl:"/assets/sounds/covers/season3_lunar_music.webp", audioUrl:"/assets/sounds/moon_marshmallow_cafe_2_epic.mp3", previewUrl: "/assets/sounds/previews/season3_music_moon_cafe_epic_2.mp3" }),
+    season3_music_lunar_run_legendary: Object.freeze({ id:"season3_music_lunar_run_legendary", seasonKey:"season2", title:"Лунный забег", rarity:"legendary", imageUrl:"/assets/sounds/covers/season3_lunar_music.webp", audioUrl:"/assets/sounds/new_song_season2(Legendary).mp3", previewUrl: "/assets/sounds/previews/season3_music_lunar_run_legendary.mp3" }),
+    season3_music_lunar_run_mythic: Object.freeze({ id:"season3_music_lunar_run_mythic", seasonKey:"season2", title:"Лунный забег II", rarity:"mythic", imageUrl:"/assets/sounds/covers/season3_lunar_music.webp", audioUrl:"/assets/sounds/new_song_season2_2(Mifik).mp3", previewUrl: "/assets/sounds/previews/season3_music_lunar_run_mythic.mp3" }),
+    season3_music_puppy_parade_epic: Object.freeze({ id:"season3_music_puppy_parade_epic", title:"Belkino Puppy Parade", rarity:"epic", imageUrl:"/assets/sounds/covers/img_sound_s3.webp", audioUrl:"/assets/sounds/season3/belkino_puppy_parade.mp3", previewUrl: "/assets/sounds/previews/season3_music_puppy_parade_epic.mp3" }),
+    season3_music_puppy_trails_mythic: Object.freeze({ id:"season3_music_puppy_trails_mythic", title:"Belkino Puppy Trails I", rarity:"mythic", imageUrl:"/assets/sounds/covers/img_sound_s3.webp", audioUrl:"/assets/sounds/season3/belkino_puppy_trails_1.mp3", previewUrl: "/assets/sounds/previews/season3_music_puppy_trails_mythic.mp3" }),
+    season3_music_puppy_trails_legendary: Object.freeze({ id:"season3_music_puppy_trails_legendary", title:"Belkino Puppy Trails II", rarity:"legendary", imageUrl:"/assets/sounds/covers/img_sound_s3.webp", audioUrl:"/assets/sounds/season3/belkino_puppy_trails_2.mp3", previewUrl: "/assets/sounds/previews/season3_music_puppy_trails_legendary.mp3" }),
+    season4_music_magical_run_epic: Object.freeze({ id:"season4_music_magical_run_epic", seasonKey:"season4", title:"Magical Run", rarity:"epic", imageUrl:"/assets/sounds/covers/season4_white_rabbit_soundtrack.webp", audioUrl:"/assets/sounds/season4/magical_run_epic.ogg", previewUrl: "/assets/sounds/previews/season4_music_magical_run_epic.mp3" }),
+    season4_music_following_rabbit_mythic: Object.freeze({ id:"season4_music_following_rabbit_mythic", seasonKey:"season4", title:"Following the Rabbit", rarity:"mythic", imageUrl:"/assets/sounds/covers/season4_white_rabbit_soundtrack.webp", audioUrl:"/assets/sounds/season4/following_the_rabbit_mythic.ogg", previewUrl: "/assets/sounds/previews/season4_music_following_rabbit_mythic.mp3" })
   })
 });
 
@@ -14552,7 +14552,7 @@ function playerCollectionPublicSeasonCatalog(releaseSnapshot) {
       const rarity=String(definition?.rarity||"common"),seasonKey=String(futureSeasonContentSeasonKey(kind,itemId)||""),seasonLabel=playerCollectionSeasonLabel(kind,itemId);
       items.push({
         kind,itemId,title:String(definition?.title||itemId),rarity,rarityLabel:String(PLAYER_COLLECTION_RARITY_LABELS[rarity]||"Особый"),
-        imageUrl:String(seasonPassCosmeticImage(kind,itemId)||SYSTEM_IMAGE_FALLBACK),seasonKey,season:{key:seasonKey,label:seasonLabel},
+        imageUrl:String(seasonPassCosmeticImage(kind,itemId)||SYSTEM_IMAGE_FALLBACK),previewUrl:kind==="music"?String(definition?.previewUrl||""):"",previewDurationSeconds:kind==="music"&&definition?.previewUrl?15:0,seasonKey,season:{key:seasonKey,label:seasonLabel},
         release:{released:Boolean(rule?.released),everReleased:Boolean(rule?.everReleased)},source:playerCollectionPublicSource(kind,itemId,definition,true),owned:false,equipped:false
       });
     }
@@ -14774,6 +14774,8 @@ function playerCollectionPublicItem(state, kind, rawItemId, releaseRules = null)
     rarity,
     rarityLabel:String(PLAYER_COLLECTION_RARITY_LABELS[rarity]||"Особый"),
     imageUrl:String(seasonPassCosmeticImage(kind,itemId)||SYSTEM_IMAGE_FALLBACK),
+    previewUrl:kind==="music"?String(definition?.previewUrl||""):"",
+    previewDurationSeconds:kind==="music"&&definition?.previewUrl?15:0,
     seasonKey,
     season:future?{key:seasonKey,label:seasonLabel}:null,
     release:future?{released:Boolean(rule?.released),everReleased:Boolean(rule?.everReleased)}:{released:true,everReleased:true},
