@@ -9240,6 +9240,26 @@ body { min-height: var(--zefirok-app-height, 100dvh); }
 </style>
 
 
+<style id="rating-player-collection-stage6-7">
+/* Stage 6: prestige header. Stage 7: local filters + sorting over the loaded payload. */
+.rating-player-collection-prestige{position:relative;isolation:isolate;overflow:hidden;margin-bottom:12px;padding:13px;border:1px solid rgba(220,178,194,.72);border-radius:22px;background:radial-gradient(circle at 88% 0,rgba(255,224,142,.32),transparent 38%),radial-gradient(circle at 4% 96%,rgba(249,183,210,.26),transparent 44%),linear-gradient(155deg,rgba(255,255,255,.94),rgba(255,244,248,.92));box-shadow:0 10px 26px rgba(99,55,72,.075),inset 0 1px 0 rgba(255,255,255,.92);animation:rating-player-collection-prestige-in .42s cubic-bezier(.22,.82,.28,1) both}
+.rating-player-collection-prestige::before{content:"";position:absolute;z-index:-1;inset:-50% -18% auto 34%;height:130px;pointer-events:none;background:radial-gradient(circle,rgba(255,223,124,.18),transparent 68%);filter:blur(2px)}
+.rating-player-collection-prestige-head{display:flex;align-items:center;justify-content:space-between;gap:12px;min-width:0}.rating-player-collection-prestige-copy{display:grid;gap:3px;min-width:0}.rating-player-collection-prestige-copy small{color:#bd557a;font-size:6.5px;font-weight:950;letter-spacing:.075em;text-transform:uppercase}.rating-player-collection-prestige-copy strong{overflow:hidden;text-overflow:ellipsis;color:#693a49;font-size:17px;font-weight:950;line-height:1.08}.rating-player-collection-prestige-copy>span{color:#9d7885;font-size:7.5px;font-weight:800;line-height:1.35}
+.rating-player-collection-completion{--collection-completion:0%;position:relative;display:grid;place-items:center;align-content:center;flex:0 0 68px;width:68px;height:68px;border-radius:50%;background:conic-gradient(#db6b94 var(--collection-completion),rgba(238,216,224,.68) 0);box-shadow:0 7px 17px rgba(171,70,108,.10);animation:rating-player-collection-completion-in .58s .08s cubic-bezier(.22,.82,.28,1) both}.rating-player-collection-completion::after{content:"";position:absolute;inset:6px;border-radius:50%;background:linear-gradient(155deg,#fff,#fff6f8);box-shadow:inset 0 0 0 1px rgba(225,190,202,.54)}.rating-player-collection-completion b,.rating-player-collection-completion small{position:relative;z-index:1}.rating-player-collection-completion b{color:#a43f66;font-size:15px;font-weight:950;font-variant-numeric:tabular-nums}.rating-player-collection-completion small{margin-top:1px;color:#a6818d;font-size:5.5px;font-weight:950;text-transform:uppercase;letter-spacing:.035em}.rating-player-collection-completion.is-unknown{background:conic-gradient(#d9c8ce 10%,rgba(238,226,230,.74) 0)}.rating-player-collection-completion.is-unknown b{color:#9b818a}
+.rating-player-collection-prestige .rating-player-collection-overview{margin:11px 0 9px}.rating-player-collection-prestige .rating-player-collection-overview-card{padding:8px 5px;background:rgba(255,255,255,.68)}.rating-player-collection-overview-card.is-archived b{color:#74636a}.rating-player-collection-overview-card.is-archived span{color:#8f7b82}
+.rating-player-collection-rarest{position:relative;display:grid;grid-template-columns:54px minmax(0,1fr) 18px;gap:9px;align-items:center;width:100%;min-width:0;padding:8px 9px;border:1px solid rgba(222,184,198,.62);border-radius:17px;background:rgba(255,255,255,.74);color:inherit;text-align:left;appearance:none;-webkit-appearance:none;cursor:pointer;-webkit-tap-highlight-color:transparent;box-shadow:inset 0 1px 0 rgba(255,255,255,.72);transition:transform .16s ease,border-color .16s ease,box-shadow .16s ease}.rating-player-collection-rarest:active{transform:scale(.988)}.rating-player-collection-rarest:focus-visible{outline:2px solid rgba(204,79,128,.38);outline-offset:2px}.rating-player-collection-rarest[data-rarity="legendary"]{overflow:hidden;border-color:rgba(218,160,48,.52);background:radial-gradient(circle at 92% 10%,rgba(255,228,123,.40),transparent 44%),linear-gradient(145deg,rgba(255,254,245,.94),rgba(255,244,204,.82));box-shadow:0 6px 16px rgba(172,112,20,.08),inset 0 1px 0 rgba(255,255,255,.9)}.rating-player-collection-rarest[data-rarity="legendary"]::after{content:"";position:absolute;top:-30%;bottom:-30%;left:-50%;width:27%;pointer-events:none;transform:skewX(-18deg);background:linear-gradient(90deg,transparent,rgba(255,255,255,.82),transparent);animation:rating-player-collection-rarest-shine 5.6s 1.2s ease-in-out infinite}
+.rating-player-collection-rarest-art,.rating-player-collection-rarest-symbol{position:relative;display:grid;place-items:center;width:54px;height:54px;border-radius:14px;background:radial-gradient(circle at 50% 35%,#fff,#f8e8ee);overflow:hidden}.rating-player-collection-rarest-art img{display:block;width:50px;height:50px;object-fit:contain;filter:drop-shadow(0 4px 7px rgba(93,54,67,.12))}.rating-player-collection-rarest[data-rarity="legendary"] .rating-player-collection-rarest-art{background:radial-gradient(circle at 50% 35%,#fffdf4,#ffeab0);box-shadow:inset 0 0 0 1px rgba(219,158,38,.25)}.rating-player-collection-rarest-symbol{color:#c15d81;font-size:21px}.rating-player-collection-rarest-copy{display:grid;gap:2px;min-width:0}.rating-player-collection-rarest-copy small{color:#b15b78;font-size:6px;font-weight:950;text-transform:uppercase;letter-spacing:.06em}.rating-player-collection-rarest-copy strong{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#6e4351;font-size:10px;font-weight:950}.rating-player-collection-rarest-copy span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#98727f;font-size:7px;font-weight:800}.rating-player-collection-rarest[data-rarity="legendary"] .rating-player-collection-rarest-copy small,.rating-player-collection-rarest[data-rarity="legendary"] .rating-player-collection-rarest-copy span{color:#91651d}.rating-player-collection-rarest[data-rarity="legendary"] .rating-player-collection-rarest-copy strong{color:#774c0e}.rating-player-collection-rarest-arrow{color:#b45c7c;font-size:24px;font-weight:800;line-height:1}.rating-player-collection-rarest.is-pending{grid-template-columns:54px minmax(0,1fr);cursor:default}.rating-player-collection-rarest.is-pending:active{transform:none}
+.rating-player-collection-tools{display:grid;gap:8px;margin:-2px 0 12px;padding:10px;border:1px solid rgba(225,190,202,.58);border-radius:17px;background:rgba(255,255,255,.62)}.rating-player-collection-tools-head{display:flex;align-items:end;justify-content:space-between;gap:10px}.rating-player-collection-tools-head>span{display:grid;gap:2px;min-width:0}.rating-player-collection-tools-head>span small{color:#a9828f;font-size:6px;font-weight:950;text-transform:uppercase;letter-spacing:.06em}.rating-player-collection-tools-head>span b{color:#744a58;font-size:9px;font-weight:950;font-variant-numeric:tabular-nums}.rating-player-collection-filters{display:flex;gap:5px;margin:0 -1px;padding:1px;overflow-x:auto;scrollbar-width:none;overscroll-behavior-x:contain}.rating-player-collection-filters::-webkit-scrollbar{display:none}.rating-player-collection-filter{flex:0 0 auto;min-height:30px;padding:6px 9px;border:1px solid rgba(222,187,199,.64);border-radius:999px;background:rgba(255,255,255,.78);color:#8c6875;font:900 7px/1 var(--font-sans);appearance:none;-webkit-appearance:none;cursor:pointer;-webkit-tap-highlight-color:transparent}.rating-player-collection-filter[aria-pressed="true"]{border-color:rgba(202,79,124,.70);background:linear-gradient(145deg,#e77fa5,#cb527f);color:#fff;box-shadow:0 4px 10px rgba(186,67,108,.15)}.rating-player-collection-filter:focus-visible{outline:2px solid rgba(204,79,128,.35);outline-offset:2px}
+.rating-player-collection-sort{display:grid;gap:2px;min-width:148px}.rating-player-collection-sort>span{color:#a9828f;font-size:5.8px;font-weight:950;text-transform:uppercase;letter-spacing:.05em;text-align:right}.rating-player-collection-sort select{width:100%;min-height:31px;padding:5px 27px 5px 9px;border:1px solid rgba(220,184,197,.66);border-radius:10px;background-color:#fffafc;color:#795361;font:900 7px/1.1 var(--font-sans);appearance:auto;-webkit-appearance:auto;outline:none}.rating-player-collection-sort select:focus-visible{border-color:#cf5b86;box-shadow:0 0 0 2px rgba(207,91,134,.12)}
+.rating-player-collection-reset{margin-top:5px;padding:8px 12px;border:1px solid rgba(208,91,133,.52);border-radius:999px;background:#fff;color:#b34970;font:950 7.5px/1 var(--font-sans);appearance:none;-webkit-appearance:none;cursor:pointer}
+@keyframes rating-player-collection-prestige-in{from{opacity:.45;transform:translateY(8px) scale(.988)}to{opacity:1;transform:translateY(0) scale(1)}}
+@keyframes rating-player-collection-completion-in{from{opacity:.4;transform:scale(.78) rotate(-8deg)}to{opacity:1;transform:scale(1) rotate(0)}}
+@keyframes rating-player-collection-rarest-shine{0%,58%{left:-50%;opacity:0}64%{opacity:.8}76%{left:126%;opacity:0}100%{left:126%;opacity:0}}
+@media(max-width:390px){.rating-player-collection-prestige{padding:11px}.rating-player-collection-completion{flex-basis:62px;width:62px;height:62px}.rating-player-collection-completion b{font-size:13px}.rating-player-collection-tools-head{align-items:center}.rating-player-collection-sort{min-width:136px}.rating-player-collection-rarest{grid-template-columns:50px minmax(0,1fr) 16px}.rating-player-collection-rarest-art,.rating-player-collection-rarest-symbol{width:50px;height:50px}.rating-player-collection-rarest-art img{width:46px;height:46px}}
+@media(prefers-reduced-motion:reduce){.rating-player-collection-prestige,.rating-player-collection-completion,.rating-player-collection-rarest[data-rarity="legendary"]::after{animation:none!important;transition:none!important}}
+</style>
+
+
 <style id="rating-v6-interface">
 .rating-v6-sr-only{position:absolute!important;width:1px!important;height:1px!important;padding:0!important;margin:-1px!important;overflow:hidden!important;clip:rect(0,0,0,0)!important;white-space:nowrap!important;border:0!important}
 #zefirok-maltipoo-runner .leaderboard-v4-layer{padding:0!important;background:linear-gradient(180deg,#fff8f6,#fff2f5)!important;backdrop-filter:none!important;-webkit-backdrop-filter:none!important}
@@ -10496,6 +10516,9 @@ body { min-height: var(--zefirok-app-height, 100dvh); }
   const PLAYER_COLLECTION_ICON = "/assets/ui/new_avatars_game.webp";
   const PLAYER_COLLECTION_BUTTON_ICON = "/assets/ui/icon_user_collectible.webp";
   const PLAYER_COLLECTION_TABS = Object.freeze([{id:"all",label:"Все"},{id:"skin",label:"Скины"},{id:"avatar",label:"Аватары"},{id:"frame",label:"Рамки"},{id:"trail",label:"Следы"},{id:"music",label:"Музыка"}]);
+  const PLAYER_COLLECTION_FILTERS = Object.freeze([{id:"all",label:"Все"},{id:"legendary",label:"Легендарные"},{id:"archived",label:"Архив"},{id:"equipped",label:"Выбрано"},{id:"viewer_owned",label:"Есть у меня",viewerOnly:true},{id:"viewer_missing",label:"Нет у меня",viewerOnly:true}]);
+  const PLAYER_COLLECTION_SORTS = Object.freeze([{id:"rarity",label:"По редкости"},{id:"player_rarity",label:"Редчайшие у игроков"},{id:"name",label:"По названию"}]);
+  const PLAYER_COLLECTION_RARITY_ORDER = Object.freeze({legendary:6,mythic:5,epic:4,superrare:3,rare:2,common:1});
   const ACHIEVEMENT_POINTS_ICON = "/assets/ui/icon_score_acivment.webp";
   const ACHIEVEMENT_FALLBACK_ICON = ACHIEVEMENT_POINTS_ICON;
   const BEST_SCORE_ICON = "/assets/optimized/v0.79.5/iconRecord.webp?v=0.79.5";
@@ -10636,6 +10659,8 @@ body { min-height: var(--zefirok-app-height, 100dvh); }
   let playerCollectionTrigger = null;
   let playerCollectionData = null;
   let playerCollectionTab = "all";
+  let playerCollectionFilter = "all";
+  let playerCollectionSort = "rarity";
   let playerCollectionItemTrigger = null;
   let playerCollectionRarityObserver = null;
   let playerProfileRequest = null;
@@ -11946,6 +11971,57 @@ function streakLaurel(){
     return PLAYER_COLLECTION_TABS.map(tab=>`<button class="rating-player-collection-tab" data-rating-player-collection-tab="${escapeHtml(tab.id)}" type="button" role="tab" aria-selected="${activeTab===tab.id?"true":"false"}"><span>${escapeHtml(tab.label)}</span><b>${formatter.format(playerCollectionCount(summary,tab.id))}</b></button>`).join("");
   }
 
+  function playerCollectionPercent(value) {
+    const number=Math.max(0,Math.min(100,Number(value)||0));
+    return Number.isInteger(number)?formatter.format(number):number.toLocaleString("ru-RU",{minimumFractionDigits:1,maximumFractionDigits:1});
+  }
+
+  function playerCollectionRarestItem(items) {
+    return (Array.isArray(items)?items:[]).filter(item=>item?.playerRarity?.known===true&&Number.isFinite(Number(item?.playerRarity?.ownershipPercent))).slice().sort((left,right)=>{
+      const percentDelta=Number(left?.playerRarity?.ownershipPercent)-Number(right?.playerRarity?.ownershipPercent);if(percentDelta)return percentDelta;
+      const rarityDelta=Number(PLAYER_COLLECTION_RARITY_ORDER[String(right?.rarity||"")]||0)-Number(PLAYER_COLLECTION_RARITY_ORDER[String(left?.rarity||"")]||0);if(rarityDelta)return rarityDelta;
+      return String(left?.title||"").localeCompare(String(right?.title||""),"ru");
+    })[0]||null;
+  }
+
+  function playerCollectionPrestigeMarkup(summary,items) {
+    const total=Math.max(0,Number(summary?.totalItems||0)),legendary=Math.max(0,Number(summary?.legendaryCount||0)),archived=Math.max(0,Number(summary?.archivedCount||0));
+    const catalogTotal=Math.max(0,Number(summary?.catalogTotal||0)),catalogKnown=summary?.catalogKnown===true&&catalogTotal>0,completion=catalogKnown?Math.max(0,Math.min(100,Number(summary?.completionPercent||0))):0;
+    const completionLabel=catalogKnown?`${playerCollectionPercent(completion)}%`:"—",completionCopy=catalogKnown?`${formatter.format(total)} из ${formatter.format(catalogTotal)} публичных предметов`:"Каталог прогресса уточняется";
+    const rarest=playerCollectionRarestItem(items),rarestStats=rarest?.playerRarity||{},rarestKind=String(rarest?.kind||""),rarestId=String(rarest?.itemId||""),rarestRarity=String(rarest?.rarity||"common");
+    const rarestMarkup=rarest?`<button class="rating-player-collection-rarest" data-rating-player-collection-item data-item-kind="${escapeHtml(rarestKind)}" data-item-id="${escapeHtml(rarestId)}" data-rarity="${escapeHtml(rarestRarity)}" type="button" aria-label="Открыть самый редкий предмет: ${escapeHtml(String(rarest?.title||"Предмет"))}"><span class="rating-player-collection-rarest-art"><img data-rating-player-collection-image src="${escapeHtml(String(rarest?.imageUrl||IMAGE_ERROR_FALLBACK))}" alt="" loading="lazy" decoding="async" data-fallback="${escapeHtml(IMAGE_ERROR_FALLBACK)}"></span><span class="rating-player-collection-rarest-copy"><small>Самый редкий предмет</small><strong>${escapeHtml(String(rarest?.title||"Предмет"))}</strong><span>${escapeHtml(String(rarest?.rarityLabel||"Особый"))} · ≈${escapeHtml(playerCollectionPercent(rarestStats?.ownershipPercent))}% игроков</span></span><span class="rating-player-collection-rarest-arrow" aria-hidden="true">›</span></button>`:`<div class="rating-player-collection-rarest is-pending" aria-label="Редкость предметов пока рассчитывается"><span class="rating-player-collection-rarest-symbol" aria-hidden="true">✦</span><span class="rating-player-collection-rarest-copy"><small>Самый редкий предмет</small><strong>Статистика уточняется</strong><span>Коллекция продолжает работать без этого показателя.</span></span></div>`;
+    return `<section class="rating-player-collection-prestige" aria-label="Статус коллекции"><div class="rating-player-collection-prestige-head"><span class="rating-player-collection-prestige-copy"><small>Статус коллекции</small><strong>${legendary?`${formatter.format(legendary)} легендарных`:"Коллекция игрока"}</strong><span>${escapeHtml(completionCopy)}</span></span><span class="rating-player-collection-completion${catalogKnown?"":" is-unknown"}" style="--collection-completion:${completion}%"><b>${escapeHtml(completionLabel)}</b><small>собрано</small></span></div><div class="rating-player-collection-overview"><span class="rating-player-collection-overview-card"><b>${formatter.format(total)}</b><span>всего</span></span><span class="rating-player-collection-overview-card is-archived"><b>${formatter.format(archived)}</b><span>архивных</span></span><span class="rating-player-collection-overview-card is-legendary${legendary?" has-items":""}"><b>${formatter.format(legendary)}</b><span>легендарных</span></span></div>${rarestMarkup}</section>`;
+  }
+
+  function playerCollectionFiltersMarkup(data,activeFilter) {
+    const isSelf=data?.viewer?.isSelf===true;
+    return PLAYER_COLLECTION_FILTERS.filter(filter=>!filter.viewerOnly||!isSelf).map(filter=>`<button class="rating-player-collection-filter" data-rating-player-collection-filter="${escapeHtml(filter.id)}" type="button" aria-pressed="${activeFilter===filter.id?"true":"false"}">${escapeHtml(filter.label)}</button>`).join("");
+  }
+
+  function playerCollectionSortMarkup(activeSort) {
+    return `<label class="rating-player-collection-sort"><span>Сортировка</span><select data-rating-player-collection-sort aria-label="Сортировка коллекции">${PLAYER_COLLECTION_SORTS.map(option=>`<option value="${escapeHtml(option.id)}"${activeSort===option.id?" selected":""}>${escapeHtml(option.label)}</option>`).join("")}</select></label>`;
+  }
+
+  function playerCollectionMatchesFilter(item,filter) {
+    if(filter==="legendary")return String(item?.rarity||"")==="legendary";
+    if(filter==="archived")return String(item?.availability?.status||"")==="archived";
+    if(filter==="equipped")return item?.equipped===true;
+    if(filter==="viewer_owned")return item?.viewerOwned===true;
+    if(filter==="viewer_missing")return item?.viewerOwned!==true;
+    return true;
+  }
+
+  function playerCollectionSortedItems(items,sortMode) {
+    const list=(Array.isArray(items)?items:[]).slice(),titleCompare=(left,right)=>String(left?.title||"").localeCompare(String(right?.title||""),"ru");
+    if(sortMode==="name")return list.sort(titleCompare);
+    if(sortMode==="player_rarity")return list.sort((left,right)=>{
+      const leftKnown=left?.playerRarity?.known===true,rightKnown=right?.playerRarity?.known===true;if(leftKnown!==rightKnown)return leftKnown?-1:1;
+      if(leftKnown&&rightKnown){const delta=Number(left?.playerRarity?.ownershipPercent||0)-Number(right?.playerRarity?.ownershipPercent||0);if(delta)return delta;}
+      const rarityDelta=Number(PLAYER_COLLECTION_RARITY_ORDER[String(right?.rarity||"")]||0)-Number(PLAYER_COLLECTION_RARITY_ORDER[String(left?.rarity||"")]||0);return rarityDelta||titleCompare(left,right);
+    });
+    return list.sort((left,right)=>Number(PLAYER_COLLECTION_RARITY_ORDER[String(right?.rarity||"")]||0)-Number(PLAYER_COLLECTION_RARITY_ORDER[String(left?.rarity||"")]||0)||titleCompare(left,right));
+  }
+
   function playerCollectionMotionReduced() {
     try{return window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches===true;}catch{return false;}
   }
@@ -12053,14 +12129,20 @@ function streakLaurel(){
   function renderPlayerCollection(data,activeTab=playerCollectionTab) {
     if(!playerCollectionContent)return;
     playerCollectionData=data;playerCollectionTab=PLAYER_COLLECTION_TABS.some(tab=>tab.id===activeTab)?activeTab:"all";
-    const player=data?.player||{},summary=data?.summary||{},items=Array.isArray(data?.items)?data.items:[],filtered=playerCollectionTab==="all"?items:items.filter(item=>String(item?.kind||"")===playerCollectionTab);
-    const total=Math.max(0,Number(summary?.totalItems||0)),rare=Math.max(0,Number(summary?.rareCount||0)),legendary=Math.max(0,Number(summary?.legendaryCount||0)),archived=Math.max(0,Number(summary?.archivedCount||0));
+    if(data?.viewer?.isSelf===true&&["viewer_owned","viewer_missing"].includes(playerCollectionFilter))playerCollectionFilter="all";
+    if(!PLAYER_COLLECTION_FILTERS.some(filter=>filter.id===playerCollectionFilter))playerCollectionFilter="all";
+    if(!PLAYER_COLLECTION_SORTS.some(sort=>sort.id===playerCollectionSort))playerCollectionSort="rarity";
+    const player=data?.player||{},summary=data?.summary||{},items=Array.isArray(data?.items)?data.items:[],scopeItems=playerCollectionTab==="all"?items:items.filter(item=>String(item?.kind||"")===playerCollectionTab);
+    const filtered=playerCollectionSortedItems(scopeItems.filter(item=>playerCollectionMatchesFilter(item,playerCollectionFilter)),playerCollectionSort);
+    const total=Math.max(0,Number(summary?.totalItems||0)),legendary=Math.max(0,Number(summary?.legendaryCount||0)),archived=Math.max(0,Number(summary?.archivedCount||0)),completionKnown=summary?.catalogKnown===true&&Number(summary?.catalogTotal)>0,completion=completionKnown?playerCollectionPercent(summary?.completionPercent):"";
     if(playerCollectionTitle)playerCollectionTitle.textContent=`Коллекция · ${String(player?.name||"Игрок")}`;
-    if(playerCollectionSubtitle)playerCollectionSubtitle.textContent=total?`${formatter.format(total)} предметов · ${formatter.format(rare)} редких${archived?` · ${formatter.format(archived)} архивных`:""}`:"Пока нет коллекционных предметов";
-    const overview=`<div class="rating-player-collection-overview"><span class="rating-player-collection-overview-card"><b>${formatter.format(total)}</b><span>всего</span></span><span class="rating-player-collection-overview-card"><b>${formatter.format(rare)}</b><span>редких</span></span><span class="rating-player-collection-overview-card is-legendary${legendary?" has-items":""}"><b>${formatter.format(legendary)}</b><span>легендарных</span></span></div>`;
+    if(playerCollectionSubtitle)playerCollectionSubtitle.textContent=total?`${formatter.format(total)} предметов · ${formatter.format(legendary)} легендарных${completionKnown?` · ${completion}% собрано`:archived?` · ${formatter.format(archived)} архивных`:""}`:"Пока нет коллекционных предметов";
+    const prestige=playerCollectionPrestigeMarkup(summary,items);
     const tabs=`<div class="rating-player-collection-tabs" role="tablist" aria-label="Категории коллекции">${playerCollectionTabsMarkup(summary,playerCollectionTab)}</div>`;
-    const body=filtered.length?`<div class="rating-player-collection-grid">${filtered.map((item,index)=>playerCollectionItemMarkup(item,index)).join("")}</div>`:`<div class="rating-player-collection-empty"><img src="${escapeHtml(PLAYER_COLLECTION_ICON)}" alt=""><strong>${total?"В этой категории пока пусто":"Коллекция пока пустая"}</strong><span>${total?"Выбери другую категорию, чтобы посмотреть предметы игрока.":"Когда игрок получит коллекционную косметику, она появится здесь."}</span></div>`;
-    playerCollectionContent.innerHTML=overview+tabs+body;
+    const tools=`<section class="rating-player-collection-tools" aria-label="Фильтры и сортировка"><div class="rating-player-collection-tools-head"><span><small>Показать</small><b>${formatter.format(filtered.length)} из ${formatter.format(scopeItems.length)}</b></span>${playerCollectionSortMarkup(playerCollectionSort)}</div><div class="rating-player-collection-filters">${playerCollectionFiltersMarkup(data,playerCollectionFilter)}</div></section>`;
+    const emptyByFilter=scopeItems.length>0&&filtered.length===0;
+    const body=filtered.length?`<div class="rating-player-collection-grid">${filtered.map((item,index)=>playerCollectionItemMarkup(item,index)).join("")}</div>`:`<div class="rating-player-collection-empty"><img src="${escapeHtml(PLAYER_COLLECTION_ICON)}" alt=""><strong>${emptyByFilter?"По этому фильтру ничего нет":total?"В этой категории пока пусто":"Коллекция пока пустая"}</strong><span>${emptyByFilter?"Измени фильтр или сортировку, чтобы увидеть другие предметы.":total?"Выбери другую категорию, чтобы посмотреть предметы игрока.":"Когда игрок получит коллекционную косметику, она появится здесь."}</span>${emptyByFilter?'<button class="rating-player-collection-reset" data-rating-player-collection-filter-reset type="button">Сбросить фильтр</button>':""}</div>`;
+    playerCollectionContent.innerHTML=prestige+tabs+tools+body;
     if(playerCollectionBody)playerCollectionBody.scrollTop=0;
     activatePlayerCollectionRarityMotion();
   }
@@ -12080,7 +12162,7 @@ function streakLaurel(){
     const id=String(targetId||playerProfileTargetId||"").trim();if(!id||!playerCollectionLayer)return;
     const auth=currentInitData();if(!auth){showToast("Откройте рейтинг из Telegram Mini App, чтобы посмотреть коллекцию игрока.","warning",4200);return;}
     const profileName=String(playerProfileContent?.querySelector("#rating-player-profile-title")?.textContent||leaderboardEntryById(id)?.name||"Игрок");
-    playerCollectionRequest?.abort?.();playerCollectionRequest=null;playerCollectionTargetId=id;playerCollectionTrigger=trigger instanceof HTMLElement?trigger:null;playerCollectionData=null;playerCollectionTab="all";
+    playerCollectionRequest?.abort?.();playerCollectionRequest=null;playerCollectionTargetId=id;playerCollectionTrigger=trigger instanceof HTMLElement?trigger:null;playerCollectionData=null;playerCollectionTab="all";playerCollectionFilter="all";playerCollectionSort="rarity";
     renderPlayerCollectionLoading(profileName);playerCollectionLayer.hidden=false;ratingImpactHaptic("light");
     try{playerCollectionSheet?.focus?.({preventScroll:true});}catch{}
     const key=`${mode}:${id}`,cached=playerCollectionCache.get(key),now=Date.now();
@@ -12093,7 +12175,7 @@ function streakLaurel(){
     closePlayerCollectionItem({returnFocus:false});
     disconnectPlayerCollectionRarityMotion();
     playerCollectionRequest?.abort?.();playerCollectionRequest=null;
-    const trigger=playerCollectionTrigger;playerCollectionTrigger=null;playerCollectionTargetId="";playerCollectionData=null;playerCollectionTab="all";playerCollectionItemTrigger=null;playerCollectionLayer.hidden=true;
+    const trigger=playerCollectionTrigger;playerCollectionTrigger=null;playerCollectionTargetId="";playerCollectionData=null;playerCollectionTab="all";playerCollectionFilter="all";playerCollectionSort="rarity";playerCollectionItemTrigger=null;playerCollectionLayer.hidden=true;
     if(playerCollectionContent)playerCollectionContent.innerHTML="";
     if(options?.returnFocus!==false){try{trigger?.focus?.({preventScroll:true});}catch{}}
   }
@@ -12405,6 +12487,12 @@ function streakLaurel(){
       if(item){openPlayerCollectionItem(item,itemTrigger);}return;
     }
     const tab=target.closest("[data-rating-player-collection-tab]");if(tab&&playerCollectionData){const next=String(tab.dataset.ratingPlayerCollectionTab||"all");if(next!==playerCollectionTab){ratingSelectHaptic();renderPlayerCollection(playerCollectionData,next);}return;}
+    const filter=target.closest("[data-rating-player-collection-filter]");if(filter&&playerCollectionData){const next=String(filter.dataset.ratingPlayerCollectionFilter||"all");if(next!==playerCollectionFilter){playerCollectionFilter=next;ratingSelectHaptic();renderPlayerCollection(playerCollectionData,playerCollectionTab);}return;}
+    if(target.closest("[data-rating-player-collection-filter-reset]")&&playerCollectionData){playerCollectionFilter="all";ratingSelectHaptic();renderPlayerCollection(playerCollectionData,playerCollectionTab);return;}
+  });
+  playerCollectionLayer?.addEventListener("change",event=>{
+    const target=event.target instanceof Element?event.target:null,sort=target?.closest?.("[data-rating-player-collection-sort]");if(!sort||!playerCollectionData)return;
+    const next=String(sort.value||"rarity");if(next!==playerCollectionSort&&PLAYER_COLLECTION_SORTS.some(option=>option.id===next)){playerCollectionSort=next;ratingSelectHaptic();renderPlayerCollection(playerCollectionData,playerCollectionTab);}
   });
   playerCollectionLayer?.addEventListener("error",event=>{const image=event.target;if(!(image instanceof HTMLImageElement)||!image.matches("[data-rating-player-collection-image]"))return;const fallback=String(image.dataset.fallback||IMAGE_ERROR_FALLBACK);if(fallback&&image.getAttribute("src")!==fallback)image.src=fallback;},true);
   function resetPlayerProfileDragState() {

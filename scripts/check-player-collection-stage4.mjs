@@ -13,7 +13,7 @@ function check(name,condition){console.log(`${condition?'PASS':'FAIL'}  ${name}`
 function between(source,start,end){const a=source.indexOf(start),b=source.indexOf(end,a+start.length);return a>=0&&b>a?source.slice(a,b):'';}
 
 const endpoint=between(worker,'async function leaderboardPlayerCollection(request, env) {','async function leaderboardPlayerProfile(request, env) {');
-const publicItem=between(worker,'function playerCollectionPublicItem(state, kind, rawItemId, releaseRules = null) {','async function playerPublicCollection(env, state) {');
+const publicItem=between(worker,'function playerCollectionPublicItem(state, kind, rawItemId, releaseRules = null) {','async function playerPublicCollection(env, state');
 const acquisition=between(worker,'function playerCollectionAcquisitionView(item, acquisition) {','function playerCollectionPublicSource(kind, itemId, definition, future) {');
 const acquisitionFallback=between(worker,'function albumAcquisitionBaselineSources(){','function withAlbumAcquisitionTimeout(promise, timeoutMs = ALBUM_ACQUISITION_TIMEOUT_MS) {');
 const rarity=between(worker,'function playerCollectionRarityFallback() {','function playerCollectionAcquisitionView(item, acquisition) {');

@@ -14446,6 +14446,7 @@ const PLAYER_COLLECTION_RARITY_LABELS = Object.freeze({ common:"Обычный",
 const PLAYER_COLLECTION_RARITY_CACHE_TTL_MS = 10 * 60 * 1000;
 const PLAYER_COLLECTION_RARITY_CACHE_FALLBACK_TTL_MS = 45 * 1000;
 const PLAYER_COLLECTION_RARITY_TIMEOUT_MS = 1100;
+const PLAYER_COLLECTION_CATALOG_TIMEOUT_MS = 1000;
 const playerCollectionRarityCache = new WeakMap();
 
 function playerCollectionOwnedIds(state, kind) {
@@ -14472,6 +14473,44 @@ function playerCollectionSeasonLabel(kind, itemId) {
   const label=String(futureSeasonContentLabel(kind,itemId)||"").trim();
   if (key === "season3" && label && !/^сезон\s*3\b/i.test(label)) return `Сезон 3 · ${label}`;
   return label;
+}
+
+function playerCollectionReleaseRulesFallback() {
+  const rows=liveContentReleaseCache?.rows instanceof Map?liveContentReleaseCache.rows:new Map();
+  return {complete:false,rows};
+}
+
+async function playerCollectionReleaseRulesSnapshot(env) {
+  try {
+    const rows=await startupBounded("player collection catalog",readLiveContentReleaseRules(env),PLAYER_COLLECTION_CATALOG_TIMEOUT_MS);
+    return {complete:true,rows:rows instanceof Map?rows:new Map()};
+  } catch (error) {
+    console.warn("player collection catalog metadata unavailable",String(error?.message||error));
+    return playerCollectionReleaseRulesFallback();
+  }
+}
+
+function playerCollectionPublicCatalogSummary(releaseSnapshot) {
+  const releaseRules=releaseSnapshot?.rows instanceof Map?releaseSnapshot.rows:new Map();
+  const rulesKnown=releaseSnapshot?.complete===true;
+  const categories={skin:0,avatar:0,frame:0,trail:0,music:0},seen=new Set();
+  let totalItems=0;
+  for(const kind of PLAYER_COLLECTION_KINDS){
+    const catalog=seasonPassAnyCosmeticCatalog(kind)||{};
+    for(const [rawItemId,definition] of Object.entries(catalog)){
+      const itemId=normalizeCaseCosmeticId(kind,rawItemId),canonicalDefinition=catalog[itemId]||definition,key=`${kind}:${itemId}`;
+      if(!itemId||seen.has(key)||canonicalDefinition?.defaultOwned===true)continue;
+      seen.add(key);
+      if(futureSeasonContentItem(kind,itemId)){
+        const rule=releaseRules.get(liveContentReleaseKey(kind,itemId));
+        // Completion never reveals unreleased future content. Once released, archived
+        // cosmetics remain part of the public collection denominator forever.
+        if(!rule?.released&&!rule?.everReleased)continue;
+      }
+      totalItems+=1;categories[kind]+=1;
+    }
+  }
+  return {known:rulesKnown,totalItems,categories};
 }
 
 function playerCollectionRarityFallback() {
@@ -14635,9 +14674,10 @@ function playerCollectionPublicItem(state, kind, rawItemId, releaseRules = null)
   };
 }
 
-async function playerPublicCollection(env, state) {
-  let releaseRules=null;
-  if (playerCollectionHasFutureOwned(state)) {
+async function playerPublicCollection(env, state, options = {}) {
+  const providedReleaseRules=options?.releaseRules instanceof Map;
+  let releaseRules=providedReleaseRules?options.releaseRules:null;
+  if (!providedReleaseRules && playerCollectionHasFutureOwned(state)) {
     try { releaseRules=await readLiveContentReleaseRules(env); }
     catch (error) {
       // Public profiles fail closed for hidden seasonal content, but a temporary
@@ -14687,9 +14727,14 @@ async function leaderboardPlayerCollection(request, env) {
       : await env.DB.prepare(`SELECT telegram_id,display_name FROM leaderboard_entries WHERE season_id=? AND telegram_id=? AND hidden=0 LIMIT 1`).bind(String(season.id),targetTelegramId).first();
     if(!publicRow)throw new ApiError(404,"Игрок сейчас не отображается в этом рейтинге.");
     const collectionStateSql=`SELECT owned_avatars_json,active_avatar_id,owned_frames_json,active_frame_id,owned_trails_json,active_trail_id,owned_skins_json,active_skin_id,owned_music_json,active_music_id FROM case_player_state WHERE telegram_id=? LIMIT 1`;
+    // Stage 6 catalog metadata is lazy with the full collection endpoint only.
+    // Start it beside the target inventory read so the mini-profile remains unchanged.
+    const releaseSnapshotPromise=playerCollectionReleaseRulesSnapshot(env);
     const targetCaseRow=await env.DB.prepare(collectionStateSql).bind(targetTelegramId).first();
     const targetState=caseStateFromRow(targetCaseRow||{});
-    const collection=await playerPublicCollection(env,targetState);
+    const releaseSnapshot=await releaseSnapshotPromise;
+    const collection=await playerPublicCollection(env,targetState,{releaseRules:releaseSnapshot.rows});
+    const catalogSummary=playerCollectionPublicCatalogSummary(releaseSnapshot);
     const stage4MetadataPromise=collection.items.length?Promise.all([
       withAlbumAcquisitionTimeout(albumAcquisitionSources(env)),
       withPlayerCollectionRarityTimeout(playerCollectionRaritySnapshot(env))
@@ -14718,10 +14763,16 @@ async function leaderboardPlayerCollection(request, env) {
         viewerEquipped:Boolean(itemId&&playerCollectionActiveId(viewerState,kind)===itemId)
       };
     });
+    const catalogKnown=catalogSummary.known===true&&catalogSummary.totalItems>0;
+    const completionPercent=catalogKnown?Math.max(0,Math.min(100,Math.round((collection.summary.totalItems/catalogSummary.totalItems)*1000)/10)):null;
     const summary={
       ...collection.summary,
       availableCount:items.filter((item)=>item?.availability?.status==="available").length,
-      archivedCount:items.filter((item)=>item?.availability?.status==="archived").length
+      archivedCount:items.filter((item)=>item?.availability?.status==="archived").length,
+      catalogKnown,
+      catalogTotal:catalogSummary.totalItems,
+      catalogCategories:catalogSummary.categories,
+      completionPercent
     };
     return jsonResponse({
       ok:true,
