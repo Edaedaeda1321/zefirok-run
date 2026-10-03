@@ -23,12 +23,12 @@ check('common mode filters target items by viewer ownership',compareItems.includ
 check('target-only mode filters target items missing from viewer',compareItems.includes('compareMode==="target_only"')&&compareItems.includes('item?.viewerOwned!==true'));
 check('viewer-only mode uses server-provided viewer-only items',compareItems.includes('compareMode==="viewer_only"')&&compareItems.includes('comparison?.viewerOnlyItems'));
 check('comparison UI shows counts without fetching again',compareMarkup.includes('commonCount')&&compareMarkup.includes('targetOnlyCount')&&compareMarkup.includes('viewerOnlyCount')&&!compareMarkup.includes('api(')&&!compareMarkup.includes('fetch('));
-check('category tabs and Stage 7 filters compose over active comparison mode',render.includes('compareItems=playerCollectionComparisonItems')&&render.includes('scopeItems=playerCollectionTab==="all"?compareItems')&&render.includes('playerCollectionMatchesFilter'));
+check('category tabs and Stage 7 filters compose over active comparison mode',render.includes('playerCollectionComparisonItems(data,playerCollectionCompareMode)')&&render.includes('scopeItems=playerCollectionTab==="all"?baseItems')&&render.includes('playerCollectionMatchesFilter'));
 check('viewer-only card is visibly distinguished',rating.includes('rating-player-collection-viewer-only')&&rating.includes('Только у тебя'));
 check('viewer-only detail explicitly shows that target player is missing the item',rating.includes('○ У игрока этого предмета нет')&&rating.includes('targetOwned=item?.owned!==false'));
 check('detail lookup can resolve both target and viewer-only payload items',rating.includes('function playerCollectionFindItem')&&rating.includes('data?.comparison?.viewerOnlyItems'));
 check('comparison click rerenders loaded payload without collection API request',handler.includes('data-rating-player-collection-compare')&&handler.includes('renderPlayerCollection(playerCollectionData,"all")')&&!handler.includes('PLAYER_COLLECTION_PATH'));
-check('self view forces comparison mode back to all',render.includes('if(isSelf)playerCollectionCompareMode="all"'));
+check('self view forces comparison mode back to all',render.includes('if(isSelf||playerCollectionSeasonKey)playerCollectionCompareMode="all"'));
 check('comparison mode resets on collection open and close',rating.match(/playerCollectionCompareMode="all"/g)?.length>=4);
 check('stage 8 check is wired into production gate',gate.includes("['player collection comparison', 'node', ['scripts/check-player-collection-stage8.mjs']]"));
 

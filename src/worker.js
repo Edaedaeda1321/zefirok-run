@@ -14452,6 +14452,15 @@ const PLAYER_COLLECTION_RARITY_TIMEOUT_MS = 1100;
 const PLAYER_COLLECTION_CATALOG_TIMEOUT_MS = 1000;
 const PLAYER_COLLECTION_SHOWCASE_LIMIT = 5;
 const PLAYER_COLLECTION_STATE_SQL = `SELECT owned_avatars_json,active_avatar_id,owned_frames_json,active_frame_id,owned_trails_json,active_trail_id,owned_skins_json,active_skin_id,owned_music_json,active_music_id FROM case_player_state WHERE telegram_id=? LIMIT 1`;
+const PLAYER_COLLECTION_SEASON_ORDER = Object.freeze(["season4","season3","season2"]);
+const PLAYER_COLLECTION_COLLECTOR_ACHIEVEMENTS = Object.freeze([
+  Object.freeze({id:"collector-skins-10",title:"Гардероб на зависть",description:"Собери 10 скинов в коллекции.",metric:"skins",target:10,rarity:"rare",preview:true}),
+  Object.freeze({id:"collector-items-50",title:"Большая коллекция",description:"Собери 50 коллекционных предметов.",metric:"totalItems",target:50,rarity:"epic",preview:true}),
+  Object.freeze({id:"collector-legendary-5",title:"Золотая полка",description:"Собери 5 легендарных предметов.",metric:"legendaryCount",target:5,rarity:"legendary",preview:true}),
+  Object.freeze({id:"collector-archive-5",title:"Хранитель истории",description:"Собери 5 архивных предметов.",metric:"archivedCount",target:5,rarity:"epic",preview:true}),
+  Object.freeze({id:"collector-season-complete",title:"Сезон закрыт",description:"Собери 100% хотя бы одного сезонного альбома.",metric:"completedSeasons",target:1,rarity:"legendary",preview:false}),
+  Object.freeze({id:"collector-legendary-under-1",title:"Один на сотню",description:"Получи легендарный предмет, который есть не более чем у 1% игроков.",metric:"legendaryUnderOne",target:1,rarity:"legendary",preview:false})
+]);
 const playerCollectionRarityCache = new WeakMap();
 
 function playerCollectionOwnedIds(state, kind) {
@@ -14516,6 +14525,99 @@ function playerCollectionPublicCatalogSummary(releaseSnapshot) {
     }
   }
   return {known:rulesKnown,totalItems,categories};
+}
+
+function playerCollectionSeasonPresentation(seasonKey, fallbackLabel = "") {
+  const key=String(seasonKey||"").trim();
+  const configured={
+    season2:{label:FUTURE_SEASON2_CONTENT_LABEL,shortTitle:"Ночь сладких чудес",imageUrl:String(ACHIEVEMENT_SEASON_ART?.night?.complete||"")},
+    season3:{label:`Сезон 3 · ${FUTURE_SEASON_CONTENT_LABEL}`,shortTitle:FUTURE_SEASON_CONTENT_LABEL,imageUrl:String(ACHIEVEMENT_SEASON_ART?.belkino?.complete||"")},
+    season4:{label:FUTURE_SEASON4_CONTENT_LABEL,shortTitle:"Белый Кролик",imageUrl:String(ACHIEVEMENT_SEASON_ART?.whiteRabbit?.complete||"")}
+  }[key]||null;
+  const label=String(configured?.label||fallbackLabel||key||"Сезонная коллекция").trim();
+  return {key,label,shortTitle:String(configured?.shortTitle||label.replace(/^Сезон\s*\d+\s*[·:—-]?\s*/i,"")||label),imageUrl:String(configured?.imageUrl||"")};
+}
+
+function playerCollectionPublicSeasonCatalog(releaseSnapshot) {
+  const releaseRules=releaseSnapshot?.rows instanceof Map?releaseSnapshot.rows:new Map(),items=[],seen=new Set();
+  for(const kind of PLAYER_COLLECTION_KINDS){
+    const seasonalCatalog=futureSeasonContentCatalog(kind)||{},catalog=seasonPassAnyCosmeticCatalog(kind)||{};
+    for(const [rawItemId,futureDefinition] of Object.entries(seasonalCatalog)){
+      const itemId=normalizeCaseCosmeticId(kind,rawItemId),definition=catalog[itemId]||futureDefinition,key=playerCollectionItemKey(kind,itemId);
+      if(!itemId||!key||seen.has(key)||definition?.defaultOwned===true)continue;
+      seen.add(key);
+      const rule=releaseRules.get(liveContentReleaseKey(kind,itemId));
+      // Stage 12 is a public catalog: never-released Live Content must remain invisible.
+      if(!rule?.released&&!rule?.everReleased)continue;
+      const rarity=String(definition?.rarity||"common"),seasonKey=String(futureSeasonContentSeasonKey(kind,itemId)||""),seasonLabel=playerCollectionSeasonLabel(kind,itemId);
+      items.push({
+        kind,itemId,title:String(definition?.title||itemId),rarity,rarityLabel:String(PLAYER_COLLECTION_RARITY_LABELS[rarity]||"Особый"),
+        imageUrl:String(seasonPassCosmeticImage(kind,itemId)||SYSTEM_IMAGE_FALLBACK),seasonKey,season:{key:seasonKey,label:seasonLabel},
+        release:{released:Boolean(rule?.released),everReleased:Boolean(rule?.everReleased)},source:playerCollectionPublicSource(kind,itemId,definition,true),owned:false,equipped:false
+      });
+    }
+  }
+  return items;
+}
+
+function playerCollectionSeasonAlbums(items) {
+  const groups=new Map();
+  for(const item of Array.isArray(items)?items:[]){
+    const seasonKey=String(item?.season?.key||item?.seasonKey||"").trim();if(!seasonKey)continue;
+    if(!groups.has(seasonKey))groups.set(seasonKey,[]);groups.get(seasonKey).push(item);
+  }
+  const albums=[];
+  for(const [seasonKey,seasonItems] of groups){
+    const presentation=playerCollectionSeasonPresentation(seasonKey,String(seasonItems.find((item)=>item?.season?.label)?.season?.label||""));
+    seasonItems.sort((left,right)=>Number(PLAYER_COLLECTION_RARITY_ORDER[String(right?.rarity||"")]||0)-Number(PLAYER_COLLECTION_RARITY_ORDER[String(left?.rarity||"")]||0)||String(left?.title||"").localeCompare(String(right?.title||""),"ru"));
+    const ownedItems=seasonItems.filter((item)=>item?.owned===true),totalItems=seasonItems.length,ownedCount=ownedItems.length,completionPercent=totalItems?Math.max(0,Math.min(100,Math.round((ownedCount/totalItems)*1000)/10)):0;
+    const legendaryTotal=seasonItems.filter((item)=>String(item?.rarity||"")==="legendary").length,legendaryOwned=ownedItems.filter((item)=>String(item?.rarity||"")==="legendary").length;
+    const archivedTotal=seasonItems.filter((item)=>item?.release?.everReleased===true&&item?.release?.released===false).length,archivedOwned=ownedItems.filter((item)=>item?.release?.everReleased===true&&item?.release?.released===false).length;
+    const rarestOwned=ownedItems.filter((item)=>item?.playerRarity?.known===true&&Number(item?.playerRarity?.ownershipPercent)>0).sort((left,right)=>Number(left.playerRarity.ownershipPercent)-Number(right.playerRarity.ownershipPercent)||Number(PLAYER_COLLECTION_RARITY_ORDER[String(right?.rarity||"")]||0)-Number(PLAYER_COLLECTION_RARITY_ORDER[String(left?.rarity||"")]||0))[0]||null;
+    albums.push({
+      key:seasonKey,label:presentation.label,shortTitle:presentation.shortTitle,imageUrl:String(presentation.imageUrl||rarestOwned?.imageUrl||seasonItems[0]?.imageUrl||SYSTEM_IMAGE_FALLBACK),
+      totalItems,ownedCount,completionPercent,complete:totalItems>0&&ownedCount===totalItems,legendaryTotal,legendaryOwned,archivedTotal,archivedOwned,rarestOwned,items:seasonItems
+    });
+  }
+  const order=new Map(PLAYER_COLLECTION_SEASON_ORDER.map((key,index)=>[key,index]));
+  return albums.sort((left,right)=>(order.get(String(left?.key||""))??999)-(order.get(String(right?.key||""))??999)||String(right?.key||"").localeCompare(String(left?.key||"")));
+}
+
+function playerCollectionCollectorAchievementMetrics(summary = {}, albums = [], items = []) {
+  const seasonalAlbums=Array.isArray(albums)?albums:[],collectionItems=Array.isArray(items)?items:[];
+  const rareLegendary=collectionItems.filter((item)=>item?.owned===true&&String(item?.rarity||"")==="legendary"&&item?.playerRarity?.known===true&&Number(item?.playerRarity?.ownershipPercent)>0&&Number(item.playerRarity.ownershipPercent)<=1).sort((left,right)=>Number(left.playerRarity.ownershipPercent)-Number(right.playerRarity.ownershipPercent))[0]||null;
+  const completedAlbum=seasonalAlbums.find((album)=>album?.complete===true)||null,archivedItem=collectionItems.find((item)=>item?.owned===true&&String(item?.availability?.status||"")==="archived")||null,legendaryItem=collectionItems.find((item)=>item?.owned===true&&String(item?.rarity||"")==="legendary")||null,skinItem=collectionItems.find((item)=>item?.owned===true&&String(item?.kind||"")==="skin")||null;
+  return {
+    totalItems:Math.max(0,Number(summary?.totalItems||0)),skins:Math.max(0,Number(summary?.categories?.skin||0)),legendaryCount:Math.max(0,Number(summary?.legendaryCount||0)),archivedCount:Math.max(0,Number(summary?.archivedCount||0)),
+    completedSeasons:seasonalAlbums.filter((album)=>album?.complete===true).length,legendaryUnderOne:rareLegendary?1:0,rareLegendary,completedAlbum,archivedItem,legendaryItem,skinItem
+  };
+}
+
+function playerCollectionCollectorAchievementItem(definition, metrics) {
+  const progress=Math.max(0,Number(metrics?.[definition.metric]||0)),target=Math.max(1,Number(definition?.target||1)),earned=progress>=target;
+  let imageUrl=SYSTEM_IMAGE_FALLBACK,detail="";
+  if(definition.id==="collector-skins-10")imageUrl=String(metrics?.skinItem?.imageUrl||SYSTEM_IMAGE_FALLBACK);
+  else if(definition.id==="collector-items-50")imageUrl="/assets/ui/icon_user_collectible.webp";
+  else if(definition.id==="collector-legendary-5")imageUrl=String(metrics?.legendaryItem?.imageUrl||"/assets/ui/icon_user_collectible.webp");
+  else if(definition.id==="collector-archive-5")imageUrl=String(metrics?.archivedItem?.imageUrl||"/assets/ui/icon_user_collectible.webp");
+  else if(definition.id==="collector-season-complete"){imageUrl=String(metrics?.completedAlbum?.imageUrl||"/assets/ui/icon_user_collectible.webp");detail=String(metrics?.completedAlbum?.label||"");}
+  else if(definition.id==="collector-legendary-under-1"){imageUrl=String(metrics?.rareLegendary?.imageUrl||"/assets/ui/icon_user_collectible.webp");const percent=Number(metrics?.rareLegendary?.playerRarity?.ownershipPercent);detail=metrics?.rareLegendary?`${String(metrics.rareLegendary.title||"Легендарный предмет")} · ${Number.isFinite(percent)?percent.toLocaleString("ru-RU",{maximumFractionDigits:1}):"≤1"}% игроков`:"";}
+  return {
+    id:String(definition.id),title:String(definition.title),description:String(definition.description),rarity:String(definition.rarity||"common"),rarityLabel:String(PLAYER_COLLECTION_RARITY_LABELS[String(definition.rarity||"common")]||"Особое"),
+    target,progress:Math.min(progress,target),rawProgress:progress,earned,statusOnly:true,reward:null,imageUrl,detail,progressPercent:Math.max(0,Math.min(100,Math.round((Math.min(progress,target)/target)*1000)/10))
+  };
+}
+
+function playerCollectionCollectorAchievements(summary = {}, albums = [], items = []) {
+  const metrics=playerCollectionCollectorAchievementMetrics(summary,albums,items),entries=PLAYER_COLLECTION_COLLECTOR_ACHIEVEMENTS.map((definition)=>playerCollectionCollectorAchievementItem(definition,metrics));
+  const earned=entries.filter((item)=>item.earned).length;
+  return {serverAuthoritative:true,statusOnly:true,earned,total:entries.length,completionPercent:entries.length?Math.round((earned/entries.length)*1000)/10:0,items:entries};
+}
+
+function playerCollectionCollectorAchievementPreview(summary = {}, items = []) {
+  const metrics=playerCollectionCollectorAchievementMetrics(summary,[],items),entries=PLAYER_COLLECTION_COLLECTOR_ACHIEVEMENTS.filter((definition)=>definition.preview===true).map((definition)=>playerCollectionCollectorAchievementItem(definition,metrics)).filter((item)=>item.earned);
+  entries.sort((left,right)=>Number(PLAYER_COLLECTION_RARITY_ORDER[String(right?.rarity||"")]||0)-Number(PLAYER_COLLECTION_RARITY_ORDER[String(left?.rarity||"")]||0)||String(left?.title||"").localeCompare(String(right?.title||""),"ru"));
+  return {serverAuthoritative:true,statusOnly:true,items:entries.slice(0,3)};
 }
 
 function playerCollectionRarityFallback() {
@@ -14711,8 +14813,9 @@ async function playerPublicCollection(env, state, options = {}) {
   const rareCount=items.filter((item)=>PLAYER_COLLECTION_RARE_RARITIES.has(String(item?.rarity||""))).length;
   const legendaryCount=items.filter((item)=>String(item?.rarity||"")==="legendary").length;
   const equippedCount=items.filter((item)=>item?.equipped===true).length;
+  const archivedCount=items.filter((item)=>item?.release?.everReleased===true&&item?.release?.released===false).length;
   return {
-    summary:{ totalItems:items.length, rareCount, legendaryCount, equippedCount, categories },
+    summary:{ totalItems:items.length, rareCount, legendaryCount, equippedCount, archivedCount, categories },
     items
   };
 }
@@ -14832,8 +14935,8 @@ async function leaderboardPlayerCollection(request, env) {
       playerPublicCollection(env,targetState,{releaseRules:releaseSnapshot.rows}),
       isSelf?Promise.resolve(null):playerPublicCollection(env,viewerState,{releaseRules:releaseSnapshot.rows})
     ]);
-    const catalogSummary=playerCollectionPublicCatalogSummary(releaseSnapshot);
-    const metadataNeeded=collection.items.length+Math.max(0,Number(viewerCollection?.items?.length||0))>0;
+    const catalogSummary=playerCollectionPublicCatalogSummary(releaseSnapshot),seasonCatalogBase=playerCollectionPublicSeasonCatalog(releaseSnapshot);
+    const metadataNeeded=collection.items.length+Math.max(0,Number(viewerCollection?.items?.length||0))+seasonCatalogBase.length>0;
     const [acquisition,raritySnapshot]=metadataNeeded?await Promise.all([
       withAlbumAcquisitionTimeout(albumAcquisitionSources(env)),
       withPlayerCollectionRarityTimeout(playerCollectionRaritySnapshot(env))
@@ -14870,6 +14973,10 @@ async function leaderboardPlayerCollection(request, env) {
       const kind=String(item?.kind||""),itemId=normalizeCaseCosmeticId(kind,item?.itemId);
       return enrichItem(item,{targetOwned:false,viewerOwned:true,viewerEquipped:Boolean(itemId&&playerCollectionActiveId(viewerState,kind)===itemId)});
     });
+    const seasonCatalogItems=seasonCatalogBase.map((item)=>{
+      const kind=String(item?.kind||""),itemId=normalizeCaseCosmeticId(kind,item?.itemId);
+      return enrichItem(item,{targetOwned:Boolean(itemId&&targetOwnedByKind.get(kind)?.has(itemId)),viewerOwned:Boolean(itemId&&viewerOwnedByKind.get(kind)?.has(itemId)),viewerEquipped:Boolean(itemId&&playerCollectionActiveId(viewerState,kind)===itemId)});
+    });
     const commonCount=isSelf?collection.summary.totalItems:items.filter((item)=>item?.viewerOwned===true).length,targetOnlyCount=isSelf?0:items.length-commonCount;
     const catalogKnown=catalogSummary.known===true&&catalogSummary.totalItems>0;
     const completionPercent=catalogKnown?Math.max(0,Math.min(100,Math.round((collection.summary.totalItems/catalogSummary.totalItems)*1000)/10)):null;
@@ -14882,6 +14989,7 @@ async function leaderboardPlayerCollection(request, env) {
       catalogCategories:catalogSummary.categories,
       completionPercent
     };
+    const seasonAlbums=playerCollectionSeasonAlbums(seasonCatalogItems),collectorAchievements=playerCollectionCollectorAchievements(summary,seasonAlbums,items);
     const showcase=playerCollectionShowcaseFromEnriched(showcaseRows,items);
     return jsonResponse({
       ok:true,
@@ -14892,6 +15000,8 @@ async function leaderboardPlayerCollection(request, env) {
       viewer:{ isSelf },
       player:{ telegramId:targetTelegramId, name:String(publicRow?.display_name||"Гость кафе") },
       summary,
+      seasonAlbums:{known:releaseSnapshot.complete===true,items:seasonAlbums},
+      collectorAchievements,
       showcase:{...showcase,editable:isSelf},
       comparison:isSelf?{available:false,isSelf:true,commonCount:items.length,targetOnlyCount:0,viewerOnlyCount:0,viewerOnlyItems:[]}:{available:true,isSelf:false,commonCount,targetOnlyCount,viewerOnlyCount:viewerOnlyItems.length,viewerOnlyItems},
       items
@@ -14957,6 +15067,7 @@ async function leaderboardPlayerProfile(request, env) {
     const activeAvatarId=normalizeCaseCosmeticId("avatar",caseRow?.active_avatar_id||playerRow.case_avatar_id),activeFrameId=normalizeCaseCosmeticId("frame",caseRow?.active_frame_id||playerRow.case_frame_id);
     const collectionState=caseStateFromRow(caseRow||{}),publicCollection=await playerPublicCollection(env,collectionState),collectionSummary=publicCollection.summary;
     const collectionShowcase={...playerCollectionShowcaseFromEnriched(collectionShowcaseRows,publicCollection.items),editable:viewerTelegramId===targetTelegramId};
+    const collectionAchievements=playerCollectionCollectorAchievementPreview(collectionSummary,publicCollection.items);
     const showcaseItems=Array.isArray(achievementPreview?.showcase?.items)?achievementPreview.showcase.items.slice(0,ACHIEVEMENT_SHOWCASE_LIMIT):[];
     const populationTotal=Math.max(0,Number(populationStats?.totalPlayers)||0),populationCounts=populationStats?.counts instanceof Map?populationStats.counts:new Map();
     const withPopulation=(item)=>{const earnedPlayers=Math.max(0,Number(populationCounts.get(String(item?.id||""))||0)),playerPercent=achievementPlayerPercent(earnedPlayers,populationTotal);return {...item,earnedPlayers,totalPlayers:populationTotal,playerPercent};};
@@ -14987,6 +15098,7 @@ async function leaderboardPlayerProfile(request, env) {
       },
       collectionSummary,
       collectionShowcase,
+      collectionAchievements,
       comparison
     });
   } catch(error) {

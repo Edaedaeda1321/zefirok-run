@@ -83,6 +83,8 @@ const steps = [
   ['player collection filters and sorting', 'node', ['scripts/check-player-collection-stage7.mjs']],
   ['player collection comparison', 'node', ['scripts/check-player-collection-stage8.mjs']],
   ['player collection showcase', 'node', ['scripts/check-player-collection-stage9.mjs']],
+  ['player collection seasonal albums', 'node', ['scripts/check-player-collection-stage12.mjs']],
+  ['player collection collector achievements', 'node', ['scripts/check-player-collection-stage13.mjs']],
   ['player collection source status UX', 'node', ['scripts/check-player-collection-source-status.mjs']],
   ['rating dethrone delivery', 'node', ['scripts/check-rating-dethrone-delivery.mjs']],
   ['player directory integrity', 'node', ['scripts/check-player-directory-integrity.mjs']],
