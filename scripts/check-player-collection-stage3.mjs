@@ -26,7 +26,7 @@ check('collection item is an interactive button',rating.includes('data-rating-pl
 check('grid marks shared items with viewer badge',rating.includes('rating-player-collection-viewer-owned')&&rating.includes('Есть у тебя'));
 check('shared-item badge is hidden for self view',rating.includes('playerCollectionData?.viewer?.isSelf!==true&&item?.viewerOwned===true'));
 check('detail layer exists inside collection sheet',rating.includes('data-rating-player-collection-detail hidden aria-hidden="true"')&&rating.includes('data-rating-player-collection-detail-content'));
-check('detail card shows type rarity and source',itemOpen.includes('playerCollectionKindLabel(kind)')&&itemOpen.includes('rating-player-collection-detail-chip is-rarity')&&itemOpen.includes('<small>Источник</small>'));
+check('detail card shows type rarity and source',itemOpen.includes('playerCollectionKindLabel(kind)')&&itemOpen.includes('rating-player-collection-detail-chip is-rarity')&&(itemOpen.includes('<small>Источник</small>')||itemOpen.includes('${escapeHtml(sourceHeading)}')));
 check('target ownership status distinguishes equipped state',itemOpen.includes('item?.equipped===true?"✓ Сейчас выбрано":"✓ Есть в коллекции"'));
 check('viewer ownership status distinguishes owned and missing',itemOpen.includes('item?.viewerOwned===true?"✓ Есть в твоей коллекции":"○ У тебя этого предмета нет"'));
 check('viewer equipped state is represented',itemOpen.includes('item?.viewerEquipped===true?"✓ Сейчас выбрано"'));

@@ -14535,15 +14535,37 @@ function playerCollectionRarityView(snapshot, kind, itemId) {
   return {known:true,ownerCount,playerCount,ownershipPercent,label,approximate:true};
 }
 
+function playerCollectionAcquisitionSourceLabel(source){
+  const provided=String(source?.label||"").trim();if(provided)return provided;
+  const type=String(source?.type||""),id=String(source?.id||"");
+  if(type==="case")return String(LEVEL_CASE_CONFIG[id]?.title||"\u041a\u0435\u0439\u0441");
+  if(type==="shop")return "\u041c\u0430\u0433\u0430\u0437\u0438\u043d";
+  if(type==="season_pass")return "Season Pass";
+  if(type==="seasonal_case")return "\u0421\u0435\u0437\u043e\u043d\u043d\u044b\u0439 \u043a\u0435\u0439\u0441";
+  if(type==="story")return "\u0421\u044e\u0436\u0435\u0442 \u0441\u0435\u0437\u043e\u043d\u0430";
+  if(type==="achievement")return "\u0414\u043e\u0441\u0442\u0438\u0436\u0435\u043d\u0438\u0435";
+  if(type==="elite_plus")return "\u042d\u043b\u0438\u0442\u043d\u044b\u0439+";
+  if(type==="manual")return "\u0421\u043f\u0435\u0446\u0438\u0430\u043b\u044c\u043d\u0430\u044f \u043d\u0430\u0433\u0440\u0430\u0434\u0430";
+  if(type==="default")return "\u0411\u0430\u0437\u043e\u0432\u044b\u0439 \u043f\u0440\u0435\u0434\u043c\u0435\u0442";
+  return "\u0418\u0433\u0440\u043e\u0432\u043e\u0439 \u0438\u0441\u0442\u043e\u0447\u043d\u0438\u043a";
+}
+
 function playerCollectionAcquisitionView(item, acquisition) {
   const kind=String(item?.kind||""),itemId=String(item?.itemId||"");
-  const rawSources=Array.isArray(acquisition?.map?.get?.(`${kind}:${itemId}`))?acquisition.map.get(`${kind}:${itemId}`):[];
+  const discovered=Array.isArray(acquisition?.map?.get?.(`${kind}:${itemId}`))?acquisition.map.get(`${kind}:${itemId}`):[];
+  const seasonLabel=String(item?.season?.label||"").trim();
+  const rawSources=discovered.length?discovered:seasonLabel?[{
+    type:"season",id:String(item?.season?.key||""),label:seasonLabel,availability:item?.release?.everReleased===true&&item?.release?.released===false?"historical":"unknown",
+    text:`${seasonLabel} \u2014 \u0441\u0435\u0437\u043e\u043d\u043d\u043e\u0435 \u043f\u0440\u043e\u0438\u0441\u0445\u043e\u0436\u0434\u0435\u043d\u0438\u0435 \u043f\u0440\u0435\u0434\u043c\u0435\u0442\u0430.`,
+    note:"\u0410\u043a\u0442\u0443\u0430\u043b\u044c\u043d\u044b\u0439 \u043a\u0430\u043d\u0430\u043b \u043f\u043e\u043b\u0443\u0447\u0435\u043d\u0438\u044f \u0443\u0442\u043e\u0447\u043d\u044f\u0435\u0442\u0441\u044f Live Content."
+  }]:[];
   const sources=rawSources.slice(0,4).map((source)=>({
     type:String(source?.type||"game").slice(0,40),
     id:String(source?.id||"").slice(0,120),
     availability:String(source?.availability||"conditional").slice(0,24),
     text:String(source?.text||"").slice(0,360),
-    note:String(source?.note||"").slice(0,360)
+    note:String(source?.note||"").slice(0,360),
+    label:playerCollectionAcquisitionSourceLabel(source).slice(0,120)
   })).filter((source)=>source.text);
   const release=item?.release||{},archivedByRelease=release.everReleased===true&&release.released===false;
   const hasCurrent=sources.some((source)=>["active","conditional"].includes(source.availability));
@@ -14556,7 +14578,8 @@ function playerCollectionAcquisitionView(item, acquisition) {
   else if(sources.length&&hasHistorical)status="archived";
   else if(acquisition?.complete===true)status="unavailable";
   const labels={available:"Можно получить",paused:"Временно недоступно",archived:"Архивный предмет",unavailable:"Сейчас недоступно",unknown:"Доступность уточняется"};
-  return {status,label:labels[status]||labels.unknown,canObtainNow:status==="available",sourcesComplete:acquisition?.complete===true,sources};
+  const sourceSummary=[...new Set(sources.map((source)=>String(source?.label||"").trim()).filter(Boolean))].slice(0,3).join(" · ");
+  return {status,label:labels[status]||labels.unknown,canObtainNow:status==="available",sourcesComplete:acquisition?.complete===true,sourceSummary,sources};
 }
 
 function playerCollectionPublicSource(kind, itemId, definition, future) {
@@ -50340,7 +50363,41 @@ const albumAcquisitionCache = new WeakMap();
 const ALBUM_ACQUISITION_CACHE_TTL_MS = 5 * 60 * 1000;
 const ALBUM_ACQUISITION_CACHE_FALLBACK_TTL_MS = 30 * 1000;
 const ALBUM_ACQUISITION_TIMEOUT_MS = 1200;
-function albumAcquisitionFallback(){return {map:new Map(),complete:false};}
+function albumAcquisitionBaselineSources(){
+  const result=new Map();
+  const add=(kind,id,source)=>{
+    if(!ALBUM_ITEM_KINDS.includes(kind)||!id)return;
+    const key=albumItemKey(kind,id),rows=result.get(key)||[];
+    if(!rows.some(row=>row.type===source.type&&row.id===source.id))rows.push(source);
+    result.set(key,rows);
+  };
+  // Cold-start fallback keeps canonical provenance visible without claiming that
+  // a runtime-configurable case is currently enabled. LiveOps refines these rows.
+  for(const [key,rows] of albumCaseAcquisitionSources(null)){
+    result.set(key,(rows||[]).map(source=>({
+      ...source,
+      availability:"unknown",
+      note:String(source?.note||"\u0418\u0441\u0442\u043e\u0447\u043d\u0438\u043a \u043f\u043e\u0434\u0442\u0432\u0435\u0440\u0436\u0434\u0451\u043d \u0431\u0430\u0437\u043e\u0432\u044b\u043c \u0438\u0433\u0440\u043e\u0432\u044b\u043c \u043a\u0430\u0442\u0430\u043b\u043e\u0433\u043e\u043c; \u0430\u043a\u0442\u0443\u0430\u043b\u044c\u043d\u0430\u044f \u0434\u043e\u0441\u0442\u0443\u043f\u043d\u043e\u0441\u0442\u044c \u043a\u0435\u0439\u0441\u0430 \u043f\u0440\u043e\u0432\u0435\u0440\u044f\u0435\u0442\u0441\u044f LiveOps.")
+    })));
+  }
+  // Built-in skins are shop products even when optional discovery metadata times out.
+  // Price and stock remain authoritative in the existing purchase flow.
+  for(const id of Object.keys(SKINS))if(id!=="default")add("skin",id,{
+    type:"shop",id,availability:"conditional",
+    text:"\u041c\u0430\u0433\u0430\u0437\u0438\u043d \u2192 \u0421\u043a\u0438\u043d\u044b. \u0426\u0435\u043d\u0430 \u0438 \u043d\u0430\u043b\u0438\u0447\u0438\u0435 \u0443\u043a\u0430\u0437\u0430\u043d\u044b \u0432 \u043a\u0430\u0440\u0442\u043e\u0447\u043a\u0435 \u043f\u0435\u0440\u0441\u043e\u043d\u0430\u0436\u0430.",
+    note:"\u041f\u043e\u043a\u0443\u043f\u043a\u0430 \u043f\u0440\u043e\u0445\u043e\u0434\u0438\u0442 \u0447\u0435\u0440\u0435\u0437 \u0442\u0435\u043a\u0443\u0449\u0443\u044e \u0446\u0435\u043d\u0443 \u0438 \u043e\u0441\u0442\u0430\u0442\u043e\u043a \u043c\u0430\u0433\u0430\u0437\u0438\u043d\u0430."
+  });
+  // Achievement-only cosmetics have a stable provenance even when the optional
+  // achievement configuration read is unavailable. Exact conditions remain dynamic.
+  const catalogs={avatar:CASE_AVATARS,frame:CASE_FRAMES,trail:CASE_TRAILS,skin:CASE_SKINS,music:CASE_MUSIC_TRACKS};
+  for(const [kind,catalog] of Object.entries(catalogs))for(const [id,item] of Object.entries(catalog||{}))if(item?.achievementOnly===true)add(kind,id,{
+    type:"achievement",id,availability:"unknown",label:"\u0414\u043e\u0441\u0442\u0438\u0436\u0435\u043d\u0438\u044f",
+    text:"\u0414\u043e\u0441\u0442\u0438\u0436\u0435\u043d\u0438\u044f \u2014 \u043d\u0430\u0433\u0440\u0430\u0434\u0430 \u0437\u0430 \u0432\u044b\u043f\u043e\u043b\u043d\u0435\u043d\u0438\u0435 \u0434\u043e\u0441\u0442\u0438\u0436\u0435\u043d\u0438\u044f.",
+    note:"\u0422\u043e\u0447\u043d\u044b\u0435 \u0443\u0441\u043b\u043e\u0432\u0438\u044f \u0438 \u0442\u0435\u043a\u0443\u0449\u0443\u044e \u0434\u043e\u0441\u0442\u0443\u043f\u043d\u043e\u0441\u0442\u044c \u043f\u0440\u043e\u0432\u0435\u0440\u044f\u0435\u0442 \u0441\u0435\u0440\u0432\u0435\u0440 \u0434\u043e\u0441\u0442\u0438\u0436\u0435\u043d\u0438\u0439."
+  });
+  return result;
+}
+function albumAcquisitionFallback(){return {map:albumAcquisitionBaselineSources(),complete:false};}
 function withAlbumAcquisitionTimeout(promise, timeoutMs = ALBUM_ACQUISITION_TIMEOUT_MS) {
   return Promise.race([
     Promise.resolve(promise),
@@ -50398,7 +50455,7 @@ async function albumAcquisitionSources(env) {
       optional("story",async()=>(await env.DB.prepare(`SELECT season_id,event_id,title,enabled,unlock_level,unlock_at,reward_json FROM season_pass_story_events WHERE enabled=1 ORDER BY season_id,unlock_level,sort_order`).all()).results||[],[]),
       optional("achievements",()=>achievementConfiguredDefinitions(env),[])
     ]);
-    const map=liveops?albumCaseAcquisitionSources(liveops):new Map();
+    const map=liveops?albumCaseAcquisitionSources(liveops):albumAcquisitionBaselineSources();
     const add=(kind,id,source)=>{
       if(!ALBUM_ITEM_KINDS.includes(kind)||!id)return;
       const future=futureSeasonContentItem(kind,id),rule=rules.get(liveContentReleaseKey(kind,id));

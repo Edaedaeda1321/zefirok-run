@@ -15,6 +15,7 @@ function between(source,start,end){const a=source.indexOf(start),b=source.indexO
 const endpoint=between(worker,'async function leaderboardPlayerCollection(request, env) {','async function leaderboardPlayerProfile(request, env) {');
 const publicItem=between(worker,'function playerCollectionPublicItem(state, kind, rawItemId, releaseRules = null) {','async function playerPublicCollection(env, state) {');
 const acquisition=between(worker,'function playerCollectionAcquisitionView(item, acquisition) {','function playerCollectionPublicSource(kind, itemId, definition, future) {');
+const acquisitionFallback=between(worker,'function albumAcquisitionBaselineSources(){','function withAlbumAcquisitionTimeout(promise, timeoutMs = ALBUM_ACQUISITION_TIMEOUT_MS) {');
 const rarity=between(worker,'function playerCollectionRarityFallback() {','function playerCollectionAcquisitionView(item, acquisition) {');
 const itemOpen=between(rating,'function openPlayerCollectionItem(item,trigger=null) {','function closePlayerCollectionItem(options={})');
 const howTo=between(rating,'function playerCollectionHowToGetMarkup(item) {','function playerCollectionHistoryMarkup(item) {');
@@ -23,6 +24,9 @@ const population=between(rating,'function playerCollectionPopulationMarkup(item)
 
 check('stage 4 uses existing acquisition metadata instead of client guesses',endpoint.includes('withAlbumAcquisitionTimeout(albumAcquisitionSources(env))'));
 check('acquisition metadata is bounded and fail-soft',worker.includes('const ALBUM_ACQUISITION_TIMEOUT_MS = 1200;')&&endpoint.includes('withAlbumAcquisitionTimeout('));
+check('cold acquisition fallback keeps canonical case provenance',acquisitionFallback.includes('albumCaseAcquisitionSources(null)')&&acquisitionFallback.includes('availability:"unknown"'));
+check('cold acquisition fallback keeps built-in skin shop provenance',acquisitionFallback.includes('Object.keys(SKINS)')&&acquisitionFallback.includes('type:"shop"')&&acquisitionFallback.includes('availability:"conditional"'));
+check('acquisition fallback is not an empty map',acquisitionFallback.includes('albumAcquisitionFallback(){return {map:albumAcquisitionBaselineSources(),complete:false};}'));
 check('season origin is server-authored',publicItem.includes('season:future?{key:seasonKey,label:seasonLabel}:null'));
 check('season 3 label is normalized for public history',worker.includes('return `Сезон 3 · ${label}`'));
 check('never-released hidden seasonal content remains private',publicItem.includes('if (!rule?.released && !rule?.everReleased) return null;'));
@@ -39,6 +43,7 @@ check('summary exposes only aggregate available/archive counts',endpoint.include
 check('public endpoint does not expose economy or prices',!endpoint.includes('wallet')&&!endpoint.includes('zefir')&&!endpoint.includes('coffee_balance')&&!endpoint.includes('price'));
 check('grid marks archived items without hiding ownership',rating.includes('rating-player-collection-archive')&&rating.includes('data-availability='));
 check('detail card renders how-to-get section',howTo.includes('Как получить')&&itemOpen.includes('playerCollectionHowToGetMarkup(item)'));
+check('grid and detail prefer discovered source summary',rating.includes('item?.availability?.sourceSummary||item?.season?.label')&&itemOpen.includes('sourceHeading=source.includes(" · ")?"Источники":"Источник"'));
 check('detail card renders seasonal history',history.includes('История предмета')&&history.includes('item?.season'));
 check('detail card renders aggregate rarity among players',population.includes('Редкость среди игроков')&&population.includes('ownerCount')&&population.includes('playerCount'));
 check('optional rarity failure does not break collection UI',population.includes('Статистика временно недоступна'));
