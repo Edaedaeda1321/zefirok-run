@@ -14443,6 +14443,10 @@ const PLAYER_COLLECTION_KINDS = Object.freeze(["skin","avatar","frame","trail","
 const PLAYER_COLLECTION_RARE_RARITIES = new Set(["rare","superrare","epic","mythic","legendary"]);
 const PLAYER_COLLECTION_RARITY_ORDER = Object.freeze({ legendary:6, mythic:5, epic:4, superrare:3, rare:2, common:1 });
 const PLAYER_COLLECTION_RARITY_LABELS = Object.freeze({ common:"Обычный", rare:"Редкий", superrare:"Суперредкий", epic:"Эпический", mythic:"Мифический", legendary:"Легендарный" });
+const PLAYER_COLLECTION_RARITY_CACHE_TTL_MS = 10 * 60 * 1000;
+const PLAYER_COLLECTION_RARITY_CACHE_FALLBACK_TTL_MS = 45 * 1000;
+const PLAYER_COLLECTION_RARITY_TIMEOUT_MS = 1100;
+const playerCollectionRarityCache = new WeakMap();
 
 function playerCollectionOwnedIds(state, kind) {
   if (kind === "skin") return Array.isArray(state?.ownedSkins) ? state.ownedSkins : [];
@@ -14460,6 +14464,99 @@ function playerCollectionActiveId(state, kind) {
   if (kind === "trail") return String(state?.activeTrailId || "");
   if (kind === "music") return String(state?.activeMusicTrackId || "cafe_run");
   return "";
+}
+
+function playerCollectionSeasonLabel(kind, itemId) {
+  if (!futureSeasonContentItem(kind,itemId)) return "";
+  const key=String(futureSeasonContentSeasonKey(kind,itemId)||"");
+  const label=String(futureSeasonContentLabel(kind,itemId)||"").trim();
+  if (key === "season3" && label && !/^сезон\s*3\b/i.test(label)) return `Сезон 3 · ${label}`;
+  return label;
+}
+
+function playerCollectionRarityFallback() {
+  return { complete:false, playerCount:0, map:new Map() };
+}
+
+function withPlayerCollectionRarityTimeout(promise, timeoutMs = PLAYER_COLLECTION_RARITY_TIMEOUT_MS) {
+  return Promise.race([
+    Promise.resolve(promise),
+    new Promise((resolve)=>setTimeout(()=>resolve(playerCollectionRarityFallback()),timeoutMs))
+  ]).catch((error)=>{
+    console.error("player collection rarity metadata unavailable",error);
+    return playerCollectionRarityFallback();
+  });
+}
+
+async function playerCollectionRaritySnapshot(env) {
+  const cached=playerCollectionRarityCache.get(env.DB),now=Date.now();
+  if(cached?.promise)return cached.promise;
+  if(cached?.value&&cached.expires>now)return cached.value;
+  const entry={promise:null,value:cached?.value||null,expires:cached?.expires||0};
+  const read=async()=>{
+    try{
+      const result=await env.DB.prepare(`WITH ownership(kind,item_id,telegram_id) AS (
+        SELECT 'avatar',CAST(j.value AS TEXT),c.telegram_id FROM case_player_state c,json_each(CASE WHEN json_valid(c.owned_avatars_json) THEN c.owned_avatars_json ELSE '[]' END) j
+        UNION ALL
+        SELECT 'frame',CASE CAST(j.value AS TEXT) WHEN 'mint' THEN 'lovers' WHEN 'flower' THEN 'lovers' WHEN 'gold' THEN 'princess' ELSE CAST(j.value AS TEXT) END,c.telegram_id FROM case_player_state c,json_each(CASE WHEN json_valid(c.owned_frames_json) THEN c.owned_frames_json ELSE '[]' END) j
+        UNION ALL
+        SELECT 'trail',CAST(j.value AS TEXT),c.telegram_id FROM case_player_state c,json_each(CASE WHEN json_valid(c.owned_trails_json) THEN c.owned_trails_json ELSE '[]' END) j
+        UNION ALL
+        SELECT 'skin',CAST(j.value AS TEXT),c.telegram_id FROM case_player_state c,json_each(CASE WHEN json_valid(c.owned_skins_json) THEN c.owned_skins_json ELSE '[]' END) j
+        UNION ALL
+        SELECT 'music',CAST(j.value AS TEXT),c.telegram_id FROM case_player_state c,json_each(CASE WHEN json_valid(c.owned_music_json) THEN c.owned_music_json ELSE '[]' END) j
+      )
+      SELECT kind,item_id,COUNT(DISTINCT telegram_id) AS owner_count,(SELECT COUNT(*) FROM case_player_state) AS player_count
+      FROM ownership WHERE item_id<>'' GROUP BY kind,item_id`).all();
+      if(result?.success===false)throw new Error("Collection rarity aggregate failed");
+      const map=new Map();let playerCount=0;
+      for(const row of result?.results||[]){
+        const kind=String(row?.kind||""),itemId=normalizeCaseCosmeticId(kind,row?.item_id);
+        playerCount=Math.max(playerCount,Math.max(0,Number(row?.player_count)||0));
+        if(!itemId)continue;
+        map.set(`${kind}:${itemId}`,Math.max(0,Number(row?.owner_count)||0));
+      }
+      return {complete:true,playerCount,map};
+    }catch(error){
+      console.error("player collection rarity aggregate failed",error);
+      return playerCollectionRarityFallback();
+    }
+  };
+  entry.promise=read().then((value)=>{entry.value=value;entry.expires=Date.now()+(value.complete?PLAYER_COLLECTION_RARITY_CACHE_TTL_MS:PLAYER_COLLECTION_RARITY_CACHE_FALLBACK_TTL_MS);return value;}).finally(()=>{entry.promise=null;});
+  playerCollectionRarityCache.set(env.DB,entry);return entry.promise;
+}
+
+function playerCollectionRarityView(snapshot, kind, itemId) {
+  const playerCount=Math.max(0,Number(snapshot?.playerCount)||0);
+  if(snapshot?.complete!==true||playerCount<1)return {known:false};
+  const ownerCount=Math.max(1,Math.min(playerCount,Math.max(0,Number(snapshot?.map?.get?.(`${kind}:${itemId}`))||0)));
+  const rawPercent=(ownerCount/playerCount)*100,ownershipPercent=Math.max(0.1,Math.round(rawPercent*10)/10);
+  const label=rawPercent<=1?"Исключительно редкий":rawPercent<=5?"Очень редкий":rawPercent<=15?"Редкий":rawPercent<=35?"Необычный":rawPercent<=70?"Популярный":"Очень популярный";
+  return {known:true,ownerCount,playerCount,ownershipPercent,label,approximate:true};
+}
+
+function playerCollectionAcquisitionView(item, acquisition) {
+  const kind=String(item?.kind||""),itemId=String(item?.itemId||"");
+  const rawSources=Array.isArray(acquisition?.map?.get?.(`${kind}:${itemId}`))?acquisition.map.get(`${kind}:${itemId}`):[];
+  const sources=rawSources.slice(0,4).map((source)=>({
+    type:String(source?.type||"game").slice(0,40),
+    id:String(source?.id||"").slice(0,120),
+    availability:String(source?.availability||"conditional").slice(0,24),
+    text:String(source?.text||"").slice(0,360),
+    note:String(source?.note||"").slice(0,360)
+  })).filter((source)=>source.text);
+  const release=item?.release||{},archivedByRelease=release.everReleased===true&&release.released===false;
+  const hasCurrent=sources.some((source)=>["active","conditional"].includes(source.availability));
+  const hasPaused=sources.some((source)=>source.availability==="paused");
+  const hasHistorical=sources.some((source)=>source.availability==="historical");
+  let status="unknown";
+  if(archivedByRelease)status="archived";
+  else if(hasCurrent)status="available";
+  else if(hasPaused)status="paused";
+  else if(sources.length&&hasHistorical)status="archived";
+  else if(acquisition?.complete===true)status="unavailable";
+  const labels={available:"Можно получить",paused:"Временно недоступно",archived:"Архивный предмет",unavailable:"Сейчас недоступно",unknown:"Доступность уточняется"};
+  return {status,label:labels[status]||labels.unknown,canObtainNow:status==="available",sourcesComplete:acquisition?.complete===true,sources};
 }
 
 function playerCollectionPublicSource(kind, itemId, definition, future) {
@@ -14489,14 +14586,16 @@ function playerCollectionPublicItem(state, kind, rawItemId, releaseRules = null)
   const definition=seasonPassAnyCosmeticCatalog(kind)?.[itemId];
   if (!definition || definition?.defaultOwned === true) return null;
   const future=futureSeasonContentItem(kind,itemId);
+  let rule=null;
   if (future) {
-    const rule=releaseRules instanceof Map ? releaseRules.get(liveContentReleaseKey(kind,itemId)) : liveContentReleaseRuleCached(kind,itemId);
+    rule=releaseRules instanceof Map ? releaseRules.get(liveContentReleaseKey(kind,itemId)) : liveContentReleaseRuleCached(kind,itemId);
     // Historical seasonal cosmetics remain public after their live route is archived,
     // while content that has never been released stays invisible in public profiles.
     if (!rule?.released && !rule?.everReleased) return null;
   }
   const rarity=String(definition?.rarity||"common");
   const seasonKey=future?String(futureSeasonContentSeasonKey(kind,itemId)||""):"";
+  const seasonLabel=future?playerCollectionSeasonLabel(kind,itemId):"";
   return {
     kind,
     itemId,
@@ -14505,6 +14604,8 @@ function playerCollectionPublicItem(state, kind, rawItemId, releaseRules = null)
     rarityLabel:String(PLAYER_COLLECTION_RARITY_LABELS[rarity]||"Особый"),
     imageUrl:String(seasonPassCosmeticImage(kind,itemId)||SYSTEM_IMAGE_FALLBACK),
     seasonKey,
+    season:future?{key:seasonKey,label:seasonLabel}:null,
+    release:future?{released:Boolean(rule?.released),everReleased:Boolean(rule?.everReleased)}:{released:true,everReleased:true},
     source:playerCollectionPublicSource(kind,itemId,definition,future),
     owned:true,
     equipped:playerCollectionActiveId(state,kind)===itemId
@@ -14566,12 +14667,17 @@ async function leaderboardPlayerCollection(request, env) {
     const targetCaseRow=await env.DB.prepare(collectionStateSql).bind(targetTelegramId).first();
     const targetState=caseStateFromRow(targetCaseRow||{});
     const collection=await playerPublicCollection(env,targetState);
+    const stage4MetadataPromise=collection.items.length?Promise.all([
+      withAlbumAcquisitionTimeout(albumAcquisitionSources(env)),
+      withPlayerCollectionRarityTimeout(playerCollectionRaritySnapshot(env))
+    ]):Promise.resolve([albumAcquisitionFallback(),playerCollectionRarityFallback()]);
     const isSelf=viewerTelegramId===targetTelegramId;
     let viewerState=targetState;
     if(!isSelf){
       const viewerCaseRow=await env.DB.prepare(collectionStateSql).bind(viewerTelegramId).first();
       viewerState=caseStateFromRow(viewerCaseRow||{});
     }
+    const [acquisition,raritySnapshot]=await stage4MetadataPromise;
     const viewerOwnedByKind=new Map(PLAYER_COLLECTION_KINDS.map((kind)=>[
       kind,
       new Set(playerCollectionOwnedIds(viewerState,kind).map((itemId)=>normalizeCaseCosmeticId(kind,itemId)).filter(Boolean))
@@ -14579,12 +14685,21 @@ async function leaderboardPlayerCollection(request, env) {
     const items=collection.items.map((item)=>{
       const kind=String(item?.kind||"");
       const itemId=normalizeCaseCosmeticId(kind,item?.itemId);
+      const availability=playerCollectionAcquisitionView(item,acquisition);
       return {
         ...item,
+        availability,
+        howToGet:availability.sources,
+        playerRarity:itemId?playerCollectionRarityView(raritySnapshot,kind,itemId):{known:false},
         viewerOwned:Boolean(itemId&&viewerOwnedByKind.get(kind)?.has(itemId)),
         viewerEquipped:Boolean(itemId&&playerCollectionActiveId(viewerState,kind)===itemId)
       };
     });
+    const summary={
+      ...collection.summary,
+      availableCount:items.filter((item)=>item?.availability?.status==="available").length,
+      archivedCount:items.filter((item)=>item?.availability?.status==="archived").length
+    };
     return jsonResponse({
       ok:true,
       serverAuthoritative:true,
@@ -14593,7 +14708,7 @@ async function leaderboardPlayerCollection(request, env) {
       viewerTelegramId,
       viewer:{ isSelf },
       player:{ telegramId:targetTelegramId, name:String(publicRow?.display_name||"Гость кафе") },
-      summary:collection.summary,
+      summary,
       items
     });
   } catch(error) {
