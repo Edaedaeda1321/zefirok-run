@@ -8,6 +8,7 @@ const worker=read('src/worker.js');
 const rating=read('rating.html');
 let failed=0;
 function check(name,condition){console.log(`${condition?'PASS':'FAIL'}  ${name}`);if(!condition)failed+=1;}
+function between(source,start,end){const a=source.indexOf(start),b=source.indexOf(end,a+start.length);return a>=0&&b>a?source.slice(a,b):'';}
 
 check('public collection route',worker.includes('url.pathname === "/api/leaderboard/player-collection"'));
 check('collection route performance tag',worker.includes('"leaderboard_player_collection", () => leaderboardPlayerCollection(request, env)'));
@@ -20,7 +21,8 @@ check('collection includes rarity/source/equipped metadata',worker.includes('rar
 check('mini-profile response includes summary',worker.includes('collectionSummary=(await playerPublicCollection(env,caseStateFromRow(caseRow||{}))).summary')&&worker.includes('collectionSummary,\n      comparison'));
 check('mini-profile summary uses same existing D1 read',worker.includes('optionalFirst(env.DB.prepare(`SELECT owned_avatars_json,active_avatar_id,owned_frames_json,active_frame_id,owned_trails_json,active_trail_id,owned_skins_json,active_skin_id,owned_music_json,active_music_id FROM case_player_state WHERE telegram_id=? LIMIT 1`).bind(targetTelegramId))'));
 check('rating renders collection summary',rating.includes('rating-player-collection-summary')&&rating.includes('const collection=data?.collectionSummary||{}'));
-check('rating does not add collection API call on mini-profile open',!rating.includes('/api/leaderboard/player-collection'));
+const profileLoad=between(rating,'async function loadPlayerProfile(targetId,entry,force=false)','function openPlayerProfile(targetId,trigger=null)');
+check('rating does not add collection API call on mini-profile open',!profileLoad.includes('PLAYER_COLLECTION_PATH')&&!profileLoad.includes('/api/leaderboard/player-collection'));
 check('collection card uses existing asset',rating.includes('const PLAYER_COLLECTION_ICON = "/assets/ui/new_avatars_game.webp";'));
 
 if(failed){console.error(`Player collection stage 1 failed: ${failed} check(s).`);process.exit(1);}
