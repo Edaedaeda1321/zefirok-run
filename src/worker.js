@@ -2631,6 +2631,9 @@ export default {
       if (url.pathname === "/api/leaderboard/player-profile" && request.method === "POST") {
         return await withPlayerApiPerformance(env, ctx, "leaderboard_player_profile", () => leaderboardPlayerProfile(request, env));
       }
+      if (url.pathname === "/api/leaderboard/player-collection" && request.method === "POST") {
+        return await withPlayerApiPerformance(env, ctx, "leaderboard_player_collection", () => leaderboardPlayerCollection(request, env));
+      }
 
       if (url.pathname === "/api/runs/start" && request.method === "POST") {
         const legalGate = await enforceLegalAcceptanceForRequest(request, env);
@@ -14436,6 +14439,148 @@ async function leaderboardRecentPublicAchievements(env, telegramId, limit = 3, o
   return result;
 }
 
+const PLAYER_COLLECTION_KINDS = Object.freeze(["skin","avatar","frame","trail","music"]);
+const PLAYER_COLLECTION_RARE_RARITIES = new Set(["rare","superrare","epic","mythic","legendary"]);
+const PLAYER_COLLECTION_RARITY_ORDER = Object.freeze({ legendary:6, mythic:5, epic:4, superrare:3, rare:2, common:1 });
+const PLAYER_COLLECTION_RARITY_LABELS = Object.freeze({ common:"Обычный", rare:"Редкий", superrare:"Суперредкий", epic:"Эпический", mythic:"Мифический", legendary:"Легендарный" });
+
+function playerCollectionOwnedIds(state, kind) {
+  if (kind === "skin") return Array.isArray(state?.ownedSkins) ? state.ownedSkins : [];
+  if (kind === "avatar") return Array.isArray(state?.ownedAvatars) ? state.ownedAvatars : [];
+  if (kind === "frame") return Array.isArray(state?.ownedFrames) ? state.ownedFrames : [];
+  if (kind === "trail") return Array.isArray(state?.ownedTrails) ? state.ownedTrails : [];
+  if (kind === "music") return Array.isArray(state?.ownedMusicTracks) ? state.ownedMusicTracks : [];
+  return [];
+}
+
+function playerCollectionActiveId(state, kind) {
+  if (kind === "skin") return String(state?.activeSkinId || "default");
+  if (kind === "avatar") return String(state?.activeAvatarId || "");
+  if (kind === "frame") return String(state?.activeFrameId || "");
+  if (kind === "trail") return String(state?.activeTrailId || "");
+  if (kind === "music") return String(state?.activeMusicTrackId || "cafe_run");
+  return "";
+}
+
+function playerCollectionPublicSource(kind, itemId, definition, future) {
+  if (future) {
+    const seasonKey=String(futureSeasonContentSeasonKey(kind,itemId)||"");
+    return { type:"season", id:seasonKey, label:String(futureSeasonContentLabel(kind,itemId)||"Сезонная награда") };
+  }
+  if (definition?.achievementOnly) return { type:"achievement", id:"", label:"Награда достижения" };
+  if (definition?.alexOnly) return { type:"alex_case", id:"alex", label:"Коллекция Алекса" };
+  if (definition?.legendaryOnly) return { type:"legendary", id:"legendary", label:"Легендарная награда" };
+  return { type:"game", id:"", label:"Игровая коллекция" };
+}
+
+function playerCollectionHasFutureOwned(state) {
+  for (const kind of PLAYER_COLLECTION_KINDS) {
+    for (const rawItemId of playerCollectionOwnedIds(state,kind)) {
+      const itemId=normalizeCaseCosmeticId(kind,rawItemId);
+      if (itemId && futureSeasonContentItem(kind,itemId)) return true;
+    }
+  }
+  return false;
+}
+
+function playerCollectionPublicItem(state, kind, rawItemId, releaseRules = null) {
+  const itemId=normalizeCaseCosmeticId(kind,rawItemId);
+  if (!itemId) return null;
+  const definition=seasonPassAnyCosmeticCatalog(kind)?.[itemId];
+  if (!definition || definition?.defaultOwned === true) return null;
+  const future=futureSeasonContentItem(kind,itemId);
+  if (future) {
+    const rule=releaseRules instanceof Map ? releaseRules.get(liveContentReleaseKey(kind,itemId)) : liveContentReleaseRuleCached(kind,itemId);
+    // Historical seasonal cosmetics remain public after their live route is archived,
+    // while content that has never been released stays invisible in public profiles.
+    if (!rule?.released && !rule?.everReleased) return null;
+  }
+  const rarity=String(definition?.rarity||"common");
+  const seasonKey=future?String(futureSeasonContentSeasonKey(kind,itemId)||""):"";
+  return {
+    kind,
+    itemId,
+    title:String(definition?.title||itemId),
+    rarity,
+    rarityLabel:String(PLAYER_COLLECTION_RARITY_LABELS[rarity]||"Особый"),
+    imageUrl:String(seasonPassCosmeticImage(kind,itemId)||SYSTEM_IMAGE_FALLBACK),
+    seasonKey,
+    source:playerCollectionPublicSource(kind,itemId,definition,future),
+    owned:true,
+    equipped:playerCollectionActiveId(state,kind)===itemId
+  };
+}
+
+async function playerPublicCollection(env, state) {
+  let releaseRules=null;
+  if (playerCollectionHasFutureOwned(state)) {
+    try { releaseRules=await readLiveContentReleaseRules(env); }
+    catch (error) {
+      // Public profiles fail closed for hidden seasonal content, but a temporary
+      // Live Content read issue must not break the whole rating mini-profile.
+      console.error("player public collection live content read failed",error);
+      releaseRules=liveContentReleaseCache.rows;
+    }
+  }
+  const items=[];
+  const categories={ skin:0, avatar:0, frame:0, trail:0, music:0 };
+  for (const kind of PLAYER_COLLECTION_KINDS) {
+    for (const rawItemId of playerCollectionOwnedIds(state,kind)) {
+      const item=playerCollectionPublicItem(state,kind,rawItemId,releaseRules);
+      if (!item) continue;
+      items.push(item);
+      categories[kind]+=1;
+    }
+  }
+  items.sort((left,right) =>
+    Number(PLAYER_COLLECTION_RARITY_ORDER[right?.rarity]||0)-Number(PLAYER_COLLECTION_RARITY_ORDER[left?.rarity]||0)
+    || String(left?.title||"").localeCompare(String(right?.title||""),"ru")
+    || String(left?.itemId||"").localeCompare(String(right?.itemId||""))
+  );
+  const rareCount=items.filter((item)=>PLAYER_COLLECTION_RARE_RARITIES.has(String(item?.rarity||""))).length;
+  const legendaryCount=items.filter((item)=>String(item?.rarity||"")==="legendary").length;
+  const equippedCount=items.filter((item)=>item?.equipped===true).length;
+  return {
+    summary:{ totalItems:items.length, rareCount, legendaryCount, equippedCount, categories },
+    items
+  };
+}
+
+async function leaderboardPlayerCollection(request, env) {
+  try {
+    requireDatabase(env);
+    requireBotToken(env);
+    const body=await readJson(request);
+    const auth=await validateTelegramInitData(String(body.initData||""),env);
+    const viewerTelegramId=String(auth.user.id);
+    const targetTelegramId=String(body.targetTelegramId||body.telegramId||body.playerId||"").trim();
+    if(!/^\d{4,20}$/.test(targetTelegramId))throw new ApiError(400,"Некорректный игрок рейтинга.");
+    const mode=String(body.mode||"season")==="all_time"?"all_time":"season";
+    const season=await selectLeaderboardSeasonForState(env);
+    if(mode==="all_time")await ensureLeaderboardAllTimeBestScoreMode(env);
+    const publicRow=mode==="all_time"
+      ? await env.DB.prepare(`SELECT telegram_id,display_name FROM leaderboard_all_time WHERE telegram_id=? AND hidden=0 LIMIT 1`).bind(targetTelegramId).first()
+      : await env.DB.prepare(`SELECT telegram_id,display_name FROM leaderboard_entries WHERE season_id=? AND telegram_id=? AND hidden=0 LIMIT 1`).bind(String(season.id),targetTelegramId).first();
+    if(!publicRow)throw new ApiError(404,"Игрок сейчас не отображается в этом рейтинге.");
+    const caseRow=await env.DB.prepare(`SELECT owned_avatars_json,active_avatar_id,owned_frames_json,active_frame_id,owned_trails_json,active_trail_id,owned_skins_json,active_skin_id,owned_music_json,active_music_id FROM case_player_state WHERE telegram_id=? LIMIT 1`).bind(targetTelegramId).first();
+    const collection=await playerPublicCollection(env,caseStateFromRow(caseRow||{}));
+    return jsonResponse({
+      ok:true,
+      serverAuthoritative:true,
+      generatedAt:Date.now(),
+      mode,
+      viewerTelegramId,
+      player:{ telegramId:targetTelegramId, name:String(publicRow?.display_name||"Гость кафе") },
+      summary:collection.summary,
+      items:collection.items
+    });
+  } catch(error) {
+    if(error instanceof ApiError)return jsonResponse({ok:false,error:error.message},error.status);
+    console.error("leaderboardPlayerCollection failed",error);
+    return jsonResponse({ok:false,error:"Не удалось загрузить коллекцию игрока."},500);
+  }
+}
+
 async function leaderboardPlayerProfile(request, env) {
   try {
     requireDatabase(env);
@@ -14476,7 +14621,7 @@ async function leaderboardPlayerProfile(request, env) {
     const [rankRow,profileRow,caseRow,presenceRow,runsRow,achievementPreview,populationStats,recentBase,viewerSnapshot,dailyStreakMap]=await Promise.all([
       rankPromise,
       optionalFirst(env.DB.prepare(`SELECT best_score,profile_xp,created_at FROM admin_profile_state WHERE telegram_id=? LIMIT 1`).bind(targetTelegramId)),
-      optionalFirst(env.DB.prepare(`SELECT active_avatar_id,active_frame_id FROM case_player_state WHERE telegram_id=? LIMIT 1`).bind(targetTelegramId)),
+      optionalFirst(env.DB.prepare(`SELECT owned_avatars_json,active_avatar_id,owned_frames_json,active_frame_id,owned_trails_json,active_trail_id,owned_skins_json,active_skin_id,owned_music_json,active_music_id FROM case_player_state WHERE telegram_id=? LIMIT 1`).bind(targetTelegramId)),
       optionalFirst(env.DB.prepare(`SELECT first_seen_at FROM player_game_presence WHERE telegram_id=? LIMIT 1`).bind(targetTelegramId)),
       achievementRunStatsRow(env,targetTelegramId,minRunMs).catch((error)=>{if(isMissingRuntimeDatabaseSchemaError(error))return null;throw error;}),
       targetAchievementPreviewPromise,
@@ -14487,6 +14632,7 @@ async function leaderboardPlayerProfile(request, env) {
     ]);
 
     const activeAvatarId=normalizeCaseCosmeticId("avatar",caseRow?.active_avatar_id||playerRow.case_avatar_id),activeFrameId=normalizeCaseCosmeticId("frame",caseRow?.active_frame_id||playerRow.case_frame_id);
+    const collectionSummary=(await playerPublicCollection(env,caseStateFromRow(caseRow||{}))).summary;
     const showcaseItems=Array.isArray(achievementPreview?.showcase?.items)?achievementPreview.showcase.items.slice(0,ACHIEVEMENT_SHOWCASE_LIMIT):[];
     const populationTotal=Math.max(0,Number(populationStats?.totalPlayers)||0),populationCounts=populationStats?.counts instanceof Map?populationStats.counts:new Map();
     const withPopulation=(item)=>{const earnedPlayers=Math.max(0,Number(populationCounts.get(String(item?.id||""))||0)),playerPercent=achievementPlayerPercent(earnedPlayers,populationTotal);return {...item,earnedPlayers,totalPlayers:populationTotal,playerPercent};};
@@ -14515,6 +14661,7 @@ async function leaderboardPlayerProfile(request, env) {
         showcase:{items:showcaseItems,selectedStyleId:String(achievementPreview?.showcase?.selectedStyleId||"default"),style:achievementPreview?.showcase?.style&&typeof achievementPreview.showcase.style==="object"?achievementPreview.showcase.style:{},styleTitle:String(achievementPreview?.showcase?.styleTitle||"Классическая")},
         rareTrophy,recent
       },
+      collectionSummary,
       comparison
     });
   } catch(error) {
