@@ -11,7 +11,7 @@ let failed=0;
 function check(name,condition){console.log(`${condition?'PASS':'FAIL'}  ${name}`);if(!condition)failed+=1;}
 function between(source,start,end){const a=source.indexOf(start),b=source.indexOf(end,a+start.length);return a>=0&&b>a?source.slice(a,b):'';}
 
-const filters=between(rating,'function playerCollectionFiltersMarkup(data,activeFilter) {','function playerCollectionSortMarkup');
+const filters=between(rating,'function playerCollectionFiltersMarkup(data,activeFilter,compareMode=playerCollectionCompareMode) {','function playerCollectionSortMarkup');
 const filterLogic=between(rating,'function playerCollectionMatchesFilter(item,filter) {','function playerCollectionSortedItems');
 const sortLogic=between(rating,'function playerCollectionSortedItems(items,sortMode) {','function playerCollectionMotionReduced');
 const render=between(rating,'function renderPlayerCollection(data,activeTab=playerCollectionTab) {','async function loadPlayerCollection');
@@ -21,7 +21,7 @@ const clickHandler=between(rating,'playerCollectionLayer?.addEventListener("clic
 const css=between(rating,'<style id="rating-player-collection-stage6-7">','</style>');
 
 check('stage 7 exposes requested quick filters',rating.includes('{id:"legendary",label:"Легендарные"}')&&rating.includes('{id:"archived",label:"Архив"}')&&rating.includes('{id:"equipped",label:"Выбрано"}')&&rating.includes('{id:"viewer_owned",label:"Есть у меня"')&&rating.includes('{id:"viewer_missing",label:"Нет у меня"'));
-check('viewer ownership filters are hidden on self view',filters.includes('!filter.viewerOnly||!isSelf'));
+check('viewer ownership filters are hidden on self view',filters.includes('!filter.viewerOnly||(!isSelf&&!comparisonActive)'));
 check('legendary filter uses actual rarity id',filterLogic.includes('filter==="legendary"')&&filterLogic.includes('item?.rarity'));
 check('archive filter uses server availability status',filterLogic.includes('filter==="archived"')&&filterLogic.includes('item?.availability?.status'));
 check('equipped filter uses target equipped state',filterLogic.includes('filter==="equipped"')&&filterLogic.includes('item?.equipped===true'));

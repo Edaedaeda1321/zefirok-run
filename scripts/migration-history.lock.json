@@ -112,6 +112,7 @@
     "0109_game_task_reward_engine_v2.sql": "bfceb3c32c4c254b1cdc8b0d61784d9f30cce5d13b24ced0d99628b073f51266",
     "0110_player_directory_integrity.sql": "b18f61f4b68d5074bfe5dbf5ac637686b4e7509f1da137e1163193e0dcfebb5f",
     "0111_game_task_daily_logins.sql": "98111df93297937c022ade8825688732e8e13fee8bab4a4763053e3bd7aabf35",
-    "0112_game_task_permanent_rewards.sql": "1f3896509632d4e84f42fef130ba193592da2bef817a22ab2cfc03dffd8f70a0"
+    "0112_game_task_permanent_rewards.sql": "1f3896509632d4e84f42fef130ba193592da2bef817a22ab2cfc03dffd8f70a0",
+    "0113_player_collection_showcase.sql": "6f1694a366cb8dccac85dacff5a15954ef9aa06e92a538321e6161f3e7e8e947"
   }
 }

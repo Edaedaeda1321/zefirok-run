@@ -26,7 +26,7 @@ check('historically released archived cosmetics remain in completion denominator
 check('full collection endpoint returns catalog total and completion',endpoint.includes('catalogKnown')&&endpoint.includes('catalogTotal:catalogSummary.totalItems')&&endpoint.includes('completionPercent'));
 check('catalog categories are aggregate-only public metadata',endpoint.includes('catalogCategories:catalogSummary.categories'));
 check('stage 6 catalog read is lazy and not added to mini-profile endpoint',endpoint.includes('playerCollectionReleaseRulesSnapshot(env)')&&!profileEndpoint.includes('playerCollectionReleaseRulesSnapshot(env)'));
-check('existing mini-profile summary still uses lightweight public collection summary',profileEndpoint.includes('playerPublicCollection(env,caseStateFromRow(caseRow||{}))'));
+check('existing mini-profile summary still uses lightweight public collection summary',profileEndpoint.includes('publicCollection=await playerPublicCollection(env,collectionState)'));
 check('prestige header shows completion and total public catalog',prestige.includes('Статус коллекции')&&prestige.includes('catalogTotal')&&prestige.includes('публичных предметов'));
 check('prestige header shows total archived and legendary counts',prestige.includes('архивных')&&prestige.includes('легендарных')&&prestige.includes('rating-player-collection-overview-card'));
 check('rarest item is selected from already loaded aggregate player rarity',rating.includes('function playerCollectionRarestItem(items)')&&rating.includes('item?.playerRarity?.known===true')&&prestige.includes('playerCollectionRarestItem(items)'));

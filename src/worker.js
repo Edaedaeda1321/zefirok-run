@@ -2634,6 +2634,9 @@ export default {
       if (url.pathname === "/api/leaderboard/player-collection" && request.method === "POST") {
         return await withPlayerApiPerformance(env, ctx, "leaderboard_player_collection", () => leaderboardPlayerCollection(request, env));
       }
+      if (url.pathname === "/api/leaderboard/player-collection/showcase" && request.method === "POST") {
+        return await withPlayerApiPerformance(env, ctx, "leaderboard_player_collection_showcase", () => saveLeaderboardPlayerCollectionShowcase(request, env));
+      }
 
       if (url.pathname === "/api/runs/start" && request.method === "POST") {
         const legalGate = await enforceLegalAcceptanceForRequest(request, env);
@@ -14447,6 +14450,8 @@ const PLAYER_COLLECTION_RARITY_CACHE_TTL_MS = 10 * 60 * 1000;
 const PLAYER_COLLECTION_RARITY_CACHE_FALLBACK_TTL_MS = 45 * 1000;
 const PLAYER_COLLECTION_RARITY_TIMEOUT_MS = 1100;
 const PLAYER_COLLECTION_CATALOG_TIMEOUT_MS = 1000;
+const PLAYER_COLLECTION_SHOWCASE_LIMIT = 5;
+const PLAYER_COLLECTION_STATE_SQL = `SELECT owned_avatars_json,active_avatar_id,owned_frames_json,active_frame_id,owned_trails_json,active_trail_id,owned_skins_json,active_skin_id,owned_music_json,active_music_id FROM case_player_state WHERE telegram_id=? LIMIT 1`;
 const playerCollectionRarityCache = new WeakMap();
 
 function playerCollectionOwnedIds(state, kind) {
@@ -14712,6 +14717,88 @@ async function playerPublicCollection(env, state, options = {}) {
   };
 }
 
+
+function playerCollectionItemKey(kind, itemId) {
+  const normalizedKind=String(kind||"").trim(),normalizedId=normalizeCaseCosmeticId(normalizedKind,itemId);
+  return normalizedKind&&normalizedId?`${normalizedKind}:${normalizedId}`:"";
+}
+
+async function playerCollectionShowcaseRows(env, telegramId) {
+  const playerId=String(telegramId||"").trim();if(!playerId)return [];
+  try {
+    const result=await env.DB.prepare(`SELECT slot,kind,item_id,updated_at FROM player_collection_showcase WHERE telegram_id=? ORDER BY slot ASC LIMIT ?`).bind(playerId,PLAYER_COLLECTION_SHOWCASE_LIMIT).all();
+    return Array.isArray(result?.results)?result.results:[];
+  } catch(error) {
+    if(isMissingRuntimeDatabaseSchemaError(error))return [];
+    throw error;
+  }
+}
+
+function playerCollectionShowcasePublicItems(rows, state, releaseRules = null) {
+  const ownedByKey=new Map();
+  for(const kind of PLAYER_COLLECTION_KINDS){
+    for(const rawItemId of playerCollectionOwnedIds(state,kind)){
+      const item=playerCollectionPublicItem(state,kind,rawItemId,releaseRules);if(!item)continue;
+      const key=playerCollectionItemKey(kind,item.itemId);if(key)ownedByKey.set(key,item);
+    }
+  }
+  const seen=new Set(),items=[];
+  for(const row of Array.isArray(rows)?rows:[]){
+    const kind=String(row?.kind||""),itemId=normalizeCaseCosmeticId(kind,row?.item_id),key=playerCollectionItemKey(kind,itemId);
+    if(!key||seen.has(key)||!ownedByKey.has(key))continue;
+    seen.add(key);items.push({...ownedByKey.get(key),slot:Math.max(1,Math.min(PLAYER_COLLECTION_SHOWCASE_LIMIT,Number(row?.slot)||items.length+1))});
+    if(items.length>=PLAYER_COLLECTION_SHOWCASE_LIMIT)break;
+  }
+  return items;
+}
+
+function playerCollectionShowcaseFromEnriched(rows, enrichedItems) {
+  const byKey=new Map((Array.isArray(enrichedItems)?enrichedItems:[]).map((item)=>[playerCollectionItemKey(item?.kind,item?.itemId),item]).filter(([key])=>Boolean(key)));
+  const seen=new Set(),items=[];
+  for(const row of Array.isArray(rows)?rows:[]){
+    const key=playerCollectionItemKey(row?.kind,row?.item_id);if(!key||seen.has(key)||!byKey.has(key))continue;
+    seen.add(key);items.push({...byKey.get(key),slot:Math.max(1,Math.min(PLAYER_COLLECTION_SHOWCASE_LIMIT,Number(row?.slot)||items.length+1))});
+    if(items.length>=PLAYER_COLLECTION_SHOWCASE_LIMIT)break;
+  }
+  return {limit:PLAYER_COLLECTION_SHOWCASE_LIMIT,items};
+}
+
+async function saveLeaderboardPlayerCollectionShowcase(request, env) {
+  try {
+    requireDatabase(env);requireBotToken(env);
+    const body=await readJson(request),auth=await validateTelegramInitData(String(body.initData||""),env),telegramId=String(auth.user.id);
+    const rawItems=Array.isArray(body?.items)?body.items:[];
+    if(rawItems.length>PLAYER_COLLECTION_SHOWCASE_LIMIT)throw new ApiError(400,`В витрине можно закрепить не больше ${PLAYER_COLLECTION_SHOWCASE_LIMIT} предметов.`);
+    const selection=[],seen=new Set();
+    for(const raw of rawItems){
+      const kind=String(raw?.kind||"").trim();if(!PLAYER_COLLECTION_KINDS.includes(kind))throw new ApiError(400,"Некорректный тип предмета витрины.");
+      const itemId=normalizeCaseCosmeticId(kind,raw?.itemId||raw?.item_id);if(!itemId)throw new ApiError(400,"Некорректный предмет витрины.");
+      const key=playerCollectionItemKey(kind,itemId);if(seen.has(key))throw new ApiError(400,"Один предмет нельзя добавить в витрину дважды.");
+      seen.add(key);selection.push({kind,itemId,key});
+    }
+    const [caseRow,releaseSnapshot]=await Promise.all([
+      env.DB.prepare(PLAYER_COLLECTION_STATE_SQL).bind(telegramId).first(),
+      playerCollectionReleaseRulesSnapshot(env)
+    ]);
+    const state=caseStateFromRow(caseRow||{}),collection=await playerPublicCollection(env,state,{releaseRules:releaseSnapshot.rows});
+    const publicByKey=new Map(collection.items.map((item)=>[playerCollectionItemKey(item?.kind,item?.itemId),item]).filter(([key])=>Boolean(key)));
+    for(const selected of selection){if(!publicByKey.has(selected.key))throw new ApiError(400,"В витрину можно добавить только предмет из своей публичной коллекции.");}
+    const now=Math.floor(Date.now()/1000),statements=[env.DB.prepare(`DELETE FROM player_collection_showcase WHERE telegram_id=?`).bind(telegramId)];
+    selection.forEach((selected,index)=>statements.push(env.DB.prepare(`INSERT INTO player_collection_showcase(telegram_id,slot,kind,item_id,updated_at) VALUES(?,?,?,?,?)`).bind(telegramId,index+1,selected.kind,selected.itemId,now)));
+    try { await env.DB.batch(statements); }
+    catch(error){
+      if(isMissingRuntimeDatabaseSchemaError(error))throw new ApiError(503,"Витрина коллекции временно недоступна. Попробуй позже.");
+      throw error;
+    }
+    const items=selection.map((selected,index)=>({...publicByKey.get(selected.key),slot:index+1}));
+    return jsonResponse({ok:true,serverAuthoritative:true,generatedAt:Date.now(),showcase:{limit:PLAYER_COLLECTION_SHOWCASE_LIMIT,items}});
+  } catch(error) {
+    if(error instanceof ApiError)return jsonResponse({ok:false,error:error.message},error.status);
+    console.error("saveLeaderboardPlayerCollectionShowcase failed",error);
+    return jsonResponse({ok:false,error:"Не удалось сохранить витрину коллекции."},500);
+  }
+}
+
 async function leaderboardPlayerCollection(request, env) {
   try {
     requireDatabase(env);
@@ -14728,43 +14815,62 @@ async function leaderboardPlayerCollection(request, env) {
       ? await env.DB.prepare(`SELECT telegram_id,display_name FROM leaderboard_all_time WHERE telegram_id=? AND hidden=0 LIMIT 1`).bind(targetTelegramId).first()
       : await env.DB.prepare(`SELECT telegram_id,display_name FROM leaderboard_entries WHERE season_id=? AND telegram_id=? AND hidden=0 LIMIT 1`).bind(String(season.id),targetTelegramId).first();
     if(!publicRow)throw new ApiError(404,"Игрок сейчас не отображается в этом рейтинге.");
-    const collectionStateSql=`SELECT owned_avatars_json,active_avatar_id,owned_frames_json,active_frame_id,owned_trails_json,active_trail_id,owned_skins_json,active_skin_id,owned_music_json,active_music_id FROM case_player_state WHERE telegram_id=? LIMIT 1`;
-    // Stage 6 catalog metadata is lazy with the full collection endpoint only.
-    // Start it beside the target inventory read so the mini-profile remains unchanged.
-    const releaseSnapshotPromise=playerCollectionReleaseRulesSnapshot(env);
-    const targetCaseRow=await env.DB.prepare(collectionStateSql).bind(targetTelegramId).first();
-    const targetState=caseStateFromRow(targetCaseRow||{});
-    const releaseSnapshot=await releaseSnapshotPromise;
-    const collection=await playerPublicCollection(env,targetState,{releaseRules:releaseSnapshot.rows});
-    const catalogSummary=playerCollectionPublicCatalogSummary(releaseSnapshot);
-    const stage4MetadataPromise=collection.items.length?Promise.all([
-      withAlbumAcquisitionTimeout(albumAcquisitionSources(env)),
-      withPlayerCollectionRarityTimeout(playerCollectionRaritySnapshot(env))
-    ]):Promise.resolve([albumAcquisitionFallback(),playerCollectionRarityFallback()]);
-    const isSelf=viewerTelegramId===targetTelegramId;
+
+    // Stage 6 catalog metadata and Stage 9 showcase rows are lazy with the full
+    // collection endpoint. They run beside the inventory reads, so rating startup
+    // and mini-profile summary remain independent from the full collection payload.
+    const releaseSnapshotPromise=playerCollectionReleaseRulesSnapshot(env),showcaseRowsPromise=playerCollectionShowcaseRows(env,targetTelegramId);
+    const targetCaseRow=await env.DB.prepare(PLAYER_COLLECTION_STATE_SQL).bind(targetTelegramId).first();
+    const targetState=caseStateFromRow(targetCaseRow||{}),isSelf=viewerTelegramId===targetTelegramId;
     let viewerState=targetState;
     if(!isSelf){
-      const viewerCaseRow=await env.DB.prepare(collectionStateSql).bind(viewerTelegramId).first();
+      const viewerCaseRow=await env.DB.prepare(PLAYER_COLLECTION_STATE_SQL).bind(viewerTelegramId).first();
       viewerState=caseStateFromRow(viewerCaseRow||{});
     }
-    const [acquisition,raritySnapshot]=await stage4MetadataPromise;
+    const [releaseSnapshot,showcaseRows]=await Promise.all([releaseSnapshotPromise,showcaseRowsPromise]);
+    const [collection,viewerCollection]=await Promise.all([
+      playerPublicCollection(env,targetState,{releaseRules:releaseSnapshot.rows}),
+      isSelf?Promise.resolve(null):playerPublicCollection(env,viewerState,{releaseRules:releaseSnapshot.rows})
+    ]);
+    const catalogSummary=playerCollectionPublicCatalogSummary(releaseSnapshot);
+    const metadataNeeded=collection.items.length+Math.max(0,Number(viewerCollection?.items?.length||0))>0;
+    const [acquisition,raritySnapshot]=metadataNeeded?await Promise.all([
+      withAlbumAcquisitionTimeout(albumAcquisitionSources(env)),
+      withPlayerCollectionRarityTimeout(playerCollectionRaritySnapshot(env))
+    ]):[albumAcquisitionFallback(),playerCollectionRarityFallback()];
+
     const viewerOwnedByKind=new Map(PLAYER_COLLECTION_KINDS.map((kind)=>[
       kind,
       new Set(playerCollectionOwnedIds(viewerState,kind).map((itemId)=>normalizeCaseCosmeticId(kind,itemId)).filter(Boolean))
     ]));
-    const items=collection.items.map((item)=>{
-      const kind=String(item?.kind||"");
-      const itemId=normalizeCaseCosmeticId(kind,item?.itemId);
-      const availability=playerCollectionAcquisitionView(item,acquisition);
+    const targetOwnedByKind=new Map(PLAYER_COLLECTION_KINDS.map((kind)=>[
+      kind,
+      new Set(playerCollectionOwnedIds(targetState,kind).map((itemId)=>normalizeCaseCosmeticId(kind,itemId)).filter(Boolean))
+    ]));
+    const enrichItem=(item,{targetOwned=true,viewerOwned=false,viewerEquipped=false}={})=>{
+      const kind=String(item?.kind||""),itemId=normalizeCaseCosmeticId(kind,item?.itemId),availability=playerCollectionAcquisitionView(item,acquisition);
       return {
         ...item,
+        owned:Boolean(targetOwned),
+        equipped:Boolean(targetOwned&&playerCollectionActiveId(targetState,kind)===itemId),
         availability,
         howToGet:availability.sources,
         playerRarity:itemId?playerCollectionRarityView(raritySnapshot,kind,itemId):{known:false},
-        viewerOwned:Boolean(itemId&&viewerOwnedByKind.get(kind)?.has(itemId)),
-        viewerEquipped:Boolean(itemId&&playerCollectionActiveId(viewerState,kind)===itemId)
+        viewerOwned:Boolean(viewerOwned),
+        viewerEquipped:Boolean(viewerEquipped)
       };
+    };
+    const items=collection.items.map((item)=>{
+      const kind=String(item?.kind||""),itemId=normalizeCaseCosmeticId(kind,item?.itemId);
+      return enrichItem(item,{targetOwned:true,viewerOwned:Boolean(itemId&&viewerOwnedByKind.get(kind)?.has(itemId)),viewerEquipped:Boolean(itemId&&playerCollectionActiveId(viewerState,kind)===itemId)});
     });
+    const viewerOnlyItems=isSelf?[]:(Array.isArray(viewerCollection?.items)?viewerCollection.items:[]).filter((item)=>{
+      const kind=String(item?.kind||""),itemId=normalizeCaseCosmeticId(kind,item?.itemId);return Boolean(itemId&&!targetOwnedByKind.get(kind)?.has(itemId));
+    }).map((item)=>{
+      const kind=String(item?.kind||""),itemId=normalizeCaseCosmeticId(kind,item?.itemId);
+      return enrichItem(item,{targetOwned:false,viewerOwned:true,viewerEquipped:Boolean(itemId&&playerCollectionActiveId(viewerState,kind)===itemId)});
+    });
+    const commonCount=isSelf?collection.summary.totalItems:items.filter((item)=>item?.viewerOwned===true).length,targetOnlyCount=isSelf?0:items.length-commonCount;
     const catalogKnown=catalogSummary.known===true&&catalogSummary.totalItems>0;
     const completionPercent=catalogKnown?Math.max(0,Math.min(100,Math.round((collection.summary.totalItems/catalogSummary.totalItems)*1000)/10)):null;
     const summary={
@@ -14776,6 +14882,7 @@ async function leaderboardPlayerCollection(request, env) {
       catalogCategories:catalogSummary.categories,
       completionPercent
     };
+    const showcase=playerCollectionShowcaseFromEnriched(showcaseRows,items);
     return jsonResponse({
       ok:true,
       serverAuthoritative:true,
@@ -14785,6 +14892,8 @@ async function leaderboardPlayerCollection(request, env) {
       viewer:{ isSelf },
       player:{ telegramId:targetTelegramId, name:String(publicRow?.display_name||"Гость кафе") },
       summary,
+      showcase:{...showcase,editable:isSelf},
+      comparison:isSelf?{available:false,isSelf:true,commonCount:items.length,targetOnlyCount:0,viewerOnlyCount:0,viewerOnlyItems:[]}:{available:true,isSelf:false,commonCount,targetOnlyCount,viewerOnlyCount:viewerOnlyItems.length,viewerOnlyItems},
       items
     });
   } catch(error) {
@@ -14831,21 +14940,23 @@ async function leaderboardPlayerProfile(request, env) {
       achievementPoints:Math.max(0,Number(viewerAchievementPreview?.summary?.achievementPoints||0)),
       catalogEarned:Math.max(0,Number(viewerAchievementPreview?.summary?.catalogEarned||0))
     }));
-    const [rankRow,profileRow,caseRow,presenceRow,runsRow,achievementPreview,populationStats,recentBase,viewerSnapshot,dailyStreakMap]=await Promise.all([
+    const [rankRow,profileRow,caseRow,presenceRow,runsRow,achievementPreview,populationStats,recentBase,viewerSnapshot,dailyStreakMap,collectionShowcaseRows]=await Promise.all([
       rankPromise,
       optionalFirst(env.DB.prepare(`SELECT best_score,profile_xp,created_at FROM admin_profile_state WHERE telegram_id=? LIMIT 1`).bind(targetTelegramId)),
-      optionalFirst(env.DB.prepare(`SELECT owned_avatars_json,active_avatar_id,owned_frames_json,active_frame_id,owned_trails_json,active_trail_id,owned_skins_json,active_skin_id,owned_music_json,active_music_id FROM case_player_state WHERE telegram_id=? LIMIT 1`).bind(targetTelegramId)),
+      optionalFirst(env.DB.prepare(PLAYER_COLLECTION_STATE_SQL).bind(targetTelegramId)),
       optionalFirst(env.DB.prepare(`SELECT first_seen_at FROM player_game_presence WHERE telegram_id=? LIMIT 1`).bind(targetTelegramId)),
       achievementRunStatsRow(env,targetTelegramId,minRunMs).catch((error)=>{if(isMissingRuntimeDatabaseSchemaError(error))return null;throw error;}),
       targetAchievementPreviewPromise,
       achievementPopulationStats(env),
       recentAchievementsPromise,
       viewerSnapshotPromise,
-      leaderboardPublicStreakMap(env,[targetTelegramId])
+      leaderboardPublicStreakMap(env,[targetTelegramId]),
+      playerCollectionShowcaseRows(env,targetTelegramId)
     ]);
 
     const activeAvatarId=normalizeCaseCosmeticId("avatar",caseRow?.active_avatar_id||playerRow.case_avatar_id),activeFrameId=normalizeCaseCosmeticId("frame",caseRow?.active_frame_id||playerRow.case_frame_id);
-    const collectionSummary=(await playerPublicCollection(env,caseStateFromRow(caseRow||{}))).summary;
+    const collectionState=caseStateFromRow(caseRow||{}),publicCollection=await playerPublicCollection(env,collectionState),collectionSummary=publicCollection.summary;
+    const collectionShowcase={...playerCollectionShowcaseFromEnriched(collectionShowcaseRows,publicCollection.items),editable:viewerTelegramId===targetTelegramId};
     const showcaseItems=Array.isArray(achievementPreview?.showcase?.items)?achievementPreview.showcase.items.slice(0,ACHIEVEMENT_SHOWCASE_LIMIT):[];
     const populationTotal=Math.max(0,Number(populationStats?.totalPlayers)||0),populationCounts=populationStats?.counts instanceof Map?populationStats.counts:new Map();
     const withPopulation=(item)=>{const earnedPlayers=Math.max(0,Number(populationCounts.get(String(item?.id||""))||0)),playerPercent=achievementPlayerPercent(earnedPlayers,populationTotal);return {...item,earnedPlayers,totalPlayers:populationTotal,playerPercent};};
@@ -14875,6 +14986,7 @@ async function leaderboardPlayerProfile(request, env) {
         rareTrophy,recent
       },
       collectionSummary,
+      collectionShowcase,
       comparison
     });
   } catch(error) {

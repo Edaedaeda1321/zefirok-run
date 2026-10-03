@@ -9259,6 +9259,19 @@ body { min-height: var(--zefirok-app-height, 100dvh); }
 @media(prefers-reduced-motion:reduce){.rating-player-collection-prestige,.rating-player-collection-completion,.rating-player-collection-rarest[data-rarity="legendary"]::after{animation:none!important;transition:none!important}}
 </style>
 
+<style id="rating-player-collection-stage8-9">
+/* Stage 8: collection comparison. Stage 9: persistent cosmetic showcase. */
+.rating-player-collection-compare{display:grid;gap:8px;margin:-2px 0 12px;padding:10px;border:1px solid rgba(221,185,198,.62);border-radius:18px;background:linear-gradient(145deg,rgba(255,255,255,.78),rgba(255,246,249,.72));box-shadow:inset 0 1px 0 rgba(255,255,255,.84)}
+.rating-player-collection-compare-head{display:flex;align-items:end;justify-content:space-between;gap:10px}.rating-player-collection-compare-head span{display:grid;gap:2px}.rating-player-collection-compare-head small{color:#a47c89;font-size:6px;font-weight:950;letter-spacing:.06em;text-transform:uppercase}.rating-player-collection-compare-head strong{color:#744957;font-size:10px;font-weight:950}.rating-player-collection-compare-head b{color:#bf557c;font-size:8px;font-weight:950;white-space:nowrap}
+.rating-player-collection-compare-modes{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}.rating-player-collection-compare-mode{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:6px;align-items:center;min-height:39px;padding:8px 9px;border:1px solid rgba(220,185,198,.64);border-radius:13px;background:rgba(255,255,255,.78);color:#876470;text-align:left;font:900 7px/1.2 var(--font-sans);appearance:none;-webkit-appearance:none;cursor:pointer}.rating-player-collection-compare-mode b{display:grid;place-items:center;min-width:24px;height:24px;padding:0 5px;border-radius:999px;background:#f7e9ee;color:#ad4d70;font-size:7px;font-weight:950;font-variant-numeric:tabular-nums}.rating-player-collection-compare-mode[aria-pressed="true"]{border-color:rgba(205,84,128,.74);background:linear-gradient(145deg,#e981a6,#ca517e);color:#fff;box-shadow:0 5px 14px rgba(182,64,105,.16)}.rating-player-collection-compare-mode[aria-pressed="true"] b{background:rgba(255,255,255,.21);color:#fff}
+.rating-player-collection-item.is-viewer-only{border-style:dashed}.rating-player-collection-viewer-only{position:absolute;z-index:7;right:6px;top:6px;padding:4px 6px;border-radius:999px;background:linear-gradient(145deg,#7b69d7,#9d7ce0);color:#fff;font-size:5.8px;font-weight:950;box-shadow:0 4px 10px rgba(96,77,169,.20)}
+.rating-player-collection-showcase{display:grid;gap:9px;margin-bottom:12px;padding:11px;border:1px solid rgba(224,185,198,.66);border-radius:19px;background:radial-gradient(circle at 88% 0,rgba(255,224,133,.24),transparent 42%),linear-gradient(155deg,rgba(255,255,255,.9),rgba(255,244,248,.82))}.rating-player-collection-showcase-head{display:flex;align-items:center;justify-content:space-between;gap:10px}.rating-player-collection-showcase-copy{display:grid;gap:2px}.rating-player-collection-showcase-copy small{color:#b75b7b;font-size:6px;font-weight:950;text-transform:uppercase;letter-spacing:.06em}.rating-player-collection-showcase-copy strong{color:#704552;font-size:11px;font-weight:950}.rating-player-collection-showcase-copy span{color:#9d7884;font-size:6.6px;font-weight:780;line-height:1.35}.rating-player-collection-showcase-edit{min-height:31px;padding:6px 10px;border:1px solid rgba(205,85,128,.56);border-radius:999px;background:#fff;color:#b24c73;font:950 7px/1 var(--font-sans);appearance:none;-webkit-appearance:none;cursor:pointer}.rating-player-collection-showcase-slots{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:6px}.rating-player-collection-showcase-slot{position:relative;display:grid;place-items:center;aspect-ratio:1;border:1px dashed rgba(210,167,183,.7);border-radius:14px;background:rgba(255,255,255,.58);overflow:hidden}.rating-player-collection-showcase-slot.has-item{border-style:solid;border-color:rgba(211,159,179,.68);background:#fff}.rating-player-collection-showcase-slot img{display:block;width:94%;height:94%;object-fit:contain;filter:drop-shadow(0 3px 5px rgba(96,56,69,.11))}.rating-player-collection-showcase-slot span{color:#c7a5b1;font-size:10px;font-weight:950}.rating-player-collection-showcase-slot[data-rarity="legendary"]{border-color:rgba(221,161,45,.62);background:radial-gradient(circle at 50% 38%,#fffef6,#fff0bf);box-shadow:0 4px 11px rgba(173,115,20,.09)}
+.rating-player-collection-item.is-showcase-selected{border-color:rgba(202,75,123,.85);box-shadow:0 0 0 2px rgba(222,96,143,.14),0 8px 20px rgba(141,55,88,.10)}.rating-player-collection-showcase-selected{position:absolute;z-index:8;left:6px;top:6px;padding:4px 6px;border-radius:999px;background:linear-gradient(145deg,#e77fa4,#c94e7c);color:#fff;font-size:5.7px;font-weight:950;box-shadow:0 4px 10px rgba(177,55,98,.18)}
+.rating-player-collection-showcase-editor{position:sticky;z-index:20;bottom:8px;display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:7px;align-items:center;margin:12px 0 1px;padding:8px;border:1px solid rgba(213,169,185,.76);border-radius:16px;background:rgba(255,251,252,.96);box-shadow:0 9px 24px rgba(87,46,61,.14);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px)}.rating-player-collection-showcase-editor-copy{display:grid;gap:2px;min-width:0}.rating-player-collection-showcase-editor-copy b{color:#744653;font-size:8px;font-weight:950}.rating-player-collection-showcase-editor-copy span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#a17b87;font-size:6px;font-weight:800}.rating-player-collection-showcase-editor button{min-height:34px;padding:7px 10px;border-radius:11px;font:950 7px/1 var(--font-sans);appearance:none;-webkit-appearance:none;cursor:pointer}.rating-player-collection-showcase-cancel{border:1px solid rgba(211,176,188,.7);background:#fff;color:#886673}.rating-player-collection-showcase-save{border:0;background:linear-gradient(145deg,#e77fa4,#ca507e);color:#fff;box-shadow:0 5px 12px rgba(180,58,101,.18)}.rating-player-collection-showcase-save:disabled{opacity:.55;box-shadow:none}
+.rating-player-mini-collection-showcase{display:grid;gap:8px;width:100%;text-align:left;font:inherit;appearance:none;-webkit-appearance:none;cursor:pointer;margin-top:-2px;padding:10px;border:1px solid rgba(225,190,202,.62);border-radius:18px;background:linear-gradient(150deg,rgba(255,255,255,.84),rgba(255,246,249,.78))}.rating-player-mini-collection-showcase-head{display:flex;align-items:center;justify-content:space-between;gap:8px}.rating-player-mini-collection-showcase-head span{display:grid;gap:2px}.rating-player-mini-collection-showcase-head strong{color:#704753;font-size:9px;font-weight:950}.rating-player-mini-collection-showcase-head small{color:#a17b87;font-size:6px;font-weight:800}.rating-player-mini-collection-showcase-head b{color:#c2577e;font-size:6.5px;font-weight:950}.rating-player-mini-collection-showcase-items{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:5px}.rating-player-mini-collection-showcase-item{position:relative;display:grid;place-items:center;aspect-ratio:1;border:1px solid rgba(219,181,195,.66);border-radius:12px;background:#fff;overflow:hidden}.rating-player-mini-collection-showcase-item img{width:92%;height:92%;object-fit:contain;filter:drop-shadow(0 3px 5px rgba(91,52,65,.10))}.rating-player-mini-collection-showcase-item.is-empty{border-style:dashed;background:rgba(255,255,255,.46)}.rating-player-mini-collection-showcase-item.is-empty::after{content:"+";color:#c8a6b2;font-size:12px;font-weight:950}.rating-player-mini-collection-showcase-item[data-rarity="legendary"]{border-color:rgba(220,159,41,.62);background:radial-gradient(circle at 50% 40%,#fffdf5,#ffefbb)}
+@media(max-width:390px){.rating-player-collection-compare-modes{gap:5px}.rating-player-collection-compare-mode{padding:7px}.rating-player-collection-showcase-slots,.rating-player-mini-collection-showcase-items{gap:4px}.rating-player-collection-showcase{padding:10px}}
+@media(prefers-reduced-motion:reduce){.rating-player-collection-compare-mode,.rating-player-collection-item,.rating-player-collection-showcase-slot{transition:none!important}}
+</style>
 
 <style id="rating-v6-interface">
 .rating-v6-sr-only{position:absolute!important;width:1px!important;height:1px!important;padding:0!important;margin:-1px!important;overflow:hidden!important;clip:rect(0,0,0,0)!important;white-space:nowrap!important;border:0!important}
@@ -10512,12 +10525,15 @@ body { min-height: var(--zefirok-app-height, 100dvh); }
   const PLAYER_PROFILE_PATH = "/api/leaderboard/player-profile";
   const PLAYER_PROFILE_CACHE_TTL_MS = 5 * 60 * 1000;
   const PLAYER_COLLECTION_PATH = "/api/leaderboard/player-collection";
+  const PLAYER_COLLECTION_SHOWCASE_PATH = "/api/leaderboard/player-collection/showcase";
   const PLAYER_COLLECTION_CACHE_TTL_MS = 5 * 60 * 1000;
+  const PLAYER_COLLECTION_SHOWCASE_LIMIT = 5;
   const PLAYER_COLLECTION_ICON = "/assets/ui/new_avatars_game.webp";
   const PLAYER_COLLECTION_BUTTON_ICON = "/assets/ui/icon_user_collectible.webp";
   const PLAYER_COLLECTION_TABS = Object.freeze([{id:"all",label:"Все"},{id:"skin",label:"Скины"},{id:"avatar",label:"Аватары"},{id:"frame",label:"Рамки"},{id:"trail",label:"Следы"},{id:"music",label:"Музыка"}]);
   const PLAYER_COLLECTION_FILTERS = Object.freeze([{id:"all",label:"Все"},{id:"legendary",label:"Легендарные"},{id:"archived",label:"Архив"},{id:"equipped",label:"Выбрано"},{id:"viewer_owned",label:"Есть у меня",viewerOnly:true},{id:"viewer_missing",label:"Нет у меня",viewerOnly:true}]);
   const PLAYER_COLLECTION_SORTS = Object.freeze([{id:"rarity",label:"По редкости"},{id:"player_rarity",label:"Редчайшие у игроков"},{id:"name",label:"По названию"}]);
+  const PLAYER_COLLECTION_COMPARE_MODES = Object.freeze([{id:"all",label:"Все"},{id:"common",label:"Есть у обоих"},{id:"target_only",label:"Только у игрока"},{id:"viewer_only",label:"Только у тебя"}]);
   const PLAYER_COLLECTION_RARITY_ORDER = Object.freeze({legendary:6,mythic:5,epic:4,superrare:3,rare:2,common:1});
   const ACHIEVEMENT_POINTS_ICON = "/assets/ui/icon_score_acivment.webp";
   const ACHIEVEMENT_FALLBACK_ICON = ACHIEVEMENT_POINTS_ICON;
@@ -10661,6 +10677,11 @@ body { min-height: var(--zefirok-app-height, 100dvh); }
   let playerCollectionTab = "all";
   let playerCollectionFilter = "all";
   let playerCollectionSort = "rarity";
+  let playerCollectionCompareMode = "all";
+  let playerCollectionShowcaseEditing = false;
+  let playerCollectionShowcaseDraft = [];
+  let playerCollectionShowcaseSaving = false;
+  let playerCollectionShowcaseNotice = "";
   let playerCollectionItemTrigger = null;
   let playerCollectionRarityObserver = null;
   let playerProfileRequest = null;
@@ -11921,6 +11942,18 @@ function streakLaurel(){
     playerProfileContent.innerHTML=`<div class="rating-player-profile-error" role="status"><strong>Не удалось открыть профиль</strong><span>${escapeHtml(message||"Попробуйте ещё раз.")}</span><button class="rating-player-profile-retry" data-rating-player-profile-retry type="button">Повторить</button></div>`;
   }
 
+  function playerProfileCollectionShowcaseMarkup(showcase,targetId) {
+    const items=Array.isArray(showcase?.items)?showcase.items.slice(0,PLAYER_COLLECTION_SHOWCASE_LIMIT):[],editable=showcase?.editable===true;
+    if(!items.length&&!editable)return "";
+    const slots=Array.from({length:PLAYER_COLLECTION_SHOWCASE_LIMIT},(_,index)=>{
+      const item=items[index];
+      if(!item)return '<span class="rating-player-mini-collection-showcase-item is-empty" aria-hidden="true"></span>';
+      return `<span class="rating-player-mini-collection-showcase-item" data-rarity="${escapeHtml(String(item?.rarity||"common"))}"><img src="${escapeHtml(String(item?.imageUrl||IMAGE_ERROR_FALLBACK))}" alt="" loading="lazy" decoding="async"></span>`;
+    }).join("");
+    const subtitle=items.length?`${formatter.format(items.length)} из ${PLAYER_COLLECTION_SHOWCASE_LIMIT} закреплено`:"Добавь до 5 любимых предметов";
+    return `<button class="rating-player-mini-collection-showcase" data-rating-player-collection-open data-player-id="${escapeHtml(String(targetId||playerProfileTargetId||""))}" type="button" aria-haspopup="dialog" aria-label="Открыть витрину коллекции"><span class="rating-player-mini-collection-showcase-head"><span><strong>Витрина коллекции</strong><small>${escapeHtml(subtitle)}</small></span><b>${editable?"Настроить":"Выбор игрока"}</b></span><span class="rating-player-mini-collection-showcase-items">${slots}</span></button>`;
+  }
+
   function renderPlayerProfile(data,targetId) {
     if(!playerProfileContent)return;
     const player=data?.player||{},achievements=data?.achievements||{},rank=achievements?.rank||{},showcase=achievements?.showcase||{},items=Array.isArray(showcase?.items)?showcase.items.slice(0,3):[],showcaseStyle=playerProfileShowcaseStyle(showcase);
@@ -11930,6 +11963,7 @@ function streakLaurel(){
     const publicTitle=String(player?.publicTitle||rank?.title||"Новичок").trim()||"Новичок",publicTitleTier=points>=600?"legend":points>=300?"veteran":points>=150?"collector":points>=50?"explorer":"novice";
     const rare=achievements?.rareTrophy||null,rarePercent=rare?playerProfilePercent(rare.playerPercent):"",rareVisual=rare?achievementThumbMarkup(rare):"";
     const collection=data?.collectionSummary||{},collectionCategories=collection?.categories||{},collectionTotal=Math.max(0,Number(collection?.totalItems||0)),collectionRare=Math.max(0,Number(collection?.rareCount||0));
+    const collectionShowcaseMarkup=playerProfileCollectionShowcaseMarkup(data?.collectionShowcase||{},targetId);
     const collectionMeta=collectionTotal?`Скины ${Math.max(0,Number(collectionCategories?.skin||0))} · Аватары ${Math.max(0,Number(collectionCategories?.avatar||0))} · Рамки ${Math.max(0,Number(collectionCategories?.frame||0))} · Следы ${Math.max(0,Number(collectionCategories?.trail||0))} · Музыка ${Math.max(0,Number(collectionCategories?.music||0))}`:"Косметика появится здесь после получения";
     const collectionSummaryMarkup=`<button class="rating-player-collection-summary" data-rating-player-collection-open data-player-id="${escapeHtml(String(targetId||playerProfileTargetId||""))}" type="button" aria-haspopup="dialog" aria-label="Открыть коллекцию игрока"><span class="rating-player-collection-icon" aria-hidden="true"><img src="${escapeHtml(PLAYER_COLLECTION_BUTTON_ICON)}" alt=""></span><span class="rating-player-collection-copy"><strong>Коллекция</strong><span>${collectionTotal?"Собранная косметика игрока":"Пока коллекция пустая"}</span></span><span class="rating-player-collection-badges"><span class="rating-player-collection-badge"><b>${formatter.format(collectionTotal)}</b><span>всего</span></span><span class="rating-player-collection-badge is-rare"><b>${formatter.format(collectionRare)}</b><span>редких</span></span></span><span class="rating-player-collection-arrow" aria-hidden="true">›</span><span class="rating-player-collection-meta">${escapeHtml(collectionMeta)}</span></button>`;
     const recent=Array.isArray(achievements?.recent)?achievements.recent.slice(0,3):[],recentMarkup=recent.length?`<section class="rating-player-recent"><div class="rating-player-section-head"><strong>Недавно получено</strong><small>Последние трофеи</small></div><div class="rating-player-recent-list">${recent.map(playerProfileRecentMarkup).join("")}</div></section>`:"";
@@ -11948,6 +11982,7 @@ function streakLaurel(){
       </div>
       <div class="rating-player-streak-mount" data-rating-player-streak="${escapeHtml(targetId || playerProfileTargetId)}" hidden></div>
       ${collectionSummaryMarkup}
+      ${collectionShowcaseMarkup}
       <section class="rating-player-showcase" data-style="${escapeHtml(showcaseStyle.id)}" aria-label="Витрина достижений игрока"><div class="rating-player-showcase-head"><strong>Витрина достижений</strong><span class="rating-player-showcase-style">${escapeHtml(showcaseStyle.title)} витрина</span></div><div class="rating-player-showcase-frame" data-layout="${escapeHtml(showcaseStyle.layout)}"><img class="rating-player-showcase-frame-art" src="${escapeHtml(showcaseStyle.imageUrl)}" alt="${escapeHtml(showcaseStyle.title)}" loading="lazy" decoding="async"><div class="rating-player-showcase-frame-slots">${playerProfileShowcaseItemsMarkup(items)}</div></div></section>
       <div class="rating-player-profile-stats">${playerProfileStatMarkup("Лучший рекорд",formatter.format(Math.max(0,Number(player?.bestScore||0))),BEST_SCORE_ICON)}${playerProfileStatMarkup("Завершено забегов",formatter.format(Math.max(0,Number(player?.completedRuns||0))),COMPLETED_RUNS_ICON)}${playerProfileStatMarkup("Достижений",`${earned} / ${total}`,ACHIEVEMENTS_COUNT_ICON)}</div>
       <div class="rating-player-profile-progress"><div class="rating-player-progress-copy"><span>Прогресс достижений</span><strong>${earned} / ${total} · ${Math.round(completion)}%</strong><span class="rating-player-progress-track" aria-hidden="true"><i style="width:${completion}%"></i></span></div><div class="rating-player-rare"${rare?"":" hidden"}><span class="rating-player-rare-art" aria-hidden="true">${rare?rareVisual:""}</span><span class="rating-player-rare-copy"><span>Редкий трофей</span><strong>${escapeHtml(rare?.title||"")}</strong><em>Получили ${escapeHtml(rarePercent)} игроков</em></span></div></div>
@@ -11962,13 +11997,14 @@ function streakLaurel(){
     return ({skin:"Скин",avatar:"Аватар",frame:"Рамка",trail:"След",music:"Музыка"})[String(kind||"")]||"Предмет";
   }
 
-  function playerCollectionCount(summary,kind) {
+  function playerCollectionCount(summary,kind,items=null) {
+    if(Array.isArray(items))return kind==="all"?items.length:items.filter(item=>String(item?.kind||"")===kind).length;
     if(kind==="all")return Math.max(0,Number(summary?.totalItems||0));
     return Math.max(0,Number(summary?.categories?.[kind]||0));
   }
 
-  function playerCollectionTabsMarkup(summary,activeTab) {
-    return PLAYER_COLLECTION_TABS.map(tab=>`<button class="rating-player-collection-tab" data-rating-player-collection-tab="${escapeHtml(tab.id)}" type="button" role="tab" aria-selected="${activeTab===tab.id?"true":"false"}"><span>${escapeHtml(tab.label)}</span><b>${formatter.format(playerCollectionCount(summary,tab.id))}</b></button>`).join("");
+  function playerCollectionTabsMarkup(summary,activeTab,items=null) {
+    return PLAYER_COLLECTION_TABS.map(tab=>`<button class="rating-player-collection-tab" data-rating-player-collection-tab="${escapeHtml(tab.id)}" type="button" role="tab" aria-selected="${activeTab===tab.id?"true":"false"}"><span>${escapeHtml(tab.label)}</span><b>${formatter.format(playerCollectionCount(summary,tab.id,items))}</b></button>`).join("");
   }
 
   function playerCollectionPercent(value) {
@@ -11993,9 +12029,71 @@ function streakLaurel(){
     return `<section class="rating-player-collection-prestige" aria-label="Статус коллекции"><div class="rating-player-collection-prestige-head"><span class="rating-player-collection-prestige-copy"><small>Статус коллекции</small><strong>${legendary?`${formatter.format(legendary)} легендарных`:"Коллекция игрока"}</strong><span>${escapeHtml(completionCopy)}</span></span><span class="rating-player-collection-completion${catalogKnown?"":" is-unknown"}" style="--collection-completion:${completion}%"><b>${escapeHtml(completionLabel)}</b><small>собрано</small></span></div><div class="rating-player-collection-overview"><span class="rating-player-collection-overview-card"><b>${formatter.format(total)}</b><span>всего</span></span><span class="rating-player-collection-overview-card is-archived"><b>${formatter.format(archived)}</b><span>архивных</span></span><span class="rating-player-collection-overview-card is-legendary${legendary?" has-items":""}"><b>${formatter.format(legendary)}</b><span>легендарных</span></span></div>${rarestMarkup}</section>`;
   }
 
-  function playerCollectionFiltersMarkup(data,activeFilter) {
-    const isSelf=data?.viewer?.isSelf===true;
-    return PLAYER_COLLECTION_FILTERS.filter(filter=>!filter.viewerOnly||!isSelf).map(filter=>`<button class="rating-player-collection-filter" data-rating-player-collection-filter="${escapeHtml(filter.id)}" type="button" aria-pressed="${activeFilter===filter.id?"true":"false"}">${escapeHtml(filter.label)}</button>`).join("");
+  function playerCollectionClientKey(kind,itemId) {
+    const normalizedKind=String(kind||""),normalizedId=String(itemId||"");
+    return normalizedKind&&normalizedId?`${normalizedKind}:${normalizedId}`:"";
+  }
+
+  function playerCollectionItemClientKey(item) {
+    return playerCollectionClientKey(item?.kind,item?.itemId);
+  }
+
+  function playerCollectionComparisonItems(data,compareMode=playerCollectionCompareMode) {
+    const items=Array.isArray(data?.items)?data.items:[],comparison=data?.comparison||{};
+    if(data?.viewer?.isSelf===true||comparison?.available!==true)return items;
+    if(compareMode==="common")return items.filter(item=>item?.viewerOwned===true);
+    if(compareMode==="target_only")return items.filter(item=>item?.viewerOwned!==true);
+    if(compareMode==="viewer_only")return Array.isArray(comparison?.viewerOnlyItems)?comparison.viewerOnlyItems:[];
+    return items;
+  }
+
+  function playerCollectionComparisonMarkup(data,activeMode) {
+    const comparison=data?.comparison||{};if(data?.viewer?.isSelf===true||comparison?.available!==true)return "";
+    const counts={all:Math.max(0,Number(data?.summary?.totalItems||0)),common:Math.max(0,Number(comparison?.commonCount||0)),target_only:Math.max(0,Number(comparison?.targetOnlyCount||0)),viewer_only:Math.max(0,Number(comparison?.viewerOnlyCount||0))};
+    const different=counts.target_only+counts.viewer_only;
+    const modes=PLAYER_COLLECTION_COMPARE_MODES.map(mode=>`<button class="rating-player-collection-compare-mode" data-rating-player-collection-compare="${escapeHtml(mode.id)}" type="button" aria-pressed="${activeMode===mode.id?"true":"false"}"><span>${escapeHtml(mode.label)}</span><b>${formatter.format(counts[mode.id]||0)}</b></button>`).join("");
+    return `<section class="rating-player-collection-compare" aria-label="Сравнение коллекций"><div class="rating-player-collection-compare-head"><span><small>Сравнение коллекций</small><strong>${formatter.format(counts.common)} общих предметов</strong></span><b>${formatter.format(different)} отличаются</b></div><div class="rating-player-collection-compare-modes">${modes}</div></section>`;
+  }
+
+  function playerCollectionFindItem(data,kind,itemId) {
+    const key=playerCollectionClientKey(kind,itemId);if(!key)return null;
+    const all=[...(Array.isArray(data?.items)?data.items:[]),...(Array.isArray(data?.comparison?.viewerOnlyItems)?data.comparison.viewerOnlyItems:[])];
+    return all.find(item=>playerCollectionItemClientKey(item)===key)||null;
+  }
+
+  function playerCollectionShowcaseDraftItems(data) {
+    const all=Array.isArray(data?.items)?data.items:[],byKey=new Map(all.map(item=>[playerCollectionItemClientKey(item),item]));
+    return playerCollectionShowcaseDraft.map(entry=>byKey.get(playerCollectionClientKey(entry?.kind,entry?.itemId))).filter(Boolean).slice(0,PLAYER_COLLECTION_SHOWCASE_LIMIT);
+  }
+
+  function playerCollectionShowcaseSelected(item) {
+    const key=playerCollectionItemClientKey(item);return Boolean(key&&playerCollectionShowcaseDraft.some(entry=>playerCollectionClientKey(entry?.kind,entry?.itemId)===key));
+  }
+
+  function playerCollectionShowcaseMarkup(data) {
+    const showcase=data?.showcase||{},editable=showcase?.editable===true&&data?.viewer?.isSelf===true;
+    const items=playerCollectionShowcaseEditing&&editable?playerCollectionShowcaseDraftItems(data):(Array.isArray(showcase?.items)?showcase.items.slice(0,PLAYER_COLLECTION_SHOWCASE_LIMIT):[]);
+    if(!items.length&&!editable)return "";
+    const slots=Array.from({length:PLAYER_COLLECTION_SHOWCASE_LIMIT},(_,index)=>{
+      const item=items[index];
+      if(!item)return '<span class="rating-player-collection-showcase-slot"><span>+</span></span>';
+      return `<button class="rating-player-collection-showcase-slot has-item" data-rating-player-collection-item data-item-kind="${escapeHtml(String(item?.kind||""))}" data-item-id="${escapeHtml(String(item?.itemId||""))}" data-rarity="${escapeHtml(String(item?.rarity||"common"))}" type="button" aria-label="Открыть ${escapeHtml(String(item?.title||"Предмет"))}"><img data-rating-player-collection-image src="${escapeHtml(String(item?.imageUrl||IMAGE_ERROR_FALLBACK))}" alt="" loading="lazy" decoding="async" data-fallback="${escapeHtml(IMAGE_ERROR_FALLBACK)}"></button>`;
+    }).join("");
+    const selected=items.length,copy=playerCollectionShowcaseEditing?`Выбрано ${formatter.format(selected)} из ${PLAYER_COLLECTION_SHOWCASE_LIMIT}`:selected?`${formatter.format(selected)} из ${PLAYER_COLLECTION_SHOWCASE_LIMIT} закреплено`:"Пока ничего не закреплено";
+    const action=editable&&!playerCollectionShowcaseEditing?'<button class="rating-player-collection-showcase-edit" data-rating-player-collection-showcase-edit type="button">Настроить</button>':"";
+    const notice=playerCollectionShowcaseEditing&&playerCollectionShowcaseNotice?`<span>${escapeHtml(playerCollectionShowcaseNotice)}</span>`:"";
+    return `<section class="rating-player-collection-showcase" aria-label="Витрина коллекции"><div class="rating-player-collection-showcase-head"><span class="rating-player-collection-showcase-copy"><small>Витрина коллекции</small><strong>${editable?"Твои лучшие предметы":"Выбор игрока"}</strong><span>${escapeHtml(copy)}</span>${notice}</span>${action}</div><div class="rating-player-collection-showcase-slots">${slots}</div></section>`;
+  }
+
+  function playerCollectionShowcaseEditorMarkup() {
+    if(!playerCollectionShowcaseEditing)return "";
+    const count=playerCollectionShowcaseDraft.length,notice=playerCollectionShowcaseNotice||"Нажимай на предметы, чтобы добавить или убрать их из витрины.";
+    return `<div class="rating-player-collection-showcase-editor" role="status"><span class="rating-player-collection-showcase-editor-copy"><b>${formatter.format(count)} / ${PLAYER_COLLECTION_SHOWCASE_LIMIT} выбрано</b><span>${escapeHtml(notice)}</span></span><button class="rating-player-collection-showcase-cancel" data-rating-player-collection-showcase-cancel type="button"${playerCollectionShowcaseSaving?" disabled":""}>Отмена</button><button class="rating-player-collection-showcase-save" data-rating-player-collection-showcase-save type="button"${playerCollectionShowcaseSaving?" disabled":""}>${playerCollectionShowcaseSaving?"Сохраняем…":"Сохранить"}</button></div>`;
+  }
+
+  function playerCollectionFiltersMarkup(data,activeFilter,compareMode=playerCollectionCompareMode) {
+    const isSelf=data?.viewer?.isSelf===true,comparisonActive=!isSelf&&compareMode!=="all";
+    return PLAYER_COLLECTION_FILTERS.filter(filter=>!filter.viewerOnly||(!isSelf&&!comparisonActive)).map(filter=>`<button class="rating-player-collection-filter" data-rating-player-collection-filter="${escapeHtml(filter.id)}" type="button" aria-pressed="${activeFilter===filter.id?"true":"false"}">${escapeHtml(filter.label)}</button>`).join("");
   }
 
   function playerCollectionSortMarkup(activeSort) {
@@ -12005,7 +12103,7 @@ function streakLaurel(){
   function playerCollectionMatchesFilter(item,filter) {
     if(filter==="legendary")return String(item?.rarity||"")==="legendary";
     if(filter==="archived")return String(item?.availability?.status||"")==="archived";
-    if(filter==="equipped")return item?.equipped===true;
+    if(filter==="equipped")return item?.owned===false?item?.viewerEquipped===true:item?.equipped===true;
     if(filter==="viewer_owned")return item?.viewerOwned===true;
     if(filter==="viewer_missing")return item?.viewerOwned!==true;
     return true;
@@ -12050,8 +12148,12 @@ function streakLaurel(){
 
   function playerCollectionItemMarkup(item,index=0) {
     const rarity=String(item?.rarity||"common"),title=String(item?.title||"Предмет"),imageUrl=String(item?.imageUrl||IMAGE_ERROR_FALLBACK),source=String(item?.availability?.sourceSummary||item?.season?.label||item?.source?.label||"Игровая коллекция"),kind=String(item?.kind||""),itemId=String(item?.itemId||""),availability=String(item?.availability?.status||"unknown");
-    const showViewerOwned=playerCollectionData?.viewer?.isSelf!==true&&item?.viewerOwned===true,archived=availability==="archived",delay=Math.min(8,Math.max(0,Number(index)||0))*34;
-    return `<button class="rating-player-collection-item" style="--collection-enter-delay:${delay}ms" data-rating-player-collection-item data-item-kind="${escapeHtml(kind)}" data-item-id="${escapeHtml(itemId)}" data-rarity="${escapeHtml(rarity)}" data-availability="${escapeHtml(availability)}" type="button" aria-label="Открыть ${escapeHtml(title)}"><span class="rating-player-collection-art"><img data-rating-player-collection-image src="${escapeHtml(imageUrl)}" alt="" loading="lazy" decoding="async" data-fallback="${escapeHtml(IMAGE_ERROR_FALLBACK)}">${playerCollectionPrestigeFxMarkup(rarity)}${archived?'<span class="rating-player-collection-archive">Архив</span>':""}${item?.equipped===true?'<span class="rating-player-collection-equipped">Выбрано</span>':""}<span class="rating-player-collection-kind">${escapeHtml(playerCollectionKindLabel(kind))}</span>${showViewerOwned?'<span class="rating-player-collection-viewer-owned">Есть у тебя</span>':""}</span><strong title="${escapeHtml(title)}">${escapeHtml(title)}</strong><span class="rating-player-collection-rarity">${escapeHtml(String(item?.rarityLabel||"Особый"))}</span><span class="rating-player-collection-source">${escapeHtml(source)}</span></button>`;
+    const viewerOnly=item?.owned===false&&item?.viewerOwned===true,showViewerOwned=!viewerOnly&&playerCollectionData?.viewer?.isSelf!==true&&item?.viewerOwned===true,archived=availability==="archived",delay=Math.min(8,Math.max(0,Number(index)||0))*34;
+    const equipped=viewerOnly?item?.viewerEquipped===true:item?.equipped===true,selected=playerCollectionShowcaseEditing&&playerCollectionShowcaseSelected(item);
+    const classes=["rating-player-collection-item",viewerOnly?"is-viewer-only":"",selected?"is-showcase-selected":""].filter(Boolean).join(" ");
+    const selectionBadge=selected?'<span class="rating-player-collection-showcase-selected">В витрине</span>':"";
+    const equippedBadge=equipped?`<span class="rating-player-collection-equipped">${viewerOnly?"Выбрано у тебя":"Выбрано"}</span>`:"";
+    return `<button class="${classes}" style="--collection-enter-delay:${delay}ms" data-rating-player-collection-item data-item-kind="${escapeHtml(kind)}" data-item-id="${escapeHtml(itemId)}" data-rarity="${escapeHtml(rarity)}" data-availability="${escapeHtml(availability)}" type="button" aria-label="${playerCollectionShowcaseEditing?(selected?"Убрать из витрины":"Добавить в витрину"):"Открыть"} ${escapeHtml(title)}"${playerCollectionShowcaseEditing?` aria-pressed="${selected?"true":"false"}"`:""}><span class="rating-player-collection-art"><img data-rating-player-collection-image src="${escapeHtml(imageUrl)}" alt="" loading="lazy" decoding="async" data-fallback="${escapeHtml(IMAGE_ERROR_FALLBACK)}">${playerCollectionPrestigeFxMarkup(rarity)}${selectionBadge}${archived?'<span class="rating-player-collection-archive">Архив</span>':""}${equippedBadge}<span class="rating-player-collection-kind">${escapeHtml(playerCollectionKindLabel(kind))}</span>${viewerOnly?'<span class="rating-player-collection-viewer-only">Только у тебя</span>':showViewerOwned?'<span class="rating-player-collection-viewer-owned">Есть у тебя</span>':""}</span><strong title="${escapeHtml(title)}">${escapeHtml(title)}</strong><span class="rating-player-collection-rarity">${escapeHtml(String(item?.rarityLabel||"Особый"))}</span><span class="rating-player-collection-source">${escapeHtml(source)}</span></button>`;
   }
 
   function playerCollectionStatusMarkup(label,text,stateClass="is-owned") {
@@ -12094,15 +12196,15 @@ function streakLaurel(){
   function openPlayerCollectionItem(item,trigger=null) {
     if(!item||!playerCollectionDetail||!playerCollectionDetailContent)return;
     const title=String(item?.title||"Предмет"),kind=String(item?.kind||""),rarityId=String(item?.rarity||"common"),rarity=String(item?.rarityLabel||"Особый"),source=String(item?.availability?.sourceSummary||item?.season?.label||item?.source?.label||"Игровая коллекция"),sourceHeading=source.includes(" · ")?"Источники":"Источник",imageUrl=String(item?.imageUrl||IMAGE_ERROR_FALLBACK),availabilityStatus=playerCollectionAvailabilityClass(item?.availability?.status),availabilityLabel=String(item?.availability?.label||"Доступность уточняется"),availabilityChip=availabilityStatus==="known"?"Источник известен":availabilityLabel;
-    const isSelf=playerCollectionData?.viewer?.isSelf===true,archived=availabilityStatus==="archived";
-    const playerStatus=item?.equipped===true?"✓ Сейчас выбрано":"✓ Есть в коллекции";
+    const isSelf=playerCollectionData?.viewer?.isSelf===true,archived=availabilityStatus==="archived",targetOwned=item?.owned!==false;
+    const playerStatus=targetOwned?(item?.equipped===true?"✓ Сейчас выбрано":"✓ Есть в коллекции"):"○ У игрока этого предмета нет";
     const viewerStatus=item?.viewerEquipped===true?"✓ Сейчас выбрано":item?.viewerOwned===true?"✓ Есть в твоей коллекции":"○ У тебя этого предмета нет";
     const statuses=isSelf
-      ? `<div class="rating-player-collection-detail-statuses is-self">${playerCollectionStatusMarkup("Твоя коллекция",playerStatus,"is-owned")}</div>`
-      : `<div class="rating-player-collection-detail-statuses">${playerCollectionStatusMarkup("Игрок",playerStatus,"is-owned")}${playerCollectionStatusMarkup("У тебя",viewerStatus,item?.viewerOwned===true?"is-owned":"is-missing")}</div>`;
+      ? `<div class="rating-player-collection-detail-statuses is-self">${playerCollectionStatusMarkup("Твоя коллекция",playerStatus,targetOwned?"is-owned":"is-missing")}</div>`
+      : `<div class="rating-player-collection-detail-statuses">${playerCollectionStatusMarkup("Игрок",playerStatus,targetOwned?"is-owned":"is-missing")}${playerCollectionStatusMarkup("У тебя",viewerStatus,item?.viewerOwned===true?"is-owned":"is-missing")}</div>`;
     const chips=`<span class="rating-player-collection-detail-chip">${escapeHtml(playerCollectionKindLabel(kind))}</span><span class="rating-player-collection-detail-chip is-rarity">${escapeHtml(rarity)}</span><span class="rating-player-collection-detail-chip is-availability is-${escapeHtml(availabilityStatus)}">${escapeHtml(availabilityChip)}</span>`;
     const legendaryFlare=rarityId==="legendary"?'<span class="rating-player-collection-legendary-flare" aria-hidden="true"></span>':"";
-    playerCollectionDetailContent.innerHTML=`<div class="rating-player-collection-detail-art"><img data-rating-player-collection-image src="${escapeHtml(imageUrl)}" alt="" decoding="async" data-fallback="${escapeHtml(IMAGE_ERROR_FALLBACK)}">${playerCollectionPrestigeFxMarkup(rarityId)}${legendaryFlare}${item?.equipped===true?'<span class="rating-player-collection-detail-equipped">Сейчас выбрано</span>':""}${archived?'<span class="rating-player-collection-detail-archive">Архив</span>':""}</div><div class="rating-player-collection-detail-copy"><h3 id="rating-player-collection-detail-title">${escapeHtml(title)}</h3><div class="rating-player-collection-detail-chips">${chips}</div></div><div class="rating-player-collection-detail-source"><span class="rating-player-collection-detail-source-icon" aria-hidden="true">✦</span><span><small>${escapeHtml(sourceHeading)}</small><b>${escapeHtml(source)}</b></span></div>${playerCollectionHistoryMarkup(item)}${playerCollectionHowToGetMarkup(item)}${playerCollectionPopulationMarkup(item)}${statuses}`;
+    playerCollectionDetailContent.innerHTML=`<div class="rating-player-collection-detail-art"><img data-rating-player-collection-image src="${escapeHtml(imageUrl)}" alt="" decoding="async" data-fallback="${escapeHtml(IMAGE_ERROR_FALLBACK)}">${playerCollectionPrestigeFxMarkup(rarityId)}${legendaryFlare}${(targetOwned?item?.equipped:item?.viewerEquipped)===true?`<span class="rating-player-collection-detail-equipped">${targetOwned?"Сейчас выбрано":"Выбрано у тебя"}</span>`:""}${archived?'<span class="rating-player-collection-detail-archive">Архив</span>':""}</div><div class="rating-player-collection-detail-copy"><h3 id="rating-player-collection-detail-title">${escapeHtml(title)}</h3><div class="rating-player-collection-detail-chips">${chips}</div></div><div class="rating-player-collection-detail-source"><span class="rating-player-collection-detail-source-icon" aria-hidden="true">✦</span><span><small>${escapeHtml(sourceHeading)}</small><b>${escapeHtml(source)}</b></span></div>${playerCollectionHistoryMarkup(item)}${playerCollectionHowToGetMarkup(item)}${playerCollectionPopulationMarkup(item)}${statuses}`;
     if(playerCollectionDetailCard)playerCollectionDetailCard.dataset.rarity=rarityId;
     playerCollectionItemTrigger=trigger instanceof HTMLElement?trigger:null;
     playerCollectionDetail.hidden=false;playerCollectionDetail.setAttribute("aria-hidden","false");ratingImpactHaptic(rarityId==="legendary"?"medium":"light");
@@ -12136,22 +12238,75 @@ function streakLaurel(){
   function renderPlayerCollection(data,activeTab=playerCollectionTab) {
     if(!playerCollectionContent)return;
     playerCollectionData=data;playerCollectionTab=PLAYER_COLLECTION_TABS.some(tab=>tab.id===activeTab)?activeTab:"all";
-    if(data?.viewer?.isSelf===true&&["viewer_owned","viewer_missing"].includes(playerCollectionFilter))playerCollectionFilter="all";
+    const isSelf=data?.viewer?.isSelf===true;
+    if(isSelf)playerCollectionCompareMode="all";
+    if(!PLAYER_COLLECTION_COMPARE_MODES.some(mode=>mode.id===playerCollectionCompareMode))playerCollectionCompareMode="all";
+    if((isSelf||playerCollectionCompareMode!=="all")&&["viewer_owned","viewer_missing"].includes(playerCollectionFilter))playerCollectionFilter="all";
     if(!PLAYER_COLLECTION_FILTERS.some(filter=>filter.id===playerCollectionFilter))playerCollectionFilter="all";
     if(!PLAYER_COLLECTION_SORTS.some(sort=>sort.id===playerCollectionSort))playerCollectionSort="rarity";
-    const player=data?.player||{},summary=data?.summary||{},items=Array.isArray(data?.items)?data.items:[],scopeItems=playerCollectionTab==="all"?items:items.filter(item=>String(item?.kind||"")===playerCollectionTab);
+    if(playerCollectionShowcaseEditing&&!isSelf){playerCollectionShowcaseEditing=false;playerCollectionShowcaseDraft=[];playerCollectionShowcaseNotice="";}
+    const player=data?.player||{},summary=data?.summary||{},targetItems=Array.isArray(data?.items)?data.items:[],compareItems=playerCollectionComparisonItems(data,playerCollectionCompareMode);
+    const scopeItems=playerCollectionTab==="all"?compareItems:compareItems.filter(item=>String(item?.kind||"")===playerCollectionTab);
     const filtered=playerCollectionSortedItems(scopeItems.filter(item=>playerCollectionMatchesFilter(item,playerCollectionFilter)),playerCollectionSort);
     const total=Math.max(0,Number(summary?.totalItems||0)),legendary=Math.max(0,Number(summary?.legendaryCount||0)),archived=Math.max(0,Number(summary?.archivedCount||0)),completionKnown=summary?.catalogKnown===true&&Number(summary?.catalogTotal)>0,completion=completionKnown?playerCollectionPercent(summary?.completionPercent):"";
     if(playerCollectionTitle)playerCollectionTitle.textContent=`Коллекция · ${String(player?.name||"Игрок")}`;
-    if(playerCollectionSubtitle)playerCollectionSubtitle.textContent=total?`${formatter.format(total)} предметов · ${formatter.format(legendary)} легендарных${completionKnown?` · ${completion}% собрано`:archived?` · ${formatter.format(archived)} архивных`:""}`:"Пока нет коллекционных предметов";
-    const prestige=playerCollectionPrestigeMarkup(summary,items);
-    const tabs=`<div class="rating-player-collection-tabs" role="tablist" aria-label="Категории коллекции">${playerCollectionTabsMarkup(summary,playerCollectionTab)}</div>`;
-    const tools=`<section class="rating-player-collection-tools" aria-label="Фильтры и сортировка"><div class="rating-player-collection-tools-head"><span><small>Показать</small><b>${formatter.format(filtered.length)} из ${formatter.format(scopeItems.length)}</b></span>${playerCollectionSortMarkup(playerCollectionSort)}</div><div class="rating-player-collection-filters">${playerCollectionFiltersMarkup(data,playerCollectionFilter)}</div></section>`;
-    const emptyByFilter=scopeItems.length>0&&filtered.length===0;
-    const body=filtered.length?`<div class="rating-player-collection-grid">${filtered.map((item,index)=>playerCollectionItemMarkup(item,index)).join("")}</div>`:`<div class="rating-player-collection-empty"><img src="${escapeHtml(PLAYER_COLLECTION_ICON)}" alt=""><strong>${emptyByFilter?"По этому фильтру ничего нет":total?"В этой категории пока пусто":"Коллекция пока пустая"}</strong><span>${emptyByFilter?"Измени фильтр или сортировку, чтобы увидеть другие предметы.":total?"Выбери другую категорию, чтобы посмотреть предметы игрока.":"Когда игрок получит коллекционную косметику, она появится здесь."}</span>${emptyByFilter?'<button class="rating-player-collection-reset" data-rating-player-collection-filter-reset type="button">Сбросить фильтр</button>':""}</div>`;
-    playerCollectionContent.innerHTML=prestige+tabs+tools+body;
-    if(playerCollectionBody)playerCollectionBody.scrollTop=0;
+    if(playerCollectionSubtitle){
+      const compareLabel=playerCollectionCompareMode==="common"?" · общие":playerCollectionCompareMode==="target_only"?" · только у игрока":playerCollectionCompareMode==="viewer_only"?" · только у тебя":"";
+      playerCollectionSubtitle.textContent=total?`${formatter.format(total)} предметов · ${formatter.format(legendary)} легендарных${compareLabel}${completionKnown&&playerCollectionCompareMode==="all"?` · ${completion}% собрано`:playerCollectionCompareMode==="all"&&archived?` · ${formatter.format(archived)} архивных`:""}`:"Пока нет коллекционных предметов";
+    }
+    const prestige=playerCollectionPrestigeMarkup(summary,targetItems),showcase=playerCollectionShowcaseMarkup(data),comparison=playerCollectionComparisonMarkup(data,playerCollectionCompareMode);
+    const tabs=`<div class="rating-player-collection-tabs" role="tablist" aria-label="Категории коллекции">${playerCollectionTabsMarkup(summary,playerCollectionTab,compareItems)}</div>`;
+    const tools=`<section class="rating-player-collection-tools" aria-label="Фильтры и сортировка"><div class="rating-player-collection-tools-head"><span><small>Показать</small><b>${formatter.format(filtered.length)} из ${formatter.format(scopeItems.length)}</b></span>${playerCollectionSortMarkup(playerCollectionSort)}</div><div class="rating-player-collection-filters">${playerCollectionFiltersMarkup(data,playerCollectionFilter,playerCollectionCompareMode)}</div></section>`;
+    const emptyByFilter=scopeItems.length>0&&filtered.length===0,modeEmpty=compareItems.length===0;
+    const modeEmptyTitle=playerCollectionCompareMode==="viewer_only"?"У тебя нет уникальных предметов":playerCollectionCompareMode==="target_only"?"У игрока нет уникальных предметов":playerCollectionCompareMode==="common"?"Общих предметов пока нет":"Коллекция пока пустая";
+    const modeEmptyCopy=playerCollectionCompareMode==="viewer_only"?"Все твои предметы уже есть у этого игрока.":playerCollectionCompareMode==="target_only"?"Все предметы игрока уже есть и у тебя.":playerCollectionCompareMode==="common"?"Коллекции пока не пересекаются.":"Когда игрок получит коллекционную косметику, она появится здесь.";
+    const body=filtered.length?`<div class="rating-player-collection-grid">${filtered.map((item,index)=>playerCollectionItemMarkup(item,index)).join("")}</div>`:`<div class="rating-player-collection-empty"><img src="${escapeHtml(PLAYER_COLLECTION_ICON)}" alt=""><strong>${emptyByFilter?"По этому фильтру ничего нет":modeEmpty?modeEmptyTitle:total?"В этой категории пока пусто":"Коллекция пока пустая"}</strong><span>${emptyByFilter?"Измени фильтр или сортировку, чтобы увидеть другие предметы.":modeEmpty?modeEmptyCopy:total?"Выбери другую категорию, чтобы посмотреть предметы игрока.":"Когда игрок получит коллекционную косметику, она появится здесь."}</span>${emptyByFilter?'<button class="rating-player-collection-reset" data-rating-player-collection-filter-reset type="button">Сбросить фильтр</button>':""}</div>`;
+    playerCollectionContent.innerHTML=prestige+showcase+comparison+tabs+tools+body+playerCollectionShowcaseEditorMarkup();
+    if(playerCollectionBody&&!playerCollectionShowcaseEditing)playerCollectionBody.scrollTop=0;
     activatePlayerCollectionRarityMotion();
+  }
+
+  function beginPlayerCollectionShowcaseEdit() {
+    if(playerCollectionData?.viewer?.isSelf!==true||playerCollectionData?.showcase?.editable!==true)return;
+    playerCollectionCompareMode="all";playerCollectionFilter="all";playerCollectionShowcaseEditing=true;playerCollectionShowcaseSaving=false;playerCollectionShowcaseNotice="";
+    playerCollectionShowcaseDraft=(Array.isArray(playerCollectionData?.showcase?.items)?playerCollectionData.showcase.items:[]).slice(0,PLAYER_COLLECTION_SHOWCASE_LIMIT).map(item=>({kind:String(item?.kind||""),itemId:String(item?.itemId||"")})).filter(item=>item.kind&&item.itemId);
+    renderPlayerCollection(playerCollectionData,playerCollectionTab);ratingSelectHaptic();
+  }
+
+  function cancelPlayerCollectionShowcaseEdit() {
+    if(!playerCollectionShowcaseEditing)return;
+    playerCollectionShowcaseEditing=false;playerCollectionShowcaseDraft=[];playerCollectionShowcaseSaving=false;playerCollectionShowcaseNotice="";
+    renderPlayerCollection(playerCollectionData,playerCollectionTab);ratingSelectHaptic();
+  }
+
+  function togglePlayerCollectionShowcaseItem(item) {
+    if(!playerCollectionShowcaseEditing||playerCollectionData?.viewer?.isSelf!==true||!item||item?.owned===false)return;
+    const key=playerCollectionItemClientKey(item),index=playerCollectionShowcaseDraft.findIndex(entry=>playerCollectionClientKey(entry?.kind,entry?.itemId)===key);
+    if(index>=0){playerCollectionShowcaseDraft.splice(index,1);playerCollectionShowcaseNotice="Предмет убран из витрины.";ratingSelectHaptic();}
+    else if(playerCollectionShowcaseDraft.length>=PLAYER_COLLECTION_SHOWCASE_LIMIT){playerCollectionShowcaseNotice=`Можно выбрать максимум ${PLAYER_COLLECTION_SHOWCASE_LIMIT} предметов.`;ratingNotifyHaptic("warning");}
+    else{playerCollectionShowcaseDraft.push({kind:String(item?.kind||""),itemId:String(item?.itemId||"")});playerCollectionShowcaseNotice="Предмет добавлен в витрину.";ratingSelectHaptic();}
+    renderPlayerCollection(playerCollectionData,playerCollectionTab);
+  }
+
+  async function savePlayerCollectionShowcase() {
+    if(!playerCollectionShowcaseEditing||playerCollectionShowcaseSaving||playerCollectionData?.viewer?.isSelf!==true)return;
+    const auth=currentInitData();if(!auth){showToast("Откройте рейтинг из Telegram Mini App, чтобы сохранить витрину.","warning",4200);return;}
+    playerCollectionShowcaseSaving=true;playerCollectionShowcaseNotice="Сохраняем витрину…";renderPlayerCollection(playerCollectionData,playerCollectionTab);
+    try{
+      const payload=playerCollectionShowcaseDraft.map(item=>({kind:String(item?.kind||""),itemId:String(item?.itemId||"")})),response=await api(PLAYER_COLLECTION_SHOWCASE_PATH,{initData:auth,items:payload});
+      const currentItems=Array.isArray(playerCollectionData?.items)?playerCollectionData.items:[],byKey=new Map(currentItems.map(item=>[playerCollectionItemClientKey(item),item]));
+      const savedItems=(Array.isArray(response?.showcase?.items)?response.showcase.items:[]).map(item=>byKey.get(playerCollectionItemClientKey(item))||item).slice(0,PLAYER_COLLECTION_SHOWCASE_LIMIT);
+      playerCollectionData={...playerCollectionData,showcase:{limit:PLAYER_COLLECTION_SHOWCASE_LIMIT,items:savedItems,editable:true}};
+      const key=`${mode}:${playerCollectionTargetId}`,cached=playerCollectionCache.get(key);playerCollectionCache.set(key,{loadedAt:Date.now(),data:playerCollectionData});
+      const profileCached=playerProfileCache.get(key);
+      if(profileCached?.data){
+        const profileData={...profileCached.data,collectionShowcase:{limit:PLAYER_COLLECTION_SHOWCASE_LIMIT,items:savedItems,editable:true}};
+        playerProfileCache.set(key,{...profileCached,loadedAt:Date.now(),data:profileData});
+        if(playerProfileTargetId===playerCollectionTargetId)renderPlayerProfile(profileData,playerProfileTargetId);
+      }
+      playerCollectionShowcaseEditing=false;playerCollectionShowcaseDraft=[];playerCollectionShowcaseSaving=false;playerCollectionShowcaseNotice="";
+      renderPlayerCollection(playerCollectionData,playerCollectionTab);ratingNotifyHaptic("success");showToast("Витрина коллекции сохранена.","success",2600);
+    }catch(error){playerCollectionShowcaseSaving=false;playerCollectionShowcaseNotice=String(error?.message||"Не удалось сохранить витрину.");renderPlayerCollection(playerCollectionData,playerCollectionTab);ratingNotifyHaptic("error");}
   }
 
   async function loadPlayerCollection(targetId,force=false) {
@@ -12169,7 +12324,7 @@ function streakLaurel(){
     const id=String(targetId||playerProfileTargetId||"").trim();if(!id||!playerCollectionLayer)return;
     const auth=currentInitData();if(!auth){showToast("Откройте рейтинг из Telegram Mini App, чтобы посмотреть коллекцию игрока.","warning",4200);return;}
     const profileName=String(playerProfileContent?.querySelector("#rating-player-profile-title")?.textContent||leaderboardEntryById(id)?.name||"Игрок");
-    playerCollectionRequest?.abort?.();playerCollectionRequest=null;playerCollectionTargetId=id;playerCollectionTrigger=trigger instanceof HTMLElement?trigger:null;playerCollectionData=null;playerCollectionTab="all";playerCollectionFilter="all";playerCollectionSort="rarity";
+    playerCollectionRequest?.abort?.();playerCollectionRequest=null;playerCollectionTargetId=id;playerCollectionTrigger=trigger instanceof HTMLElement?trigger:null;playerCollectionData=null;playerCollectionTab="all";playerCollectionFilter="all";playerCollectionSort="rarity";playerCollectionCompareMode="all";playerCollectionShowcaseEditing=false;playerCollectionShowcaseDraft=[];playerCollectionShowcaseSaving=false;playerCollectionShowcaseNotice="";
     renderPlayerCollectionLoading(profileName);playerCollectionLayer.hidden=false;ratingImpactHaptic("light");
     try{playerCollectionSheet?.focus?.({preventScroll:true});}catch{}
     const key=`${mode}:${id}`,cached=playerCollectionCache.get(key),now=Date.now();
@@ -12182,7 +12337,7 @@ function streakLaurel(){
     closePlayerCollectionItem({returnFocus:false});
     disconnectPlayerCollectionRarityMotion();
     playerCollectionRequest?.abort?.();playerCollectionRequest=null;
-    const trigger=playerCollectionTrigger;playerCollectionTrigger=null;playerCollectionTargetId="";playerCollectionData=null;playerCollectionTab="all";playerCollectionFilter="all";playerCollectionSort="rarity";playerCollectionItemTrigger=null;playerCollectionLayer.hidden=true;
+    const trigger=playerCollectionTrigger;playerCollectionTrigger=null;playerCollectionTargetId="";playerCollectionData=null;playerCollectionTab="all";playerCollectionFilter="all";playerCollectionSort="rarity";playerCollectionCompareMode="all";playerCollectionShowcaseEditing=false;playerCollectionShowcaseDraft=[];playerCollectionShowcaseSaving=false;playerCollectionShowcaseNotice="";playerCollectionItemTrigger=null;playerCollectionLayer.hidden=true;
     if(playerCollectionContent)playerCollectionContent.innerHTML="";
     if(options?.returnFocus!==false){try{trigger?.focus?.({preventScroll:true});}catch{}}
   }
@@ -12487,11 +12642,15 @@ function streakLaurel(){
     if(target.closest("[data-rating-player-collection-detail-close]")){ratingSelectHaptic();closePlayerCollectionItem();return;}
     if(target.closest("[data-rating-player-collection-close]")){ratingSelectHaptic();closePlayerCollection();return;}
     if(target.closest("[data-rating-player-collection-retry]")&&playerCollectionTargetId){ratingImpactHaptic("light");renderPlayerCollectionLoading(String(playerCollectionData?.player?.name||playerProfileContent?.querySelector("#rating-player-profile-title")?.textContent||"Игрок"));void loadPlayerCollection(playerCollectionTargetId,true);return;}
+    if(target.closest("[data-rating-player-collection-showcase-edit]")){beginPlayerCollectionShowcaseEdit();return;}
+    if(target.closest("[data-rating-player-collection-showcase-cancel]")){cancelPlayerCollectionShowcaseEdit();return;}
+    if(target.closest("[data-rating-player-collection-showcase-save]")){void savePlayerCollectionShowcase();return;}
+    const compareMode=target.closest("[data-rating-player-collection-compare]");
+    if(compareMode&&playerCollectionData){const next=String(compareMode.dataset.ratingPlayerCollectionCompare||"all");if(next!==playerCollectionCompareMode&&PLAYER_COLLECTION_COMPARE_MODES.some(mode=>mode.id===next)){playerCollectionCompareMode=next;if(["viewer_owned","viewer_missing"].includes(playerCollectionFilter))playerCollectionFilter="all";ratingSelectHaptic();renderPlayerCollection(playerCollectionData,"all");}return;}
     const itemTrigger=target.closest("[data-rating-player-collection-item]");
     if(itemTrigger&&playerCollectionData){
-      const itemKind=String(itemTrigger.dataset.itemKind||""),itemId=String(itemTrigger.dataset.itemId||"");
-      const item=(Array.isArray(playerCollectionData?.items)?playerCollectionData.items:[]).find((entry)=>String(entry?.kind||"")===itemKind&&String(entry?.itemId||"")===itemId);
-      if(item){openPlayerCollectionItem(item,itemTrigger);}return;
+      const itemKind=String(itemTrigger.dataset.itemKind||""),itemId=String(itemTrigger.dataset.itemId||""),item=playerCollectionFindItem(playerCollectionData,itemKind,itemId);
+      if(item){if(playerCollectionShowcaseEditing)togglePlayerCollectionShowcaseItem(item);else openPlayerCollectionItem(item,itemTrigger);}return;
     }
     const tab=target.closest("[data-rating-player-collection-tab]");if(tab&&playerCollectionData){const next=String(tab.dataset.ratingPlayerCollectionTab||"all");if(next!==playerCollectionTab){ratingSelectHaptic();renderPlayerCollection(playerCollectionData,next);}return;}
     const filter=target.closest("[data-rating-player-collection-filter]");if(filter&&playerCollectionData){const next=String(filter.dataset.ratingPlayerCollectionFilter||"all");if(next!==playerCollectionFilter){playerCollectionFilter=next;ratingSelectHaptic();renderPlayerCollection(playerCollectionData,playerCollectionTab);}return;}

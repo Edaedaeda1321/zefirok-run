@@ -33,7 +33,7 @@ check('observer is disconnected before rerender and close',prestigeHelpers.inclu
 check('reduced-motion is respected in JS',prestigeHelpers.includes('(prefers-reduced-motion: reduce)')&&prestigeHelpers.includes('playerCollectionMotionReduced()'));
 check('reduced-motion is respected in CSS',prestigeCss.includes('@media(prefers-reduced-motion:reduce)'));
 check('grid arrival is staggered and bounded',prestigeHelpers.includes('Math.min(8')&&render.includes('playerCollectionItemMarkup(item,index)'));
-check('legendary overview count receives prestige without extra data',render.includes('playerCollectionPrestigeMarkup(summary,items)')&&prestigeSummary.includes('is-legendary${legendary?" has-items":""}'));
+check('legendary overview count receives prestige without extra data',render.includes('playerCollectionPrestigeMarkup(summary,targetItems)')&&prestigeSummary.includes('is-legendary${legendary?" has-items":""}'));
 check('stage 5 does not add a collection API request',!prestigeHelpers.includes('api(')&&!itemOpen.includes('api(')&&!itemOpen.includes('fetch('));
 check('stage 5 does not change server collection authority',!worker.includes('rating-player-collection-prestige-motion'));
 check('stage 4 discovery metadata is still present',rating.includes('playerCollectionHowToGetMarkup(item)')&&rating.includes('playerCollectionPopulationMarkup(item)'));

@@ -17,9 +17,9 @@ const profileLoad=between(rating,'async function loadPlayerProfile(targetId,entr
 check('endpoint exposes viewer self marker',endpoint.includes('viewer:{ isSelf }'));
 check('endpoint exposes viewerOwned per target item',endpoint.includes('viewerOwned:Boolean(itemId&&viewerOwnedByKind.get(kind)?.has(itemId))'));
 check('endpoint exposes viewerEquipped per target item',endpoint.includes('viewerEquipped:Boolean(itemId&&playerCollectionActiveId(viewerState,kind)===itemId)'));
-check('viewer comparison reads cosmetic columns only',endpoint.includes('const collectionStateSql=`SELECT owned_avatars_json,active_avatar_id,owned_frames_json,active_frame_id,owned_trails_json,active_trail_id,owned_skins_json,active_skin_id,owned_music_json,active_music_id FROM case_player_state'));
+check('viewer comparison reads cosmetic columns only',worker.includes('const PLAYER_COLLECTION_STATE_SQL = `SELECT owned_avatars_json,active_avatar_id,owned_frames_json,active_frame_id,owned_trails_json,active_trail_id,owned_skins_json,active_skin_id,owned_music_json,active_music_id FROM case_player_state'));
 check('self view reuses target cosmetic state',endpoint.includes('let viewerState=targetState;')&&endpoint.includes('if(!isSelf){'));
-check('other-player view performs viewer cosmetic read conditionally',endpoint.includes('const viewerCaseRow=await env.DB.prepare(collectionStateSql).bind(viewerTelegramId).first();'));
+check('other-player view performs viewer cosmetic read conditionally',endpoint.includes('const viewerCaseRow=await env.DB.prepare(PLAYER_COLLECTION_STATE_SQL).bind(viewerTelegramId).first();'));
 check('public payload still contains only target collection plus viewer booleans',!endpoint.includes('coins')&&!endpoint.includes('marshmallow')&&!endpoint.includes('coffee_balance')&&!endpoint.includes('price'));
 check('mini-profile remains free of full collection request',!profileLoad.includes('PLAYER_COLLECTION_PATH'));
 check('collection item is an interactive button',rating.includes('data-rating-player-collection-item data-item-kind=')&&rating.includes('type="button" aria-label="Открыть'));

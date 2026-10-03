@@ -17,7 +17,7 @@ const profileLoad=between(rating,'async function loadPlayerProfile(targetId,entr
 check('mini-profile open still does not fetch full collection',!profileLoad.includes('PLAYER_COLLECTION_PATH'));
 check('collection request is cached for five minutes',rating.includes('const PLAYER_COLLECTION_CACHE_TTL_MS = 5 * 60 * 1000;')&&rating.includes('const playerCollectionCache = new Map();'));
 check('collection has all public cosmetic tabs',['skin','avatar','frame','trail','music'].every(kind=>rating.includes(`{id:"${kind}"`)));
-check('tab changes filter existing payload without refetch',rating.includes('items.filter(item=>String(item?.kind||"")===playerCollectionTab)')&&rating.includes('renderPlayerCollection(playerCollectionData,next)'));
+check('tab changes filter existing payload without refetch',rating.includes('compareItems.filter(item=>String(item?.kind||"")===playerCollectionTab)')&&rating.includes('renderPlayerCollection(playerCollectionData,next)'));
 check('collection cards show server metadata',rating.includes('item?.rarityLabel')&&rating.includes('item?.source?.label')&&rating.includes('item?.equipped===true'));
 check('collection image fallback is fail-soft',rating.includes('data-rating-player-collection-image')&&rating.includes('image.src=fallback'));
 check('collection request aborts on close',rating.includes('function closePlayerCollection(options={})')&&rating.includes('playerCollectionRequest?.abort?.();playerCollectionRequest=null;'));
