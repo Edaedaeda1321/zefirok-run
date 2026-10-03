@@ -14,7 +14,7 @@
   const CACHE_MS=15000;
   const REQUEST_TIMEOUT_MS=12000;
   const FILTERS=new Set(['all','daily','weekly','permanent','event','series','ready']);
-  let payload=null,filter='all',loading=false,inflight=null,readInflight=null,readQueued=false,lastFreshAt=0,serverOffsetMs=0,claimingKey='',claimSuccessKey='',claimingAll=false,claimedOpen=false,toastTimer=0,timerTick=0,completionNoticeTimer=0,completionNoticePoll=0,bulkReceiptViewportLock=null,bulkReceiptCloseTimer=0;
+  let payload=null,filter='all',loading=false,inflight=null,readInflight=null,readQueued=false,lastFreshAt=0,serverOffsetMs=0,claimingKey='',claimSuccessKey='',claimingAll=false,claimedOpen=false,toastTimer=0,timerTick=0,completionNoticeTimer=0,completionNoticePoll=0,bulkReceiptViewportLock=null,bulkReceiptCloseTimer=0,profileRenderOverride=null,pendingProfileXpAnimation=null,profileXpAnimationToken=0,profileXpAnimationFrame=0;
   const committedClaims=new Set();
   const completionNoticeSeen=new Set();
   const completionNoticeQueue=[];
@@ -28,6 +28,136 @@
   const list=value=>Array.isArray(value)?value:[];
   const nowServerMs=()=>Date.now()+serverOffsetMs;
   const requestId=()=>`tasks-ui:${Date.now().toString(36)}:${Math.random().toString(36).slice(2,9)}`;
+
+  const profileSnapshot=value=>{
+    const p=value&&typeof value==='object'?value:{};
+    const level=Math.max(1,whole(p.level)||1),needed=whole(p.needed);
+    return {xp:whole(p.xp),level,progress:needed?Math.min(whole(p.progress),needed):0,needed,revision:whole(p.revision)};
+  };
+  const profilePercent=value=>{const p=profileSnapshot(value);return p.needed?Math.max(0,Math.min(100,(p.progress/p.needed)*100)):100;};
+  const profileXpInItems=items=>list(items).reduce((total,item)=>String(item?.kind||'')==='profile_xp'?total+whole(item?.amount):total,0);
+  function queueProfileXpAnimation(items){
+    const amount=profileXpInItems(items);
+    if(amount<=0)return 0;
+    pendingProfileXpAnimation={from:profileSnapshot(payload?.profile),amount,queuedAt:Date.now()};
+    return amount;
+  }
+  function taskHaptic(kind='impact',value='soft'){
+    if(screen.hidden||document.visibilityState==='hidden')return;
+    try{if(window.ZefirokMediaPrefs?.get?.().vibrationEnabled===false)return;}catch{}
+    const message={type:'zefirok-haptic',kind,value};
+    if(window.parent&&window.parent!==window){try{window.parent.postMessage(message,'*');return;}catch{}}
+    try{
+      const feedback=window.Telegram?.WebApp?.HapticFeedback;
+      if(kind==='notification')feedback?.notificationOccurred?.(value||'success');
+      else if(kind==='selection')feedback?.selectionChanged?.();
+      else feedback?.impactOccurred?.(value||'soft');
+    }catch{}
+  }
+  function restartMotionClass(node,className){
+    if(!node)return;
+    node.classList.remove(className);
+    void node.offsetWidth;
+    node.classList.add(className);
+  }
+  function cancelProfileXpAnimation(){
+    profileXpAnimationToken+=1;
+    if(profileXpAnimationFrame){window.cancelAnimationFrame(profileXpAnimationFrame);profileXpAnimationFrame=0;}
+    const card=screen.querySelector('[data-gt-profile-card]');
+    card?.classList.remove('is-xp-animating','is-xp-settled');
+  }
+  function setProfileXpDom(value){
+    const p=profileSnapshot(value),card=screen.querySelector('[data-gt-profile-card]');
+    if(!card)return false;
+    const levelEl=card.querySelector('[data-gt-profile-level]'),levelKindEl=card.querySelector('[data-gt-profile-level-kind]'),totalEl=card.querySelector('[data-gt-profile-xp-total-value]'),track=card.querySelector('[data-gt-xp-track]'),fill=card.querySelector('[data-gt-xp-fill]'),progressEl=card.querySelector('[data-gt-xp-progress]'),leftEl=card.querySelector('[data-gt-xp-left]');
+    if(levelEl)levelEl.textContent=fmt(p.level);
+    if(levelKindEl)levelKindEl.textContent=p.needed?'уровень':'максимум';
+    if(totalEl)totalEl.textContent=`${fmt(p.xp)} XP`;
+    if(track){track.setAttribute('aria-valuemax',String(p.needed||1));track.setAttribute('aria-valuenow',String(p.needed?Math.min(p.progress,p.needed):1));}
+    if(fill)fill.style.width=`${profilePercent(p).toFixed(2)}%`;
+    if(progressEl)progressEl.textContent=p.needed?`${fmt(p.progress)} / ${fmt(p.needed)} XP`:'Максимальный уровень';
+    if(leftEl)leftEl.textContent=p.needed?`До следующего: ${fmt(Math.max(0,p.needed-p.progress))} XP`:'Прогресс продолжается';
+    return true;
+  }
+  const profileNeededForLevel=level=>level<50?20+(Math.max(1,whole(level))-1)*10:0;
+  function buildProfileXpSegments(fromValue,toValue){
+    const from=profileSnapshot(fromValue),to=profileSnapshot(toValue);
+    if(to.xp<=from.xp)return [];
+    if(to.level<=from.level||from.needed<=0)return [{from,to,levelComplete:false,duration:850}];
+    const segments=[];
+    let cursor={...from},guard=0;
+    while(cursor.level<to.level&&cursor.needed>0&&guard<12){
+      const remaining=Math.max(0,cursor.needed-cursor.progress);
+      const boundaryXp=Math.min(to.xp,cursor.xp+remaining);
+      if(remaining>0){
+        segments.push({from:{...cursor},to:{...cursor,xp:boundaryXp,progress:cursor.needed},levelComplete:true,duration:Math.max(500,Math.min(720,520+remaining*2))});
+      }
+      const nextLevel=cursor.level+1;
+      cursor={xp:boundaryXp,level:nextLevel,progress:0,needed:profileNeededForLevel(nextLevel),revision:to.revision};
+      guard+=1;
+    }
+    if(cursor.level===to.level&&(cursor.xp!==to.xp||cursor.progress!==to.progress||cursor.needed!==to.needed)){
+      const delta=Math.max(1,to.xp-cursor.xp);
+      segments.push({from:{...cursor},to:{...to},levelComplete:false,duration:Math.max(560,Math.min(850,620+delta*5))});
+    }
+    if(!segments.length)segments.push({from,to,levelComplete:false,duration:850});
+    return segments;
+  }
+  function waitProfileMotion(ms,token){return new Promise(resolve=>window.setTimeout(()=>resolve(token===profileXpAnimationToken),ms));}
+  function animateProfileXpSegment(segment,token){
+    return new Promise(resolve=>{
+      const card=screen.querySelector('[data-gt-profile-card]'),fill=card?.querySelector('[data-gt-xp-fill]');
+      if(!card||!fill||token!==profileXpAnimationToken){resolve(false);return;}
+      setProfileXpDom(segment.from);
+      restartMotionClass(fill,'is-xp-shimmer');
+      const started=performance.now(),duration=Math.max(240,Number(segment.duration)||850);
+      const tick=now=>{
+        if(token!==profileXpAnimationToken||!card.isConnected){profileXpAnimationFrame=0;resolve(false);return;}
+        const t=Math.max(0,Math.min(1,(now-started)/duration)),eased=1-Math.pow(1-t,3);
+        setProfileXpDom({
+          ...segment.from,
+          xp:Math.round(segment.from.xp+(segment.to.xp-segment.from.xp)*eased),
+          progress:Math.round(segment.from.progress+(segment.to.progress-segment.from.progress)*eased)
+        });
+        if(t<1){profileXpAnimationFrame=window.requestAnimationFrame(tick);return;}
+        profileXpAnimationFrame=0;setProfileXpDom(segment.to);resolve(true);
+      };
+      profileXpAnimationFrame=window.requestAnimationFrame(tick);
+    });
+  }
+  async function playProfileXpAnimation(fromValue,toValue,token){
+    const from=profileSnapshot(fromValue),to=profileSnapshot(toValue),card=screen.querySelector('[data-gt-profile-card]');
+    if(!card||token!==profileXpAnimationToken||to.xp<=from.xp)return;
+    const reduceMotion=Boolean(window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches);
+    if(reduceMotion){setProfileXpDom(to);taskHaptic(to.level>from.level?'notification':'impact',to.level>from.level?'success':'soft');return;}
+    const segments=buildProfileXpSegments(from,to);
+    card.classList.add('is-xp-animating');
+    for(let index=0;index<segments.length;index+=1){
+      const segment=segments[index];
+      if(!(await animateProfileXpSegment(segment,token)))return;
+      if(segment.levelComplete){
+        const next=segments[index+1]?.from||{...to,xp:segment.to.xp,progress:0};
+        if(next.level>segment.to.level){
+          if(!(await waitProfileMotion(90,token)))return;
+          setProfileXpDom(next);
+          const levelEl=screen.querySelector('[data-gt-profile-level]');
+          restartMotionClass(levelEl,'is-xp-level-bump');
+          if(!(await waitProfileMotion(120,token)))return;
+        }
+      }
+    }
+    if(token!==profileXpAnimationToken)return;
+    setProfileXpDom(to);
+    card.classList.remove('is-xp-animating');
+    restartMotionClass(card,'is-xp-settled');
+    taskHaptic(to.level>from.level?'notification':'impact',to.level>from.level?'success':'soft');
+    window.setTimeout(()=>{if(token===profileXpAnimationToken)card.classList.remove('is-xp-settled');},520);
+  }
+  function scheduleProfileXpAnimation(fromValue,toValue){
+    cancelProfileXpAnimation();
+    const token=profileXpAnimationToken,from=profileSnapshot(fromValue),to=profileSnapshot(toValue);
+    window.requestAnimationFrame(()=>window.requestAnimationFrame(()=>{if(token===profileXpAnimationToken)void playProfileXpAnimation(from,to,token);}));
+  }
 
   const TASK_ICONS=Object.freeze({
     task:'/assets/ui/icon_quest_game.webp',
@@ -398,12 +528,12 @@
   }
 
   function profileMarkup(){
-    const p=payload?.profile||{};
+    const p=profileRenderOverride||payload?.profile||{};
     const level=Math.max(1,whole(p.level)||1),xp=whole(p.xp),needed=whole(p.needed),progress=whole(p.progress);
     const pct=needed?Math.max(0,Math.min(100,(progress/needed)*100)):100;
     const ready=whole(payload?.readyCount),active=whole(payload?.activeCount),claimed=claimedTasks().length;
     const daily=cycleProgress('daily'),weekly=cycleProgress('weekly');
-    return `<section class="gt-profile-card" aria-label="Прогресс профиля"><div class="gt-profile-top"><div><span class="gt-level-label">Уровень профиля</span><div class="gt-level"><strong>${level}</strong><span>${needed?'уровень':'максимум'}</span></div></div><span class="gt-profile-xp-total">${iconMarkup(TASK_ICONS.xp,'gt-profile-xp-icon')}<b>${fmt(xp)} XP</b></span></div><div class="gt-xp-track" role="progressbar" aria-valuemin="0" aria-valuemax="${needed||1}" aria-valuenow="${needed?Math.min(progress,needed):1}"><span class="gt-xp-fill" style="width:${pct.toFixed(1)}%"></span></div><div class="gt-xp-caption"><span>${needed?`${fmt(progress)} / ${fmt(needed)} XP`:'Максимальный уровень'}</span><span>${needed?`До следующего: ${fmt(Math.max(0,needed-progress))} XP`:'Прогресс продолжается'}</span></div><div class="gt-cycle-summary"><span>${iconMarkup(TASK_ICONS.daily,'gt-cycle-icon')}<i><small>Ежедневные</small><b>${daily.done} / ${daily.total}</b></i></span><span>${iconMarkup(TASK_ICONS.weekly,'gt-cycle-icon')}<i><small>Еженедельные</small><b>${weekly.done} / ${weekly.total}</b></i></span></div><div class="gt-overview"><div class="gt-overview-item${ready?' is-ready':''}"><b>${ready}</b><span>готово</span></div><div class="gt-overview-item"><b>${active}</b><span>активно</span></div><div class="gt-overview-item is-claimed"><b>${claimed}</b><span>получено</span></div></div></section>`;
+    return `<section class="gt-profile-card" data-gt-profile-card aria-label="Прогресс профиля"><div class="gt-profile-top"><div><span class="gt-level-label">Уровень профиля</span><div class="gt-level"><strong data-gt-profile-level>${level}</strong><span data-gt-profile-level-kind>${needed?'уровень':'максимум'}</span></div></div><span class="gt-profile-xp-total">${iconMarkup(TASK_ICONS.xp,'gt-profile-xp-icon')}<b data-gt-profile-xp-total-value>${fmt(xp)} XP</b></span></div><div class="gt-xp-track" data-gt-xp-track role="progressbar" aria-valuemin="0" aria-valuemax="${needed||1}" aria-valuenow="${needed?Math.min(progress,needed):1}"><span class="gt-xp-fill" data-gt-xp-fill style="width:${pct.toFixed(1)}%"></span></div><div class="gt-xp-caption"><span data-gt-xp-progress>${needed?`${fmt(progress)} / ${fmt(needed)} XP`:'Максимальный уровень'}</span><span data-gt-xp-left>${needed?`До следующего: ${fmt(Math.max(0,needed-progress))} XP`:'Прогресс продолжается'}</span></div><div class="gt-cycle-summary"><span>${iconMarkup(TASK_ICONS.daily,'gt-cycle-icon')}<i><small>Ежедневные</small><b>${daily.done} / ${daily.total}</b></i></span><span>${iconMarkup(TASK_ICONS.weekly,'gt-cycle-icon')}<i><small>Еженедельные</small><b>${weekly.done} / ${weekly.total}</b></i></span></div><div class="gt-overview"><div class="gt-overview-item${ready?' is-ready':''}"><b>${ready}</b><span>готово</span></div><div class="gt-overview-item"><b>${active}</b><span>активно</span></div><div class="gt-overview-item is-claimed"><b>${claimed}</b><span>получено</span></div></div></section>`;
   }
 
   function readySummaryMarkup(){
@@ -550,9 +680,19 @@
         }
         if(tombstonedReady)data.readyCount=Math.max(0,whole(data.readyCount)-tombstonedReady);
         if(tombstonedUnread)data.unreadCount=Math.max(0,whole(data.unreadCount)-tombstonedUnread);
+        const queuedXp=pendingProfileXpAnimation;
+        const nextProfile=profileSnapshot(data.profile);
+        const canAnimateXp=Boolean(queuedXp&&Date.now()-queuedXp.queuedAt<=8000&&nextProfile.xp>queuedXp.from.xp);
+        pendingProfileXpAnimation=null;
+        if(!canAnimateXp)cancelProfileXpAnimation();
         payload=data;lastFreshAt=Date.now();serverOffsetMs=num(data.serverTime)?num(data.serverTime)*1000-Date.now():0;
         entryNotice={readyCount:whole(data.readyCount),unreadCount:whole(data.unreadCount??list(data.tasks).filter(task=>task?.unread&&task?.complete&&!task?.claimed).length),activeCount:whole(data.activeCount)};
-        updateEntry();render();void markVisibleCompletedRead();return data;
+        updateEntry();
+        if(canAnimateXp){
+          profileRenderOverride=queuedXp.from;render();profileRenderOverride=null;
+          scheduleProfileXpAnimation(queuedXp.from,nextProfile);
+        }else render();
+        void markVisibleCompletedRead();return data;
       }catch(error){
         if(payload){render();toast(String(error?.message||'Не удалось обновить задания.'));return payload;}
         renderError(String(error?.message||'Не удалось загрузить задания.'));return null;
@@ -742,6 +882,7 @@
     try{
       const result=await post(API_CLAIM,{kind:String(task.kind||'task'),key:String(task.key||''),cycleKey:String(task.cycleKey||'')});
       if(result?.claimed){
+        if(!result?.repeated)queueProfileXpAnimation(result?.rewardItems);
         claimSuccessKey=id;claimingKey='';render();
         await new Promise(resolve=>window.setTimeout(resolve,120));
         committedClaims.add(id);
@@ -771,7 +912,10 @@
     try{
       const result=await post(API_CLAIM,{claims:tasks.map(task=>({kind:String(task.kind||'task'),key:String(task.key||''),cycleKey:String(task.cycleKey||'')}))});
       const responseClaims=list(result?.claims),returned=new Map(responseClaims.map(item=>[`${String(item?.kind||'task')}:${String(item?.key||'')}:${String(item?.cycleKey||'')}`,item]));
-      const confirmedRewards=mergedRewardItems(responseClaims.filter(item=>Boolean(item?.claimed&&!item?.repeated)));
+      const newlyClaimed=responseClaims.filter(item=>Boolean(item?.claimed&&!item?.repeated));
+      const confirmedRewards=mergedRewardItems(newlyClaimed);
+      const xpRewardItems=[];for(const item of newlyClaimed)xpRewardItems.push(...list(item?.rewardItems));
+      queueProfileXpAnimation(xpRewardItems);
       await new Promise(resolve=>window.setTimeout(resolve,120));
       let claimedCount=0,failedCount=0,unreadClaimed=0;
       for(const task of tasks){

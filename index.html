@@ -33241,10 +33241,23 @@ html &gt; body.zefirok-game-expanded{height:var(--zefirok-visible-height,100dvh)
 #zefirok-maltipoo-runner .gt-level strong{color:#6e3851;font-size:30px;line-height:1;font-weight:950}
 #zefirok-maltipoo-runner .gt-level span{color:#b8587d;font-size:11px;font-weight:900}
 #zefirok-maltipoo-runner .gt-profile-xp-total{padding:7px 10px;border:1px solid rgba(225,181,197,.5);border-radius:999px;background:rgba(255,255,255,.72);color:#a64f70;font-size:10px;font-weight:900;white-space:nowrap;display:inline-flex;align-items:center;gap:5px}
-#zefirok-maltipoo-runner .gt-xp-track{height:13px;overflow:hidden;border:1px solid rgba(219,160,182,.52);border-radius:999px;background:#f0e6e9;box-shadow:inset 0 1px 3px rgba(92,56,70,.08)}
-#zefirok-maltipoo-runner .gt-xp-fill{display:block;width:0;height:100%;border-radius:inherit;background:linear-gradient(90deg,#f5a0bf,#dc6594 75%,#c94b7e);transition:width .28s ease}
+#zefirok-maltipoo-runner .gt-xp-track{position:relative;height:13px;overflow:hidden;border:1px solid rgba(219,160,182,.52);border-radius:999px;background:#f0e6e9;box-shadow:inset 0 1px 3px rgba(92,56,70,.08);transition:border-color .22s ease,box-shadow .22s ease}
+#zefirok-maltipoo-runner .gt-xp-track:after{content:&quot;&quot;;position:absolute;inset:1px;border-radius:inherit;box-shadow:inset 0 1px 0 rgba(255,255,255,.62);pointer-events:none}
+#zefirok-maltipoo-runner .gt-xp-fill{position:relative;display:block;width:0;height:100%;overflow:hidden;border-radius:inherit;background:linear-gradient(90deg,#f5a0bf,#dc6594 75%,#c94b7e);box-shadow:0 0 10px rgba(217,83,137,.10);transition:width .28s ease;will-change:width}
+#zefirok-maltipoo-runner .gt-xp-fill:after{content:&quot;&quot;;position:absolute;top:-3px;bottom:-3px;left:-48%;width:38%;opacity:0;pointer-events:none;transform:skewX(-18deg);background:linear-gradient(100deg,rgba(255,255,255,0),rgba(255,255,255,.74) 48%,rgba(255,255,255,0))}
+#zefirok-maltipoo-runner .gt-xp-fill.is-xp-shimmer:after{animation:gtXpShimmer .68s cubic-bezier(.2,.68,.28,1) both}
+#zefirok-maltipoo-runner .gt-profile-card.is-xp-animating .gt-xp-fill{transition:none}
+#zefirok-maltipoo-runner .gt-profile-card.is-xp-animating .gt-xp-track{border-color:rgba(221,112,155,.68);box-shadow:inset 0 1px 3px rgba(92,56,70,.08),0 0 0 3px rgba(224,100,151,.055)}
+#zefirok-maltipoo-runner .gt-profile-card.is-xp-settled .gt-xp-track{animation:gtXpTrackSettle .38s ease-out both}
+#zefirok-maltipoo-runner .gt-profile-card.is-xp-settled .gt-profile-xp-total{animation:gtXpTotalSettle .38s cubic-bezier(.2,.75,.24,1) both}
+#zefirok-maltipoo-runner .gt-level strong.is-xp-level-bump{animation:gtXpLevelBump .44s cubic-bezier(.18,.78,.24,1.15) both}
 #zefirok-maltipoo-runner .gt-xp-caption{display:flex;justify-content:space-between;gap:10px;color:#8d737c;font-size:9px;font-weight:750}
 #zefirok-maltipoo-runner .gt-xp-caption span:last-child{text-align:right}
+@keyframes gtXpShimmer{0%{left:-48%;opacity:0}12%{opacity:.72}82%{opacity:.42}100%{left:112%;opacity:0}}
+@keyframes gtXpTrackSettle{0%{box-shadow:inset 0 1px 3px rgba(92,56,70,.08),0 0 0 0 rgba(229,106,157,.26)}45%{box-shadow:inset 0 1px 3px rgba(92,56,70,.08),0 0 0 5px rgba(229,106,157,.10),0 0 17px rgba(223,91,147,.16)}100%{box-shadow:inset 0 1px 3px rgba(92,56,70,.08),0 0 0 0 rgba(229,106,157,0)}}
+@keyframes gtXpTotalSettle{0%,100%{transform:scale(1)}45%{transform:scale(1.045)}}
+@keyframes gtXpLevelBump{0%{transform:translateY(0) scale(1)}38%{transform:translateY(-2px) scale(1.11);text-shadow:0 5px 16px rgba(199,73,125,.20)}100%{transform:translateY(0) scale(1);text-shadow:none}}
+@media(prefers-reduced-motion:reduce){#zefirok-maltipoo-runner .gt-xp-fill,#zefirok-maltipoo-runner .gt-xp-fill:after,#zefirok-maltipoo-runner .gt-profile-card.is-xp-settled .gt-xp-track,#zefirok-maltipoo-runner .gt-profile-card.is-xp-settled .gt-profile-xp-total,#zefirok-maltipoo-runner .gt-level strong.is-xp-level-bump{transition:none!important;animation:none!important}}
 
 #zefirok-maltipoo-runner .gt-overview{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px}
 #zefirok-maltipoo-runner .gt-overview-item{display:grid;gap:2px;padding:9px 8px;border:1px solid rgba(231,204,195,.72);border-radius:15px;background:rgba(255,255,255,.78);text-align:center}
@@ -33588,7 +33601,8 @@ html &gt; body.zefirok-game-expanded{height:var(--zefirok-visible-height,100dvh)
 #zefirok-maltipoo-runner .gt-history-done-icon{width:14px;height:14px;object-fit:contain}
 #zefirok-maltipoo-runner .gt-series-node-done{width:18px;height:18px;object-fit:contain}
 &lt;/style&gt;
-&lt;script id=&quot;zefirok-game-tasks-inline-runtime-v18&quot;&gt;(()=&gt;{
+&lt;script id=&quot;zefirok-game-tasks-inline-runtime-v18&quot;&gt;
+(()=&gt;{
   &#x27;use strict&#x27;;
   if(window.__ZEFIROK_GAME_TASKS_UI_V18__)return;
   window.__ZEFIROK_GAME_TASKS_UI_V18__=true;
@@ -33604,7 +33618,7 @@ html &gt; body.zefirok-game-expanded{height:var(--zefirok-visible-height,100dvh)
   const CACHE_MS=15000;
   const REQUEST_TIMEOUT_MS=12000;
   const FILTERS=new Set([&#x27;all&#x27;,&#x27;daily&#x27;,&#x27;weekly&#x27;,&#x27;permanent&#x27;,&#x27;event&#x27;,&#x27;series&#x27;,&#x27;ready&#x27;]);
-  let payload=null,filter=&#x27;all&#x27;,loading=false,inflight=null,readInflight=null,readQueued=false,lastFreshAt=0,serverOffsetMs=0,claimingKey=&#x27;&#x27;,claimSuccessKey=&#x27;&#x27;,claimingAll=false,claimedOpen=false,toastTimer=0,timerTick=0,completionNoticeTimer=0,completionNoticePoll=0,bulkReceiptViewportLock=null,bulkReceiptCloseTimer=0;
+  let payload=null,filter=&#x27;all&#x27;,loading=false,inflight=null,readInflight=null,readQueued=false,lastFreshAt=0,serverOffsetMs=0,claimingKey=&#x27;&#x27;,claimSuccessKey=&#x27;&#x27;,claimingAll=false,claimedOpen=false,toastTimer=0,timerTick=0,completionNoticeTimer=0,completionNoticePoll=0,bulkReceiptViewportLock=null,bulkReceiptCloseTimer=0,profileRenderOverride=null,pendingProfileXpAnimation=null,profileXpAnimationToken=0,profileXpAnimationFrame=0;
   const committedClaims=new Set();
   const completionNoticeSeen=new Set();
   const completionNoticeQueue=[];
@@ -33618,6 +33632,136 @@ html &gt; body.zefirok-game-expanded{height:var(--zefirok-visible-height,100dvh)
   const list=value=&gt;Array.isArray(value)?value:[];
   const nowServerMs=()=&gt;Date.now()+serverOffsetMs;
   const requestId=()=&gt;`tasks-ui:${Date.now().toString(36)}:${Math.random().toString(36).slice(2,9)}`;
+
+  const profileSnapshot=value=&gt;{
+    const p=value&amp;&amp;typeof value===&#x27;object&#x27;?value:{};
+    const level=Math.max(1,whole(p.level)||1),needed=whole(p.needed);
+    return {xp:whole(p.xp),level,progress:needed?Math.min(whole(p.progress),needed):0,needed,revision:whole(p.revision)};
+  };
+  const profilePercent=value=&gt;{const p=profileSnapshot(value);return p.needed?Math.max(0,Math.min(100,(p.progress/p.needed)*100)):100;};
+  const profileXpInItems=items=&gt;list(items).reduce((total,item)=&gt;String(item?.kind||&#x27;&#x27;)===&#x27;profile_xp&#x27;?total+whole(item?.amount):total,0);
+  function queueProfileXpAnimation(items){
+    const amount=profileXpInItems(items);
+    if(amount&lt;=0)return 0;
+    pendingProfileXpAnimation={from:profileSnapshot(payload?.profile),amount,queuedAt:Date.now()};
+    return amount;
+  }
+  function taskHaptic(kind=&#x27;impact&#x27;,value=&#x27;soft&#x27;){
+    if(screen.hidden||document.visibilityState===&#x27;hidden&#x27;)return;
+    try{if(window.ZefirokMediaPrefs?.get?.().vibrationEnabled===false)return;}catch{}
+    const message={type:&#x27;zefirok-haptic&#x27;,kind,value};
+    if(window.parent&amp;&amp;window.parent!==window){try{window.parent.postMessage(message,&#x27;*&#x27;);return;}catch{}}
+    try{
+      const feedback=window.Telegram?.WebApp?.HapticFeedback;
+      if(kind===&#x27;notification&#x27;)feedback?.notificationOccurred?.(value||&#x27;success&#x27;);
+      else if(kind===&#x27;selection&#x27;)feedback?.selectionChanged?.();
+      else feedback?.impactOccurred?.(value||&#x27;soft&#x27;);
+    }catch{}
+  }
+  function restartMotionClass(node,className){
+    if(!node)return;
+    node.classList.remove(className);
+    void node.offsetWidth;
+    node.classList.add(className);
+  }
+  function cancelProfileXpAnimation(){
+    profileXpAnimationToken+=1;
+    if(profileXpAnimationFrame){window.cancelAnimationFrame(profileXpAnimationFrame);profileXpAnimationFrame=0;}
+    const card=screen.querySelector(&#x27;[data-gt-profile-card]&#x27;);
+    card?.classList.remove(&#x27;is-xp-animating&#x27;,&#x27;is-xp-settled&#x27;);
+  }
+  function setProfileXpDom(value){
+    const p=profileSnapshot(value),card=screen.querySelector(&#x27;[data-gt-profile-card]&#x27;);
+    if(!card)return false;
+    const levelEl=card.querySelector(&#x27;[data-gt-profile-level]&#x27;),levelKindEl=card.querySelector(&#x27;[data-gt-profile-level-kind]&#x27;),totalEl=card.querySelector(&#x27;[data-gt-profile-xp-total-value]&#x27;),track=card.querySelector(&#x27;[data-gt-xp-track]&#x27;),fill=card.querySelector(&#x27;[data-gt-xp-fill]&#x27;),progressEl=card.querySelector(&#x27;[data-gt-xp-progress]&#x27;),leftEl=card.querySelector(&#x27;[data-gt-xp-left]&#x27;);
+    if(levelEl)levelEl.textContent=fmt(p.level);
+    if(levelKindEl)levelKindEl.textContent=p.needed?&#x27;уровень&#x27;:&#x27;максимум&#x27;;
+    if(totalEl)totalEl.textContent=`${fmt(p.xp)} XP`;
+    if(track){track.setAttribute(&#x27;aria-valuemax&#x27;,String(p.needed||1));track.setAttribute(&#x27;aria-valuenow&#x27;,String(p.needed?Math.min(p.progress,p.needed):1));}
+    if(fill)fill.style.width=`${profilePercent(p).toFixed(2)}%`;
+    if(progressEl)progressEl.textContent=p.needed?`${fmt(p.progress)} / ${fmt(p.needed)} XP`:&#x27;Максимальный уровень&#x27;;
+    if(leftEl)leftEl.textContent=p.needed?`До следующего: ${fmt(Math.max(0,p.needed-p.progress))} XP`:&#x27;Прогресс продолжается&#x27;;
+    return true;
+  }
+  const profileNeededForLevel=level=&gt;level&lt;50?20+(Math.max(1,whole(level))-1)*10:0;
+  function buildProfileXpSegments(fromValue,toValue){
+    const from=profileSnapshot(fromValue),to=profileSnapshot(toValue);
+    if(to.xp&lt;=from.xp)return [];
+    if(to.level&lt;=from.level||from.needed&lt;=0)return [{from,to,levelComplete:false,duration:850}];
+    const segments=[];
+    let cursor={...from},guard=0;
+    while(cursor.level&lt;to.level&amp;&amp;cursor.needed&gt;0&amp;&amp;guard&lt;12){
+      const remaining=Math.max(0,cursor.needed-cursor.progress);
+      const boundaryXp=Math.min(to.xp,cursor.xp+remaining);
+      if(remaining&gt;0){
+        segments.push({from:{...cursor},to:{...cursor,xp:boundaryXp,progress:cursor.needed},levelComplete:true,duration:Math.max(500,Math.min(720,520+remaining*2))});
+      }
+      const nextLevel=cursor.level+1;
+      cursor={xp:boundaryXp,level:nextLevel,progress:0,needed:profileNeededForLevel(nextLevel),revision:to.revision};
+      guard+=1;
+    }
+    if(cursor.level===to.level&amp;&amp;(cursor.xp!==to.xp||cursor.progress!==to.progress||cursor.needed!==to.needed)){
+      const delta=Math.max(1,to.xp-cursor.xp);
+      segments.push({from:{...cursor},to:{...to},levelComplete:false,duration:Math.max(560,Math.min(850,620+delta*5))});
+    }
+    if(!segments.length)segments.push({from,to,levelComplete:false,duration:850});
+    return segments;
+  }
+  function waitProfileMotion(ms,token){return new Promise(resolve=&gt;window.setTimeout(()=&gt;resolve(token===profileXpAnimationToken),ms));}
+  function animateProfileXpSegment(segment,token){
+    return new Promise(resolve=&gt;{
+      const card=screen.querySelector(&#x27;[data-gt-profile-card]&#x27;),fill=card?.querySelector(&#x27;[data-gt-xp-fill]&#x27;);
+      if(!card||!fill||token!==profileXpAnimationToken){resolve(false);return;}
+      setProfileXpDom(segment.from);
+      restartMotionClass(fill,&#x27;is-xp-shimmer&#x27;);
+      const started=performance.now(),duration=Math.max(240,Number(segment.duration)||850);
+      const tick=now=&gt;{
+        if(token!==profileXpAnimationToken||!card.isConnected){profileXpAnimationFrame=0;resolve(false);return;}
+        const t=Math.max(0,Math.min(1,(now-started)/duration)),eased=1-Math.pow(1-t,3);
+        setProfileXpDom({
+          ...segment.from,
+          xp:Math.round(segment.from.xp+(segment.to.xp-segment.from.xp)*eased),
+          progress:Math.round(segment.from.progress+(segment.to.progress-segment.from.progress)*eased)
+        });
+        if(t&lt;1){profileXpAnimationFrame=window.requestAnimationFrame(tick);return;}
+        profileXpAnimationFrame=0;setProfileXpDom(segment.to);resolve(true);
+      };
+      profileXpAnimationFrame=window.requestAnimationFrame(tick);
+    });
+  }
+  async function playProfileXpAnimation(fromValue,toValue,token){
+    const from=profileSnapshot(fromValue),to=profileSnapshot(toValue),card=screen.querySelector(&#x27;[data-gt-profile-card]&#x27;);
+    if(!card||token!==profileXpAnimationToken||to.xp&lt;=from.xp)return;
+    const reduceMotion=Boolean(window.matchMedia?.(&#x27;(prefers-reduced-motion: reduce)&#x27;)?.matches);
+    if(reduceMotion){setProfileXpDom(to);taskHaptic(to.level&gt;from.level?&#x27;notification&#x27;:&#x27;impact&#x27;,to.level&gt;from.level?&#x27;success&#x27;:&#x27;soft&#x27;);return;}
+    const segments=buildProfileXpSegments(from,to);
+    card.classList.add(&#x27;is-xp-animating&#x27;);
+    for(let index=0;index&lt;segments.length;index+=1){
+      const segment=segments[index];
+      if(!(await animateProfileXpSegment(segment,token)))return;
+      if(segment.levelComplete){
+        const next=segments[index+1]?.from||{...to,xp:segment.to.xp,progress:0};
+        if(next.level&gt;segment.to.level){
+          if(!(await waitProfileMotion(90,token)))return;
+          setProfileXpDom(next);
+          const levelEl=screen.querySelector(&#x27;[data-gt-profile-level]&#x27;);
+          restartMotionClass(levelEl,&#x27;is-xp-level-bump&#x27;);
+          if(!(await waitProfileMotion(120,token)))return;
+        }
+      }
+    }
+    if(token!==profileXpAnimationToken)return;
+    setProfileXpDom(to);
+    card.classList.remove(&#x27;is-xp-animating&#x27;);
+    restartMotionClass(card,&#x27;is-xp-settled&#x27;);
+    taskHaptic(to.level&gt;from.level?&#x27;notification&#x27;:&#x27;impact&#x27;,to.level&gt;from.level?&#x27;success&#x27;:&#x27;soft&#x27;);
+    window.setTimeout(()=&gt;{if(token===profileXpAnimationToken)card.classList.remove(&#x27;is-xp-settled&#x27;);},520);
+  }
+  function scheduleProfileXpAnimation(fromValue,toValue){
+    cancelProfileXpAnimation();
+    const token=profileXpAnimationToken,from=profileSnapshot(fromValue),to=profileSnapshot(toValue);
+    window.requestAnimationFrame(()=&gt;window.requestAnimationFrame(()=&gt;{if(token===profileXpAnimationToken)void playProfileXpAnimation(from,to,token);}));
+  }
 
   const TASK_ICONS=Object.freeze({
     task:&#x27;/assets/ui/icon_quest_game.webp&#x27;,
@@ -33988,12 +34132,12 @@ html &gt; body.zefirok-game-expanded{height:var(--zefirok-visible-height,100dvh)
   }
 
   function profileMarkup(){
-    const p=payload?.profile||{};
+    const p=profileRenderOverride||payload?.profile||{};
     const level=Math.max(1,whole(p.level)||1),xp=whole(p.xp),needed=whole(p.needed),progress=whole(p.progress);
     const pct=needed?Math.max(0,Math.min(100,(progress/needed)*100)):100;
     const ready=whole(payload?.readyCount),active=whole(payload?.activeCount),claimed=claimedTasks().length;
     const daily=cycleProgress(&#x27;daily&#x27;),weekly=cycleProgress(&#x27;weekly&#x27;);
-    return `&lt;section class=&quot;gt-profile-card&quot; aria-label=&quot;Прогресс профиля&quot;&gt;&lt;div class=&quot;gt-profile-top&quot;&gt;&lt;div&gt;&lt;span class=&quot;gt-level-label&quot;&gt;Уровень профиля&lt;/span&gt;&lt;div class=&quot;gt-level&quot;&gt;&lt;strong&gt;${level}&lt;/strong&gt;&lt;span&gt;${needed?&#x27;уровень&#x27;:&#x27;максимум&#x27;}&lt;/span&gt;&lt;/div&gt;&lt;/div&gt;&lt;span class=&quot;gt-profile-xp-total&quot;&gt;${iconMarkup(TASK_ICONS.xp,&#x27;gt-profile-xp-icon&#x27;)}&lt;b&gt;${fmt(xp)} XP&lt;/b&gt;&lt;/span&gt;&lt;/div&gt;&lt;div class=&quot;gt-xp-track&quot; role=&quot;progressbar&quot; aria-valuemin=&quot;0&quot; aria-valuemax=&quot;${needed||1}&quot; aria-valuenow=&quot;${needed?Math.min(progress,needed):1}&quot;&gt;&lt;span class=&quot;gt-xp-fill&quot; style=&quot;width:${pct.toFixed(1)}%&quot;&gt;&lt;/span&gt;&lt;/div&gt;&lt;div class=&quot;gt-xp-caption&quot;&gt;&lt;span&gt;${needed?`${fmt(progress)} / ${fmt(needed)} XP`:&#x27;Максимальный уровень&#x27;}&lt;/span&gt;&lt;span&gt;${needed?`До следующего: ${fmt(Math.max(0,needed-progress))} XP`:&#x27;Прогресс продолжается&#x27;}&lt;/span&gt;&lt;/div&gt;&lt;div class=&quot;gt-cycle-summary&quot;&gt;&lt;span&gt;${iconMarkup(TASK_ICONS.daily,&#x27;gt-cycle-icon&#x27;)}&lt;i&gt;&lt;small&gt;Ежедневные&lt;/small&gt;&lt;b&gt;${daily.done} / ${daily.total}&lt;/b&gt;&lt;/i&gt;&lt;/span&gt;&lt;span&gt;${iconMarkup(TASK_ICONS.weekly,&#x27;gt-cycle-icon&#x27;)}&lt;i&gt;&lt;small&gt;Еженедельные&lt;/small&gt;&lt;b&gt;${weekly.done} / ${weekly.total}&lt;/b&gt;&lt;/i&gt;&lt;/span&gt;&lt;/div&gt;&lt;div class=&quot;gt-overview&quot;&gt;&lt;div class=&quot;gt-overview-item${ready?&#x27; is-ready&#x27;:&#x27;&#x27;}&quot;&gt;&lt;b&gt;${ready}&lt;/b&gt;&lt;span&gt;готово&lt;/span&gt;&lt;/div&gt;&lt;div class=&quot;gt-overview-item&quot;&gt;&lt;b&gt;${active}&lt;/b&gt;&lt;span&gt;активно&lt;/span&gt;&lt;/div&gt;&lt;div class=&quot;gt-overview-item is-claimed&quot;&gt;&lt;b&gt;${claimed}&lt;/b&gt;&lt;span&gt;получено&lt;/span&gt;&lt;/div&gt;&lt;/div&gt;&lt;/section&gt;`;
+    return `&lt;section class=&quot;gt-profile-card&quot; data-gt-profile-card aria-label=&quot;Прогресс профиля&quot;&gt;&lt;div class=&quot;gt-profile-top&quot;&gt;&lt;div&gt;&lt;span class=&quot;gt-level-label&quot;&gt;Уровень профиля&lt;/span&gt;&lt;div class=&quot;gt-level&quot;&gt;&lt;strong data-gt-profile-level&gt;${level}&lt;/strong&gt;&lt;span data-gt-profile-level-kind&gt;${needed?&#x27;уровень&#x27;:&#x27;максимум&#x27;}&lt;/span&gt;&lt;/div&gt;&lt;/div&gt;&lt;span class=&quot;gt-profile-xp-total&quot;&gt;${iconMarkup(TASK_ICONS.xp,&#x27;gt-profile-xp-icon&#x27;)}&lt;b data-gt-profile-xp-total-value&gt;${fmt(xp)} XP&lt;/b&gt;&lt;/span&gt;&lt;/div&gt;&lt;div class=&quot;gt-xp-track&quot; data-gt-xp-track role=&quot;progressbar&quot; aria-valuemin=&quot;0&quot; aria-valuemax=&quot;${needed||1}&quot; aria-valuenow=&quot;${needed?Math.min(progress,needed):1}&quot;&gt;&lt;span class=&quot;gt-xp-fill&quot; data-gt-xp-fill style=&quot;width:${pct.toFixed(1)}%&quot;&gt;&lt;/span&gt;&lt;/div&gt;&lt;div class=&quot;gt-xp-caption&quot;&gt;&lt;span data-gt-xp-progress&gt;${needed?`${fmt(progress)} / ${fmt(needed)} XP`:&#x27;Максимальный уровень&#x27;}&lt;/span&gt;&lt;span data-gt-xp-left&gt;${needed?`До следующего: ${fmt(Math.max(0,needed-progress))} XP`:&#x27;Прогресс продолжается&#x27;}&lt;/span&gt;&lt;/div&gt;&lt;div class=&quot;gt-cycle-summary&quot;&gt;&lt;span&gt;${iconMarkup(TASK_ICONS.daily,&#x27;gt-cycle-icon&#x27;)}&lt;i&gt;&lt;small&gt;Ежедневные&lt;/small&gt;&lt;b&gt;${daily.done} / ${daily.total}&lt;/b&gt;&lt;/i&gt;&lt;/span&gt;&lt;span&gt;${iconMarkup(TASK_ICONS.weekly,&#x27;gt-cycle-icon&#x27;)}&lt;i&gt;&lt;small&gt;Еженедельные&lt;/small&gt;&lt;b&gt;${weekly.done} / ${weekly.total}&lt;/b&gt;&lt;/i&gt;&lt;/span&gt;&lt;/div&gt;&lt;div class=&quot;gt-overview&quot;&gt;&lt;div class=&quot;gt-overview-item${ready?&#x27; is-ready&#x27;:&#x27;&#x27;}&quot;&gt;&lt;b&gt;${ready}&lt;/b&gt;&lt;span&gt;готово&lt;/span&gt;&lt;/div&gt;&lt;div class=&quot;gt-overview-item&quot;&gt;&lt;b&gt;${active}&lt;/b&gt;&lt;span&gt;активно&lt;/span&gt;&lt;/div&gt;&lt;div class=&quot;gt-overview-item is-claimed&quot;&gt;&lt;b&gt;${claimed}&lt;/b&gt;&lt;span&gt;получено&lt;/span&gt;&lt;/div&gt;&lt;/div&gt;&lt;/section&gt;`;
   }
 
   function readySummaryMarkup(){
@@ -34140,9 +34284,19 @@ html &gt; body.zefirok-game-expanded{height:var(--zefirok-visible-height,100dvh)
         }
         if(tombstonedReady)data.readyCount=Math.max(0,whole(data.readyCount)-tombstonedReady);
         if(tombstonedUnread)data.unreadCount=Math.max(0,whole(data.unreadCount)-tombstonedUnread);
+        const queuedXp=pendingProfileXpAnimation;
+        const nextProfile=profileSnapshot(data.profile);
+        const canAnimateXp=Boolean(queuedXp&amp;&amp;Date.now()-queuedXp.queuedAt&lt;=8000&amp;&amp;nextProfile.xp&gt;queuedXp.from.xp);
+        pendingProfileXpAnimation=null;
+        if(!canAnimateXp)cancelProfileXpAnimation();
         payload=data;lastFreshAt=Date.now();serverOffsetMs=num(data.serverTime)?num(data.serverTime)*1000-Date.now():0;
         entryNotice={readyCount:whole(data.readyCount),unreadCount:whole(data.unreadCount??list(data.tasks).filter(task=&gt;task?.unread&amp;&amp;task?.complete&amp;&amp;!task?.claimed).length),activeCount:whole(data.activeCount)};
-        updateEntry();render();void markVisibleCompletedRead();return data;
+        updateEntry();
+        if(canAnimateXp){
+          profileRenderOverride=queuedXp.from;render();profileRenderOverride=null;
+          scheduleProfileXpAnimation(queuedXp.from,nextProfile);
+        }else render();
+        void markVisibleCompletedRead();return data;
       }catch(error){
         if(payload){render();toast(String(error?.message||&#x27;Не удалось обновить задания.&#x27;));return payload;}
         renderError(String(error?.message||&#x27;Не удалось загрузить задания.&#x27;));return null;
@@ -34332,6 +34486,7 @@ html &gt; body.zefirok-game-expanded{height:var(--zefirok-visible-height,100dvh)
     try{
       const result=await post(API_CLAIM,{kind:String(task.kind||&#x27;task&#x27;),key:String(task.key||&#x27;&#x27;),cycleKey:String(task.cycleKey||&#x27;&#x27;)});
       if(result?.claimed){
+        if(!result?.repeated)queueProfileXpAnimation(result?.rewardItems);
         claimSuccessKey=id;claimingKey=&#x27;&#x27;;render();
         await new Promise(resolve=&gt;window.setTimeout(resolve,120));
         committedClaims.add(id);
@@ -34361,7 +34516,10 @@ html &gt; body.zefirok-game-expanded{height:var(--zefirok-visible-height,100dvh)
     try{
       const result=await post(API_CLAIM,{claims:tasks.map(task=&gt;({kind:String(task.kind||&#x27;task&#x27;),key:String(task.key||&#x27;&#x27;),cycleKey:String(task.cycleKey||&#x27;&#x27;)}))});
       const responseClaims=list(result?.claims),returned=new Map(responseClaims.map(item=&gt;[`${String(item?.kind||&#x27;task&#x27;)}:${String(item?.key||&#x27;&#x27;)}:${String(item?.cycleKey||&#x27;&#x27;)}`,item]));
-      const confirmedRewards=mergedRewardItems(responseClaims.filter(item=&gt;Boolean(item?.claimed&amp;&amp;!item?.repeated)));
+      const newlyClaimed=responseClaims.filter(item=&gt;Boolean(item?.claimed&amp;&amp;!item?.repeated));
+      const confirmedRewards=mergedRewardItems(newlyClaimed);
+      const xpRewardItems=[];for(const item of newlyClaimed)xpRewardItems.push(...list(item?.rewardItems));
+      queueProfileXpAnimation(xpRewardItems);
       await new Promise(resolve=&gt;window.setTimeout(resolve,120));
       let claimedCount=0,failedCount=0,unreadClaimed=0;
       for(const task of tasks){
