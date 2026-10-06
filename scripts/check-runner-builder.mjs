@@ -166,8 +166,8 @@ must('owner previews waiter cart',owner,"barricade_game_group_telechka:'/assets/
 must('client registers season 2 road asset',index,'road_night_cafe: &quot;/assets/optimized/v0.79.5/road_night_cafe.webp?v=0.79.5&quot;');
 must('client lazy loads builtin runner assets',index,'const builtInSrc = String(assetSources[key] || &quot;&quot;).trim();');
 must('season 2 road variant detection',index,'const nightCafeRoad = roadIdentity.includes(&quot;road_night_cafe&quot;);');
-must('season 2 road trims transparent top',index,'const syRatio = nightCafeRoad ? 0.30 : parkDayRoad ? 0.01 : 0;');
-must('season 2 road trims transparent height',index,'const shRatio = nightCafeRoad ? 0.52 : parkDayRoad ? 0.98 : 1;');
+must('season 2 road trims transparent top',index,'const syRatio = nightCafeRoad ? 0.30 : parkDayRoad ? 0.01 : season4Road ? 0.24 : 0;');
+must('season 2 road trims transparent height',index,'const shRatio = nightCafeRoad ? 0.52 : parkDayRoad ? 0.98 : season4Road ? 0.52 : 1;');
 must('season 2 road taller',index,'Math.max(118, Math.min(156, w * 0.30))');
 must('seasonal roads wider',index,'const roadWidthScale = seasonalRoad ? 1.08 : 1;');
 must('season 2 road lifted',index,'Math.max(38, Math.min(52, roadH * 0.32))');
@@ -218,7 +218,7 @@ must('season 3 public road',worker,'if(season3Scene)publicRoadKey="road_park_day
 must('client season 3 IDs',index,'const RUNNER_SEASON3_OBSTACLE_IDS = new Set');
 must('client season 3 road',index,'if (season3Scene) roadAssetKey = &quot;road_park_day_s3&quot;;');
 must('park road renderer',index,'const parkDayRoad = roadIdentity.includes(&quot;road_park_day_s3&quot;);');
-must('park road same seasonal dimensions',index,'const seasonalRoad = nightCafeRoad || parkDayRoad;');
+must('park road same seasonal dimensions',index,'const seasonalRoad = nightCafeRoad || parkDayRoad || season4Road;');
 must('owner park road preview',owner,"road_park_day_s3:'/assets/optimized/v0.79.5/road_park_day_s3.webp?v=0.79.5'");
 for(const file of ['game_barricade_park_birdhouse_s3.webp','game_barricade_park_scooter_s3.webp','game_barricade_park_stone_s3.webp','game_barricade_park_flowebed_s3.webp','game_barricade_park_birdhouse_bird_s3.webp','game_barricade_park_log_s3.webp','game_barricade_park_picknik_basket_s3.webp','game_barricade_park_bike_s3.webp','barricade_game_park_flowers_s3.webp','road_park_day_s3.webp'])checks.push({name:`season 3 asset ${file}`,ok:fs.existsSync(new URL(`../assets/optimized/v0.79.5/${file}`,import.meta.url)),detail:file});
 

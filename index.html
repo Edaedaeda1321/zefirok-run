@@ -14939,7 +14939,8 @@ function installProgressInfo(){
         game_barricade_park_picknik_basket_s3: &quot;/assets/optimized/v0.79.5/game_barricade_park_picknik_basket_s3.webp?v=0.79.5&quot;,
         game_barricade_park_bike_s3: &quot;/assets/optimized/v0.79.5/game_barricade_park_bike_s3.webp?v=0.79.5&quot;,
         barricade_game_park_flowers_s3: &quot;/assets/optimized/v0.79.5/barricade_game_park_flowers_s3.webp?v=0.79.5&quot;,
-        road_park_day_s3: &quot;/assets/optimized/v0.79.5/road_park_day_s3.webp?v=0.79.5&quot;
+        road_park_day_s3: &quot;/assets/optimized/v0.79.5/road_park_day_s3.webp?v=0.79.5&quot;,
+        road_season4: &quot;/assets/optimized/v0.79.5/road_season4.webp?v=0.79.5&quot;
       });
       // Новый стандартный аватар Зеффи в шапке основного экрана.
       // Не влияет на игровой спрайт и портрет выбранного скина в забеге.
@@ -15454,8 +15455,10 @@ function installProgressInfo(){
         const sceneMarker = `${String(raw.sceneId || &quot;&quot;)} ${String(raw.title || &quot;&quot;)} ${String(backgroundRaw.id || &quot;&quot;)} ${String(backgroundRaw.title || &quot;&quot;)}`;
         const season2Scene = /(?:night|ноч|season[\s_-]*2|сезон[\s_-]*2|(?:^|[^a-z0-9])s2(?:[^a-z0-9]|$))/i.test(sceneMarker);
         const season3Scene = /(?:park|парк|belkino|белкин|season[\s_-]*3|сезон[\s_-]*3|(?:^|[^a-z0-9])s3(?:[^a-z0-9]|$))/i.test(sceneMarker);
+        const season4Scene = /(?:white[\s_-]*rabbit|бел(?:ый|ого)[\s_-]*кролик|season[\s_-]*4|сезон[\s_-]*4|(?:^|[^a-z0-9])s4(?:[^a-z0-9]|$))/i.test(sceneMarker);
         if (!roadAssetPath &amp;&amp; (!roadAssetKey || roadAssetKey === &quot;roadStrip&quot;)) {
-          if (season3Scene) roadAssetKey = &quot;road_park_day_s3&quot;;
+          if (season4Scene) roadAssetKey = &quot;road_season4&quot;;
+          else if (season3Scene) roadAssetKey = &quot;road_park_day_s3&quot;;
           else if (season2Scene) roadAssetKey = &quot;road_night_cafe&quot;;
         }
         return {
@@ -29816,7 +29819,8 @@ function createTutorialDeck(layer, mount, options, words) {
         const roadIdentity = `${String(runnerBackground.roadAssetKey || &quot;&quot;)}|${String(runnerBackground.roadAssetPath || &quot;&quot;)}`;
         const nightCafeRoad = roadIdentity.includes(&quot;road_night_cafe&quot;);
         const parkDayRoad = roadIdentity.includes(&quot;road_park_day_s3&quot;);
-        const seasonalRoad = nightCafeRoad || parkDayRoad;
+        const season4Road = roadIdentity.includes(&quot;road_season4&quot;) || roadIdentity.includes(&quot;road_white_rabbit&quot;);
+        const seasonalRoad = nightCafeRoad || parkDayRoad || season4Road;
         if (
           !roadDrawMetricsCache ||
           roadDrawMetricsCache.width !== w ||
@@ -29825,10 +29829,10 @@ function createTutorialDeck(layer, mount, options, words) {
           roadDrawMetricsCache.sourceHeight !== img.naturalHeight ||
           roadDrawMetricsCache.variant !== roadIdentity
         ) {
-          const sxRatio = nightCafeRoad ? 0.04 : parkDayRoad ? 0.02 : 0.12;
-          const swRatio = nightCafeRoad ? 0.92 : parkDayRoad ? 0.96 : 0.76;
-          const syRatio = nightCafeRoad ? 0.30 : parkDayRoad ? 0.01 : 0;
-          const shRatio = nightCafeRoad ? 0.52 : parkDayRoad ? 0.98 : 1;
+          const sxRatio = nightCafeRoad ? 0.04 : parkDayRoad ? 0.02 : season4Road ? 0.04 : 0.12;
+          const swRatio = nightCafeRoad ? 0.92 : parkDayRoad ? 0.96 : season4Road ? 0.92 : 0.76;
+          const syRatio = nightCafeRoad ? 0.30 : parkDayRoad ? 0.01 : season4Road ? 0.24 : 0;
+          const shRatio = nightCafeRoad ? 0.52 : parkDayRoad ? 0.98 : season4Road ? 0.52 : 1;
           const sx = Math.floor(img.naturalWidth * sxRatio);
           const sw = Math.max(1, Math.floor(img.naturalWidth * swRatio));
           const sy = Math.max(0, Math.floor(img.naturalHeight * syRatio));
@@ -33258,7 +33262,7 @@ html &gt; body.zefirok-game-expanded{height:var(--zefirok-visible-height,100dvh)
 #zefirok-maltipoo-runner .gt-level span{color:#b8587d;font-size:11px;font-weight:900}
 #zefirok-maltipoo-runner .gt-profile-xp-total{padding:7px 10px;border:1px solid rgba(225,181,197,.5);border-radius:999px;background:rgba(255,255,255,.72);color:#a64f70;font-size:10px;font-weight:900;white-space:nowrap;display:inline-flex;align-items:center;gap:5px}
 #zefirok-maltipoo-runner .gt-xp-track{position:relative;height:13px;overflow:hidden;border:1px solid rgba(219,160,182,.52);border-radius:999px;background:#f0e6e9;box-shadow:inset 0 1px 3px rgba(92,56,70,.08);transition:border-color .22s ease,box-shadow .22s ease}
-#zefirok-maltipoo-runner .gt-xp-track:after{content:&quot;&quot;;position:absolute;inset:1px;border-radius:inherit;box-shadow:inset 0 1px 0 rgba(255,255,255,.62);pointer-events:none}
+#zefirok-maltipoo-runner .gt-xp-track:after{content:none}
 #zefirok-maltipoo-runner .gt-xp-fill{position:relative;display:block;width:0;height:100%;overflow:hidden;border-radius:inherit;background:linear-gradient(90deg,#f5a0bf,#dc6594 75%,#c94b7e);box-shadow:0 0 10px rgba(217,83,137,.10);transition:width .28s ease;will-change:width}
 #zefirok-maltipoo-runner .gt-xp-fill:after{content:&quot;&quot;;position:absolute;top:-3px;bottom:-3px;left:-48%;width:38%;opacity:0;pointer-events:none;transform:skewX(-18deg);background:linear-gradient(100deg,rgba(255,255,255,0),rgba(255,255,255,.74) 48%,rgba(255,255,255,0))}
 #zefirok-maltipoo-runner .gt-xp-fill.is-xp-shimmer:after{animation:gtXpShimmer .68s cubic-bezier(.2,.68,.28,1) both}

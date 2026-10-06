@@ -16,11 +16,16 @@ must('season 4 seed',worker,'function runnerBuilderSeason4Seed()');
 must('season 4 upgrade',worker,'seed4=runnerBuilderSeason4Seed()');
 must('season 4 one-time library upgrade',worker,'if(currentVersion<10)');
 must('season 4 background stays disabled',worker,'id:"white-rabbit-s4", title:"Белый Кролик · сезон 4", enabled:false');
-must('season 4 road prepared',worker,'roadAssetPath:`${assetBase}road_white_rabbit.webp`');
+must('season 4 road prepared',worker,'roadAssetKey:"road_season4", roadAssetPath:""');
+must('season 4 legacy road repair',worker,'background.roadAssetKey="road_season4"');
 must('season 4 has no auto group',worker,'groups:[]');
 must('season 4 has no auto scene',worker,'scenes:[]');
 must('owner custom obstacle preview preserves aspect',owner,"fit=custom?'xMidYMax meet':'none'");
 must('runtime custom obstacle preserves aspect',index,'if (assetPath) drawn = drawContain(image, renderX, renderY, item.w, item.h, 1, &quot;bottom&quot;);');
+must('season 4 road client asset',index,'road_season4: &quot;/assets/optimized/v0.79.5/road_season4.webp?v=0.79.5&quot;');
+must('season 4 road renderer variant',index,'const season4Road = roadIdentity.includes(&quot;road_season4&quot;) || roadIdentity.includes(&quot;road_white_rabbit&quot;);');
+must('season 4 road uses seasonal height',index,'const seasonalRoad = nightCafeRoad || parkDayRoad || season4Road;');
+must('season 4 road crop keeps full art',index,'season4Road ? 0.24 : 0;');
 
 const obstacleChecks=[
   ['padded stool low','id:"padded-stool-s4"','width:64, height:46'],
@@ -48,7 +53,7 @@ for(const id of disabledIds){
 }
 
 for(const file of [
-  'road_white_rabbit.webp',
+  'road_season4.webp',
   'obstacle_padded_stool.webp','obstacle_box_of_brushes.webp','obstacle_mountain_of_gifts.webp','obstacle_childs_chair.webp',
   'obstacle_armchair.webp','obstacle_the_stand.webp','obstacle_pillow.webp','obstacle_plant_s4.webp','obstacle_medical_trolley.webp',
   'obstacle_white_rabbit_caution_floor_sign.webp','obstacle_low_basket_with_toys.webp','obstacle_shoe_box.webp'
