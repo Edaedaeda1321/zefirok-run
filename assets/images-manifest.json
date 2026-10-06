@@ -1,8 +1,8 @@
 {
   "version": 2,
   "hashAlgorithm": "sha256",
-  "catalogHash": "9a31d61cc783dff0",
-  "count": 571,
+  "catalogHash": "7c173f36111aa26e",
+  "count": 577,
   "images": [
     {
       "fileName": "achievements/background_achivment_panel.webp",
@@ -4123,6 +4123,54 @@
       "path": "/assets/ui/background_referals.webp",
       "hash": "6c9778cbac77",
       "size": 25854
+    },
+    {
+      "fileName": "ui/collector-status/collector_golden_shelf.webp",
+      "label": "Collector golden shelf",
+      "folder": "ui/collector-status",
+      "path": "/assets/ui/collector-status/collector_golden_shelf.webp",
+      "hash": "6e4ff5ccca57",
+      "size": 86426
+    },
+    {
+      "fileName": "ui/collector-status/collector_keeper_history.webp",
+      "label": "Collector keeper history",
+      "folder": "ui/collector-status",
+      "path": "/assets/ui/collector-status/collector_keeper_history.webp",
+      "hash": "ab6ccd7ab638",
+      "size": 85180
+    },
+    {
+      "fileName": "ui/collector-status/collector_large_collection.webp",
+      "label": "Collector large collection",
+      "folder": "ui/collector-status",
+      "path": "/assets/ui/collector-status/collector_large_collection.webp",
+      "hash": "f7396ae30039",
+      "size": 86966
+    },
+    {
+      "fileName": "ui/collector-status/collector_one_in_hundred.webp",
+      "label": "Collector one in hundred",
+      "folder": "ui/collector-status",
+      "path": "/assets/ui/collector-status/collector_one_in_hundred.webp",
+      "hash": "36ccd5fc0b9c",
+      "size": 78752
+    },
+    {
+      "fileName": "ui/collector-status/collector_season_closed.webp",
+      "label": "Collector season closed",
+      "folder": "ui/collector-status",
+      "path": "/assets/ui/collector-status/collector_season_closed.webp",
+      "hash": "e20d4cc2cda1",
+      "size": 81368
+    },
+    {
+      "fileName": "ui/collector-status/collector_wardrobe.webp",
+      "label": "Collector wardrobe",
+      "folder": "ui/collector-status",
+      "path": "/assets/ui/collector-status/collector_wardrobe.webp",
+      "hash": "2244640da884",
+      "size": 86696
     },
     {
       "fileName": "ui/error404-no-icon.webp",
