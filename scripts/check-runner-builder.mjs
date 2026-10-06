@@ -138,7 +138,7 @@ must('scene preview uses framed background',owner,"rbBackgroundFrameMarkup(bg,'r
 must('background cards use framed preview',owner,"rbBackgroundFrameMarkup(item,'rb-bg-preview')");
 
 
-must('runner builder config v4',worker,'RUNNER_BUILDER_CONFIG_VERSION = 4');
+must('runner builder config v10',worker,'RUNNER_BUILDER_CONFIG_VERSION = 10');
 must('season 2 seed function',worker,'function runnerBuilderSeason2Seed()');
 must('season 2 one-time upgrade',worker,'function runnerBuilderUpgradeConfig(raw)');
 must('season 2 road builtin allowed',worker,'"road_night_cafe"');

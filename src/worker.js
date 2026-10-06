@@ -43368,7 +43368,7 @@ function ownerV8AssetPath(value = "") {
 
 // ======================= RUNNER SCENE BUILDER v1 =======================
 const RUNNER_BUILDER_STATE_KEY = "runner:scene-builder:v1";
-const RUNNER_BUILDER_CONFIG_VERSION = 9;
+const RUNNER_BUILDER_CONFIG_VERSION = 10;
 const RUNNER_BUILDER_MAX_OBSTACLES = 80;
 const RUNNER_BUILDER_MAX_GROUPS = 48;
 const RUNNER_BUILDER_MAX_SCENES = 48;
@@ -43429,6 +43429,31 @@ function runnerBuilderSeason3Seed(){
     scenes:[
       { id:"park-belkino-s3", title:"Парк Белкино · сезон 3", enabled:false, backgroundId:"park-belkino-s3", useAllObstacles:false, groupIds:["park-belkino-s3"] }
     ]
+  };
+}
+
+function runnerBuilderSeason4Seed(){
+  const assetBase="/assets/optimized/v0.79.5/";
+  return {
+    backgrounds:[
+      { id:"white-rabbit-s4", title:"Белый Кролик · сезон 4", enabled:false, assetKey:"", assetPath:`${assetBase}white_rabbit_background_season4.webp`, fitMode:"cover", zoom:1, positionX:.5, positionY:.5, roadEnabled:true, roadAssetKey:"", roadAssetPath:`${assetBase}road_white_rabbit.webp` }
+    ],
+    obstacles:[
+      { id:"padded-stool-s4", title:"Мягкий пуфик", enabled:false, assetKey:"", assetPath:`${assetBase}obstacle_padded_stool.webp`, width:64, height:46, shadow:true, defaultWeight:18, hitboxes:[{x:.06,y:.30,w:.88,h:.62}] },
+      { id:"box-of-brushes-s4", title:"Ящик с кистями", enabled:false, assetKey:"", assetPath:`${assetBase}obstacle_box_of_brushes.webp`, width:82, height:65, shadow:true, defaultWeight:11, hitboxes:[{x:.08,y:.16,w:.84,h:.78}] },
+      { id:"mountain-of-gifts-s4", title:"Гора подарков", enabled:false, assetKey:"", assetPath:`${assetBase}obstacle_mountain_of_gifts.webp`, width:82, height:102, shadow:true, defaultWeight:7, hitboxes:[{x:.14,y:.06,w:.72,h:.90}] },
+      { id:"child-chair-s4", title:"Детский стульчик", enabled:false, assetKey:"", assetPath:`${assetBase}obstacle_childs_chair.webp`, width:72, height:41, shadow:true, defaultWeight:17, hitboxes:[{x:.05,y:.36,w:.90,h:.56}] },
+      { id:"armchair-s4", title:"Кресло", enabled:false, assetKey:"", assetPath:`${assetBase}obstacle_armchair.webp`, width:76, height:70, shadow:true, defaultWeight:11, hitboxes:[{x:.07,y:.10,w:.86,h:.84}] },
+      { id:"stand-s4", title:"Стойка", enabled:false, assetKey:"", assetPath:`${assetBase}obstacle_the_stand.webp`, width:42, height:80, shadow:true, defaultWeight:10, hitboxes:[{x:.18,y:.06,w:.64,h:.88}] },
+      { id:"pillow-s4", title:"Подушка", enabled:false, assetKey:"", assetPath:`${assetBase}obstacle_pillow.webp`, width:72, height:38, shadow:true, defaultWeight:18, hitboxes:[{x:.05,y:.35,w:.90,h:.54}] },
+      { id:"plant-s4", title:"Растение", enabled:false, assetKey:"", assetPath:`${assetBase}obstacle_plant_s4.webp`, width:66, height:75, shadow:true, defaultWeight:10, hitboxes:[{x:.12,y:.08,w:.76,h:.86}] },
+      { id:"medical-trolley-s4", title:"Медицинская тележка", enabled:false, assetKey:"", assetPath:`${assetBase}obstacle_medical_trolley.webp`, width:98, height:95, shadow:true, defaultWeight:7, hitboxes:[{x:.06,y:.12,w:.88,h:.82}] },
+      { id:"caution-floor-sign-s4", title:"Табличка «Осторожно»", enabled:false, assetKey:"", assetPath:`${assetBase}obstacle_white_rabbit_caution_floor_sign.webp`, width:56, height:82, shadow:true, defaultWeight:10, hitboxes:[{x:.14,y:.08,w:.72,h:.84}] },
+      { id:"toy-basket-s4", title:"Низкая корзина с игрушками", enabled:false, assetKey:"", assetPath:`${assetBase}obstacle_low_basket_with_toys.webp`, width:70, height:46, shadow:true, defaultWeight:17, hitboxes:[{x:.05,y:.30,w:.90,h:.62}] },
+      { id:"shoe-box-s4", title:"Коробка с обувью", enabled:false, assetKey:"", assetPath:`${assetBase}obstacle_shoe_box.webp`, width:98, height:55, shadow:true, defaultWeight:11, hitboxes:[{x:.04,y:.32,w:.92,h:.56}] }
+    ],
+    groups:[],
+    scenes:[]
   };
 }
 
@@ -43528,7 +43553,7 @@ function runnerBuilderUpgradeConfig(raw){
   if(!raw||typeof raw!=="object")return raw;
   const currentVersion=Math.max(1,Math.floor(Number(raw.version)||1));
   if(currentVersion>=RUNNER_BUILDER_CONFIG_VERSION)return raw;
-  const source=JSON.parse(JSON.stringify(raw)),seed=runnerBuilderSeason2Seed(),seed3=runnerBuilderSeason3Seed();
+  const source=JSON.parse(JSON.stringify(raw)),seed=runnerBuilderSeason2Seed(),seed3=runnerBuilderSeason3Seed(),seed4=runnerBuilderSeason4Seed();
   if(currentVersion<2){
     for(const key of ["backgrounds","obstacles","groups","scenes"]){
       const rows=Array.isArray(source[key])?source[key]:[];source[key]=rows;const ids=new Set(rows.map(item=>String(item?.id||"")));
@@ -43553,6 +43578,12 @@ function runnerBuilderUpgradeConfig(raw){
   if(currentVersion<5)runnerBuilderRepairSceneAssetsV5(source);
   if(currentVersion<6&&(!source.seasonVariants||typeof source.seasonVariants!=='object'))source.seasonVariants={};
   if(currentVersion<7&&(!source.seasonNpcs||typeof source.seasonNpcs!=='object'))source.seasonNpcs={};
+  if(currentVersion<10){
+    for(const key of ["backgrounds","obstacles"]){
+      const rows=Array.isArray(source[key])?source[key]:[];source[key]=rows;const ids=new Set(rows.map(item=>String(item?.id||"")));
+      for(const item of seed4[key])if(!ids.has(item.id)){rows.push(item);ids.add(item.id);}
+    }
+  }
   source.version=RUNNER_BUILDER_CONFIG_VERSION;
   return source;
 }
@@ -43565,7 +43596,8 @@ function runnerBuilderDefaultConfig(){
     backgrounds: [
       { id:"cafe", title:"Кафе", enabled:true, assetKey:"cafeBackground", assetPath:"", fitMode:"cover", zoom:1, positionX:.5, positionY:.5, roadEnabled:true, roadAssetKey:"roadStrip", roadAssetPath:"" },
       ...runnerBuilderSeason2Seed().backgrounds,
-      ...runnerBuilderSeason3Seed().backgrounds
+      ...runnerBuilderSeason3Seed().backgrounds,
+      ...runnerBuilderSeason4Seed().backgrounds
     ],
     obstacles: [
       { id:"pouf", title:"Пуф", enabled:true, assetKey:"pouf", assetPath:"", width:58, height:40, shadow:true, defaultWeight:30, hitboxes:[{x:.16,y:.62,w:.68,h:.28}] },
@@ -43574,7 +43606,8 @@ function runnerBuilderDefaultConfig(){
       { id:"pillow", title:"Подушка", enabled:true, assetKey:"pillowObstacle", assetPath:"", width:72, height:35, shadow:true, defaultWeight:16, hitboxes:[{x:.08,y:.55,w:.84,h:.33}] },
       { id:"vase", title:"Ваза", enabled:true, assetKey:"vaseObstacle", assetPath:"", width:42, height:64, shadow:true, defaultWeight:14, hitboxes:[{x:.20,y:.42,w:.60,h:.48}] },
       ...runnerBuilderSeason2Seed().obstacles,
-      ...runnerBuilderSeason3Seed().obstacles
+      ...runnerBuilderSeason3Seed().obstacles,
+      ...runnerBuilderSeason4Seed().obstacles
     ],
     groups: [
       { id:"cafe", title:"Кафе", enabled:true, items:[

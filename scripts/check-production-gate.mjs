@@ -97,6 +97,7 @@ const steps = [
   ['season 3 story', 'node', ['scripts/check-season3-story.mjs']],
   ['season 4 story', 'node', ['scripts/check-season4-story.mjs']],
   ['season 4 hidden content', 'node', ['scripts/check-season4-hidden-content.mjs']],
+  ['season 4 runner obstacles', 'node', ['scripts/check-season4-runner-obstacles.mjs']],
   ['season story collectibles', 'node', ['scripts/check-season-story-collectibles.mjs']],
   ['season achievements', 'node', ['scripts/check-season-achievements.mjs']],
   ['achievement art overrides', 'node', ['scripts/check-achievement-art-overrides.mjs']],

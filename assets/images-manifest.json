@@ -1,8 +1,8 @@
 {
   "version": 2,
   "hashAlgorithm": "sha256",
-  "catalogHash": "7c173f36111aa26e",
-  "count": 577,
+  "catalogHash": "a6c4171ed9acfa80",
+  "count": 590,
   "images": [
     {
       "fileName": "achievements/background_achivment_panel.webp",
@@ -1901,6 +1901,102 @@
       "size": 29126
     },
     {
+      "fileName": "optimized/v0.79.5/obstacle_armchair.webp",
+      "label": "Obstacle armchair",
+      "folder": "optimized/v0.79.5",
+      "path": "/assets/optimized/v0.79.5/obstacle_armchair.webp",
+      "hash": "d3c3176724bd",
+      "size": 883184
+    },
+    {
+      "fileName": "optimized/v0.79.5/obstacle_box_of_brushes.webp",
+      "label": "Obstacle box of brushes",
+      "folder": "optimized/v0.79.5",
+      "path": "/assets/optimized/v0.79.5/obstacle_box_of_brushes.webp",
+      "hash": "139dd0a9e86d",
+      "size": 1202800
+    },
+    {
+      "fileName": "optimized/v0.79.5/obstacle_childs_chair.webp",
+      "label": "Obstacle childs chair",
+      "folder": "optimized/v0.79.5",
+      "path": "/assets/optimized/v0.79.5/obstacle_childs_chair.webp",
+      "hash": "c8733a76bbdb",
+      "size": 717910
+    },
+    {
+      "fileName": "optimized/v0.79.5/obstacle_low_basket_with_toys.webp",
+      "label": "Obstacle low basket with toys",
+      "folder": "optimized/v0.79.5",
+      "path": "/assets/optimized/v0.79.5/obstacle_low_basket_with_toys.webp",
+      "hash": "0d283b5d8932",
+      "size": 844198
+    },
+    {
+      "fileName": "optimized/v0.79.5/obstacle_medical_trolley.webp",
+      "label": "Obstacle medical trolley",
+      "folder": "optimized/v0.79.5",
+      "path": "/assets/optimized/v0.79.5/obstacle_medical_trolley.webp",
+      "hash": "52787930be9e",
+      "size": 953340
+    },
+    {
+      "fileName": "optimized/v0.79.5/obstacle_mountain_of_gifts.webp",
+      "label": "Obstacle mountain of gifts",
+      "folder": "optimized/v0.79.5",
+      "path": "/assets/optimized/v0.79.5/obstacle_mountain_of_gifts.webp",
+      "hash": "00d1dc0f8b71",
+      "size": 912492
+    },
+    {
+      "fileName": "optimized/v0.79.5/obstacle_padded_stool.webp",
+      "label": "Obstacle padded stool",
+      "folder": "optimized/v0.79.5",
+      "path": "/assets/optimized/v0.79.5/obstacle_padded_stool.webp",
+      "hash": "854c50862245",
+      "size": 817044
+    },
+    {
+      "fileName": "optimized/v0.79.5/obstacle_pillow.webp",
+      "label": "Obstacle pillow",
+      "folder": "optimized/v0.79.5",
+      "path": "/assets/optimized/v0.79.5/obstacle_pillow.webp",
+      "hash": "a5e6885253fa",
+      "size": 694572
+    },
+    {
+      "fileName": "optimized/v0.79.5/obstacle_plant_s4.webp",
+      "label": "Obstacle plant s4",
+      "folder": "optimized/v0.79.5",
+      "path": "/assets/optimized/v0.79.5/obstacle_plant_s4.webp",
+      "hash": "7860db504828",
+      "size": 1135366
+    },
+    {
+      "fileName": "optimized/v0.79.5/obstacle_shoe_box.webp",
+      "label": "Obstacle shoe box",
+      "folder": "optimized/v0.79.5",
+      "path": "/assets/optimized/v0.79.5/obstacle_shoe_box.webp",
+      "hash": "35614224dad4",
+      "size": 235430
+    },
+    {
+      "fileName": "optimized/v0.79.5/obstacle_the_stand.webp",
+      "label": "Obstacle the stand",
+      "folder": "optimized/v0.79.5",
+      "path": "/assets/optimized/v0.79.5/obstacle_the_stand.webp",
+      "hash": "7f3857d2c1f5",
+      "size": 653292
+    },
+    {
+      "fileName": "optimized/v0.79.5/obstacle_white_rabbit_caution_floor_sign.webp",
+      "label": "Obstacle white rabbit caution floor sign",
+      "folder": "optimized/v0.79.5",
+      "path": "/assets/optimized/v0.79.5/obstacle_white_rabbit_caution_floor_sign.webp",
+      "hash": "db75e32b1c47",
+      "size": 701160
+    },
+    {
       "fileName": "optimized/v0.79.5/pillowObstacle.webp",
       "label": "PillowObstacle",
       "folder": "optimized/v0.79.5",
@@ -1931,6 +2027,14 @@
       "path": "/assets/optimized/v0.79.5/road_park_day_s3.webp",
       "hash": "63056468621f",
       "size": 126442
+    },
+    {
+      "fileName": "optimized/v0.79.5/road_white_rabbit.webp",
+      "label": "Road white rabbit",
+      "folder": "optimized/v0.79.5",
+      "path": "/assets/optimized/v0.79.5/road_white_rabbit.webp",
+      "hash": "f90778ac67d5",
+      "size": 656736
     },
     {
       "fileName": "optimized/v0.79.5/shopAmericano.webp",

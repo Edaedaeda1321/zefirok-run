@@ -6,7 +6,7 @@ const index=fs.readFileSync(new URL('../index.html',import.meta.url),'utf8');
 const checks=[];
 const must=(name,haystack,needle)=>checks.push({name,ok:haystack.includes(needle),detail:needle});
 
-must('runner builder schema v9',worker,'RUNNER_BUILDER_CONFIG_VERSION = 9');
+must('runner builder schema v10',worker,'RUNNER_BUILDER_CONFIG_VERSION = 10');
 must('server dialogue line cap',worker,'RUNNER_BUILDER_MAX_DIALOGUE_LINES = 6');
 must('server normalizes dialogue speaker',worker,"speaker:String(rawLine?.speaker||'npc')==='player'?'player':'npc'");
 must('server clamps dialogue duration',worker,'runnerBuilderNum(rawLine?.durationSec,1.2,4,2.4)');
