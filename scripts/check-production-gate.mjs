@@ -70,6 +70,7 @@ const steps = [
   ['daily streak admin setter', 'node', ['scripts/check-daily-streak-admin-set.mjs']],
   ['profile hero core status', 'node', ['scripts/check-profile-hero-core-status-v32.mjs']],
   ['progress info stability', 'node', ['scripts/check-progress-info-stability.mjs']],
+  ['player ban access gate', 'node', ['scripts/check-player-ban-gate.mjs']],
   // Protect the exact regression that previously made rating/profile reads hang:
   // public leaderboard reads must remain read-only and first paint must stay lazy.
   ['rating fast reads', 'node', ['scripts/check-rating-fast-read.mjs']],

@@ -2,7 +2,7 @@
 'use strict';
 if(window.SweetRunPlatform)return;
 
-const VERSION='1.1.0';
+const VERSION='1.2.0';
 const LEGACY_SESSION_PREFIX='sr-session:';
 const SESSION_KEY='sweet-run-player-session-v1';
 const NATIVE_BOOTSTRAP_KEY='__SWEET_RUN_NATIVE_BOOTSTRAP__';
@@ -110,6 +110,43 @@ function haptic(kindValue='selection',value=''){
     return Boolean(feedback);
   }catch{return false;}
 }
+
+function installPlayerBlockObserver(){
+  if(window.__SWEET_RUN_PLAYER_BLOCK_FETCH_V1__)return;
+  const nativeFetch=typeof window.fetch==='function'?window.fetch.bind(window):null;
+  if(!nativeFetch)return;
+  window.__SWEET_RUN_PLAYER_BLOCK_FETCH_V1__=true;
+  window.fetch=async(...args)=>{
+    const response=await nativeFetch(...args);
+    if(Number(response?.status||0)===403){
+      try{
+        const clone=response.clone();
+        const type=String(clone.headers.get('content-type')||'').toLowerCase();
+        if(type.includes('application/json')){
+          const payload=await clone.json().catch(()=>null);
+          const details=payload?.details&&typeof payload.details==='object'?payload.details:{};
+          const error=String(payload?.error||'');
+          const code=String(payload?.code||details.code||'');
+          if(code==='PLAYER_BLOCKED'||error.startsWith('Доступ к игре ограничен.')){
+            const detail={
+              blocked:true,
+              allowed:false,
+              code:'PLAYER_BLOCKED',
+              error,
+              blockType:String(details.blockType||''),
+              blockedUntil:Number(details.blockedUntil||0),
+              reason:String(details.reason||'')
+            };
+            try{window.dispatchEvent(new CustomEvent('sweet-run-player-blocked',{detail}));}catch{}
+            try{if(window.parent&&window.parent!==window)window.parent.postMessage({type:'sweet-run-player-blocked',detail},'*');}catch{}
+          }
+        }
+      }catch{}
+    }
+    return response;
+  };
+}
+installPlayerBlockObserver();
 
 window.SweetRunPlatform=Object.freeze({
   version:VERSION,

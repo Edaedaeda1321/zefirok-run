@@ -23091,7 +23091,14 @@ async function applyPlayerAdminControl(user, env) {
       ? ` Ограничение действует до ${formatUtcDate(control.blockedUntil)}.`
       : " Ограничение действует бессрочно.";
     const reason = control.blockReason ? ` Причина: ${control.blockReason}` : "";
-    throw new ApiError(403, `Доступ к игре ограничен.${until}${reason}`);
+    throw new ApiError(403, `Доступ к игре ограничен.${until}${reason}`, {
+      code: 'PLAYER_BLOCKED',
+      operationCode: 'PLAYER_BLOCKED',
+      retryable: false,
+      blockType: control.blockType,
+      blockedUntil: Number(control.blockedUntil || 0),
+      reason: String(control.blockReason || '')
+    });
   }
   if (control.customName) return { ...user, first_name: control.customName, last_name: "" };
   return user;
@@ -33308,7 +33315,32 @@ async function getAccessBootstrap(request, env) {
     const legalPromise = authResult.ok
       ? legalAcceptanceState(env, telegramId, false)
       : Promise.resolve(null);
-    const [identity, legalState] = await Promise.all([identityPromise, legalPromise]);
+    // PLAYER BAN ACCESS GATE V1: expose moderation state in the existing startup request.
+    // This avoids a second startup endpoint while keeping player blocking server-authoritative.
+    const playerAccessPromise = authResult.ok
+      ? getPlayerAdminControl(telegramId, env)
+          .then((control) => ({
+            ok: true,
+            allowed: !control.blocked,
+            blocked: Boolean(control.blocked),
+            code: control.blocked ? 'PLAYER_BLOCKED' : '',
+            blockType: control.blockType,
+            blockedUntil: Number(control.blockedUntil || 0),
+            reason: String(control.blockReason || ''),
+            updatedAt: Number(control.updatedAt || 0)
+          }))
+          .catch((error) => {
+            console.error('player access bootstrap check failed', error);
+            return {
+              ok: false,
+              allowed: false,
+              blocked: false,
+              code: 'PLAYER_ACCESS_CHECK_FAILED',
+              error: 'Не удалось подтвердить доступ к игре. Повторите проверку.'
+            };
+          })
+      : Promise.resolve(null);
+    const [identity, legalState, playerAccess] = await Promise.all([identityPromise, legalPromise, playerAccessPromise]);
 
     // Referral binding is specific to Telegram Mini App start_param. A native
     // bearer session never fabricates or replays this Telegram-only signal.
@@ -33354,7 +33386,7 @@ async function getAccessBootstrap(request, env) {
         error:String(error?.message || 'Откройте игру внутри Telegram.')
       };
     }
-    return jsonResponse({ ok:true, maintenance, legal });
+    return jsonResponse({ ok:true, maintenance, legal, playerAccess });
   } catch (error) {
     if (error instanceof ApiError) return jsonResponse({ ok:false, error:error.message }, error.status);
     console.error('access bootstrap failed', error);
