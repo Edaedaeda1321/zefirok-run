@@ -43,7 +43,7 @@ requireText(platform, "window.webkit?.messageHandlers?.[NATIVE_HANDLER]", 'nativ
 requireText(platform, "Authorization',`Bearer ${token}`", 'platform bearer header');
 requireText(platform, "window.SweetRunPlatform=Object.freeze", 'platform global');
 
-requireText(index, '<script src="/assets/sweet-run-platform.js?v=1.0.0"></script>', 'index platform adapter');
+requireText(index, '<script src="/assets/sweet-run-platform.js?v=1.2.0"></script>', 'index platform adapter');
 requireText(index, 'preparedSource.includes("sweet-run-platform.js")', 'srcdoc platform injection');
 requireText(index, 'window.SweetRunPlatform?.haptic?.(kind, value)', 'host haptic bridge');
 requireText(index, 'platformAuth?.headers?.({ "Content-Type": "application/json" })', 'host auth headers');
