@@ -24316,6 +24316,7 @@ const SUPPORT_TICKET_CATEGORIES = Object.freeze({
   purchase: "Проблема с покупкой",
   reward: "Награда",
   account: "Аккаунт и прогресс",
+  moderation: "Блокировка и апелляция",
   suggestion: "Предложение",
   feedback: "Отзыв",
   reward_missing: "Не получил награду",
@@ -24326,7 +24327,7 @@ const SUPPORT_TICKET_CATEGORIES = Object.freeze({
   pass_problem: "Сезонный пропуск",
   other: "Другое"
 });
-const PLAYER_SUPPORT_CATEGORIES = Object.freeze(["reward_missing","purchase","item_missing","rating_problem","pass_problem","account","bug","suggestion","other"]);
+const PLAYER_SUPPORT_CATEGORIES = Object.freeze(["reward_missing","purchase","item_missing","rating_problem","pass_problem","account","moderation","bug","suggestion","other"]);
 const STAFF_SUPPORT_CATEGORIES = Object.freeze(["reward_missing","code_problem","item_missing","balance_problem","rating_problem","pass_problem","other"]);
 const SUPPORT_MAX_OPEN_TICKETS = 3;
 const SUPPORT_MAX_DAILY_TICKETS = 6;
@@ -24365,12 +24366,12 @@ const SUPPORT_TAG_LABELS = Object.freeze({
 });
 
 function supportAutoPriority(category) {
-  return new Set(["purchase","reward","account","reward_missing","code_problem","item_missing","balance_problem","rating_problem","pass_problem"]).has(String(category || "")) ? "important" : "normal";
+  return new Set(["purchase","reward","account","moderation","reward_missing","code_problem","item_missing","balance_problem","rating_problem","pass_problem"]).has(String(category || "")) ? "important" : "normal";
 }
 
 function supportAutoTags(category, area = "") {
   const categoryTag = ({
-    bug: "bug", purchase: "purchase", reward: "reward", account: "account",
+    bug: "bug", purchase: "purchase", reward: "reward", account: "account", moderation: "account",
     suggestion: "idea", feedback: "feedback", reward_missing: "reward",
     code_problem: "code", item_missing: "reward", balance_problem: "account",
     rating_problem: "rating", pass_problem: "pass", other: "other"
@@ -24596,10 +24597,26 @@ async function playerSupportStateData(env, telegramId) {
   return { tickets, openCount: tickets.filter((item) => !["resolved","rejected"].includes(item.status)).length, unreadCount: tickets.filter((item) => item.unread).length, knownIssues };
 }
 
+async function validatePlayerSupportInitData(initData, env) {
+  // Support is intentionally available even when the game account is blocked.
+  // We validate the signed Telegram identity but do not run applyPlayerAdminControl(),
+  // otherwise a blocked player could not read replies or submit an appeal.
+  const auth = await validateTelegramInitDataSignature(String(initData || ""), env);
+  const control = await getPlayerAdminControl(String(auth.user.id), env);
+  const user = control.customName ? { ...auth.user, first_name: control.customName, last_name: "" } : auth.user;
+  return { ...auth, user, playerAccess: {
+    blocked: Boolean(control.blocked),
+    blockType: String(control.blockType || "permanent"),
+    blockedUntil: Number(control.blockedUntil || 0),
+    reason: String(control.blockReason || ""),
+    updatedAt: Number(control.updatedAt || 0)
+  } };
+}
+
 async function getPlayerSupportState(request, env) {
   try {
     const body = await readJson(request);
-    const auth = await validateTelegramInitData(String(body.initData || ""), env);
+    const auth = await validatePlayerSupportInitData(String(body.initData || ""), env);
     return jsonResponse({ ok:true, ...(await playerSupportStateData(env, String(auth.user.id))) });
   } catch (error) {
     if (error instanceof ApiError) return jsonResponse({ ok:false,error:error.message }, error.status);
@@ -24612,7 +24629,7 @@ async function markPlayerSupportKnownIssueImpact(request, env) {
   try {
     await ensurePlayerSupportSchema(env);
     const body = await readJson(request);
-    const auth = await validateTelegramInitData(String(body.initData || ""), env);
+    const auth = await validatePlayerSupportInitData(String(body.initData || ""), env);
     const telegramId = String(auth.user.id);
     const issueId = Math.max(0, Math.floor(Number(body.issueId || 0)));
     if (!issueId) throw new ApiError(400,"Некорректная проблема.");
@@ -24636,7 +24653,7 @@ async function createPlayerSupportTicket(request, env, executionCtx) {
   try {
     await ensurePlayerSupportSchema(env);
     const form = await request.formData();
-    const auth = await validateTelegramInitData(String(form.get("initData") || ""), env);
+    const auth = await validatePlayerSupportInitData(String(form.get("initData") || ""), env);
     const telegramId = String(auth.user.id);
     const category = String(form.get("category") || "other").trim();
     if (!PLAYER_SUPPORT_CATEGORIES.includes(category)) throw new ApiError(400,"Выберите категорию обращения.");
@@ -24647,6 +24664,10 @@ async function createPlayerSupportTicket(request, env, executionCtx) {
     const requestId = supportRequestId(form.get("requestId"),"ticket");
     const repeated = await env.DB.prepare(`SELECT t.id FROM support_ticket_meta m JOIN support_tickets t ON t.id=m.ticket_id WHERE m.source='player' AND m.request_id=? AND t.player_telegram_id=? LIMIT 1`).bind(requestId,telegramId).first();
     if (repeated) return jsonResponse({ ok:true,repeated:true,ticketId:Number(repeated.id),...(await playerSupportStateData(env,telegramId)) });
+    if (category === "moderation") {
+      const existingAppeal = await env.DB.prepare(`SELECT t.id FROM support_tickets t JOIN support_ticket_meta m ON m.ticket_id=t.id WHERE t.player_telegram_id=? AND m.source='player' AND t.category='moderation' AND t.status IN ('new','working') ORDER BY t.updated_at DESC,t.id DESC LIMIT 1`).bind(telegramId).first();
+      if (existingAppeal) return jsonResponse({ ok:true,repeated:true,ticketId:Number(existingAppeal.id),...(await playerSupportStateData(env,telegramId)) });
+    }
     const [openRow, dailyRow] = await Promise.all([
       env.DB.prepare(`SELECT COUNT(*) AS count FROM support_tickets t JOIN support_ticket_meta m ON m.ticket_id=t.id WHERE t.player_telegram_id=? AND m.source='player' AND t.status IN ('new','working')`).bind(telegramId).first(),
       env.DB.prepare(`SELECT COUNT(*) AS count FROM support_tickets t JOIN support_ticket_meta m ON m.ticket_id=t.id WHERE t.player_telegram_id=? AND m.source='player' AND t.created_at>=?`).bind(telegramId,Math.floor(Date.now()/1000)-86400).first()
@@ -24669,6 +24690,17 @@ async function createPlayerSupportTicket(request, env, executionCtx) {
     }
     const diagnostics = await supportPlayerDiagnostics(request,env,auth,form.get("clientJson") || "{}");
     const context = supportSafeClientJson(form.get("contextJson") || "{}");
+    if (category === "moderation") {
+      const moderation = auth.playerAccess || {};
+      context.moderationBlocked = Boolean(moderation.blocked);
+      context.moderationType = String(moderation.blockType || "permanent");
+      context.moderationUntil = Number(moderation.blockedUntil || 0);
+      context.moderationReason = String(moderation.reason || "").slice(0,300);
+      context.moderationUpdatedAt = Number(moderation.updatedAt || 0);
+      // Keep the client-provided UI source only as diagnostics. The block details above
+      // always come from server-side player_admin_controls and are never trusted from the client.
+      context.moderationSource = String(context.source || "support_center").slice(0,80);
+    }
     diagnostics.context = context;
     const now = Math.floor(Date.now()/1000), playerName = telegramDisplayName(auth.user);
     const insert = await env.DB.prepare(`INSERT INTO support_tickets(created_by,created_by_name,player_telegram_id,player_name,category,description,status,assigned_to,assigned_to_name,resolution,created_at,updated_at,closed_at)
@@ -24709,7 +24741,7 @@ async function createPlayerSupportTicket(request, env, executionCtx) {
 async function replyPlayerSupportTicket(request, env, executionCtx) {
   try {
     await ensurePlayerSupportSchema(env);
-    const body=await readJson(request),auth=await validateTelegramInitData(String(body.initData||""),env),telegramId=String(auth.user.id);
+    const body=await readJson(request),auth=await validatePlayerSupportInitData(String(body.initData||""),env),telegramId=String(auth.user.id);
     const ticketId=Math.floor(Number(body.ticketId)||0),message=String(body.message||"").trim().slice(0,SUPPORT_MAX_MESSAGE_LENGTH),requestId=supportRequestId(body.requestId,"reply");
     if(!ticketId||message.length<2)throw new ApiError(400,"Введите сообщение.");
     const ticket=await env.DB.prepare(`SELECT t.*,m.source FROM support_tickets t JOIN support_ticket_meta m ON m.ticket_id=t.id WHERE t.id=? AND t.player_telegram_id=? AND m.source='player' LIMIT 1`).bind(ticketId,telegramId).first();
@@ -24739,17 +24771,21 @@ ${escapeHtml(message.slice(0,1800))}`);
 }
 
 async function markPlayerSupportTicketRead(request,env){
-  try{await ensurePlayerSupportSchema(env);const body=await readJson(request),auth=await validateTelegramInitData(String(body.initData||""),env),ticketId=Math.floor(Number(body.ticketId)||0),telegramId=String(auth.user.id);if(!ticketId)throw new ApiError(400,"Некорректное обращение.");const row=await env.DB.prepare(`SELECT t.id FROM support_tickets t JOIN support_ticket_meta m ON m.ticket_id=t.id WHERE t.id=? AND t.player_telegram_id=? AND m.source='player' LIMIT 1`).bind(ticketId,telegramId).first();if(!row)throw new ApiError(404,"Обращение не найдено.");const now=Math.floor(Date.now()/1000);await env.DB.prepare(`UPDATE support_ticket_meta SET player_last_read_at=?,updated_at=MAX(updated_at,?) WHERE ticket_id=?`).bind(now,now,ticketId).run();return jsonResponse({ok:true,ticketId,readAt:now});}catch(error){if(error instanceof ApiError)return jsonResponse({ok:false,error:error.message},error.status);return jsonResponse({ok:false,error:"Не удалось отметить ответ прочитанным."},500);}
+  try{await ensurePlayerSupportSchema(env);const body=await readJson(request),auth=await validatePlayerSupportInitData(String(body.initData||""),env),ticketId=Math.floor(Number(body.ticketId)||0),telegramId=String(auth.user.id);if(!ticketId)throw new ApiError(400,"Некорректное обращение.");const row=await env.DB.prepare(`SELECT t.id FROM support_tickets t JOIN support_ticket_meta m ON m.ticket_id=t.id WHERE t.id=? AND t.player_telegram_id=? AND m.source='player' LIMIT 1`).bind(ticketId,telegramId).first();if(!row)throw new ApiError(404,"Обращение не найдено.");const now=Math.floor(Date.now()/1000);await env.DB.prepare(`UPDATE support_ticket_meta SET player_last_read_at=?,updated_at=MAX(updated_at,?) WHERE ticket_id=?`).bind(now,now,ticketId).run();return jsonResponse({ok:true,ticketId,readAt:now});}catch(error){if(error instanceof ApiError)return jsonResponse({ok:false,error:error.message},error.status);return jsonResponse({ok:false,error:"Не удалось отметить ответ прочитанным."},500);}
 }
 
 function supportNewTicketNotification({ticketId,subject,category,message,diagnostics,playerName,telegramId}){
-  const client=diagnostics?.client||{},server=diagnostics?.server||{},profile=diagnostics?.profile||{},lastRun=diagnostics?.lastRun||{},pass=diagnostics?.seasonPass||{},tg=diagnostics?.telegram||{};
+  const client=diagnostics?.client||{},server=diagnostics?.server||{},profile=diagnostics?.profile||{},lastRun=diagnostics?.lastRun||{},pass=diagnostics?.seasonPass||{},tg=diagnostics?.telegram||{},context=diagnostics?.context||{};
   const username=tg.username?`@${tg.username}`:"без username";
   const device=[client.telegramPlatform||client.platform||"",client.os||"",client.telegramVersion?`Telegram ${client.telegramVersion}`:""].filter(Boolean).join(" · ")||"не определено";
   const display=[client.viewport?`viewport ${client.viewport}`:"",client.screen?`screen ${client.screen}`:"",client.devicePixelRatio?`DPR ${client.devicePixelRatio}`:""].filter(Boolean).join(" · ")||"нет данных";
   const network=[client.network||"",client.online===false?"offline":"",client.language||tg.languageCode||"",server.country||"",server.colo||""].filter(Boolean).join(" · ")||"нет данных";
   const level=Number(client.profileLevel||0),profileXp=Number(profile.profile_xp||0),best=Number(profile.best_score||client.localBest||0);
   const passLine=pass?.season_id?`${escapeHtml(String(pass.season_id))} · ${Number(pass.xp||0).toLocaleString("ru-RU")} XP · ${escapeHtml(String(pass.premium_tier||"none"))}`:"нет данных";
+  const moderationTerm=String(context.moderationType||"permanent")==="temporary"&&Number(context.moderationUntil||0)?`до ${formatUtcDate(Number(context.moderationUntil))}`:"бессрочно";
+  const moderationLine=String(category||"")==="moderation"
+    ? `\n⛔ Блокировка: ${context.moderationBlocked?`активна · ${escapeHtml(moderationTerm)}`:"снята"}\nПричина: ${escapeHtml(String(context.moderationReason||"не указана"))}`
+    : "";
   const body=String(message||"");
   return `🛟 <b>Новое обращение #${ticketId}</b>
 
@@ -24765,7 +24801,7 @@ function supportNewTicketNotification({ticketId,subject,category,message,diagnos
 ⭐ Уровень ${level||"?"} · ${profileXp.toLocaleString("ru-RU")} XP · рекорд ${best.toLocaleString("ru-RU")}
 💰 ${Number(profile.wallet||0).toLocaleString("ru-RU")} очков · ${Number(profile.treats||0).toLocaleString("ru-RU")} зефира · ${Number(profile.coffee||0).toLocaleString("ru-RU")} кофе
 🎟 ${passLine}
-🏁 Последний забег: ${lastRun.run_id?`${escapeHtml(String(lastRun.run_id))} · ${Number(lastRun.score||0).toLocaleString("ru-RU")} очков · ${(Number(lastRun.duration_ms||0)/1000).toFixed(1)} сек` : "нет данных"}
+🏁 Последний забег: ${lastRun.run_id?`${escapeHtml(String(lastRun.run_id))} · ${Number(lastRun.score||0).toLocaleString("ru-RU")} очков · ${(Number(lastRun.duration_ms||0)/1000).toFixed(1)} сек` : "нет данных"}${moderationLine}
 
 ${escapeHtml(body.slice(0,1800))}${body.length>1800?"…":""}`;
 }
