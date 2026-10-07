@@ -28278,6 +28278,12 @@ async function notifyPlayerModeration(env, telegramId, text) {
   }
 }
 
+function scheduleModerationBackground(executionCtx, task, label = "moderation background task failed") {
+  const background = Promise.resolve(task).catch((error) => console.error(label, error));
+  if (executionCtx?.waitUntil) executionCtx.waitUntil(background);
+  else void background;
+}
+
 async function expireTemporaryPlayerBan(telegramId, env) {
   const now = Math.floor(Date.now() / 1000);
   const row = await env.DB.prepare(
@@ -54334,9 +54340,10 @@ async function ownerPanelModerationBlock(env, ctx) {
   const after=await blockPlayerAndWipeProgress(env,{telegramId:targetId,reason,blockType,blockedUntil,actor:ctx.user,before});
   await writeModerationHistory(env,targetId,'block',after,ctx.user,reason);
   await logStaffAction(env,ctx.user,ctx.access,'player_block',targetId,'player',0,1,{reason,reasonCode:blockReason.code,reasonTitle:blockReason.title,customReason:blockReason.customReason,reasonLegacy:blockReason.legacy,blockType,blockedUntil,progressReset:true,resetId:after.resetId,resetComponents:after.resetComponents,source:'owner_panel'});
-  await notifyPlayerModeration(env,targetId,`⛔ <b>Доступ к игре ограничен</b>\n\nСрок: <b>${escapeHtml(banDurationLabel(after.blockType,after.blockedUntil))}</b>\nПричина: <b>${escapeHtml(after.blockReason)}</b>\n\nИгровой прогресс и сезонный пропуск обнулены. По вопросам обратитесь в поддержку игры.`);
-  await notifySubscribedStaff(env,'player_blocks',`⛔ <b>Игрок заблокирован и обнулён</b>\n\nИгрок: <code>${escapeHtml(targetId)}</code>\nСрок: ${escapeHtml(banDurationLabel(after.blockType,after.blockedUntil))}\nПричина: ${escapeHtml(after.blockReason)}\nВладелец: ${escapeHtml(telegramDisplayName(ctx.user))}`);
-  return {ok:true,telegramId:targetId,name:await playerDisplayNameById(targetId,env),blockedUntil:after.blockedUntil,blockType:after.blockType,resetId:after.resetId,reason,reasonCode:blockReason.code,reasonTitle:blockReason.title};
+  const name=await playerDisplayNameById(targetId,env);
+  scheduleModerationBackground(ctx.executionCtx,notifyPlayerModeration(env,targetId,`⛔ <b>Доступ к игре ограничен</b>\n\nСрок: <b>${escapeHtml(banDurationLabel(after.blockType,after.blockedUntil))}</b>\nПричина: <b>${escapeHtml(after.blockReason)}</b>\n\nИгровой прогресс и сезонный пропуск обнулены. По вопросам обратитесь в поддержку игры.`),'moderation block player notification failed');
+  scheduleModerationBackground(ctx.executionCtx,notifySubscribedStaff(env,'player_blocks',`⛔ <b>Игрок заблокирован и обнулён</b>\n\nИгрок: <code>${escapeHtml(targetId)}</code>\nСрок: ${escapeHtml(banDurationLabel(after.blockType,after.blockedUntil))}\nПричина: ${escapeHtml(after.blockReason)}\nВладелец: ${escapeHtml(telegramDisplayName(ctx.user))}`),'moderation block staff notification failed');
+  return {ok:true,telegramId:targetId,name,blockedUntil:after.blockedUntil,blockType:after.blockType,resetId:after.resetId,reason,reasonCode:blockReason.code,reasonTitle:blockReason.title};
 }
 
 async function ownerPanelModerationUnblock(env, ctx) {
@@ -54347,8 +54354,9 @@ async function ownerPanelModerationUnblock(env, ctx) {
   const now=Math.floor(Date.now()/1000);await savePlayerAdminControl(targetId,{blocked:false,blockReason:'',lastUnblockedAt:now,lastUnblockedBy:telegramDisplayName(ctx.user)},ctx.user.id,env);
   await writeModerationHistory(env,targetId,'unblock',{blockType:before.blockType,blockReason:before.blockReason,blockedUntil:before.blockedUntil},ctx.user,before.blockReason);
   await logStaffAction(env,ctx.user,ctx.access,'player_unblock',targetId,'player',1,0,{previousReason:before.blockReason,previousBlockType:before.blockType,previousBlockedUntil:before.blockedUntil,source:'owner_panel'});
-  await notifyPlayerModeration(env,targetId,'✅ <b>Доступ к игре восстановлен</b>\n\nВы снова можете пользоваться игрой и участвовать в рейтинге.');
-  return {ok:true,telegramId:targetId,name:await playerDisplayNameById(targetId,env)};
+  const name=await playerDisplayNameById(targetId,env);
+  scheduleModerationBackground(ctx.executionCtx,notifyPlayerModeration(env,targetId,'✅ <b>Доступ к игре восстановлен</b>\n\nВы снова можете пользоваться игрой и участвовать в рейтинге.'),'moderation unblock player notification failed');
+  return {ok:true,telegramId:targetId,name};
 }
 
 async function ownerSupportPlayer360Summary(env, telegramId) {
