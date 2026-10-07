@@ -55,7 +55,7 @@ requireText(worker, 'rawInitData.startsWith(PLAYER_SESSION_BODY_PREFIX)', 'legac
 requireText(worker, 'issuePlayerSession({ ...oidcAuth, user:controlledUser }, env, "telegram-ios")', 'same player session issuance');
 requireText(worker, 'photo_url: String(user.photo_url || "").slice(0, 2048)', 'native profile photo session claim');
 
-requireText(platform, "const VERSION='1.1.0';", 'platform version');
+requireText(platform, "const VERSION='1.2.0';", 'platform version');
 requireText(platform, "const LEGACY_SESSION_PREFIX='sr-session:';", 'client legacy bridge prefix');
 requireText(platform, 'function legacyInitData()', 'client legacy auth bridge');
 requireText(platform, 'legacyInitData,sessionToken', 'platform auth API');
