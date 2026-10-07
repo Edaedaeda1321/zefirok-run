@@ -7,6 +7,7 @@ import vm from 'node:vm';
 const root=process.cwd();
 const read=(p)=>fs.readFileSync(path.join(root,p),'utf8');
 const worker=read('src/worker.js');
+const owner=read('owner.html');
 const index=read('index.html');
 const platform=read('assets/sweet-run-platform.js');
 const gate=read('scripts/check-production-gate.mjs');
@@ -31,6 +32,9 @@ assert('game frame is disabled while blocked',index.includes("gameFrame.inert = 
 assert('block gate exposes rules and support actions',index.includes('Правила блокировки')&&index.includes('Апелляции, статусы и ответы')&&index.includes('openPlayerBlockDocs')&&index.includes('openPlayerBlockSupport'));
 assert('blocked support auth bypass is support-only',worker.includes('async function validatePlayerSupportInitData')&&worker.includes('validateTelegramInitDataSignature(String(initData || ""), env)')&&worker.includes('do not run applyPlayerAdminControl()'));
 assert('moderation appeals have dedicated support category',worker.includes('moderation: "Блокировка и апелляция"')&&worker.includes('category === "moderation"')&&index.includes("body.append('category', 'moderation')"));
+assert('moderation reason catalog is server authoritative',worker.includes('PLAYER_BLOCK_REASON_CATALOG')&&worker.includes("code: '1.4', title: 'Накрутка'")&&worker.includes('reasonCatalog:playerBlockReasonCatalogForClient()')&&worker.includes('resolvePlayerBlockReason(ctx.body)'));
+assert('control center uses catalog plus custom reason',owner.includes('id="moderationReasonCode"')&&owner.includes('id="moderationCustomReasonWrap"')&&owner.includes('syncModerationReasonInput')&&owner.includes("reasonCode:$('moderationReasonCode').value")&&owner.includes("customReason:$('moderationCustomReason').value"));
+assert('fraud shortcut selects review reason code',owner.includes("$('moderationReasonCode').value='1.10'")&&owner.includes('Подозрительная активность · проверка'));
 assert('appeal context is server authoritative',worker.includes('context.moderationBlocked = Boolean(moderation.blocked)')&&worker.includes('context.moderationReason = String(moderation.reason || "")'));
 assert('duplicate open appeals are reused',worker.includes("t.category='moderation' AND t.status IN ('new','working')")&&worker.includes('existingAppeal'));
 assert('support state is loaded lazily from blocked support layer',index.includes('async function openPlayerBlockSupport')&&index.includes('await fetchPlayerBlockSupportState(true)')&&index.includes("support.addEventListener('click', () => void openPlayerBlockSupport"));
