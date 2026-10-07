@@ -1,8 +1,8 @@
 {
   "version": 2,
   "hashAlgorithm": "sha256",
-  "catalogHash": "f09d763ce954576d",
-  "count": 591,
+  "catalogHash": "807383bc138219c1",
+  "count": 592,
   "images": [
     {
       "fileName": "achievements/background_achivment_panel.webp",
@@ -4307,6 +4307,14 @@
       "path": "/assets/ui/icon_background_albom.webp",
       "hash": "9419cba21aae",
       "size": 18762
+    },
+    {
+      "fileName": "ui/icon_banned.webp",
+      "label": "Icon banned",
+      "folder": "ui",
+      "path": "/assets/ui/icon_banned.webp",
+      "hash": "3efab6e8a6c1",
+      "size": 207916
     },
     {
       "fileName": "ui/icon_battlepass.webp",

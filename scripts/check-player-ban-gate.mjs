@@ -20,6 +20,7 @@ assert('startup exposes playerAccess',worker.includes('// PLAYER BAN ACCESS GATE
 assert('blocked auth has structured code',worker.includes("code: 'PLAYER_BLOCKED'")&&worker.includes("operationCode: 'PLAYER_BLOCKED'"));
 assert('startup gate precedes maintenance handling',index.indexOf('const playerAccess = data?.playerAccess')>=0&&index.indexOf('const playerAccess = data?.playerAccess')<index.indexOf('const maintenance = data?.maintenance'));
 assert('large player block gate exists',index.includes('id="zefirok-player-ban-gate-v2"')&&index.includes('function showPlayerBlockGate(access = {})')&&index.includes('Аккаунт заблокирован'));
+assert('blocked screen uses dedicated banned asset',index.includes("iconImage.src = '/assets/ui/icon_banned.webp';")&&fs.existsSync(path.join(root,'assets','ui','icon_banned.webp')));
 assert('ban styles live in host document',countOf(index,'<style id="zefirok-player-ban-gate-v2">')===1&&!index.includes('preparedSource.includes("<style id="zefirok-player-ban-gate-v2">'));
 assert('srcdoc platform injection stays intact',index.includes('preparedSource = preparedSource.includes("</head>") ? preparedSource.replace("</head>", platformTag + "</head>") : platformTag + preparedSource;'));
 const accessHostScript=extractAccessHostScript(index);
