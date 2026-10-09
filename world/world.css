@@ -57,3 +57,18 @@ img,canvas,svg{-webkit-user-drag:none;user-drag:none}
 .catalog-card.cannot-afford { opacity:.78; }
 .catalog-card.cannot-afford.is-active { opacity:1; }
 .edit-summary b { overflow-wrap:anywhere; }
+
+/* V1 living town: friendly, legible progression on small Telegram screens. */
+.metric-people{background:linear-gradient(150deg,#fff0f5ed,#fffdf8f2);border-color:#f1c8d9}
+.metric-people strong{color:#b45282}
+.metric-comfort{background:linear-gradient(150deg,#fff8e5f2,#fffef9ed);border-color:#ecd7af}
+.metric-comfort strong{color:#b48749}
+.metric-comfort small{color:#9d816f;font-size:8px;font-weight:800;line-height:1.05;white-space:nowrap;max-width:100%;overflow:hidden;text-overflow:ellipsis}
+@media(max-width:640px){
+ .map-metrics{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));width:184px;max-width:52%;top:49px;right:9px;gap:5px}
+ .map-metrics .metric{min-width:0;min-height:48px;padding:4px 5px}
+ .map-metrics .metric span{font-size:8px}
+ .map-metrics .metric strong{font-size:17px}
+ .map-metrics .metric-comfort small{font-size:7px}
+}
+@media(max-width:360px){.map-metrics{width:166px}.map-metrics .metric{min-height:42px}.map-metrics .metric strong{font-size:15px}}

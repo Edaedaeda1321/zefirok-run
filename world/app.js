@@ -11,6 +11,7 @@ import {
 } from './engine.js';
 import { drawWorld, drawCatalogThumbnail, screenToTile, isoToScreen, PROJECT_FOCUS } from './renderer.js';
 import { onSpriteUpdate, setSpriteMode, spriteStatus, preloadBuildFrames, preloadSpriteSet, spriteManifest, catalogSpriteId, parkConstructionAssetId, buildingAssetId } from './sprite-assets.js';
+import { buildCitizenScene, sampleCitizenScene } from './citizens.js';
 
 const STORAGE_KEY = 'zefirok-world-v01-sandbox-local';
 const SERVER_MODE = window.ZeffiWorldServerRequired === true;
@@ -23,7 +24,7 @@ const state = {
  camera: { x: 0, y: 0, zoom: 1 },
  undo: [], redo: [], pointers: new Map(), pointerStart: null,
  gesture: null, toastTimer: null, drawScheduled: false, pointerDrag: false,
- loadingFailed: false, visualsReady: false, preparingPlacementArt: false, serverRevision: null, serverReady: false, serverBusy: false, serverPurchasesEnabled: false, serverInitData: '', skipAnimation: null, skipAnimationTimer: null, skipAnimationRaf: null,
+ loadingFailed: false, visualsReady: false, preparingPlacementArt: false, citizenScene: null, citizenSnapshot: null, citizenPopulation: -1, serverRevision: null, serverReady: false, serverBusy: false, serverPurchasesEnabled: false, serverInitData: '', skipAnimation: null, skipAnimationTimer: null, skipAnimationRaf: null,
  skipPreparingUid: null, skipToken: 0
 };
 const iconCodes = { house: 0x1F3E1, coffee: 0x2615, cake: 0x1F370, flower: 0x1F338,
@@ -249,9 +250,11 @@ function scheduleDraw(){
  state.drawScheduled=true;
  requestAnimationFrame(()=>{
   state.drawScheduled=false;
+  const now=Date.now();
   drawWorld(canvas,state.city,CATALOG,state.camera,{
     selectedUid:state.selectedUid,draft:state.draft,mode:state.mode,
-    roadDraft:state.roadDraft,roadValid:state.roadValid, expansionDraft:state.expansionDraft, now:Date.now(),
+    roadDraft:state.roadDraft,roadValid:state.roadValid, expansionDraft:state.expansionDraft,
+    now, citizens:sampleCitizenScene(state.citizenScene,now),
     skipAnimation: state.skipAnimation ? {...state.skipAnimation} : null
   });
  });
@@ -391,12 +394,22 @@ function updateSelection(){
    $('finishBuildTest').textContent=skipPreparing?'Подготовка…':`${tr('skipPaid')} ${cost.coffee} ☕`;
  }
 }
+function syncCitizens(stats){
+ // Rebuild routes only after saved city changes or construction finishes.
+ if(state.citizenSnapshot===state.city && state.citizenPopulation===stats.population)return;
+ state.citizenSnapshot=state.city;
+ state.citizenPopulation=stats.population;
+ state.citizenScene=buildCitizenScene(state.city,CATALOG,stats.population);
+}
 function updateUI(){
  const stats=cityStats(state.city,CATALOG);
- $('buildingsCount').textContent=stats.structures;
+ syncCitizens(stats);
+ $('populationCount').textContent=stats.population.toLocaleString('ru-RU');
+ $('comfortCount').textContent=stats.comfort.toLocaleString('ru-RU');
+ $('comfortTier').textContent=tr(`comfort_${stats.comfortTier}`);
+ $('comfortCard').title=`${tr('comfort')}: ${stats.comfort}. ${tr(`comfort_${stats.comfortTier}`)}`;
+ $('buildingsCount').textContent=stats.completedStructures;
  $('constructingCount').textContent=stats.constructing;
- $('roadsCount').textContent=stats.roads;
- $('connectedCount').textContent=stats.connected;
  $('warehouseBadge').textContent=stats.stored;
  for(const [currency,id] of [['points','walletPoints'],['coffee','walletCoffee'],['treats','walletTreats']])$(id).textContent=state.city.wallet[currency].toLocaleString('ru-RU');
  $('coordLabel').textContent=state.mode==='expand'?`${tr('landPlots')}: ${36+state.city.parcels.length}`:`${576+state.city.parcels.length*16} ${tr('cellsShort')}`;
@@ -786,6 +799,15 @@ function bindEvents(){
  });
  new ResizeObserver(scheduleDraw).observe($('mapZone'));
  document.addEventListener('visibilitychange',()=>{if(!document.hidden){updateUI();scheduleDraw();}});
+ // Draw citizens at a capped 8 fps; gesture handling still gets immediate
+ // animation frames. No loops are scheduled for hidden pages or when system
+ // reduced-motion is enabled. The 12-citizen cap keeps full-map repaints cheap.
+ const motionReduced=window.matchMedia?.('(prefers-reduced-motion: reduce)');
+ setInterval(()=>{
+  if(document.hidden||motionReduced?.matches||!state.visualsReady)return;
+  if(!state.citizenScene?.routes?.length)return;
+  scheduleDraw();
+ },125);
  // Wall-clock countdown: construction continues while the page is closed.
  let previousConstructionCount=cityStats(state.city,CATALOG).constructing;
  setInterval(()=>{
