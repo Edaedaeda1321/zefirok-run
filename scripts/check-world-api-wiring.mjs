@@ -33,7 +33,21 @@ assert(main.includes('const fn=host().world'));
 assert(main.includes('const fn=host().back'));
 assert(main.includes('world-locked-back'));
 assert(main.includes('Мир Зеффи ещё строится!'));
-assert(world.includes('const enabled=local;'), 'hosted /world.html must not load city');
+assert(world.includes('const enabled=local;'), 'normal hosted /world.html stays locked');
+assert(world.includes("get('world_tester')==='1'"), 'tester route explicitly requested');
+assert(world.includes('async function isAuthorizedTester()'), 'hosted city must check server authorization');
+assert(world.includes('payload?.ok===true&&payload?.serverAuthoritative===true'), 'server authorization required before city modules');
+assert(world.includes('if(testerRequest&&await isAuthorizedTester()){launchCity();return;}'), 'no city before server approval');
+assert(world.includes('event.source!==window.parent||event.origin!==location.origin'), 'World auth messages must be same-origin parent');
+assert(main.includes("frame.src=location.protocol==='file:'?'./world-preview.html':'./world.html?world_tester=1'"), 'World overlay must request guarded tester route');
+assert(main.includes("if(e?.data?.type!=='zeffi-world-tester-open')return;"), 'World opens only from runner request');
+assert(main.includes('if(e.source!==runner?.contentWindow||e.origin!==location.origin)return;'), 'World open messages must come from runner iframe');
+assert(main.includes('void openForTester(token);'), 'home button must probe the server before opening the city');
+assert(main.includes('if(!local)return;'), 'hosted game must not inject a second World button');
+// Tester IDs are deployment secrets, never literals in client source.
+for(const id of ['1075203342','1150340018','5454011700']){
+  assert(!main.includes(id)&&!world.includes(id)&&!server.includes(id),'tester ID leaked into client/repository');
+}
 assert(world.includes('ПОКА НЕДОСТУПНО'));
 assert(!world.includes('const enabled=true;'));
 assert(fs.existsSync('assets/ui/icon_world_zeffi.webp'));
