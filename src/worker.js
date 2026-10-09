@@ -1,3 +1,4 @@
+import { handleZeffiWorldApi } from './zeffi-world-service.js';
 import {
   RUNTIME_SCHEMA_REQUIRED_TABLES,
   RUNTIME_SCHEMA_REQUIRED_INDEXES,
@@ -2199,6 +2200,18 @@ export default {
           console.error("Runtime schema contract blocked player API", url.pathname, String(error?.message||error));
           return jsonResponse({ok:false,code:"SCHEMA_NOT_READY",error:"Серверная база требует обслуживания. Попробуй открыть раздел чуть позже."},503);
         }
+      }
+      if (url.pathname.startsWith("/api/world/")) {
+        // Preserve existing legal acceptance requirements for spend operations.
+        // The server module additionally enforces explicit tester access and
+        // fail-closed feature flags before using the shared D1 wallet.
+        if(url.pathname==="/api/world/mutate"){
+          const legalGate=await enforceLegalAcceptanceForRequest(request,env);
+          if(legalGate)return legalGate;
+        }
+        return await handleZeffiWorldApi(request,env,{
+          resolvePlayerAuth,ensureAuthoritativeProfileRow,requirePlayerOperationAvailable
+        });
       }
       if (url.pathname === "/legal.html" && request.method === "GET") {
         if (!env.ASSETS) return new Response("Not found", { status: 404 });

@@ -113,6 +113,8 @@ const steps = [
   ['live content authority', 'node', ['scripts/check-live-content-authority.mjs']],
   // Operation system includes the server-authoritative purchase/case/booster guards.
   ['operation system', 'node', ['scripts/check-operation-system.mjs']],
+  ['Zeffi World wiring', 'node', ['scripts/check-world-api-wiring.mjs']],
+  ['Zeffi World shared D1', 'node', ['--no-warnings','--experimental-sqlite','scripts/check-zeffi-world-integration.mjs']],
   ['game task reward engine', 'node', ['scripts/check-game-task-reward-engine.mjs']],
   ['P1 read paths', 'node', ['scripts/check-p1-read-paths.mjs']],
   ['P2 hardening', 'node', ['scripts/check-p2-hardening.mjs']]
