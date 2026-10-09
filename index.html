@@ -35241,18 +35241,44 @@ html &gt; body.zefirok-game-expanded{height:var(--zefirok-visible-height,100dvh)
   const entry=root?.querySelector('[data-world-open]');
   if(!root||!screen||!entry)return;
   const host=()=&gt;window.zefirokTaskHost||{};
+  let openToken=0;
+  async function openForTester(token){
+    // Only the server-signed Telegram session can authorize a city.
+    // No tester identifiers or trusted balances are stored in the browser.
+    const initData=String(host().auth?.()||window.SweetRunPlatform?.auth?.legacyInitData?.()||window.Telegram?.WebApp?.initData||'');
+    if(!initData||window.parent===window)return;
+    const controller=new AbortController();
+    const timer=window.setTimeout(()=&gt;controller.abort(),8500);
+    try{
+      const response=await fetch('/api/world/state',{
+        method:'POST',headers:{'Content-Type':'application/json'},
+        credentials:'same-origin',cache:'no-store',signal:controller.signal,
+        body:JSON.stringify({initData})
+      });
+      if(!response.ok)return;
+      const data=await response.json();
+      if(!data?.ok||data?.serverAuthoritative!==true)return;
+      if(token!==openToken||screen.hidden)return;
+      window.parent.postMessage({type:'zeffi-world-tester-open'},location.origin);
+    }catch{}finally{window.clearTimeout(timer);}
+  }
   function render(){
     screen.innerHTML=`&lt;div class=&quot;world-locked-shell&quot;&gt;&lt;div class=&quot;world-locked-topbar&quot;&gt;&lt;button class=&quot;world-locked-icon-button&quot; data-world-back type=&quot;button&quot; aria-label=&quot;Назад&quot;&gt;&lt;svg viewBox=&quot;0 0 24 24&quot; aria-hidden=&quot;true&quot;&gt;&lt;path d=&quot;m14 6-6 6 6 6&quot;/&gt;&lt;/svg&gt;&lt;/button&gt;&lt;div class=&quot;world-locked-heading&quot;&gt;&lt;strong&gt;Мир Зеффи&lt;/strong&gt;&lt;span&gt;Скоро открытие&lt;/span&gt;&lt;/div&gt;&lt;span class=&quot;world-locked-spacer&quot; aria-hidden=&quot;true&quot;&gt;&lt;/span&gt;&lt;/div&gt;&lt;div class=&quot;world-locked-card&quot;&gt;&lt;span class=&quot;world-locked-badge&quot;&gt;ПОКА НЕДОСТУПНО&lt;/span&gt;&lt;img class=&quot;world-locked-illustration&quot; src=&quot;/assets/ui/icon_blocked_stranicha.webp&quot; alt=&quot;&quot; loading=&quot;lazy&quot; decoding=&quot;async&quot;&gt;&lt;div class=&quot;world-locked-copy&quot;&gt;&lt;h2&gt;Мир Зеффи ещё строится!&lt;/h2&gt;&lt;p&gt;Зеффи уже возводит уютные домики, мостики и первые улицы своего сладкого городка.&lt;/p&gt;&lt;p&gt;Остались последние штрихи — и совсем скоро она распахнёт ворота для первых гостей!&lt;/p&gt;&lt;/div&gt;&lt;div class=&quot;world-locked-note&quot;&gt;Пока ворота города закрыты для всех. Как только Зеффи закончит строительство, здесь начнётся новое приключение.&lt;/div&gt;&lt;button class=&quot;world-locked-back&quot; data-world-back type=&quot;button&quot;&gt;Вернуться к забегу&lt;/button&gt;&lt;/div&gt;&lt;/div&gt;`;
   }
   function open(){
-    render();
     if(host().running?.())return;
+    render();
+    const token=++openToken;
     let switched=false;
     try{const fn=host().world;if(typeof fn==='function'){fn();switched=true;}}catch{}
     if(!switched||screen.hidden){root.querySelectorAll('.screen').forEach(node=&gt;{node.hidden=node!==screen;});}
     window.requestAnimationFrame(()=&gt;screen.querySelector('[data-world-back]')?.focus({preventScroll:true}));
+    // Guests remain on the existing coming-soon page. Successful testers
+    // enter the actual city only after the Worker has authorized this session.
+    void openForTester(token);
   }
   function back(){
+    ++openToken;
     let switched=false;
     try{const fn=host().back;if(typeof fn==='function'){fn();switched=true;}}catch{}
     if(!switched){
@@ -36339,9 +36365,8 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
   if(window.__ZEFIROK_WORLD_PREVIEW_ENTRY_V1__)return;
   window.__ZEFIROK_WORLD_PREVIEW_ENTRY_V1__=true;
   const local=location.protocol==='file:' || /^(localhost|127\.0\.0\.1|\[::1\])$/i.test(location.hostname);
-  // Public release teaser: the standalone city preview stays local-only.
-  const enabled=local;
-  if(!enabled)return;
+  // Hosted users only get the existing teaser by default. Authenticated
+  // testers may request the existing World overlay; the Worker decides access.
   const ROOT_FRAME_SELECTOR='body > iframe[title="Сладкий Забег"]';
   let worldLayer=null;
   function closeWorld(){
@@ -36370,11 +36395,19 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
     frame.setAttribute('allow','clipboard-write');
     frame.setAttribute('referrerpolicy','no-referrer');
     frame.style.cssText='width:100%;height:100%;border:0;background:#fff8fa;display:block;min-width:0;min-height:0';
-    frame.src=location.protocol==='file:'?'./world-preview.html':'./world.html?world_preview=1';
+    frame.src=location.protocol==='file:'?'./world-preview.html':'./world.html?world_tester=1';
     layer.append(header,frame);
     document.body.append(layer);
     worldLayer=layer;
   }
+  // The button lives inside the existing runner iframe. Never trust a
+  // window message from another origin or from the World overlay itself.
+  window.addEventListener('message',e=>{
+    if(e?.data?.type!=='zeffi-world-tester-open')return;
+    const runner=document.querySelector(ROOT_FRAME_SELECTOR);
+    if(e.source!==runner?.contentWindow||e.origin!==location.origin)return;
+    openWorld();
+  });
   window.addEventListener('message',e=>{
     if(e?.data?.type!=='zeffi-world-request-init-data'||!worldLayer)return;
     const target=worldLayer.querySelector('iframe');
@@ -36432,6 +36465,8 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
     return true;
   }
   function boot(){
+    // Avoid adding a duplicate World button to the hosted home screen.
+    if(!local)return;
     const frame=document.querySelector(ROOT_FRAME_SELECTOR);
     if(!frame)return;
     frame.addEventListener('load',()=>{setTimeout(injectEntry,80);setTimeout(injectEntry,750);});

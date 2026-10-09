@@ -15,10 +15,10 @@ for(const f of modules) assert(fs.existsSync(path.join(root,'world',f)),`missing
 assert(entry.includes('data-srcdoc="'),'runner iframe missing');
 assert(entry.includes('" title="Сладкий Забег"></iframe>'),'runner iframe boundary missing');
 assert((entry.match(/id="zefirok-world-preview-entry-v1"/g)||[]).length===1,'entry script duplicated or missing');
-assert(entry.includes('const enabled=local;'),'hosted preview must remain closed');
+assert(entry.includes('if(!local)return;'),'hosted preview must not add another World button');
 assert(entry.includes('iframe[title="Сладкий Забег"]'),'entry frame selector changed');
 assert(world.includes('<base href="./world/" />'),'world.html must resolve module assets within world/');
-assert(world.includes('const enabled=local;'),'hosted city must remain unavailable');
+assert(world.includes('if(testerRequest&&await isAuthorizedTester()){launchCity();return;}'),'hosted city must require server-authorized Telegram tester');
 assert(world.includes('id="zeffiReturnGame"'),'back-to-main control missing');
 assert(!world.includes('http-equiv="refresh"'),'world.html must not redirect to runner');
 assert(sandbox.includes('src="./app.js"'),'world module sandbox source changed');

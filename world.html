@@ -11,16 +11,62 @@
   <script id="zeffi-world-preview-access">
     (()=>{
       const local=location.protocol==='file:'||/^(localhost|127\.0\.0\.1|\[::1\])$/i.test(location.hostname);
-      // Coming-soon launch: the hosted city is closed for EVERYONE,
-      // including testers and direct URLs such as ?world_preview=1.
-      // The standalone engine remains usable only in local development.
+      // Normal hosted visitors always see the teaser, even with the old
+      // ?world_preview=1 URL. The new ?world_tester=1 route only asks the Worker
+      // whether a signed Telegram session is authorized; it grants no access.
       const enabled=local;
+      const testerRequest=!local&&new URLSearchParams(location.search).get('world_tester')==='1';
       window.ZeffiWorldServerRequired=!local;
       window.ZeffiWorldPreviewAllowed=local;
-      document.addEventListener('DOMContentLoaded',()=>{
+      if(!local){
+        const style=document.createElement('style');
+        style.id='zeffi-world-awaiting-auth-style';
+        style.textContent='html:not(.zeffi-world-ready) body{visibility:hidden}';
+        document.head.append(style);
+      }
+      async function acquireTelegramInitData(){
+        const direct=String(window.Telegram?.WebApp?.initData||'');
+        if(direct)return direct;
+        if(window.parent===window)return '';
+        return new Promise(resolve=>{
+          const requestId=`world-auth-${crypto.randomUUID()}`;
+          let finished=false;
+          const done=value=>{if(finished)return;finished=true;clearTimeout(timer);window.removeEventListener('message',receive);resolve(value);};
+          const receive=event=>{
+            if(event.source!==window.parent||event.origin!==location.origin)return;
+            if(event.data?.type!=='zeffi-world-init-data'||event.data?.requestId!==requestId)return;
+            done(String(event.data.initData||''));
+          };
+          const timer=setTimeout(()=>done(''),3000);
+          window.addEventListener('message',receive);
+          window.parent.postMessage({type:'zeffi-world-request-init-data',requestId},location.origin);
+        });
+      }
+      async function isAuthorizedTester(){
+        const initData=await acquireTelegramInitData();
+        if(!initData)return false;
+        const controller=new AbortController();
+        const timer=setTimeout(()=>controller.abort(),8000);
+        try{
+          const response=await fetch('/api/world/state',{
+            method:'POST',headers:{'Content-Type':'application/json'},
+            credentials:'same-origin',cache:'no-store',signal:controller.signal,
+            body:JSON.stringify({initData})
+          });
+          if(!response.ok)return false;
+          const payload=await response.json();
+          return payload?.ok===true&&payload?.serverAuthoritative===true;
+        }catch{return false;}finally{clearTimeout(timer);}
+      }
+      function launchCity(){
+        document.documentElement.classList.add('zeffi-world-ready');
+        const script=document.createElement('script');script.type='module';script.src='./app.js';document.head.appendChild(script);
+      }
+      document.addEventListener('DOMContentLoaded',async()=>{
         if(!enabled){
-          // This is only a presentation route: no game modules, API requests,
-          // city initialization or real-wallet operations are started here.
+          if(testerRequest&&await isAuthorizedTester()){launchCity();return;}
+          // Everyone without a signed, allowlisted Telegram session gets only
+          // this static teaser, not city modules or wallet operations.
           document.title='Мир Зеффи — скоро открытие';
           document.querySelector('link[rel="stylesheet"]')?.remove();
           document.body.style.cssText='margin:0;min-height:100dvh;background:linear-gradient(180deg,#fff8fb,#fff0f6);font-family:system-ui,-apple-system,sans-serif;color:#713850';
@@ -34,9 +80,10 @@
               <a href="/" style="display:block;margin-top:22px;padding:14px 12px;border-radius:16px;background:linear-gradient(135deg,#ef90b4,#dc6596);color:#fff;text-decoration:none;font-weight:800">Вернуться к забегу</a>
             </section>
           </main>`;
+          document.documentElement.classList.add('zeffi-world-ready');
           return;
         }
-        const script=document.createElement('script');script.type='module';script.src='./app.js';document.head.appendChild(script);
+        launchCity();
       },{once:true});
     })();
   </script>
