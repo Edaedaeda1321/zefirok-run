@@ -35259,7 +35259,13 @@ html &gt; body.zefirok-game-expanded{height:var(--zefirok-visible-height,100dvh)
       const data=await response.json();
       if(!data?.ok||data?.serverAuthoritative!==true)return;
       if(token!==openToken||screen.hidden)return;
-      window.parent.postMessage({type:'zeffi-world-tester-open'},location.origin);
+      // The game runs as about:srcdoc. Its location.origin is not a reliable
+      // targetOrigin even with a same-origin sandbox. Read the embedding frame's
+      // actual origin, and never send a privileged open message to another site.
+      let parentOrigin='';
+      try{parentOrigin=String(window.parent.location.origin||'');}catch{return;}
+      if(!/^https?:\/\//.test(parentOrigin))return;
+      window.parent.postMessage({type:'zeffi-world-tester-open'},parentOrigin);
     }catch{}finally{window.clearTimeout(timer);}
   }
   function render(){
@@ -36416,7 +36422,15 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
     if(!/^world-auth-[a-zA-Z0-9-]{20,90}$/.test(requestId))return;
     const runner=document.querySelector(ROOT_FRAME_SELECTOR);
     let initData='';
-    try{initData=String(runner?.contentWindow?.Telegram?.WebApp?.initData||window.Telegram?.WebApp?.initData||'');}catch{}
+    // The runner's authoritative Telegram profile may be available only
+    // through zefirokTaskHost.auth(), not the raw Telegram WebApp global.
+    // Keep the signed session inside same-origin, verified overlay frames.
+    try{initData=String(runner?.contentWindow?.zefirokTaskHost?.auth?.()
+      ||runner?.contentWindow?.SweetRunPlatform?.auth?.legacyInitData?.()
+      ||runner?.contentWindow?.Telegram?.WebApp?.initData
+      ||window.SweetRunPlatform?.auth?.legacyInitData?.()
+      ||window.Telegram?.WebApp?.initData||'');}
+    catch{try{initData=String(window.SweetRunPlatform?.auth?.legacyInitData?.()||window.Telegram?.WebApp?.initData||'');}catch{}}
     target.contentWindow.postMessage({type:'zeffi-world-init-data',requestId,initData},location.origin);
   });
   window.addEventListener('message',e=>{
