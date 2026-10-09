@@ -25,7 +25,9 @@ test('no selectable content or 3D/2D toggle in both hosted and standalone city p
  const runtime=read('../app.js');
  for(const html of [read('../../world.html'),read('../index.html')]){
   assert.doesNotMatch(html,/id="artModeButton"/);
-  assert.match(html,/data-t="connected" title=/);
+  assert.match(html,/data-t="population"/);
+  assert.match(html,/data-t="comfort"/);
+  assert.match(html,/id="comfortTier"/);
  }
  assert.match(style,/-webkit-user-select:none!important/);
  assert.match(style,/-webkit-touch-callout:none!important/);
@@ -42,7 +44,9 @@ test('signed server city prepares image art before displaying the D1 snapshot',(
  assert(start>=0&&prepared>start&&accepted>prepared);
  assert.match(source,/if\(art.failed\)throw new Error/);
  assert.match(source,/for\(let rotation=0;rotation<4;rotation\+\+\)/);
- assert.match(source,/stats\.structures/);
+ assert.match(source,/stats\.population/);
+ assert.match(source,/stats\.comfort/);
+ assert.match(source,/sampleCitizenScene/);
  assert.match(source,/await preloadBuildFrames\(item.kind,item.rotation\);/);
  assert.doesNotMatch(source,/Promise\.race\(\[preloadBuildFrames/);
 });

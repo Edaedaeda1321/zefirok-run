@@ -392,20 +392,73 @@ export function isObjectConnected(item, city, catalog, connected = connectedRoad
   return false;
 }
 
+// Non-monetary city progression is derived from authoritative city state.
+// It never changes a save, a wallet, D1, or the price of existing objects.
+const RESIDENTS_BY_KIND = Object.freeze({
+  'cottage':2, 'family-home':4, 'villa':6,
+  'coffee-kiosk':1, 'coffee-house':2, 'bakery':2, 'flower-shop':1
+});
+const COMFORT_BY_KIND = Object.freeze({
+  'cottage':6, 'family-home':10, 'villa':14,
+  'coffee-kiosk':8, 'coffee-house':12, 'bakery':10, 'flower-shop':9,
+  'garden':18, 'playground':15,
+  'tree':2, 'flowerbed':2, 'lamp':3, 'bench':3,
+  'fountain':8, 'monument':10,
+  'extra-tree':2, 'extra-flowerbed':2, 'extra-bush':1,
+  'extra-lamp':3, 'extra-bench':3, 'extra-planter':2,
+  'extra-arch':5, 'extra-fountain':8, 'extra-sign':2,
+  'extra-sweet_object':4
+});
+export function comfortTierFor(score){
+  if(score>=200)return 'magical';
+  if(score>=100)return 'town';
+  if(score>=50)return 'district';
+  if(score>=20)return 'corner';
+  return 'empty';
+}
+export function visibleCitizenCount(population){
+  // A big city has many residents, but at most 12 animated characters on
+  // mobile. This is an animation budget, not an artificial population cap.
+  return Math.min(12,Math.max(0,Math.ceil(Math.max(0,population)/4)));
+}
 export function cityStats(city, catalog, now = Date.now()) {
   const connected = connectedRoads(city);
   const placed = city.objects.filter(item => !item.stored);
+  let population=0,comfort=0,structures=0,completedStructures=0;
+  let constructing=0,connectedCount=0,disconnected=0;
+  const kinds=new Set();
+  for(const item of placed){
+    const def=catalog[item.kind];
+    if(!def)continue;
+    const underConstruction=isConstructing(item,now);
+    if(underConstruction)constructing++;
+    if(['homes','shops'].includes(def.category)){
+      structures++;
+      if(!underConstruction)completedStructures++;
+    }
+    const roadAccess=!underConstruction && isObjectConnected(item,city,catalog,connected,now);
+    if(def.needsRoad){
+      if(roadAccess)connectedCount++;
+      else if(!underConstruction)disconnected++;
+    }
+    if(underConstruction)continue;
+    kinds.add(def.category);
+    comfort+=COMFORT_BY_KIND[item.kind]|| (def.category==='plazas'?6:0);
+    if(def.needsRoad && roadAccess){
+      // A road connection brings new citizens; disconnected buildings wait.
+      population+=RESIDENTS_BY_KIND[item.kind]||0;
+      comfort+=2;
+    }
+  }
+  if(['homes','shops','parks'].every(kind=>kinds.has(kind)))comfort+=10;
   return {
-    buildings: placed.length,
-    // Only real residences and shops; the separate buildings field stays
-    // backward-compatible for older saves, diagnostics and tests.
-    structures: placed.filter(item => ['homes','shops'].includes(catalog[item.kind]?.category)).length,
-    constructing: placed.filter(item => isConstructing(item, now)).length,
-    ready: placed.filter(item => !isConstructing(item, now)).length,
-    roads: city.roads.length,
-    stored: city.objects.length - placed.length,
-    connected: placed.filter(item => catalog[item.kind]?.needsRoad && isObjectConnected(item, city, catalog, connected, now)).length,
-    disconnected: placed.filter(item => catalog[item.kind]?.needsRoad && !isObjectConnected(item, city, catalog, connected, now) && !isConstructing(item, now)).length
+    // Keep all legacy metrics for old diagnostics, clients and D1 requests.
+    buildings: placed.length, structures, completedStructures,
+    constructing, ready:placed.length-constructing,
+    roads:city.roads.length, stored:city.objects.length-placed.length,
+    connected:connectedCount, disconnected,
+    population, comfort, comfortTier:comfortTierFor(comfort),
+    visibleCitizens:visibleCitizenCount(population)
   };
 }
 

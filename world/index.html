@@ -34,9 +34,10 @@
     <div class="map-coordinates"><span class="coordinate-dot"></span><span id="coordLabel">24 x 24</span></div>
    </div>
    <div class="map-metrics">
-    <div class="metric"><span data-t="objects"></span><strong id="buildingsCount">0</strong></div>
-    <div class="metric"><span data-t="roads"></span><strong id="roadsCount">0</strong></div>
-    <div class="metric"><span data-t="connected" title="Здания с доступом к основной дороге"></span><strong id="connectedCount">0</strong></div><div class="metric metric-build"><span data-t="buildInProgress"></span><strong id="constructingCount">0</strong></div>
+    <div class="metric metric-people"><span data-t="population"></span><strong id="populationCount">0</strong></div>
+    <div class="metric metric-comfort" id="comfortCard"><span data-t="comfort"></span><strong id="comfortCount">0</strong><small id="comfortTier" aria-live="polite"></small></div>
+    <div class="metric"><span data-t="completedStructures"></span><strong id="buildingsCount">0</strong></div>
+    <div class="metric metric-build"><span data-t="buildInProgress"></span><strong id="constructingCount">0</strong></div>
    </div>
    <div class="world-tools" role="toolbar" aria-label="City tools">
     <button id="toolSelect" data-tool="select" type="button" class="tool-button is-active" aria-label="Select tool" title="Select tool"><span class="tool-glyph">&#x261e;</span><small data-t="selectMode"></small></button>

@@ -1,5 +1,6 @@
 import { dims, keyOf, connectedRoads, isObjectConnected, checkPlacement, isConstructing, rotateLocalPoint, expansionCandidates, PARCEL_SIZE } from './engine.js';
 import { drawSprite, drawCatalogSprite, catalogSpriteId, fallbackSpriteId, buildingAssetId, parkConstructionAssetId, roadMaskId } from './sprite-assets.js';
+import { drawCitizen } from './citizens.js';
 
 export const TILE_W = 72;
 export const TILE_H = 36;
@@ -577,11 +578,24 @@ export function drawWorld(canvas,city,catalog,cam,overlay={}) {
  }
  drawRoads(ctx,city,viewport);
  const connected=connectedRoads(city);
- const objects=city.objects.filter(o=>!o.stored && catalog[o.kind]?.layer!=='surface').slice().sort((a,b)=>{
-  const da=dims(catalog[a.kind],a.rotation),db=dims(catalog[b.kind],b.rotation);
-  return (a.x+a.y+da.w+da.h)-(b.x+b.y+db.w+db.h);
+ // Buildings and citizens share one depth-sorted painter. Residents walking
+ // behind a house should disappear behind it, not float over its roof.
+ const layers=city.objects.filter(o=>!o.stored && catalog[o.kind]?.layer!=='surface').map(item=>{
+  const size=dims(catalog[item.kind],item.rotation);
+  return {type:'object',item,depth:item.x+item.y+size.w+size.h};
  });
- for(const item of objects){
+ for(const person of overlay.citizens||[]){
+  if(person.x<viewport.minX-2||person.y<viewport.minY-2||person.x>viewport.maxX+2||person.y>viewport.maxY+2)continue;
+  layers.push({type:'citizen',person,depth:person.x+person.y});
+ }
+ layers.sort((a,b)=>a.depth-b.depth||(a.type==='citizen'?-1:1));
+ for(const layer of layers){
+  if(layer.type==='citizen'){
+   const pos=P(layer.person.x,layer.person.y);
+   drawCitizen(ctx,layer.person,pos.x,pos.y,overlay.now);
+   continue;
+  }
+  const item=layer.item;
   const def=catalog[item.kind];
   if(!def)continue;
   if(item.x>viewport.maxX+3||item.y>viewport.maxY+3||item.x+def.w<viewport.minX-3||item.y+def.h<viewport.minY-3)continue;
