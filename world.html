@@ -10,16 +10,30 @@
   <link rel="stylesheet" href="./world.css" />
   <script id="zeffi-world-preview-access">
     (()=>{
-      const qp=new URLSearchParams(location.search);
       const local=location.protocol==='file:'||/^(localhost|127\.0\.0\.1|\[::1\])$/i.test(location.hostname);
-      // Local/offline stays sandboxed. Hosted access always requires verified
-      // Telegram identity and the backend's explicit WORLD_ENABLED/tester gates.
-      const enabled=true;
+      // Coming-soon launch: the hosted city is closed for EVERYONE,
+      // including testers and direct URLs such as ?world_preview=1.
+      // The standalone engine remains usable only in local development.
+      const enabled=local;
       window.ZeffiWorldServerRequired=!local;
       window.ZeffiWorldPreviewAllowed=local;
       document.addEventListener('DOMContentLoaded',()=>{
         if(!enabled){
-          document.body.innerHTML='<main style="max-width:440px;margin:16vh auto;padding:32px 24px;border:1px solid #efd5dd;border-radius:22px;background:#fff;text-align:center;font-family:system-ui;color:#824c61"><h1>Мир Зеффи</h1><p>Режим проходит внутреннее тестирование и пока недоступен игрокам.</p><a href="../index.html" style="color:#bf5981">В Сладкий Забег</a></main>';
+          // This is only a presentation route: no game modules, API requests,
+          // city initialization or real-wallet operations are started here.
+          document.title='Мир Зеффи — скоро открытие';
+          document.querySelector('link[rel="stylesheet"]')?.remove();
+          document.body.style.cssText='margin:0;min-height:100dvh;background:linear-gradient(180deg,#fff8fb,#fff0f6);font-family:system-ui,-apple-system,sans-serif;color:#713850';
+          document.body.innerHTML=`<main style="box-sizing:border-box;max-width:480px;min-height:100dvh;margin:0 auto;padding:28px 18px 48px;display:grid;align-content:center;gap:17px;text-align:center">
+            <header><strong style="font-size:24px">Мир Зеффи</strong><div style="font-size:12px;color:#a57489;margin-top:4px">Скоро открытие</div></header>
+            <section style="padding:24px 20px 25px;border:1px solid #edcbd9;border-radius:30px;background:linear-gradient(180deg,#fff,#fff6f9);box-shadow:0 16px 36px #a4648220">
+              <span style="display:inline-block;padding:8px 12px;border-radius:99px;background:#fff0f5;color:#9a5e77;font-size:11px;font-weight:800;letter-spacing:.045em">ПОКА НЕДОСТУПНО</span>
+              <img src="/assets/ui/icon_blocked_stranicha.webp" alt="Зеффи строит новый город" style="display:block;width:min(100%,320px);height:auto;margin:10px auto;filter:drop-shadow(0 10px 16px #cd97aa44)">
+              <h1 style="margin:10px 0;font-size:27px;line-height:1.12">Мир Зеффи ещё строится!</h1>
+              <p style="margin:0;color:#876674;font-size:14px;line-height:1.55">Зеффи возводит уютные домики, мостики и первые улицы своего сладкого городка. Остались последние штрихи — и совсем скоро она распахнёт ворота для первых гостей!</p>
+              <a href="/" style="display:block;margin-top:22px;padding:14px 12px;border-radius:16px;background:linear-gradient(135deg,#ef90b4,#dc6596);color:#fff;text-decoration:none;font-weight:800">Вернуться к забегу</a>
+            </section>
+          </main>`;
           return;
         }
         const script=document.createElement('script');script.type='module';script.src='./app.js';document.head.appendChild(script);

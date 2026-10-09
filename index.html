@@ -12688,7 +12688,81 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
 &lt;/button&gt;
 &lt;/div&gt;
 &lt;section class=&quot;screen&quot; data-screen=&quot;tasks&quot; hidden&gt;&lt;/section&gt;
+&lt;section class=&quot;screen&quot; data-screen=&quot;world-locked&quot; hidden&gt;&lt;/section&gt;
 &lt;section class=&quot;screen&quot; data-screen=&quot;game&quot;&gt;
+&lt;style id=&quot;zefirok-game-home-shortcuts-v1&quot;&gt;
+#zefirok-maltipoo-runner .game-home-shortcuts{
+  display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin:8px 0 14px;
+}
+#zefirok-maltipoo-runner .game-home-shortcuts &gt; *{min-width:0}
+#zefirok-maltipoo-runner .game-home-shortcuts .tasks-entry,
+#zefirok-maltipoo-runner .game-home-shortcuts .world-entry{
+  position:relative;box-sizing:border-box;width:100%;min-height:102px;margin:0;padding:16px 14px 14px;
+  display:flex;flex-direction:column;justify-content:center;align-items:center;gap:10px;
+  border-radius:24px;text-align:center;cursor:pointer;overflow:hidden;
+  transition:transform .14s ease,box-shadow .14s ease,opacity .14s ease,border-color .14s ease;
+  box-shadow:0 10px 26px rgba(104,56,77,.12);
+}
+#zefirok-maltipoo-runner .game-home-shortcuts .tasks-entry{
+  border:1px solid rgba(233,180,198,.72);
+  background:linear-gradient(145deg,#fff8fb 0%,#fff1f6 100%);color:#6b4050;
+}
+#zefirok-maltipoo-runner .game-home-shortcuts .world-entry{
+  border:1px solid rgba(129,98,120,.52);
+  background:linear-gradient(145deg,#3d343b 0%,#47393f 100%);color:#fff6fb;
+}
+#zefirok-maltipoo-runner .game-home-shortcuts .tasks-entry:active,
+#zefirok-maltipoo-runner .game-home-shortcuts .world-entry:active{transform:translateY(1px) scale(.995)}
+#zefirok-maltipoo-runner .game-home-shortcuts .tasks-entry[hidden],
+#zefirok-maltipoo-runner .game-home-shortcuts .world-entry[hidden]{display:none!important}
+#zefirok-maltipoo-runner .game-home-shortcuts .tasks-entry__icon,
+#zefirok-maltipoo-runner .game-home-shortcuts .world-entry__icon{
+  width:56px;height:56px;display:grid;place-items:center;border-radius:16px;overflow:hidden
+}
+#zefirok-maltipoo-runner .game-home-shortcuts .tasks-entry__icon{
+  background:linear-gradient(145deg,#fff,#ffeaf2);box-shadow:inset 0 0 0 1px rgba(224,143,174,.18)
+}
+#zefirok-maltipoo-runner .game-home-shortcuts .world-entry__icon{
+  background:linear-gradient(145deg,rgba(255,255,255,.2),rgba(255,255,255,.08));box-shadow:inset 0 0 0 1px rgba(255,255,255,.14)
+}
+#zefirok-maltipoo-runner .game-home-shortcuts .tasks-entry__icon img,
+#zefirok-maltipoo-runner .game-home-shortcuts .world-entry__icon img{display:block;width:51px;height:51px;object-fit:contain}
+#zefirok-maltipoo-runner .game-home-shortcuts .tasks-entry__copy,
+#zefirok-maltipoo-runner .game-home-shortcuts .world-entry__copy{display:grid;gap:4px;min-width:0}
+#zefirok-maltipoo-runner .game-home-shortcuts .tasks-entry__title-row{display:flex;align-items:center;justify-content:center;gap:7px;min-width:0;flex-wrap:wrap}
+#zefirok-maltipoo-runner .game-home-shortcuts .tasks-entry__copy strong,
+#zefirok-maltipoo-runner .game-home-shortcuts .world-entry__copy strong{font-size:18px;line-height:1.08;font-weight:950}
+#zefirok-maltipoo-runner .game-home-shortcuts .tasks-entry__copy strong{color:#7a3151}
+#zefirok-maltipoo-runner .game-home-shortcuts .world-entry__copy strong{color:#fff8fc}
+#zefirok-maltipoo-runner .game-home-shortcuts .tasks-entry__copy small,
+#zefirok-maltipoo-runner .game-home-shortcuts .world-entry__copy small{display:block;color:#8f6b79;font-size:10px;line-height:1.3;font-weight:750;white-space:normal}
+#zefirok-maltipoo-runner .game-home-shortcuts .world-entry__copy small{color:rgba(255,238,247,.76)}
+#zefirok-maltipoo-runner .game-home-shortcuts .tasks-entry__chevron{display:none}
+#zefirok-maltipoo-runner .game-home-shortcuts .tasks-entry__badge{
+  position:absolute;right:10px;top:10px;min-width:24px;height:24px;padding:0 7px;box-sizing:border-box;
+  display:grid;place-items:center;border:2px solid #fff;border-radius:999px;
+  background:linear-gradient(145deg,#f28db2,#dd5f91);color:#fff;font-size:11px;font-weight:950;
+  box-shadow:0 5px 12px rgba(172,65,107,.2)
+}
+#zefirok-maltipoo-runner .game-home-shortcuts .tasks-entry__badge[hidden]{display:none!important}
+#zefirok-maltipoo-runner .game-home-shortcuts .tasks-entry.has-ready{border-color:rgba(224,169,74,.58);background:radial-gradient(circle at 92% 7%,rgba(255,225,146,.38),transparent 32%),linear-gradient(145deg,#fff9fb 0%,#ffe9f1 58%,#fff2d7 100%);box-shadow:0 10px 24px rgba(144,84,70,.10)}
+#zefirok-maltipoo-runner .game-home-shortcuts .tasks-entry.has-unread{border-color:rgba(219,108,151,.68);box-shadow:0 10px 26px rgba(177,72,116,.13),0 0 0 3px rgba(238,139,177,.07)}
+#zefirok-maltipoo-runner .game-home-shortcuts .world-entry:before{
+  content:&quot;&quot;;position:absolute;inset:auto auto -18px -18px;width:76px;height:76px;border-radius:999px;
+  background:radial-gradient(circle,rgba(255,255,255,.22) 0%,rgba(255,255,255,0) 72%);pointer-events:none
+}
+@media (max-width: 380px){
+  #zefirok-maltipoo-runner .game-home-shortcuts{gap:10px}
+  #zefirok-maltipoo-runner .game-home-shortcuts .tasks-entry,
+  #zefirok-maltipoo-runner .game-home-shortcuts .world-entry{min-height:96px;padding:14px 10px 12px}
+  #zefirok-maltipoo-runner .game-home-shortcuts .tasks-entry__copy strong,
+  #zefirok-maltipoo-runner .game-home-shortcuts .world-entry__copy strong{font-size:16px}
+}
+&lt;/style&gt;
+&lt;div class=&quot;game-home-shortcuts&quot; data-game-home-shortcuts&gt;
+  &lt;button class=&quot;tasks-entry&quot; data-tasks-open type=&quot;button&quot; aria-label=&quot;Открыть задания&quot;&gt;&lt;span class=&quot;tasks-entry__icon&quot; aria-hidden=&quot;true&quot;&gt;&lt;img src=&quot;/assets/ui/icon_quest_game.webp&quot; alt=&quot;&quot;&gt;&lt;/span&gt;&lt;span class=&quot;tasks-entry__copy&quot;&gt;&lt;span class=&quot;tasks-entry__title-row&quot;&gt;&lt;strong&gt;Задания&lt;/strong&gt;&lt;em class=&quot;tasks-entry__new&quot; data-tasks-new hidden&gt;НОВОЕ ✨&lt;/em&gt;&lt;/span&gt;&lt;small data-tasks-summary&gt;Цели и награды&lt;/small&gt;&lt;/span&gt;&lt;span class=&quot;tasks-entry__chevron&quot; aria-hidden=&quot;true&quot;&gt;›&lt;/span&gt;&lt;b class=&quot;tasks-entry__badge&quot; data-tasks-badge hidden&gt;0&lt;/b&gt;&lt;/button&gt;
+  &lt;button class=&quot;world-entry&quot; data-world-open type=&quot;button&quot; aria-label=&quot;Открыть Мир Зеффи&quot;&gt;&lt;span class=&quot;world-entry__icon&quot; aria-hidden=&quot;true&quot;&gt;&lt;img src=&quot;/assets/ui/icon_world_zeffi.webp&quot; alt=&quot;&quot;&gt;&lt;/span&gt;&lt;span class=&quot;world-entry__copy&quot;&gt;&lt;strong&gt;Мир Зеффи&lt;/strong&gt;&lt;small&gt;Скоро откроется&lt;/small&gt;&lt;/span&gt;&lt;/button&gt;
+&lt;/div&gt;
 &lt;div aria-live=&quot;polite&quot; class=&quot;hud&quot;&gt;
 &lt;div class=&quot;stat&quot;&gt;&lt;img alt=&quot;&quot; class=&quot;stat-icon&quot; data-shop-img=&quot;iconScore&quot;/&gt;&lt;span&gt;Очки&lt;/span&gt;&lt;strong data-score=&quot;&quot;&gt;0&lt;/strong&gt;&lt;/div&gt;
 &lt;div class=&quot;stat&quot;&gt;&lt;img alt=&quot;&quot; class=&quot;stat-icon&quot; data-shop-img=&quot;iconRecord&quot;/&gt;&lt;span&gt;Рекорд&lt;/span&gt;&lt;strong data-best=&quot;&quot;&gt;0&lt;/strong&gt;&lt;/div&gt;
@@ -12699,39 +12773,6 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
   &lt;div class=&quot;liveops-run-banner-icon&quot; aria-hidden=&quot;true&quot;&gt;⚡&lt;/div&gt;
   &lt;div class=&quot;liveops-run-banner-copy&quot;&gt;&lt;strong data-liveops-run-title&gt;LiveOps&lt;/strong&gt;&lt;span data-liveops-run-meta&gt;&lt;/span&gt;&lt;/div&gt;
 &lt;/div&gt;
-&lt;style id=&quot;zefirok-task-entry-v4&quot;&gt;
-#zefirok-maltipoo-runner .tasks-entry{
-  position:relative;width:100%;min-height:70px;margin:8px 0 12px;padding:12px 54px 12px 14px;
-  display:grid;grid-template-columns:52px minmax(0,1fr);align-items:center;gap:12px;
-  border:1px solid rgba(233,180,198,.72);border-radius:22px;
-  background:linear-gradient(145deg,#fff8fb 0%,#fff1f6 100%);color:#6b4050;text-align:left;
-  box-shadow:0 8px 20px rgba(123,69,89,.08);cursor:pointer;
-  transition:transform .14s ease,box-shadow .14s ease,opacity .14s ease,border-color .14s ease;
-}
-#zefirok-maltipoo-runner .tasks-entry:active{transform:translateY(1px) scale(.995)}
-#zefirok-maltipoo-runner .tasks-entry[hidden]{display:none!important}
-#zefirok-maltipoo-runner .tasks-entry__icon{
-  width:52px;height:52px;display:grid;place-items:center;border-radius:16px;
-  background:linear-gradient(145deg,#fff,#ffeaf2);box-shadow:inset 0 0 0 1px rgba(224,143,174,.18);overflow:hidden
-}
-#zefirok-maltipoo-runner .tasks-entry__icon img{display:block;width:40px;height:40px;object-fit:contain}
-#zefirok-maltipoo-runner .tasks-entry__copy{display:grid;gap:4px;min-width:0}
-#zefirok-maltipoo-runner .tasks-entry__copy strong{font-size:14px;line-height:1.1;font-weight:950;color:#7a3151}
-#zefirok-maltipoo-runner .tasks-entry__copy small{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#8f6b79;font-size:9px;line-height:1.25;font-weight:750}
-#zefirok-maltipoo-runner .tasks-entry__chevron{
-  position:absolute;right:16px;top:50%;transform:translateY(-50%);
-  color:#df6f9b;font-size:20px;font-weight:950;line-height:1
-}
-#zefirok-maltipoo-runner .tasks-entry__badge{
-  position:absolute;right:12px;top:-8px;min-width:26px;height:26px;padding:0 7px;box-sizing:border-box;
-  display:grid;place-items:center;border:2px solid #fff;border-radius:999px;
-  background:linear-gradient(145deg,#f28db2,#dd5f91);color:#fff;font-size:11px;font-weight:950;
-  box-shadow:0 5px 12px rgba(172,65,107,.2)
-}
-#zefirok-maltipoo-runner .tasks-entry__badge[hidden]{display:none!important}
-#zefirok-maltipoo-runner .tasks-entry.has-ready{border-color:rgba(226,126,165,.68);background:linear-gradient(145deg,#fff8fb 0%,#ffe5ef 54%,#ffdae8 100%)}
-&lt;/style&gt;
-&lt;button class=&quot;tasks-entry&quot; data-tasks-open type=&quot;button&quot; aria-label=&quot;Открыть задания&quot;&gt;&lt;span class=&quot;tasks-entry__icon&quot; aria-hidden=&quot;true&quot;&gt;&lt;img src=&quot;/assets/ui/icon_quest_game.webp&quot; alt=&quot;&quot;&gt;&lt;/span&gt;&lt;span class=&quot;tasks-entry__copy&quot;&gt;&lt;span class=&quot;tasks-entry__title-row&quot;&gt;&lt;strong&gt;Задания&lt;/strong&gt;&lt;em class=&quot;tasks-entry__new&quot; data-tasks-new hidden&gt;НОВОЕ ✨&lt;/em&gt;&lt;/span&gt;&lt;small data-tasks-summary&gt;Цели и награды&lt;/small&gt;&lt;/span&gt;&lt;span class=&quot;tasks-entry__chevron&quot; aria-hidden=&quot;true&quot;&gt;›&lt;/span&gt;&lt;b class=&quot;tasks-entry__badge&quot; data-tasks-badge hidden&gt;0&lt;/b&gt;&lt;/button&gt;
 &lt;div class=&quot;stage&quot; data-stage=&quot;&quot;&gt;
 &lt;button aria-label=&quot;Развернуть игру на весь экран&quot; aria-pressed=&quot;false&quot; class=&quot;game-expand-toggle&quot; data-game-expand-toggle title=&quot;На весь экран&quot; type=&quot;button&quot;&gt;
 &lt;svg aria-hidden=&quot;true&quot; class=&quot;game-expand-icon game-expand-icon--expand&quot; viewBox=&quot;0 0 24 24&quot;&gt;&lt;path d=&quot;M8 3H3v5M16 3h5v5M8 21H3v-5M16 21h5v-5&quot;/&gt;&lt;/svg&gt;
@@ -31626,6 +31667,7 @@ function createTutorialDeck(layer, mount, options, words) {
         auth: () =&gt; String(telegramProfile?.initData || &quot;&quot;),
         running: () =&gt; Boolean(state.running),
         open: () =&gt; switchScreen(&quot;tasks&quot;),
+        world: () =&gt; switchScreen(&quot;world-locked&quot;),
         back: () =&gt; switchScreen(&quot;game&quot;),
         season: () =&gt; window.parent.postMessage({ type:&quot;zefirok-open-battle-pass&quot;, view:&quot;tasks&quot; }, &quot;*&quot;),
         seasonReady: () =&gt; Number(state.seasonPassAttentionCount || 0),
@@ -35154,6 +35196,75 @@ html &gt; body.zefirok-game-expanded{height:var(--zefirok-visible-height,100dvh)
   }catch{}
 })();
 &lt;/script&gt;
+&lt;style id=&quot;zefirok-world-locked-ui-v1&quot;&gt;
+#zefirok-maltipoo-runner [data-screen=&quot;world-locked&quot;]{
+  min-height:100%;box-sizing:border-box;padding:16px 14px calc(22px + env(safe-area-inset-bottom,0px));
+  background:linear-gradient(180deg,#fff8fb 0%,#fff4f7 100%);overflow:auto;
+}
+#zefirok-maltipoo-runner .world-locked-shell{display:grid;gap:14px;align-content:start}
+#zefirok-maltipoo-runner .world-locked-topbar{display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:10px}
+#zefirok-maltipoo-runner .world-locked-icon-button{width:42px;height:42px;border:none;border-radius:14px;background:#fff;color:#7a3151;display:grid;place-items:center;box-shadow:0 6px 18px rgba(138,88,105,.12);cursor:pointer}
+#zefirok-maltipoo-runner .world-locked-icon-button svg{width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+#zefirok-maltipoo-runner .world-locked-heading{display:grid;gap:2px;min-width:0}
+#zefirok-maltipoo-runner .world-locked-heading strong{font-size:18px;line-height:1.1;color:#7a3151;font-weight:950}
+#zefirok-maltipoo-runner .world-locked-heading span{font-size:11px;line-height:1.3;color:#a17286;font-weight:750}
+#zefirok-maltipoo-runner .world-locked-spacer{width:42px;height:42px}
+#zefirok-maltipoo-runner .world-locked-card{position:relative;display:grid;gap:14px;justify-items:center;padding:20px 18px 18px;border-radius:28px;background:linear-gradient(180deg,#fff 0%,#fff6f9 100%);border:1px solid rgba(233,180,198,.66);box-shadow:0 16px 34px rgba(137,78,101,.12);text-align:center;overflow:hidden}
+#zefirok-maltipoo-runner .world-locked-card:before{content:&quot;&quot;;position:absolute;top:-72px;right:-54px;width:180px;height:180px;border-radius:999px;background:radial-gradient(circle,rgba(255,208,225,.55) 0%,rgba(255,208,225,0) 72%);pointer-events:none}
+#zefirok-maltipoo-runner .world-locked-illustration{width:min(100%,310px);height:auto;display:block;filter:drop-shadow(0 12px 24px rgba(188,121,147,.18))}
+#zefirok-maltipoo-runner .world-locked-badge{display:inline-flex;align-items:center;gap:6px;padding:7px 12px;border-radius:999px;border:1px solid rgba(236,196,210,.9);background:#fff6f9;color:#9a5e77;font-size:10px;line-height:1;font-weight:900;letter-spacing:.06em;text-transform:uppercase}
+#zefirok-maltipoo-runner .world-locked-copy{display:grid;gap:8px;max-width:320px;position:relative;z-index:1}
+#zefirok-maltipoo-runner .world-locked-copy h2{margin:0;font-size:26px;line-height:1.04;color:#7a3151;font-weight:1000}
+#zefirok-maltipoo-runner .world-locked-copy p{margin:0;color:#7f6470;font-size:13px;line-height:1.5;font-weight:700}
+#zefirok-maltipoo-runner .world-locked-note{padding:12px 14px;border-radius:18px;background:linear-gradient(145deg,#fff8fb,#ffeef4);color:#8d6273;font-size:12px;line-height:1.45;font-weight:750}
+#zefirok-maltipoo-runner .world-locked-back{min-height:48px;padding:0 18px;border:none;border-radius:16px;background:linear-gradient(145deg,#f28db2,#dd5f91);color:#fff;font-size:14px;font-weight:950;box-shadow:0 10px 24px rgba(204,96,139,.26);cursor:pointer}
+#zefirok-maltipoo-runner .world-locked-back:active{transform:translateY(1px) scale(.995)}
+@media(max-width:430px) and (max-height:860px){
+  #zefirok-maltipoo-runner [data-screen=&quot;world-locked&quot;]{padding:10px 11px 18px}
+  #zefirok-maltipoo-runner .world-locked-shell{gap:10px}
+  #zefirok-maltipoo-runner .world-locked-card{padding:15px 14px;gap:10px}
+  #zefirok-maltipoo-runner .world-locked-illustration{width:min(100%,235px)}
+  #zefirok-maltipoo-runner .world-locked-copy{gap:5px}
+  #zefirok-maltipoo-runner .world-locked-copy h2{font-size:23px}
+  #zefirok-maltipoo-runner .world-locked-copy p{font-size:12px;line-height:1.4}
+  #zefirok-maltipoo-runner .world-locked-note{font-size:11px;line-height:1.35;padding:9px 11px}
+  #zefirok-maltipoo-runner .world-locked-back{min-height:44px}
+}
+&lt;/style&gt;
+&lt;script id=&quot;zefirok-world-locked-inline-runtime-v1&quot;&gt;
+(()=&gt;{
+  'use strict';
+  if(window.__ZEFIROK_WORLD_LOCKED_UI_V1__)return;
+  window.__ZEFIROK_WORLD_LOCKED_UI_V1__=true;
+  const root=document.querySelector('#zefirok-maltipoo-runner');
+  const screen=root?.querySelector('[data-screen=&quot;world-locked&quot;]');
+  const entry=root?.querySelector('[data-world-open]');
+  if(!root||!screen||!entry)return;
+  const host=()=&gt;window.zefirokTaskHost||{};
+  function render(){
+    screen.innerHTML=`&lt;div class=&quot;world-locked-shell&quot;&gt;&lt;div class=&quot;world-locked-topbar&quot;&gt;&lt;button class=&quot;world-locked-icon-button&quot; data-world-back type=&quot;button&quot; aria-label=&quot;Назад&quot;&gt;&lt;svg viewBox=&quot;0 0 24 24&quot; aria-hidden=&quot;true&quot;&gt;&lt;path d=&quot;m14 6-6 6 6 6&quot;/&gt;&lt;/svg&gt;&lt;/button&gt;&lt;div class=&quot;world-locked-heading&quot;&gt;&lt;strong&gt;Мир Зеффи&lt;/strong&gt;&lt;span&gt;Скоро открытие&lt;/span&gt;&lt;/div&gt;&lt;span class=&quot;world-locked-spacer&quot; aria-hidden=&quot;true&quot;&gt;&lt;/span&gt;&lt;/div&gt;&lt;div class=&quot;world-locked-card&quot;&gt;&lt;span class=&quot;world-locked-badge&quot;&gt;ПОКА НЕДОСТУПНО&lt;/span&gt;&lt;img class=&quot;world-locked-illustration&quot; src=&quot;/assets/ui/icon_blocked_stranicha.webp&quot; alt=&quot;&quot; loading=&quot;lazy&quot; decoding=&quot;async&quot;&gt;&lt;div class=&quot;world-locked-copy&quot;&gt;&lt;h2&gt;Мир Зеффи ещё строится!&lt;/h2&gt;&lt;p&gt;Зеффи уже возводит уютные домики, мостики и первые улицы своего сладкого городка.&lt;/p&gt;&lt;p&gt;Остались последние штрихи — и совсем скоро она распахнёт ворота для первых гостей!&lt;/p&gt;&lt;/div&gt;&lt;div class=&quot;world-locked-note&quot;&gt;Пока ворота города закрыты для всех. Как только Зеффи закончит строительство, здесь начнётся новое приключение.&lt;/div&gt;&lt;button class=&quot;world-locked-back&quot; data-world-back type=&quot;button&quot;&gt;Вернуться к забегу&lt;/button&gt;&lt;/div&gt;&lt;/div&gt;`;
+  }
+  function open(){
+    render();
+    if(host().running?.())return;
+    let switched=false;
+    try{const fn=host().world;if(typeof fn==='function'){fn();switched=true;}}catch{}
+    if(!switched||screen.hidden){root.querySelectorAll('.screen').forEach(node=&gt;{node.hidden=node!==screen;});}
+    window.requestAnimationFrame(()=&gt;screen.querySelector('[data-world-back]')?.focus({preventScroll:true}));
+  }
+  function back(){
+    let switched=false;
+    try{const fn=host().back;if(typeof fn==='function'){fn();switched=true;}}catch{}
+    if(!switched){
+      const game=root.querySelector('[data-screen=&quot;game&quot;]');
+      root.querySelectorAll('.screen').forEach(node=&gt;{node.hidden=node!==game;});
+    }
+  }
+  entry.addEventListener('click',event=&gt;{event.preventDefault();open();});
+  screen.addEventListener('click',event=&gt;{const target=event.target instanceof Element?event.target:null;if(!target)return;if(target.closest('[data-world-back]')){event.preventDefault();back();}});
+  render();
+})();
+&lt;/script&gt;
 &lt;/body&gt;
 &lt;/html&gt;
 &lt;style id=&quot;zefirok-levels-boosters-info-v2&quot;&gt;
@@ -36227,9 +36338,9 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
   'use strict';
   if(window.__ZEFIROK_WORLD_PREVIEW_ENTRY_V1__)return;
   window.__ZEFIROK_WORLD_PREVIEW_ENTRY_V1__=true;
-  const params=new URLSearchParams(location.search);
   const local=location.protocol==='file:' || /^(localhost|127\.0\.0\.1|\[::1\])$/i.test(location.hostname);
-  const enabled=local || params.get('world_preview')==='1';
+  // Public release teaser: the standalone city preview stays local-only.
+  const enabled=local;
   if(!enabled)return;
   const ROOT_FRAME_SELECTOR='body > iframe[title="Сладкий Забег"]';
   let worldLayer=null;

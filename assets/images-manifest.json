@@ -1,8 +1,8 @@
 {
   "version": 2,
   "hashAlgorithm": "sha256",
-  "catalogHash": "a4013f80c0b18f16",
-  "count": 592,
+  "catalogHash": "315142153a467303",
+  "count": 594,
   "images": [
     {
       "fileName": "achievements/background_achivment_panel.webp",
@@ -4325,6 +4325,14 @@
       "size": 28576
     },
     {
+      "fileName": "ui/icon_blocked_stranicha.webp",
+      "label": "Icon blocked stranicha",
+      "folder": "ui",
+      "path": "/assets/ui/icon_blocked_stranicha.webp",
+      "hash": "dbf9c1ebb0c0",
+      "size": 123568
+    },
+    {
       "fileName": "ui/icon_bp_prize.webp",
       "label": "Icon bp prize",
       "folder": "ui",
@@ -4643,6 +4651,14 @@
       "path": "/assets/ui/icon_warning.webp",
       "hash": "c2d69304886a",
       "size": 89322
+    },
+    {
+      "fileName": "ui/icon_world_zeffi.webp",
+      "label": "Icon world zeffi",
+      "folder": "ui",
+      "path": "/assets/ui/icon_world_zeffi.webp",
+      "hash": "6851afa648e6",
+      "size": 118494
     },
     {
       "fileName": "ui/icon_zanovo_button.webp",
