@@ -15,10 +15,10 @@ for(const f of modules) assert(fs.existsSync(path.join(root,'world',f)),`missing
 assert(entry.includes('data-srcdoc="'),'runner iframe missing');
 assert(entry.includes('" title="Сладкий Забег"></iframe>'),'runner iframe boundary missing');
 assert((entry.match(/id="zefirok-world-preview-entry-v1"/g)||[]).length===1,'entry script duplicated or missing');
-assert(entry.includes("params.get('world_preview')==='1'"),'test flag not in entry script');
+assert(entry.includes('const enabled=local;'),'hosted preview must remain closed');
 assert(entry.includes('iframe[title="Сладкий Забег"]'),'entry frame selector changed');
 assert(world.includes('<base href="./world/" />'),'world.html must resolve module assets within world/');
-assert(world.includes('world_preview'),'public world gate requires preview flag');
+assert(world.includes('const enabled=local;'),'hosted city must remain unavailable');
 assert(world.includes('id="zeffiReturnGame"'),'back-to-main control missing');
 assert(!world.includes('http-equiv="refresh"'),'world.html must not redirect to runner');
 assert(sandbox.includes('src="./app.js"'),'world module sandbox source changed');
@@ -43,4 +43,4 @@ const app=read('world/app.js');const engine=read('world/engine.js');
 assert(app.includes('zefirok-world-v01-sandbox-local'),'sandbox wallet must remain local');
 assert(engine.includes('skipConstruction'),'construction timings unexpectedly removed');
 assert(!world.includes('api/world/purchase'),'no real wallet API allowed in stage 1');
-console.log('World integration OK: 249 WebP, 16 Road masks, modules, UI entry, preview gate, isolated local wallet.');
+console.log('World integration OK: 249 WebP, 16 Road masks, modules, locked hosted entry, isolated local wallet.');
