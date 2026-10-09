@@ -10,12 +10,11 @@ import {
   expansionCandidates, expansionPrice, PARCEL_SIZE, canAfford, objectPrice, roadStrokePrice
 } from './engine.js';
 import { drawWorld, drawCatalogThumbnail, screenToTile, isoToScreen, PROJECT_FOCUS } from './renderer.js';
-import { onSpriteUpdate, isSpriteModeEnabled, setSpriteMode, spriteStatus, preloadBuildFrames } from './sprite-assets.js';
+import { onSpriteUpdate, setSpriteMode, spriteStatus, preloadBuildFrames, preloadSpriteSet, spriteManifest, catalogSpriteId, parkConstructionAssetId, buildingAssetId } from './sprite-assets.js';
 
 const STORAGE_KEY = 'zefirok-world-v01-sandbox-local';
 const SERVER_MODE = window.ZeffiWorldServerRequired === true;
 const WELCOME_KEY = 'zefirok-world-v01-welcome-read';
-const ART_KEY = 'zefirok-world-v01-core-pack-art';
 const $ = id => document.getElementById(id);
 const canvas = $('worldCanvas');
 const state = {
@@ -24,7 +23,7 @@ const state = {
  camera: { x: 0, y: 0, zoom: 1 },
  undo: [], redo: [], pointers: new Map(), pointerStart: null,
  gesture: null, toastTimer: null, drawScheduled: false, pointerDrag: false,
- loadingFailed: false, serverRevision: null, serverReady: false, serverBusy: false, serverPurchasesEnabled: false, serverInitData: '', skipAnimation: null, skipAnimationTimer: null, skipAnimationRaf: null,
+ loadingFailed: false, visualsReady: false, preparingPlacementArt: false, serverRevision: null, serverReady: false, serverBusy: false, serverPurchasesEnabled: false, serverInitData: '', skipAnimation: null, skipAnimationTimer: null, skipAnimationRaf: null,
  skipPreparingUid: null, skipToken: 0
 };
 const iconCodes = { house: 0x1F3E1, coffee: 0x2615, cake: 0x1F370, flower: 0x1F338,
@@ -92,7 +91,7 @@ function serverLock(message='Подключаем личный город к с�
  const header=document.createElement('strong');header.style.cssText='display:block;font-size:21px;margin-bottom:12px';header.textContent='Мир Зеффи';
  const text=document.createElement('div');text.textContent=message;
  notice.append(header,text);
- if(isError){const btn=document.createElement('button');btn.textContent='Повторить';btn.style.cssText='margin-top:16px;padding:9px 18px;border:0;border-radius:12px;background:#c36b91;color:#fff;font-weight:800';btn.addEventListener('click',()=>bootWorldServer());notice.append(btn);}
+ if(isError){const btn=document.createElement('button');btn.textContent='Повторить';btn.style.cssText='margin-top:16px;padding:9px 18px;border:0;border-radius:12px;background:#c36b91;color:#fff;font-weight:800';btn.addEventListener('click',()=>SERVER_MODE?void bootWorldServer():void bootLocalArt());notice.append(btn);}
  layer.replaceChildren(notice);
 }
 function unlockServer(){const el=$('worldServerLock');if(el)el.remove();}
@@ -135,6 +134,47 @@ function acceptServerCity(payload){
  state.undo=[];state.redo=[];
  updateUI();scheduleDraw();
 }
+// All 4 angles of every available catalogue object, plus terrain, roads,
+// selection art, and stages of any building still under construction. About
+// 107 normal images (not all 249 construction frames at once): iOS-friendly.
+function initialArtIds(city){
+ const ids=new Set();
+ for(const meta of spriteManifest.assets){
+  if(['ground','roads'].includes(meta.category)||meta.id.includes('overlay_'))ids.add(meta.id);
+ }
+ for(const item of CATALOG_ITEMS){
+  for(let rotation=0;rotation<4;rotation++){
+   const id=catalogSpriteId(item.id,rotation);
+   if(id)ids.add(id);
+  }
+ }
+ for(const item of city.objects||[]){
+  if(item.stored||!isConstructing(item))continue;
+  for(const stage of ['build_01','build_02','build_03']){
+   const id=parkConstructionAssetId(item.kind,item.rotation,stage)||buildingAssetId(item.kind,item.rotation,stage);
+   if(id)ids.add(id);
+  }
+ }
+ return [...ids];
+}
+async function prepareInitialArt(city){
+ let lastTens=-1;
+ const art=await preloadSpriteSet(initialArtIds(city),{pin:true,onProgress:(progress)=>{
+  const tens=Math.floor(progress.done/10);
+  if(tens!==lastTens||progress.done===progress.total){
+   lastTens=tens;
+   serverLock(`\u041f\u043e\u0434\u0433\u0440\u0443\u0436\u0430\u0435\u043c \u0433\u0440\u0430\u0444\u0438\u043a\u0443 \u0433\u043e\u0440\u043e\u0434\u0430: ${progress.done}/${progress.total}`);
+  }
+ }});
+ if(art.failed)throw new Error(`\u041d\u0435 \u0437\u0430\u0433\u0440\u0443\u0437\u0438\u043b\u0438\u0441\u044c ${art.failed} \u0438\u0437 ${art.total} \u0438\u0437\u043e\u0431\u0440\u0430\u0436\u0435\u043d\u0438\u0439. \u041f\u0440\u043e\u0432\u0435\u0440\u044c \u0441\u0435\u0442\u044c \u0438 \u043d\u0430\u0436\u043c\u0438 \"\u041f\u043e\u0432\u0442\u043e\u0440\u0438\u0442\u044c\".`);
+ state.visualsReady=true;
+}
+async function bootLocalArt(){
+ state.visualsReady=false;
+ serverLock('\u041f\u043e\u0434\u0433\u0440\u0443\u0436\u0430\u0435\u043c \u0433\u0440\u0430\u0444\u0438\u043a\u0443 \u0433\u043e\u0440\u043e\u0434\u0430...');
+ try{await prepareInitialArt(state.city);unlockServer();refreshArt();}
+ catch(error){serverLock(error.message||'\u041e\u0448\u0438\u0431\u043a\u0430 \u0437\u0430\u0433\u0440\u0443\u0437\u043a\u0438 \u0433\u0440\u0430\u0444\u0438\u043a\u0438.',true);}
+}
 async function bootWorldServer(){
  if(!SERVER_MODE)return;
  serverLock();
@@ -143,7 +183,8 @@ async function bootWorldServer(){
   state.serverInitData=await acquireTelegramInitData();
   if(!state.serverInitData)throw new Error('Откройте игру через Telegram. Подтверждённая Telegram-сессия обязательна для серверного города.');
   const result=await serverRequest('state');
-  acceptServerCity(result);unlockServer();
+  await prepareInitialArt(result.city);
+  acceptServerCity(result);unlockServer();refreshArt();
  }catch(error){serverLock(error.message||'Ошибка загрузки города.',true);}
 }
 function quoteForAction(kind,args){
@@ -222,14 +263,6 @@ function refreshArt() {
   const thumb=card.querySelector('canvas.building-thumbnail');
   if(definition&&thumb)drawCatalogThumbnail(thumb,definition);
  });
- const toggle=$('artModeButton');
- if(toggle){
-  const active=isSpriteModeEnabled();
-  toggle.setAttribute('aria-pressed',String(active));
-  toggle.setAttribute('aria-label',active?'Выключить 3D-ассеты':'Включить 3D-ассеты');
-  toggle.title=active?'3D Core + Extra + Flower Style включены. Нажмите для 2D-графики.':'Стандартная 2D-графика. Нажмите для 3D Core + Extra + Flower Style.';
-  toggle.textContent=active?'3D':'2D';
- }
 }
 function formatRemaining(ms) {
  const seconds=Math.max(0,Math.ceil(ms/1000));
@@ -274,6 +307,7 @@ function startPlacement(kind){
  state.roadDraft=[];
  const pos=findFreeSpot(kind);
  state.draft={type:'place',kind,rotation:0,...pos};
+ if(Number(CATALOG[kind]?.buildMs)>0)void preloadBuildFrames(kind,0);
  updateUI();scheduleDraw();
 }
 function startRestore(uid){
@@ -337,7 +371,7 @@ function updateActions(){
  $('previewKind').textContent=tr(kind);
  $('editSummary').textContent=summary;
  $('editFeedback').textContent=feedback;
- $('confirmEdit').disabled=!canCommit||(SERVER_MODE&&(!state.serverReady||state.serverBusy));
+ $('confirmEdit').disabled=!canCommit||state.preparingPlacementArt||(SERVER_MODE&&(!state.serverReady||state.serverBusy));
  $('editActions').classList.toggle('is-invalid',!canCommit);
 }
 function updateSelection(){
@@ -359,7 +393,7 @@ function updateSelection(){
 }
 function updateUI(){
  const stats=cityStats(state.city,CATALOG);
- $('buildingsCount').textContent=stats.buildings;
+ $('buildingsCount').textContent=stats.structures;
  $('constructingCount').textContent=stats.constructing;
  $('roadsCount').textContent=stats.roads;
  $('connectedCount').textContent=stats.connected;
@@ -434,8 +468,7 @@ function openWarehouse(){
  state.selectedUid=null;state.mode='select';state.warehouse=!state.warehouse;
  updateUI();scheduleDraw();
 }
-function confirmEdit(){
- if(SERVER_MODE){void confirmServerEdit();return;}
+function confirmLocalEdit(){
  try {
   if(state.mode==='expand'&&state.expansionDraft){
    const p=state.expansionDraft;
@@ -470,6 +503,24 @@ function confirmEdit(){
    updateUI();scheduleDraw();if(changed)showToast(tr(erasing?'roadsErased':'roadsBuilt')+(erasing?'':` ${tr('charged')}: ${priceLabel(paid)}`));
   }
  }catch(error){showToast(statusError(error),true);updateUI();scheduleDraw();}
+}
+// A paid building must not start its construction animation while its stage
+// art is still downloading. Only execute the authoritative action afterward.
+async function confirmEdit(){
+ if(state.preparingPlacementArt)return;
+ const d=state.draft;
+ const existing=d?.uid?state.city.objects.find(item=>item.uid===d.uid):null;
+ const stageRequired=d && ((d.type==='place'&&Number(CATALOG[d.kind]?.buildMs)>0)||isConstructing(existing));
+ if(stageRequired){
+  state.preparingPlacementArt=true;updateActions();
+  try{
+   const stage=await preloadBuildFrames(d.kind,d.rotation);
+   if(stage.failed){showToast('\u041d\u0435 \u0437\u0430\u0433\u0440\u0443\u0437\u0438\u043b\u0430\u0441\u044c \u0433\u0440\u0430\u0444\u0438\u043a\u0430 \u0441\u0442\u0440\u043e\u0439\u043a\u0438. \u041f\u043e\u0432\u0442\u043e\u0440\u0438 \u043f\u043e\u043f\u044b\u0442\u043a\u0443.',true);return;}
+   if(state.draft!==d)return; // User may have cancelled the edit while loading.
+  }finally{state.preparingPlacementArt=false;updateActions();}
+ }
+ if(SERVER_MODE)await confirmServerEdit();
+ else confirmLocalEdit();
 }
 function cancelEdit(){stopDraft();if(['move','place','restore','expand'].includes(state.mode))state.mode='select';updateUI();scheduleDraw();}
 function zoomTo(nextZoom){state.camera.zoom=Math.max(.42,Math.min(2.0,nextZoom));scheduleDraw();}
@@ -631,9 +682,10 @@ async function finishSelectedConstruction(uid){
  state.skipPreparingUid=uid;
  updateUI();
  try{
-  // Warm all three stage frames and the completed WebP first, with a timeout
-  // for network failures. This is visual-only; payment remains authoritative.
-  await Promise.race([preloadBuildFrames(item.kind,item.rotation),new Promise(resolve=>setTimeout(resolve,1400))]);
+  // Hold the animation and payment until every directional stage is decoded.
+  // A short timer used to show procedural geometry during slow downloads.
+  const art=await preloadBuildFrames(item.kind,item.rotation);
+  if(art.failed)throw new Error('\u0410\u0440\u0442\u044b \u0441\u0442\u0440\u043e\u0439\u043a\u0438 \u043d\u0435 \u0437\u0430\u0433\u0440\u0443\u0437\u0438\u043b\u0438\u0441\u044c. \u041f\u043e\u0432\u0442\u043e\u0440\u0438 \u043f\u043e\u043f\u044b\u0442\u043a\u0443.');
   const current=state.city.objects.find(row=>row.uid===uid&&!row.stored);
   if(!current||!isConstructing(current))return;
   const now=Date.now();
@@ -649,13 +701,16 @@ async function finishSelectedConstruction(uid){
   state.skipAnimationTimer=setTimeout(()=>finishFx(token),fx.duration+120);
   state.skipAnimationRaf=requestAnimationFrame(()=>paintSkipAnimation(token));
   updateUI();scheduleDraw();
- }catch(error){showToast(statusError(error),true);}
+ }catch(error){showToast(error?.message||statusError(error),true);}
  finally{state.skipPreparingUid=null;updateUI();scheduleDraw();}
 }
 function bindEvents(){
+ for(const type of ['contextmenu','selectstart','dragstart','copy','cut']){
+  document.addEventListener(type,event=>event.preventDefault());
+ }
  document.querySelectorAll('[data-tool]').forEach(btn=>btn.addEventListener('click',()=>switchMode(btn.dataset.tool)));
  $('warehouseButton').addEventListener('click',openWarehouse);
- $('rotateButton').addEventListener('click',()=>{if(!state.draft||CATALOG[state.draft.kind]?.rotatable===false)return;state.draft.rotation=nextRotation(state.draft.rotation);updateActions();scheduleDraw();});
+ $('rotateButton').addEventListener('click',()=>{if(!state.draft||CATALOG[state.draft.kind]?.rotatable===false||state.preparingPlacementArt)return;state.draft.rotation=nextRotation(state.draft.rotation);if(Number(CATALOG[state.draft.kind]?.buildMs)>0)void preloadBuildFrames(state.draft.kind,state.draft.rotation);updateActions();scheduleDraw();});
  $('confirmEdit').addEventListener('click',confirmEdit);
  $('cancelEdit').addEventListener('click',cancelEdit);
  $('moveSelected').addEventListener('click',startMove);
@@ -744,20 +799,17 @@ function bindEvents(){
  },1000);
 }
 function initialize(){
- onSpriteUpdate(refreshArt);
- try{if(localStorage.getItem(ART_KEY)==='off')setSpriteMode(false);}catch{}
- const artButton=$('artModeButton');
- if(artButton)artButton.addEventListener('click',()=>{
-  const next=!isSpriteModeEnabled();setSpriteMode(next);
-  try{localStorage.setItem(ART_KEY,next?'on':'off');}catch{}
- });
- translateStatic();readSavedCity();bindEvents();renderCategories();renderCatalog();updateUI();resetView();refreshArt();
+ onSpriteUpdate(()=>{if(state.visualsReady)refreshArt();});
+ // A retired 2D/3D preference must never switch the released city to wireframes.
+ setSpriteMode(true);
+ translateStatic();readSavedCity();bindEvents();renderCategories();renderCatalog();updateUI();resetView();
  if(SERVER_MODE){
   for(const id of ['topupWallet','undoButton','redoButton','resetButton']){$(id).hidden=true;}
   document.querySelector('.test-wallet__badge').textContent='СЕРВЕР · D1';
   document.querySelector('.panel-eyebrow').textContent='ПОКУПКИ И СОХРАНЕНИЯ ЧЕРЕЗ WORKER';
+  document.querySelector('.nav-notice [data-t="local"]').textContent='Серверное сохранение';
   void bootWorldServer();
- }
+ }else void bootLocalArt();
  if(state.loadingFailed)showToast(tr('invalidSave'),true);
  let seen=false;try{seen=localStorage.getItem(WELCOME_KEY)==='1';}catch{}
  if(!seen){$('welcomeModal').hidden=false;$('welcomeStart').focus();}
