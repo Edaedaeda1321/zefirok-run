@@ -1,0 +1,110 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <base href="./world/" />
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no" />
+  <meta name="theme-color" content="#fdf5f8" />
+  <meta name="description" content="World Zeffi standalone city builder sandbox v0.1.13: animated construction acceleration and dynamic coffee-only prices" />
+  <title>Мир Зеффи — Песочница 0.1.13</title>
+  <link rel="stylesheet" href="./world.css" />
+  <script id="zeffi-world-preview-access">
+    (()=>{
+      const qp=new URLSearchParams(location.search);
+      const local=location.protocol==='file:'||/^(localhost|127\.0\.0\.1|\[::1\])$/i.test(location.hostname);
+      // Local/offline stays sandboxed. Hosted access always requires verified
+      // Telegram identity and the backend's explicit WORLD_ENABLED/tester gates.
+      const enabled=true;
+      window.ZeffiWorldServerRequired=!local;
+      window.ZeffiWorldPreviewAllowed=local;
+      document.addEventListener('DOMContentLoaded',()=>{
+        if(!enabled){
+          document.body.innerHTML='<main style="max-width:440px;margin:16vh auto;padding:32px 24px;border:1px solid #efd5dd;border-radius:22px;background:#fff;text-align:center;font-family:system-ui;color:#824c61"><h1>Мир Зеффи</h1><p>Режим проходит внутреннее тестирование и пока недоступен игрокам.</p><a href="../index.html" style="color:#bf5981">В Сладкий Забег</a></main>';
+          return;
+        }
+        const script=document.createElement('script');script.type='module';script.src='./app.js';document.head.appendChild(script);
+      },{once:true});
+    })();
+  </script>
+</head>
+<body>
+ <div class="app-shell" id="app">
+  <header class="topbar">
+   <div class="brand">
+    <div class="brand-paw" aria-hidden="true"><svg viewBox="0 0 52 52" width="32" height="32" fill="none"><ellipse cx="26" cy="30" rx="13" ry="11" fill="#fff"/><circle cx="13" cy="19" r="5" fill="#fff"/><circle cx="23" cy="14" r="5" fill="#fff"/><circle cx="34" cy="16" r="5" fill="#fff"/><circle cx="42" cy="24" r="4" fill="#fff"/></svg></div>
+    <div class="brand-text"><strong data-t="app"></strong><small data-t="subtitle"></small></div>
+   </div>
+   <div class="topbar-side">
+    <span class="version-pill" data-t="v01"></span>
+    <button class="art-mode-button" id="artModeButton" type="button" aria-pressed="true" aria-label="Выключить 3D-ассеты" title="3D Core Pack включён">3D</button>
+    <button class="icon-button help-button" id="helpButton" data-title="help" aria-label="Help" title="Help">?</button>
+   </div>
+  </header>
+  <nav class="world-nav" aria-label="World selection">
+   <button type="button" id="zeffiReturnGame" style="border:1px solid #eecbd8;border-radius:12px;background:#fff;color:#96506c;padding:9px 12px;font-weight:800" aria-label="Вернуться в Сладкий Забег">← В игру</button>
+   <button type="button" class="world-nav__active" aria-current="page"><span class="tiny-shape">&#x2302;</span> <span data-t="myCity"></span></button>
+   <button type="button" class="world-nav__disabled" id="commonButton"><span class="tiny-shape">&#x2727;</span> <span data-t="commonWorld"></span> <small data-t="commonLater"></small></button>
+   <div class="nav-notice"><span class="notice-dot"></span><span data-t="local"></span></div>
+  </nav>
+  <section class="map-zone" aria-label="City builder area" id="mapZone">
+   <canvas id="worldCanvas" aria-label="Isometric construction map" tabindex="0"></canvas>
+   <div class="map-glow" aria-hidden="true"></div>
+   <div class="map-heading">
+    <div class="map-title"><small>ZEFFI VALLEY</small><strong data-t="myCity"></strong></div>
+    <div class="map-coordinates"><span class="coordinate-dot"></span><span id="coordLabel">24 x 24</span></div>
+   </div>
+   <div class="map-metrics">
+    <div class="metric"><span data-t="objects"></span><strong id="buildingsCount">0</strong></div>
+    <div class="metric"><span data-t="roads"></span><strong id="roadsCount">0</strong></div>
+    <div class="metric"><span data-t="connected"></span><strong id="connectedCount">0</strong></div><div class="metric metric-build"><span data-t="buildInProgress"></span><strong id="constructingCount">0</strong></div>
+   </div>
+   <div class="world-tools" role="toolbar" aria-label="City tools">
+    <button id="toolSelect" data-tool="select" type="button" class="tool-button is-active" aria-label="Select tool" title="Select tool"><span class="tool-glyph">&#x261e;</span><small data-t="selectMode"></small></button>
+    <button id="toolRoad" data-tool="road" type="button" class="tool-button" aria-label="Road tool" title="Road tool"><span class="tool-glyph">&#x2550;</span><small data-t="roadMode"></small></button>
+    <button id="toolErase" data-tool="erase" type="button" class="tool-button" aria-label="Erase road tool" title="Erase road tool"><span class="tool-glyph">&#x2715;</span><small data-t="eraseMode"></small></button>
+    <button id="toolExpand" data-tool="expand" type="button" class="tool-button tool-expand" aria-label="Expand city" title="Expand city"><span class="tool-glyph">&#x229e;</span><small data-t="expandMode"></small></button>
+   </div>
+   <div class="zoom-tools" aria-label="Camera controls">
+    <button class="small-round" id="zoomIn" type="button" data-title="zoomIn" title="Zoom in">+</button>
+    <button class="small-round" id="zoomOut" type="button" data-title="zoomOut" title="Zoom out">-</button>
+    <button class="small-round camera-round" id="centerCamera" type="button" data-title="camera" title="Center camera">&#x2316;</button>
+   </div>
+   <div class="floating-notice" id="mapNotice"><span class="notice-star" aria-hidden="true">&#x2727;</span><span id="mapHint" data-t="hintSelect"></span></div>
+   <div class="edit-actions" id="editActions" hidden>
+    <div class="edit-summary"><small id="previewKind" data-t="preview"></small><b id="editSummary"></b><span id="editFeedback"></span></div>
+    <div class="edit-buttons">
+     <button class="ghost-button" id="rotateButton" type="button"><span class="btn-sign">&#x21bb;</span><span data-t="rotate"></span></button>
+     <button class="ghost-button" id="cancelEdit" type="button" data-t="cancel"></button>
+     <button class="solid-button" id="confirmEdit" type="button" data-t="confirm"></button>
+    </div>
+   </div>
+   <div class="selection-panel" id="selectionPanel" hidden>
+    <div class="selection-meta"><div class="selection-emblem" id="selectionEmblem">&#x2302;</div><div><small data-t="details"></small><strong id="selectionName"></strong><span id="selectionStatus"></span></div></div>
+    <div class="selection-actions"><button id="moveSelected" type="button" data-t="moveItem"></button><button id="storeSelected" type="button" data-t="sendToStore"></button><button id="finishBuildTest" type="button" hidden></button><button id="closeSelected" type="button" aria-label="Close">&#x2715;</button></div>
+   </div>
+   <div class="toast" id="toast" role="status" aria-live="polite"></div>
+  </section>
+  <section class="bottom-panel" id="bottomPanel">
+   <div class="test-wallet"><span class="test-wallet__badge" data-t="demoWallet"></span><span class="test-wallet__balance">&#x2605; <b id="walletPoints">0</b></span><span class="test-wallet__balance">&#x2615; <b id="walletCoffee">0</b></span><span class="test-wallet__balance">&#x2728; <b id="walletTreats">0</b></span><button id="topupWallet" type="button" data-t="topUpWallet"></button></div>
+   <div class="panel-head">
+    <div class="panel-heading"><span class="panel-eyebrow" data-t="testPrices"></span><h2 id="panelTitle" data-t="chooseCategory"></h2></div>
+    <div class="panel-head-actions"><button class="head-action" id="warehouseButton" type="button"><span class="warehouse-bag">&#x25a3;</span><span data-t="store"></span><b id="warehouseBadge">0</b></button><button class="head-action" id="undoButton" type="button" data-title="undo" aria-label="Undo">&#x21b6;</button><button class="head-action" id="redoButton" type="button" data-title="redo" aria-label="Redo">&#x21b7;</button></div>
+   </div>
+   <div class="category-tabs" id="categoryTabs" aria-label="Building categories"></div>
+   <div class="catalog-list" id="catalogList"></div>
+   <div class="warehouse-list" id="warehouseList" hidden></div>
+   <div class="panel-footer"><span class="safe-marker"></span><span data-t="noMoney"></span><button type="button" id="resetButton" data-t="reset"></button></div>
+  </section>
+  <div class="modal-backdrop" id="welcomeModal" hidden><div class="welcome-card" role="dialog" aria-modal="true" aria-labelledby="welcomeTitle"><div class="welcome-crest"><svg viewBox="0 0 64 64" width="56" height="56"><circle cx="32" cy="32" r="29" fill="#fff1f6"/><circle cx="32" cy="35" r="15" fill="#edb5c9"/><circle cx="19" cy="20" r="5" fill="#edb5c9"/><circle cx="30" cy="15" r="5" fill="#edb5c9"/><circle cx="42" cy="18" r="5" fill="#edb5c9"/><circle cx="51" cy="28" r="4" fill="#edb5c9"/></svg></div><small data-t="v01"></small><h2 id="welcomeTitle" data-t="welcomeTitle"></h2><p data-t="welcomeText"></p><div class="welcome-features" data-t="welcomePoints"></div><button class="solid-button" id="welcomeStart" data-t="welcomeGo" type="button"></button></div></div>
+  <div class="modal-backdrop" id="confirmModal" hidden><div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="modalTitle"><h2 id="modalTitle" data-t="modalResetTitle"></h2><p data-t="modalResetBody"></p><div class="modal-actions"><button id="resetCancel" class="ghost-button" type="button" data-t="modalCancel"></button><button id="resetAccept" class="solid-button" type="button" data-t="resetConfirm"></button></div></div></div>
+  <div class="modal-backdrop" id="skipModal" hidden><div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="skipTitle"><h2 id="skipTitle" data-t="skipConfirmTitle"></h2><p id="skipConfirmText"></p><p class="modal-balance" id="skipWalletHint"></p><div class="modal-actions"><button id="skipCancel" class="ghost-button" type="button" data-t="modalCancel"></button><button id="skipAccept" class="solid-button" type="button" data-t="skipConfirmPay"></button></div></div></div>
+  <div class="modal-backdrop" id="helpModal" hidden><div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="helpTitle"><h2 id="helpTitle" data-t="help"></h2><p data-t="helpShort"></p><p data-t="helpBuild"></p><p data-t="helpRoad"></p><p data-t="helpWarehouse"></p><p data-t="helpExpand"></p><p data-t="constructionInfo"></p><div class="tip-card" data-t="phaseInfo"></div><button class="solid-button" id="helpClose" type="button" data-t="confirm"></button></div></div>
+ </div>
+ <script id="zeffi-return-to-main">
+ document.getElementById('zeffiReturnGame')?.addEventListener('click',()=>{
+   if(window.parent!==window){window.parent.postMessage({type:'zefirok-world-close'},'*');return;}
+   location.href=new URL('../index.html',document.baseURI).href;
+ });
+ </script>
+</body>
+</html>

@@ -1,0 +1,215 @@
+{
+  "pack_name": "Mir_Zeffi_Premium_Terrain_No_Round_Pack_v1",
+  "asset_count": 19,
+  "assets": [
+    {
+      "id": "terrain_grass_clean_premium",
+      "category": "terrain_surfaces",
+      "png": "png/terrain_surfaces/terrain_grass_clean_premium.png",
+      "webp": "webp/terrain_surfaces/terrain_grass_clean_premium.webp",
+      "size_px": [
+        454,
+        299
+      ],
+      "source_sheet": "a_clean_high_resolution_isometric_game_asset_shee_1_batch_1.png"
+    },
+    {
+      "id": "terrain_grass_floral_sparse_premium",
+      "category": "terrain_surfaces",
+      "png": "png/terrain_surfaces/terrain_grass_floral_sparse_premium.png",
+      "webp": "webp/terrain_surfaces/terrain_grass_floral_sparse_premium.webp",
+      "size_px": [
+        454,
+        298
+      ],
+      "source_sheet": "a_clean_high_resolution_isometric_game_asset_shee_1_batch_1.png"
+    },
+    {
+      "id": "terrain_grass_stone_accent_premium",
+      "category": "terrain_surfaces",
+      "png": "png/terrain_surfaces/terrain_grass_stone_accent_premium.png",
+      "webp": "webp/terrain_surfaces/terrain_grass_stone_accent_premium.webp",
+      "size_px": [
+        453,
+        298
+      ],
+      "source_sheet": "a_clean_high_resolution_isometric_game_asset_shee_1_batch_1.png"
+    },
+    {
+      "id": "terrain_grass_meadow_premium",
+      "category": "terrain_surfaces",
+      "png": "png/terrain_surfaces/terrain_grass_meadow_premium.png",
+      "webp": "webp/terrain_surfaces/terrain_grass_meadow_premium.webp",
+      "size_px": [
+        454,
+        306
+      ],
+      "source_sheet": "a_clean_high_resolution_isometric_game_asset_shee_1_batch_1.png"
+    },
+    {
+      "id": "terrain_garden_soil_premium",
+      "category": "terrain_surfaces",
+      "png": "png/terrain_surfaces/terrain_garden_soil_premium.png",
+      "webp": "webp/terrain_surfaces/terrain_garden_soil_premium.webp",
+      "size_px": [
+        453,
+        306
+      ],
+      "source_sheet": "a_clean_high_resolution_isometric_game_asset_shee_1_batch_1.png"
+    },
+    {
+      "id": "terrain_plaza_round_inlay_premium",
+      "category": "terrain_surfaces",
+      "png": "png/terrain_surfaces/terrain_plaza_round_inlay_premium.png",
+      "webp": "webp/terrain_surfaces/terrain_plaza_round_inlay_premium.webp",
+      "size_px": [
+        456,
+        303
+      ],
+      "source_sheet": "a_clean_high_resolution_isometric_game_asset_shee_1_batch_1.png"
+    },
+    {
+      "id": "terrain_path_sand_premium",
+      "category": "terrain_surfaces",
+      "png": "png/terrain_surfaces/terrain_path_sand_premium.png",
+      "webp": "webp/terrain_surfaces/terrain_path_sand_premium.webp",
+      "size_px": [
+        456,
+        320
+      ],
+      "source_sheet": "a_clean_high_resolution_isometric_game_asset_shee_1_batch_1.png"
+    },
+    {
+      "id": "terrain_flower_edge_premium",
+      "category": "terrain_surfaces",
+      "png": "png/terrain_surfaces/terrain_flower_edge_premium.png",
+      "webp": "webp/terrain_surfaces/terrain_flower_edge_premium.webp",
+      "size_px": [
+        453,
+        308
+      ],
+      "source_sheet": "a_clean_high_resolution_isometric_game_asset_shee_1_batch_1.png"
+    },
+    {
+      "id": "terrain_shrub_edge_premium",
+      "category": "terrain_surfaces",
+      "png": "png/terrain_surfaces/terrain_shrub_edge_premium.png",
+      "webp": "webp/terrain_surfaces/terrain_shrub_edge_premium.webp",
+      "size_px": [
+        453,
+        311
+      ],
+      "source_sheet": "a_clean_high_resolution_isometric_game_asset_shee_1_batch_1.png"
+    },
+    {
+      "id": "terrain_edge_straight_a_premium",
+      "category": "terrain_structures",
+      "png": "png/terrain_structures/terrain_edge_straight_a_premium.png",
+      "webp": "webp/terrain_structures/terrain_edge_straight_a_premium.webp",
+      "size_px": [
+        429,
+        308
+      ],
+      "source_sheet": "a_clean_transparent_background_isometric_game_asse_2_batch_2.png"
+    },
+    {
+      "id": "terrain_edge_straight_b_premium",
+      "category": "terrain_structures",
+      "png": "png/terrain_structures/terrain_edge_straight_b_premium.png",
+      "webp": "webp/terrain_structures/terrain_edge_straight_b_premium.webp",
+      "size_px": [
+        452,
+        320
+      ],
+      "source_sheet": "a_clean_transparent_background_isometric_game_asse_2_batch_2.png"
+    },
+    {
+      "id": "terrain_corner_outer_premium",
+      "category": "terrain_structures",
+      "png": "png/terrain_structures/terrain_corner_outer_premium.png",
+      "webp": "webp/terrain_structures/terrain_corner_outer_premium.webp",
+      "size_px": [
+        404,
+        285
+      ],
+      "source_sheet": "a_clean_transparent_background_isometric_game_asse_2_batch_2.png"
+    },
+    {
+      "id": "terrain_corner_inner_premium",
+      "category": "terrain_structures",
+      "png": "png/terrain_structures/terrain_corner_inner_premium.png",
+      "webp": "webp/terrain_structures/terrain_corner_inner_premium.webp",
+      "size_px": [
+        397,
+        251
+      ],
+      "source_sheet": "a_clean_transparent_background_isometric_game_asse_2_batch_2.png"
+    },
+    {
+      "id": "terrain_platform_plain_premium",
+      "category": "terrain_structures",
+      "png": "png/terrain_structures/terrain_platform_plain_premium.png",
+      "webp": "webp/terrain_structures/terrain_platform_plain_premium.webp",
+      "size_px": [
+        441,
+        327
+      ],
+      "source_sheet": "a_clean_transparent_background_isometric_game_asse_2_batch_2.png"
+    },
+    {
+      "id": "terrain_border_floral_premium",
+      "category": "terrain_structures",
+      "png": "png/terrain_structures/terrain_border_floral_premium.png",
+      "webp": "webp/terrain_structures/terrain_border_floral_premium.webp",
+      "size_px": [
+        433,
+        316
+      ],
+      "source_sheet": "a_clean_transparent_background_isometric_game_asse_2_batch_2.png"
+    },
+    {
+      "id": "terrain_stair_entry_premium",
+      "category": "terrain_structures",
+      "png": "png/terrain_structures/terrain_stair_entry_premium.png",
+      "webp": "webp/terrain_structures/terrain_stair_entry_premium.webp",
+      "size_px": [
+        373,
+        306
+      ],
+      "source_sheet": "a_clean_transparent_background_isometric_game_asse_2_batch_2.png"
+    },
+    {
+      "id": "terrain_podium_plaza_premium",
+      "category": "terrain_structures",
+      "png": "png/terrain_structures/terrain_podium_plaza_premium.png",
+      "webp": "webp/terrain_structures/terrain_podium_plaza_premium.webp",
+      "size_px": [
+        393,
+        316
+      ],
+      "source_sheet": "a_clean_transparent_background_isometric_game_asse_2_batch_2.png"
+    },
+    {
+      "id": "terrain_overlay_selected_blue_premium",
+      "category": "terrain_structures",
+      "png": "png/terrain_structures/terrain_overlay_selected_blue_premium.png",
+      "webp": "webp/terrain_structures/terrain_overlay_selected_blue_premium.webp",
+      "size_px": [
+        327,
+        199
+      ],
+      "source_sheet": "a_clean_transparent_background_isometric_game_asse_2_batch_2.png"
+    },
+    {
+      "id": "terrain_overlay_expansion_gold_premium",
+      "category": "terrain_structures",
+      "png": "png/terrain_structures/terrain_overlay_expansion_gold_premium.png",
+      "webp": "webp/terrain_structures/terrain_overlay_expansion_gold_premium.webp",
+      "size_px": [
+        299,
+        187
+      ],
+      "source_sheet": "a_clean_transparent_background_isometric_game_asse_2_batch_2.png"
+    }
+  ]
+}

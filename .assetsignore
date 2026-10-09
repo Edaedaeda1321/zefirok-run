@@ -33,3 +33,20 @@ profile.html
 candidate-console.html
 candidates/
 ios/
+
+# World Zeffi local-only artifacts
+world/index.html
+world/asset-gallery.html
+world/build-standalone.py
+world/tests/
+world/package.json
+world/README.md
+world/CODEX_PROMPT.txt
+world-preview.html
+WORLD_INTEGRATION_RU.md
+WORLD_INTEGRATION_CHECKS.txt
+START_WORLD_TEST.py
+START_WORLD_TEST.command
+START_WORLD_TEST.bat
+.world-integration-backup/
+world/docs/
