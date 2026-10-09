@@ -31,7 +31,10 @@ export function parkConstructionAssetId(kind, rotation=0, state='build_01') {
  const id=`park_${base}_${state}_${facing}`;
  return manifestById.has(id)?id:null;
 }
-const MAX_CACHE = 160;
+// Pin the initially visible world art and the complete rotation set. Loading
+// later construction stages must not evict these directional sprites.
+const MAX_CACHE = 190;
+const pinnedScene = new Set();
 const cache = new Map();
 let enabled = true;
 let onUpdate = () => {};
@@ -97,7 +100,7 @@ function notify(){try{onUpdate();}catch(error){console.warn('Sprite paint callba
 function cleanupLRU(){
  if(cache.size<=MAX_CACHE)return;
  for(const [id,entry] of cache){
-  if(entry.status==='loading')continue;
+  if(entry.status==='loading'||pinnedScene.has(id))continue;
   cache.delete(id);
   if(cache.size<=MAX_CACHE)return;
  }
@@ -118,8 +121,8 @@ function load(meta){
  cache.set(meta.id,entry);cleanupLRU();
  const image=entry.image;
  image.decoding='async';
- image.onload=()=>{entry.status='ready';notify();};
- image.onerror=()=>{entry.status='failed';notify();};
+ image.onload=()=>{entry.status='ready';notify();cleanupLRU();};
+ image.onerror=()=>{entry.status='failed';notify();cleanupLRU();};
  image.src=spriteUrl(meta);
  return null;
 }
@@ -145,29 +148,55 @@ export function drawCatalogSprite(ctx,id,canvasWidth,canvasHeight){
  try{ctx.drawImage(image,(canvasWidth-w)/2,(canvasHeight-h)/2,w,h);return true;}
  catch(error){console.warn('Sprite thumbnail failed',id,error);return false;}
 }
-// Warm construction frames BEFORE playing the accelerated build FX; otherwise
-// the browser may show only the completed image while lazy WebP decodes run.
-export function preloadBuildFrames(kind, rotation=0) {
+// Decode the art before exposing the city, never paint a procedural house
+// because its directional WebP is merely pending. A bounded concurrent queue
+// prevents hundreds of parallel image decodes in Telegram on iOS.
+async function preloadOne(id){
+ const meta=manifestById.get(id);
+ if(!meta||typeof Image==='undefined')return false;
+ if(cache.get(id)?.status==='failed')cache.delete(id); // Retry after network failure.
+ const ready=load(meta);
+ const picture=ready||cache.get(id)?.image;
+ if(!picture)return false;
+ try{
+  if(typeof picture.decode==='function')await picture.decode();
+  else if(!picture.complete){
+   await new Promise(resolve=>{
+    picture.addEventListener('load',resolve,{once:true});
+    picture.addEventListener('error',resolve,{once:true});
+    if(picture.complete)resolve();
+   });
+  }
+ }catch{return false;}
+ if(!picture.complete||!picture.naturalWidth)return false;
+ const entry=cache.get(id);
+ if(entry?.image===picture)entry.status='ready';
+ return true;
+}
+export async function preloadSpriteSet(ids,{pin=false,onProgress=()=>{}}={}){
+ const selected=[...new Set(ids)].filter(id=>manifestById.has(id));
+ if(pin)for(const id of selected)pinnedScene.add(id);
+ const outcome={total:selected.length,done:0,loaded:0,failed:0};
+ let cursor=0;
+ await Promise.all(Array.from({length:Math.min(8,selected.length)},async()=>{
+  while(cursor<selected.length){
+   const id=selected[cursor++];
+   if(await preloadOne(id))outcome.loaded++;
+   else outcome.failed++;
+   outcome.done++;
+   onProgress({...outcome});
+  }
+ }));
+ cleanupLRU();
+ return outcome;
+}
+// Warm construction stages before server purchase, including acceleration FX.
+export function preloadBuildFrames(kind,rotation=0){
  const ids=['build_01','build_02','build_03'].map(stage=>
    parkConstructionAssetId(kind,rotation,stage)||buildingAssetId(kind,rotation,stage)
  );
  ids.push(catalogSpriteId(kind,rotation,'complete'));
- return Promise.all(ids.filter(Boolean).map(id=>{
-   const meta=manifestById.get(id);
-   if(!meta || typeof Image==='undefined')return Promise.resolve();
-   let entry=cache.get(id);
-   if(entry?.status==='ready' || entry?.status==='failed')return Promise.resolve();
-   // load existing image or trigger a new cache entry. Event listeners are
-   // registered separately from the loader's own onload/onerror handlers.
-   const picture=load(meta) || cache.get(id)?.image;
-   if(!picture)return Promise.resolve();
-   if(cache.get(id)?.status!=='loading')return Promise.resolve();
-   return new Promise(resolve=>{
-     picture.addEventListener('load',resolve,{once:true});
-     picture.addEventListener('error',resolve,{once:true});
-     if(picture.complete)resolve();
-   });
- }));
+ return preloadSpriteSet(ids.filter(Boolean));
 }
 export function spriteStatus(){
  const values=[...cache.values()];

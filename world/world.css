@@ -40,11 +40,16 @@
 @media(max-width:370px){.test-wallet{gap:4px}.test-wallet__badge{display:none}#topupWallet{font-size:8px;padding:4px 5px}}
 @media(max-height:650px){.bottom-panel{height:214px}.test-wallet{min-height:26px}}
 
-/* Core Pack v1 art-mode switch; independent from city state. */
-.art-mode-button{width:42px;height:33px;flex:none;border:1px solid #e7acc2;border-radius:12px;background:linear-gradient(135deg,#ca7c9c,#a85578);color:#fff;font-size:11px;font-weight:950;box-shadow:0 3px 10px #d787a929;}
-.art-mode-button[aria-pressed="false"]{background:#fff6f7;color:#a97587;border-color:#efd3de;box-shadow:none;}
-@media(max-width:640px){.art-mode-button{width:36px;height:31px;border-radius:10px;font-size:10px}}
-@media(max-width:360px){.art-mode-button{width:31px;height:29px}.brand{gap:5px}.brand-paw{width:36px;height:36px}.brand-text strong{font-size:17px}}
+/* The city is an interactive touch surface, not selectable document text.
+   Keep ordinary scrolling in the construction catalogue; the canvas still
+   owns pinch and pan with touch-action:none. */
+html,body,.app-shell,.app-shell *,#worldServerLock,#worldServerLock *{
+  -webkit-user-select:none!important;
+  user-select:none!important;
+  -webkit-touch-callout:none!important;
+}
+img,canvas,svg{-webkit-user-drag:none;user-drag:none}
+@media(max-width:360px){.brand{gap:5px}.brand-paw{width:36px;height:36px}.brand-text strong{font-size:17px}}
 
 /* v0.1.3 - visible costs in the catalogue; do not hide items people cannot afford. */
 .catalog-card .catalog-price { color:#a86c26; font-weight:800; background:#fff1d9; white-space:normal; line-height:1.25; display:inline-block; }

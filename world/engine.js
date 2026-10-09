@@ -397,6 +397,9 @@ export function cityStats(city, catalog, now = Date.now()) {
   const placed = city.objects.filter(item => !item.stored);
   return {
     buildings: placed.length,
+    // Only real residences and shops; the separate buildings field stays
+    // backward-compatible for older saves, diagnostics and tests.
+    structures: placed.filter(item => ['homes','shops'].includes(catalog[item.kind]?.category)).length,
     constructing: placed.filter(item => isConstructing(item, now)).length,
     ready: placed.filter(item => !isConstructing(item, now)).length,
     roads: city.roads.length,
