@@ -32,8 +32,8 @@ body{background:#d6ead0}
  box-shadow:var(--premium-shadow);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);
 }
 .topbar-identity{display:flex;align-items:center;gap:11px;min-width:0;flex:1}
-.back-button{display:grid;place-items:center;flex:none;width:44px;height:44px;border-radius:50%;border:1px solid #f1cdd9;background:linear-gradient(145deg,#fff,#ffeff5);color:#9c476e;box-shadow:0 3px 8px #ca80a02b}
-.back-button .game-icon{width:24px;height:24px}
+.back-button{display:flex;align-items:center;justify-content:center;flex:none;width:44px;height:44px;padding:0;border-radius:50%;border:1px solid #f1cdd9;background:linear-gradient(145deg,#fff,#ffeff5);color:#9c476e;box-shadow:0 3px 8px #ca80a02b;appearance:none;-webkit-appearance:none}
+.back-button .game-icon{width:22px;height:22px;transform:translateX(-.5px)}
 .brand{gap:11px}.brand-paw{width:46px;height:46px;border-radius:17px;background:linear-gradient(145deg,#ff8cb1,#c9437c);box-shadow:0 8px 15px #ae4b7b40,inset 0 2px #ffffff82}
 .brand-text strong{color:var(--premium-ink);letter-spacing:-.055em;font-size:clamp(18px,2vw,26px);white-space:nowrap}
 .brand-text small{color:#a67b89;font-weight:650;font-size:11px}
@@ -73,7 +73,8 @@ body{background:#d6ead0}
 .map-heading{top:calc(var(--zeffi-safe-top) + 155px);left:clamp(16px,3vw,33px);gap:7px;max-width:44%;pointer-events:none;z-index:5}
 .map-title{gap:3px}.map-title small{font-size:9px;letter-spacing:.23em;color:#956777;text-shadow:0 1px #fff8}
 .map-title strong{font-size:19px;color:#803e56;text-shadow:0 2px 4px #fff9}
-.map-coordinates{padding:6px 8px;font-size:9px;border:1px solid #fff;background:#fff9f2dc;box-shadow:0 3px 11px #916c7130}
+.map-coordinates{display:inline-flex;align-items:center;gap:6px;padding:6px 10px;font-size:9px;font-weight:850;border:1px solid #fff;background:#fff9f2dc;box-shadow:0 3px 11px #916c7130;border-radius:999px;color:#9a7a59;white-space:nowrap}
+.map-coordinates .coordinate-dot{width:9px;height:9px;flex:none;border-radius:50%;background:linear-gradient(145deg,#d7b36e,#b88c46);box-shadow:0 1px 0 rgba(255,255,255,.7)}
 /* Collapsible city health card. All four stats remain in the DOM and live. */
 .map-metrics{
  position:absolute;top:calc(var(--zeffi-safe-top) + 156px);right:clamp(10px,3vw,30px);
@@ -120,12 +121,16 @@ body{background:#d6ead0}
  border:1px solid #fff;border-bottom:0;border-radius:33px 33px 0 0;
  background:linear-gradient(180deg,#fffaf9f8 0%,#fff4f6fb 100%);box-shadow:0 -12px 38px #98567540;
  backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);
- transition:height .22s ease;overflow:hidden;
+ transition:height .28s cubic-bezier(.22,.8,.24,1),transform .28s cubic-bezier(.22,.8,.24,1),box-shadow .28s ease;overflow:hidden;transform:translateY(var(--sheet-drag-offset,0px));will-change:height,transform;
 }
 .bottom-panel.is-collapsed{height:calc(81px + var(--zeffi-safe-bottom));}
-.bottom-panel.is-collapsed .category-tabs,.bottom-panel.is-collapsed .catalog-list,.bottom-panel.is-collapsed .warehouse-list,.bottom-panel.is-collapsed .panel-footer{display:none!important}
-.sheet-grip{position:absolute;top:7px;left:50%;transform:translateX(-50%);width:55px;height:5px;border-radius:99px;background:#d6adbc;cursor:pointer}
+.bottom-panel.is-dragging,.bottom-panel.no-anim{transition:none}
+.bottom-panel .category-tabs,.bottom-panel .catalog-list,.bottom-panel .warehouse-list,.bottom-panel .panel-footer{opacity:1;transform:translateY(0);transition:opacity .2s ease,transform .24s ease;will-change:opacity,transform}
+.bottom-panel.is-collapsed .category-tabs,.bottom-panel.is-collapsed .catalog-list,.bottom-panel.is-collapsed .warehouse-list,.bottom-panel.is-collapsed .panel-footer{opacity:0;transform:translateY(12px);pointer-events:none}
+.sheet-grip{position:absolute;top:7px;left:50%;transform:translateX(-50%);width:55px;height:5px;border-radius:99px;background:#d6adbc;cursor:pointer;transition:width .18s ease,background .18s ease;touch-action:none}
+.panel-head{touch-action:none}
 .panel-head{gap:9px;min-height:46px;padding:0 1px}
+.bottom-panel.is-dragging .sheet-grip,.bottom-panel:active .sheet-grip{width:68px;background:#c98ea4}
 .panel-heading{display:flex;align-items:center;min-width:0;gap:11px}
 .panel-heading-icon{width:46px;height:46px;display:grid;place-items:center;flex:none;border-radius:17px;background:linear-gradient(140deg,#ffe5ed,#ffeff1);border:1px solid #f9d0dc;color:#c45682}
 .panel-shop-icon{width:28px;height:28px;stroke-width:1.8}
@@ -198,7 +203,7 @@ body{background:#d6ead0}
  .nav-notice .status-icon{display:none}
  .map-heading{top:calc(var(--zeffi-safe-top) + 145px);left:12px;gap:5px}
  .map-title strong{font-size:17px}.map-title small{font-size:8px;letter-spacing:.13em}
- .map-coordinates{padding:5px;font-size:8px;white-space:nowrap}
+ .map-coordinates{padding:5px 8px;font-size:8px;white-space:nowrap;gap:5px}
  .map-metrics{top:calc(var(--zeffi-safe-top) + 139px);right:8px;width:163px;max-width:46%;border-radius:18px;padding:6px}
  .metrics-toggle{font-size:9px;padding:1px 2px 4px}
  .map-metrics .metric{grid-template-columns:14px minmax(0,1fr);gap:1px 3px;min-height:42px;padding:5px 4px;border-radius:12px}

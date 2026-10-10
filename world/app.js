@@ -39,15 +39,27 @@ const PRICE_IMAGES = Object.freeze({
  treats: '../assets/season-pass/zefir_currency.webp'
 });
 const CATEGORY_SYMBOLS = Object.freeze({all:'▦', homes:'⌂', shops:'☕', parks:'♣', decor:'✿'});
-function setCatalogOpen(isOpen){
+function setCatalogOpen(isOpen,{animate=true}={}){
  state.catalogOpen=Boolean(isOpen);
- $('bottomPanel').classList.toggle('is-open',state.catalogOpen);
- $('bottomPanel').classList.toggle('is-collapsed',!state.catalogOpen);
+ const panel=$('bottomPanel');
+ panel.classList.toggle('is-open',state.catalogOpen);
+ panel.classList.toggle('is-collapsed',!state.catalogOpen);
+ panel.classList.toggle('no-anim',!animate);
+ panel.style.removeProperty('--sheet-drag-offset');
  $('catalogToggle').setAttribute('aria-expanded',String(state.catalogOpen));
  $('catalogToggle').setAttribute('aria-label',state.catalogOpen?'Свернуть каталог':'Открыть каталог');
  $('openBuildCatalog').setAttribute('aria-expanded',String(state.catalogOpen));
  $('openBuildCatalog').classList.toggle('is-active',state.catalogOpen);
  $('app').classList.toggle('catalog-expanded',state.catalogOpen);
+ if(!animate){requestAnimationFrame(()=>panel.classList.remove('no-anim'));}
+}
+function panelSnapThreshold(){
+ return Math.max(44,Math.min(110,Math.round(window.innerHeight*0.08)));
+}
+function updateCityBadge(){
+ const totalCells=576+state.city.parcels.length*16;
+ const totalPlots=36+state.city.parcels.length;
+ $('coordLabel').textContent=state.mode==='expand'?`Участков: ${totalPlots}`:`${totalCells.toLocaleString('ru-RU')} ${tr('cellsShort')}`;
 }
 function addCatalogPrice(container,cost){
  const amounts=[['points','Очки'],['coffee','Кофе'],['treats','Зефир']];
@@ -446,7 +458,7 @@ function updateUI(){
  $('constructingCount').textContent=stats.constructing;
  $('warehouseBadge').textContent=stats.stored;
  for(const [currency,id] of [['points','walletPoints'],['coffee','walletCoffee'],['treats','walletTreats']])$(id).textContent=state.city.wallet[currency].toLocaleString('ru-RU');
- $('coordLabel').textContent=state.mode==='expand'?`${tr('landPlots')}: ${36+state.city.parcels.length}`:`${576+state.city.parcels.length*16} ${tr('cellsShort')}`;
+ updateCityBadge();
  $('undoButton').disabled=SERVER_MODE||state.undo.length===0;
  $('redoButton').disabled=SERVER_MODE||state.redo.length===0;
  document.querySelectorAll('[data-tool]').forEach(button=>{
@@ -646,7 +658,7 @@ function onPointerDown(event){
 }
 function onPointerMove(event){
  if(!state.pointers.has(event.pointerId)){
-  const tile=tileFromEvent(event);if(validTile(tile))$('coordLabel').textContent=`${tile.x+1}:${tile.y+1}`;return;
+  return;
  }
  const pos=pointerPosition(event);
  state.pointers.set(event.pointerId,{...pos});
@@ -769,11 +781,51 @@ function bindEvents(){
   scheduleDraw();
  });
  $('catalogToggle').addEventListener('click',()=>setCatalogOpen(!state.catalogOpen));
- const grip=document.querySelector('.sheet-grip');
- if(grip){
-  let gestureStart=null;
-  grip.addEventListener('pointerdown',event=>{gestureStart=event.clientY;});
-  grip.addEventListener('pointerup',event=>{if(gestureStart!==null){setCatalogOpen(!state.catalogOpen);gestureStart=null;}});
+ const bottomPanel=$('bottomPanel');
+ const dragHandle=bottomPanel?.querySelector('.sheet-grip');
+ const dragZone=bottomPanel?.querySelector('.panel-head');
+ if(bottomPanel && dragHandle && dragZone){
+  let dragState=null;
+  const releaseDrag=()=>{
+   if(!dragState)return;
+   try{dragState.target.releasePointerCapture?.(dragState.pointerId);}catch{}
+   dragState=null;
+   bottomPanel.classList.remove('is-dragging');
+   bottomPanel.style.removeProperty('--sheet-drag-offset');
+  };
+  const beginDrag=event=>{
+   if(event.pointerType==='mouse' && event.button!==0)return;
+   if(event.target.closest('.head-action'))return;
+   dragState={pointerId:event.pointerId,startY:event.clientY,lastY:event.clientY,moved:false,target:event.currentTarget};
+   bottomPanel.classList.add('is-dragging');
+   event.currentTarget.setPointerCapture?.(event.pointerId);
+  };
+  const moveDrag=event=>{
+   if(!dragState || event.pointerId!==dragState.pointerId)return;
+   const deltaY=event.clientY-dragState.startY;
+   dragState.lastY=event.clientY;
+   if(Math.abs(deltaY)>4)dragState.moved=true;
+   const limited=state.catalogOpen?Math.max(0,Math.min(deltaY,320)):Math.min(0,Math.max(deltaY,-320));
+   bottomPanel.style.setProperty('--sheet-drag-offset',`${limited}px`);
+  };
+  const endDrag=event=>{
+   if(!dragState || event.pointerId!==dragState.pointerId)return;
+   const deltaY=(dragState.lastY||event.clientY)-dragState.startY;
+   const moved=dragState.moved;
+   releaseDrag();
+   if(!moved){setCatalogOpen(!state.catalogOpen);return;}
+   const threshold=panelSnapThreshold();
+   if(state.catalogOpen && deltaY>threshold){setCatalogOpen(false);return;}
+   if(!state.catalogOpen && deltaY<-threshold){setCatalogOpen(true);return;}
+   setCatalogOpen(state.catalogOpen);
+  };
+  [dragHandle,dragZone].forEach(node=>{
+   node.addEventListener('pointerdown',beginDrag);
+   node.addEventListener('pointermove',moveDrag);
+   node.addEventListener('pointerup',endDrag);
+   node.addEventListener('pointercancel',releaseDrag);
+   node.addEventListener('lostpointercapture',releaseDrag);
+  });
  }
  $('metricsToggle').addEventListener('click',()=>{
   const panel=$('cityMetrics'),expanded=!panel.classList.contains('is-expanded');
