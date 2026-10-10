@@ -19,7 +19,7 @@ const WELCOME_KEY = 'zefirok-world-v01-welcome-read';
 const $ = id => document.getElementById(id);
 const canvas = $('worldCanvas');
 const state = {
- city: makeInitialCity(), mode: 'select', category: 'all', warehouse: false,
+ city: makeInitialCity(), mode: 'select', category: 'all', warehouse: false, catalogOpen: true,
  selectedUid: null, draft: null, roadDraft: [], roadValid: true, expansionDraft: null, paidSkipUid: null,
  camera: { x: 0, y: 0, zoom: 1 },
  undo: [], redo: [], pointers: new Map(), pointerStart: null,
@@ -33,6 +33,35 @@ const iconCodes = { house: 0x1F3E1, coffee: 0x2615, cake: 0x1F370, flower: 0x1F3
 const icon = kind => String.fromCodePoint(iconCodes[kind] || 0x2726);
 const SIZE = () => ({ width: canvas.getBoundingClientRect().width, height: canvas.getBoundingClientRect().height });
 const nameOf = kind => tr(CATALOG[kind]?.titleKey || kind);
+const PRICE_IMAGES = Object.freeze({
+ points: '../assets/optimized/v0.79.5/iconScore.webp',
+ coffee: '../assets/optimized/v0.79.5/iconCoffee.webp',
+ treats: '../assets/season-pass/zefir_currency.webp'
+});
+const CATEGORY_SYMBOLS = Object.freeze({all:'▦', homes:'⌂', shops:'☕', parks:'♣', decor:'✿'});
+function setCatalogOpen(isOpen){
+ state.catalogOpen=Boolean(isOpen);
+ $('bottomPanel').classList.toggle('is-open',state.catalogOpen);
+ $('bottomPanel').classList.toggle('is-collapsed',!state.catalogOpen);
+ $('catalogToggle').setAttribute('aria-expanded',String(state.catalogOpen));
+ $('catalogToggle').setAttribute('aria-label',state.catalogOpen?'Свернуть каталог':'Открыть каталог');
+ $('openBuildCatalog').setAttribute('aria-expanded',String(state.catalogOpen));
+ $('openBuildCatalog').classList.toggle('is-active',state.catalogOpen);
+}
+function addCatalogPrice(container,cost){
+ const amounts=[['points','Очки'],['coffee','Кофе'],['treats','Зефир']];
+ let count=0;
+ for(const [field,label] of amounts){
+  const amount=Number(cost[field]||0);
+  if(!amount)continue;
+  const item=document.createElement('span');item.className='catalog-price__piece';
+  const image=document.createElement('img');image.src=PRICE_IMAGES[field];image.alt='';image.width=17;image.height=17;image.loading='lazy';image.decoding='async';
+  const value=document.createElement('b');value.textContent=amount.toLocaleString('ru-RU');
+  item.title=`${label}: ${value.textContent}`;item.append(image,value);container.append(item);count++;
+ }
+ if(!count){const free=document.createElement('span');free.className='catalog-price__free';free.textContent=tr('free');container.append(free);}
+ container.setAttribute('aria-label',priceLabel(cost));
+}
 function priceLabel(cost){
  const parts=[];
  if(cost.points) parts.push(`${cost.points.toLocaleString('ru-RU')} ★`);
@@ -57,7 +86,7 @@ function showToast(message, isError = false) {
 function translateStatic() {
  document.querySelectorAll('[data-t]').forEach(el=>{ el.textContent = tr(el.dataset.t); });
  document.querySelectorAll('[data-title]').forEach(el=>{ el.title=tr(el.dataset.title);el.setAttribute('aria-label',tr(el.dataset.title)); });
- document.title = `${tr('app')} | Sandbox 0.1.13`; 
+ document.title = `${tr('app')} — ${tr('myCity')}`; 
 }
 function readSavedCity() {
  if(SERVER_MODE)return;
@@ -278,6 +307,7 @@ function statusError(error) {
 function selectedItem(){return state.city.objects.find(x=>x.uid===state.selectedUid && !x.stored)||null;}
 function stopDraft(){state.draft=null;state.roadDraft=[];state.roadValid=true;state.expansionDraft=null;}
 function switchMode(mode){
+ setCatalogOpen(false);
  stopDraft();state.mode=mode;state.selectedUid=null;
  if(mode!=='select')state.warehouse=false;
  if(mode==='expand'){
@@ -310,6 +340,7 @@ function startPlacement(kind){
  state.roadDraft=[];
  const pos=findFreeSpot(kind);
  state.draft={type:'place',kind,rotation:0,...pos};
+ setCatalogOpen(false);
  if(Number(CATALOG[kind]?.buildMs)>0)void preloadBuildFrames(kind,0);
  updateUI();scheduleDraw();
 }
@@ -319,12 +350,14 @@ function startRestore(uid){
  const pos=findFreeSpot(item.kind,item.rotation);
  state.mode='restore';state.selectedUid=null;state.warehouse=false;state.roadDraft=[];
  state.draft={type:'restore',uid,kind:item.kind,rotation:item.rotation,...pos};
+ setCatalogOpen(false);
  updateUI();scheduleDraw();
 }
 function startMove(){
  const item=selectedItem();if(!item)return;
  state.draft={type:'move',uid:item.uid,kind:item.kind,rotation:item.rotation,x:item.x,y:item.y};
  state.mode='move';state.selectedUid=null;state.roadDraft=[];state.warehouse=false;
+ setCatalogOpen(false);
  updateUI();scheduleDraw();
 }
 function updateRoadValidity(){
@@ -433,12 +466,17 @@ function updateUI(){
  $('categoryTabs').hidden=state.warehouse;
  $('panelTitle').textContent=state.warehouse?tr('warehouseTitle'):tr('chooseCategory');
  $('warehouseButton').classList.toggle('is-active',state.warehouse);
+ const status=$('saveStatus');
+ if(status)status.textContent=SERVER_MODE?(state.serverBusy?'Сохраняем…':state.serverReady?'На сервере':'Подключение…'):'Локально';
  updateActions();updateSelection();renderWarehouse();renderCatalogSelection();
 }
 function renderCategories(){
  const el=$('categoryTabs');el.replaceChildren();
  for(const category of CATEGORIES){
-  const button=document.createElement('button');button.type='button';button.textContent=tr(category);button.classList.toggle('is-active',state.category===category);
+  const button=document.createElement('button');button.type='button';
+  const symbol=document.createElement('span');symbol.className='category-icon';symbol.textContent=CATEGORY_SYMBOLS[category]||'✦';symbol.setAttribute('aria-hidden','true');
+  const label=document.createElement('span');label.textContent=tr(category);button.append(symbol,label);
+  button.classList.toggle('is-active',state.category===category);
   button.addEventListener('click',()=>{state.category=category;state.warehouse=false;renderCategories();renderCatalog();updateUI();});
   el.append(button);
  }
@@ -451,7 +489,7 @@ function renderCatalog(){
   const fig=document.createElement('div');fig.className='catalog-figure';const thumb=document.createElement('canvas');thumb.className='building-thumbnail';thumb.setAttribute('aria-hidden','true');fig.append(thumb);drawCatalogThumbnail(thumb,def);
   const copy=document.createElement('div');copy.className='catalog-copy';const title=document.createElement('strong');title.textContent=nameOf(def.id);
   const size=document.createElement('small');size.textContent=`${def.w} x ${def.h}  |  ${Number(def.buildMs||0)>0?formatRemaining(def.buildMs):tr('instant')}`;
-  const cost=document.createElement('em');cost.className='catalog-price';cost.textContent=priceLabel(objectPrice(CATALOG,def.id));
+  const cost=document.createElement('em');cost.className='catalog-price';addCatalogPrice(cost,objectPrice(CATALOG,def.id));
   copy.append(title,size,cost);button.append(fig,copy);
   button.addEventListener('click',()=>startPlacement(def.id));el.append(button);
  }
@@ -479,6 +517,7 @@ function renderWarehouse(){
 function openWarehouse(){
  if(activeEdit())stopDraft();
  state.selectedUid=null;state.mode='select';state.warehouse=!state.warehouse;
+ setCatalogOpen(true);
  updateUI();scheduleDraw();
 }
 function confirmLocalEdit(){
@@ -722,6 +761,29 @@ function bindEvents(){
   document.addEventListener(type,event=>event.preventDefault());
  }
  document.querySelectorAll('[data-tool]').forEach(btn=>btn.addEventListener('click',()=>switchMode(btn.dataset.tool)));
+ $('openBuildCatalog').addEventListener('click',()=>{
+  const open=(!state.catalogOpen)||state.warehouse;
+  if(open){if(activeEdit())cancelEdit();state.mode='select';state.warehouse=false;state.selectedUid=null;updateUI();}
+  setCatalogOpen(open);
+  scheduleDraw();
+ });
+ $('catalogToggle').addEventListener('click',()=>setCatalogOpen(!state.catalogOpen));
+ const grip=document.querySelector('.sheet-grip');
+ if(grip){
+  let gestureStart=null;
+  grip.addEventListener('pointerdown',event=>{gestureStart=event.clientY;});
+  grip.addEventListener('pointerup',event=>{if(gestureStart!==null){setCatalogOpen(!state.catalogOpen);gestureStart=null;}});
+ }
+ $('metricsToggle').addEventListener('click',()=>{
+  const panel=$('cityMetrics'),expanded=!panel.classList.contains('is-expanded');
+  panel.classList.toggle('is-expanded',expanded);
+  $('metricsToggle').setAttribute('aria-expanded',String(expanded));
+  $('metricsToggle').setAttribute('aria-label',expanded?'Скрыть подробную статистику':'Показать всю статистику города');
+ });
+ if(location.pathname.endsWith('/world/index.html')){
+  $('zeffiReturnGame').addEventListener('click',()=>{location.href=new URL('../index.html',location.href).href;});
+ }
+
  $('warehouseButton').addEventListener('click',openWarehouse);
  $('rotateButton').addEventListener('click',()=>{if(!state.draft||CATALOG[state.draft.kind]?.rotatable===false||state.preparingPlacementArt)return;state.draft.rotation=nextRotation(state.draft.rotation);if(Number(CATALOG[state.draft.kind]?.buildMs)>0)void preloadBuildFrames(state.draft.kind,state.draft.rotation);updateActions();scheduleDraw();});
  $('confirmEdit').addEventListener('click',confirmEdit);
@@ -768,7 +830,7 @@ function bindEvents(){
  $('helpButton').addEventListener('click',()=>{$('helpModal').hidden=false;$('helpClose').focus();});
  $('helpClose').addEventListener('click',()=>{$('helpModal').hidden=true;});
  $('commonButton').addEventListener('click',()=>showToast(tr('worldUnavailable')));
- $('toolRoad').title=`Road: ${priceLabel(ROAD_TILE_PRICE)} / ${tr('cellsShort')}`;
+ $('toolRoad').title=`Дороги: ${priceLabel(ROAD_TILE_PRICE)} / ${tr('cellsShort')}`;
  $('welcomeStart').addEventListener('click',()=>{
   $('welcomeModal').hidden=true;
   try{localStorage.setItem(WELCOME_KEY,'1');}catch{}
@@ -782,6 +844,7 @@ function bindEvents(){
  canvas.addEventListener('wheel',event=>{event.preventDefault();zoomTo(state.camera.zoom*(event.deltaY<0?1.12:.89));},{passive:false});
  document.addEventListener('keydown',event=>{
   if(event.key==='Escape'){
+   if(state.catalogOpen){setCatalogOpen(false);return;}
    if(!$('skipModal').hidden){closeSkipModal();return;}
    if(!$('confirmModal').hidden){$('confirmModal').hidden=true;return;}
    if(!$('helpModal').hidden){$('helpModal').hidden=true;return;}
@@ -824,12 +887,12 @@ function initialize(){
  onSpriteUpdate(()=>{if(state.visualsReady)refreshArt();});
  // A retired 2D/3D preference must never switch the released city to wireframes.
  setSpriteMode(true);
- translateStatic();readSavedCity();bindEvents();renderCategories();renderCatalog();updateUI();resetView();
+ translateStatic();readSavedCity();bindEvents();renderCategories();renderCatalog();setCatalogOpen(true);updateUI();resetView();
  if(SERVER_MODE){
   for(const id of ['topupWallet','undoButton','redoButton','resetButton']){$(id).hidden=true;}
   document.querySelector('.test-wallet__badge').textContent='СЕРВЕР · D1';
-  document.querySelector('.panel-eyebrow').textContent='ПОКУПКИ И СОХРАНЕНИЯ ЧЕРЕЗ WORKER';
-  document.querySelector('.nav-notice [data-t="local"]').textContent='Серверное сохранение';
+  document.querySelector('.panel-footer [data-t="noMoney"]').textContent='Покупки подтверждаются сервером';
+  $('saveStatus').textContent='Подключение…';
   void bootWorldServer();
  }else void bootLocalArt();
  if(state.loadingFailed)showToast(tr('invalidSave'),true);

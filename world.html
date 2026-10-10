@@ -8,6 +8,7 @@
   <meta name="description" content="World Zeffi standalone city builder sandbox v0.1.13: animated construction acceleration and dynamic coffee-only prices" />
   <title>Мир Зеффи — Песочница 0.1.13</title>
   <link rel="stylesheet" href="./world.css" />
+  <link rel="stylesheet" href="./premium-ui.css" />
   <script id="zeffi-world-preview-access">
     (()=>{
       const local=location.protocol==='file:'||/^(localhost|127\.0\.0\.1|\[::1\])$/i.test(location.hostname);
@@ -68,7 +69,7 @@
           // Everyone without a signed, allowlisted Telegram session gets only
           // this static teaser, not city modules or wallet operations.
           document.title='Мир Зеффи — скоро открытие';
-          document.querySelector('link[rel="stylesheet"]')?.remove();
+          document.querySelectorAll('link[rel="stylesheet"]').forEach(link=>link.remove());
           document.body.style.cssText='margin:0;min-height:100dvh;background:linear-gradient(180deg,#fff8fb,#fff0f6);font-family:system-ui,-apple-system,sans-serif;color:#713850';
           document.body.innerHTML=`<main style="box-sizing:border-box;max-width:480px;min-height:100dvh;margin:0 auto;padding:28px 18px 48px;display:grid;align-content:center;gap:17px;text-align:center">
             <header><strong style="font-size:24px">Мир Зеффи</strong><div style="font-size:12px;color:#a57489;margin-top:4px">Скоро открытие</div></header>
@@ -90,21 +91,27 @@
 </head>
 <body>
  <div class="app-shell" id="app">
-  <header class="topbar">
-   <div class="brand">
-    <div class="brand-paw" aria-hidden="true"><svg viewBox="0 0 52 52" width="32" height="32" fill="none"><ellipse cx="26" cy="30" rx="13" ry="11" fill="#fff"/><circle cx="13" cy="19" r="5" fill="#fff"/><circle cx="23" cy="14" r="5" fill="#fff"/><circle cx="34" cy="16" r="5" fill="#fff"/><circle cx="42" cy="24" r="4" fill="#fff"/></svg></div>
-    <div class="brand-text"><strong data-t="app"></strong><small data-t="subtitle"></small></div>
+  <header class="topbar" aria-label="Панель Мира Зеффи">
+   <div class="topbar-identity">
+    <button type="button" class="back-button" id="zeffiReturnGame" aria-label="Вернуться в Сладкий Забег"><svg class="game-icon" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg></button>
+    <div class="brand">
+     <div class="brand-paw" aria-hidden="true"><svg viewBox="0 0 52 52" width="32" height="32" fill="none"><ellipse cx="26" cy="30" rx="13" ry="11" fill="#fff"/><circle cx="13" cy="19" r="5" fill="#fff"/><circle cx="23" cy="14" r="5" fill="#fff"/><circle cx="34" cy="16" r="5" fill="#fff"/><circle cx="42" cy="24" r="4" fill="#fff"/></svg></div>
+     <div class="brand-text"><strong data-t="app"></strong><small data-t="subtitle"></small></div>
+    </div>
    </div>
-   <div class="topbar-side">
-    <span class="version-pill" data-t="v01"></span>
-    <button class="icon-button help-button" id="helpButton" data-title="help" aria-label="Help" title="Help">?</button>
+   <div class="topbar-side"><button class="icon-button help-button" id="helpButton" data-title="help" aria-label="Помощь" title="Помощь">?</button></div>
+   <div class="test-wallet" aria-label="Валюты города">
+    <span class="test-wallet__badge" data-t="demoWallet"></span>
+    <span class="test-wallet__balance" title="Очки"><img src="../assets/optimized/v0.79.5/iconScore.webp" alt="" width="28" height="28" decoding="async"/><b id="walletPoints">0</b></span>
+    <span class="test-wallet__balance" title="Кофе"><img src="../assets/optimized/v0.79.5/iconCoffee.webp" alt="" width="28" height="28" decoding="async"/><b id="walletCoffee">0</b></span>
+    <span class="test-wallet__balance" title="Зефир"><img src="../assets/season-pass/zefir_currency.webp" alt="" width="28" height="28" decoding="async"/><b id="walletTreats">0</b></span>
+    <button id="topupWallet" type="button" data-title="topUpWallet" aria-label="Пополнить тестовые валюты">+</button>
    </div>
   </header>
-  <nav class="world-nav" aria-label="World selection">
-   <button type="button" id="zeffiReturnGame" style="border:1px solid #eecbd8;border-radius:12px;background:#fff;color:#96506c;padding:9px 12px;font-weight:800" aria-label="Вернуться в Сладкий Забег">← В игру</button>
-   <button type="button" class="world-nav__active" aria-current="page"><span class="tiny-shape">&#x2302;</span> <span data-t="myCity"></span></button>
-   <button type="button" class="world-nav__disabled" id="commonButton"><span class="tiny-shape">&#x2727;</span> <span data-t="commonWorld"></span> <small data-t="commonLater"></small></button>
-   <div class="nav-notice"><span class="notice-dot"></span><span data-t="local"></span></div>
+  <nav class="world-nav" aria-label="Выбор мира">
+   <button type="button" class="world-nav__active" aria-current="page"><svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m3 11 9-8 9 8v9H3z"/><path d="M9 20v-8h6v8"/></svg><span data-t="myCity"></span></button>
+   <button type="button" class="world-nav__disabled" id="commonButton"><svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 20v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 20v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg><span data-t="commonWorld"></span> <small data-t="commonLater"></small></button>
+   <div class="nav-notice" title="Состояние синхронизации"><span class="notice-dot"></span><span id="saveStatus" data-t="local"></span><svg class="status-icon" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 5 5L20 7"/></svg></div>
   </nav>
   <section class="map-zone" aria-label="City builder area" id="mapZone">
    <canvas id="worldCanvas" aria-label="Isometric construction map" tabindex="0"></canvas>
@@ -113,17 +120,21 @@
     <div class="map-title"><small>ZEFFI VALLEY</small><strong data-t="myCity"></strong></div>
     <div class="map-coordinates"><span class="coordinate-dot"></span><span id="coordLabel">24 x 24</span></div>
    </div>
-   <div class="map-metrics">
-    <div class="metric metric-people"><span data-t="population"></span><strong id="populationCount">0</strong></div>
-    <div class="metric metric-comfort" id="comfortCard"><span data-t="comfort"></span><strong id="comfortCount">0</strong><small id="comfortTier" aria-live="polite"></small></div>
-    <div class="metric"><span data-t="completedStructures"></span><strong id="buildingsCount">0</strong></div>
-    <div class="metric metric-build"><span data-t="buildInProgress"></span><strong id="constructingCount">0</strong></div>
+   <div class="map-metrics" id="cityMetrics">
+    <button type="button" class="metrics-toggle" id="metricsToggle" aria-controls="cityMetricsContent" aria-expanded="false" aria-label="Показать всю статистику города"><svg class="metrics-toggle-icon" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 20v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 20v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg> <span>Город в цифрах</span><span class="metrics-chevron">⌄</span></button>
+    <div class="metrics-content" id="cityMetricsContent">
+     <div class="metric metric-people"><svg class="metric-icon" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 20v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 20v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg><span data-t="population"></span><strong id="populationCount">0</strong></div>
+     <div class="metric metric-comfort" id="comfortCard"><svg class="metric-icon" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.8 4.6a5.3 5.3 0 0 0-7.5 0L12 5.9l-1.3-1.3a5.3 5.3 0 0 0-7.5 7.5L12 21l8.8-8.9a5.3 5.3 0 0 0 0-7.5z"/></svg><span data-t="comfort"></span><strong id="comfortCount">0</strong><small id="comfortTier" aria-live="polite"></small></div>
+     <div class="metric metric-completed"><svg class="metric-icon" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m3 11 9-8 9 8v9H3z"/><path d="M9 20v-8h6v8"/></svg><span data-t="completedStructures"></span><strong id="buildingsCount">0</strong></div>
+     <div class="metric metric-build"><svg class="metric-icon" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 12-7 7a2 2 0 0 1-3-3l7-7"/><path d="m11 6 3-3 7 7-3 3"/><path d="M16 5 19 2"/></svg><span data-t="buildInProgress"></span><strong id="constructingCount">0</strong></div>
+    </div>
    </div>
-   <div class="world-tools" role="toolbar" aria-label="City tools">
-    <button id="toolSelect" data-tool="select" type="button" class="tool-button is-active" aria-label="Select tool" title="Select tool"><span class="tool-glyph">&#x261e;</span><small data-t="selectMode"></small></button>
-    <button id="toolRoad" data-tool="road" type="button" class="tool-button" aria-label="Road tool" title="Road tool"><span class="tool-glyph">&#x2550;</span><small data-t="roadMode"></small></button>
-    <button id="toolErase" data-tool="erase" type="button" class="tool-button" aria-label="Erase road tool" title="Erase road tool"><span class="tool-glyph">&#x2715;</span><small data-t="eraseMode"></small></button>
-    <button id="toolExpand" data-tool="expand" type="button" class="tool-button tool-expand" aria-label="Expand city" title="Expand city"><span class="tool-glyph">&#x229e;</span><small data-t="expandMode"></small></button>
+   <div class="world-tools" role="toolbar" aria-label="Инструменты города">
+    <button id="openBuildCatalog" type="button" class="tool-button tool-build" aria-controls="bottomPanel" aria-expanded="true"><svg class="tool-glyph" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 12-7 7a2 2 0 0 1-3-3l7-7"/><path d="m11 6 3-3 7 7-3 3"/><path d="M16 5 19 2"/></svg><small>Строить</small></button>
+    <button id="toolSelect" data-tool="select" type="button" class="tool-button is-active" aria-label="Режим просмотра" title="Режим просмотра"><svg class="tool-glyph" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m5 3 14 9-7 1-3 7z"/><path d="m12 13 5 7"/></svg><small>Выбор</small></button>
+    <button id="toolRoad" data-tool="road" type="button" class="tool-button" aria-label="Строить дороги" title="Строить дороги"><svg class="tool-glyph" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20 20 4M9 21l12-12M4 15l11-11"/><path d="m9 15 2-2m2-2 2-2"/></svg><small>Дороги</small></button>
+    <button id="toolErase" data-tool="erase" type="button" class="tool-button" aria-label="Удалить дорогу" title="Удалить дорогу"><svg class="tool-glyph" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m4 16 9-10 8 8-6 7H9z"/><path d="m13 6 8 8M8 21h13"/></svg><small>Убрать</small></button>
+    <button id="toolExpand" data-tool="expand" type="button" class="tool-button tool-expand" aria-label="Купить землю" title="Купить землю"><svg class="tool-glyph" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="2"/><path d="M12 4v16M4 12h16"/><path d="m16 8 2-2m-2 0 2 2"/></svg><small>Земля</small></button>
    </div>
    <div class="zoom-tools" aria-label="Camera controls">
     <button class="small-round" id="zoomIn" type="button" data-title="zoomIn" title="Zoom in">+</button>
@@ -145,13 +156,18 @@
    </div>
    <div class="toast" id="toast" role="status" aria-live="polite"></div>
   </section>
-  <section class="bottom-panel" id="bottomPanel">
-   <div class="test-wallet"><span class="test-wallet__badge" data-t="demoWallet"></span><span class="test-wallet__balance">&#x2605; <b id="walletPoints">0</b></span><span class="test-wallet__balance">&#x2615; <b id="walletCoffee">0</b></span><span class="test-wallet__balance">&#x2728; <b id="walletTreats">0</b></span><button id="topupWallet" type="button" data-t="topUpWallet"></button></div>
+  <section class="bottom-panel is-open" id="bottomPanel" aria-label="Строительство">
+   <div class="sheet-grip" aria-hidden="true"></div>
    <div class="panel-head">
-    <div class="panel-heading"><span class="panel-eyebrow" data-t="testPrices"></span><h2 id="panelTitle" data-t="chooseCategory"></h2></div>
-    <div class="panel-head-actions"><button class="head-action" id="warehouseButton" type="button"><span class="warehouse-bag">&#x25a3;</span><span data-t="store"></span><b id="warehouseBadge">0</b></button><button class="head-action" id="undoButton" type="button" data-title="undo" aria-label="Undo">&#x21b6;</button><button class="head-action" id="redoButton" type="button" data-title="redo" aria-label="Redo">&#x21b7;</button></div>
+    <div class="panel-heading"><div class="panel-heading-icon"><svg class="panel-shop-icon" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m3 9 2-5h14l2 5-2 2H5z"/><path d="M5 11v9h14v-9M9 20v-6h6v6"/></svg></div><div class="panel-heading-label"><h2 id="panelTitle" data-t="chooseCategory"></h2><span class="panel-subtitle">Построй свой уютный городок</span></div></div>
+    <div class="panel-head-actions">
+     <button class="head-action" id="warehouseButton" type="button" aria-label="Склад построек" title="Склад построек"><svg class="panel-action-icon" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 20V8l9-5 9 5v12H3z"/><path d="M9 20v-8h6v8M3 9l9 4 9-4"/></svg><b id="warehouseBadge">0</b></button>
+     <button class="head-action" id="undoButton" type="button" data-title="undo" aria-label="Отменить">↶</button>
+     <button class="head-action" id="redoButton" type="button" data-title="redo" aria-label="Повторить">↷</button>
+     <button class="head-action catalog-toggle" id="catalogToggle" type="button" aria-label="Свернуть каталог" aria-controls="bottomPanel" aria-expanded="true"><svg class="panel-action-icon" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
+    </div>
    </div>
-   <div class="category-tabs" id="categoryTabs" aria-label="Building categories"></div>
+   <div class="category-tabs" id="categoryTabs" aria-label="Категории построек"></div>
    <div class="catalog-list" id="catalogList"></div>
    <div class="warehouse-list" id="warehouseList" hidden></div>
    <div class="panel-footer"><span class="safe-marker"></span><span data-t="noMoney"></span><button type="button" id="resetButton" data-t="reset"></button></div>
