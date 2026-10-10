@@ -5,6 +5,13 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no" />
   <meta name="theme-color" content="#fdf5f8" />
+  <script id="zeffi-world-iframe-insets">
+    try {
+      if (window.frameElement?.parentElement?.id === 'zeffi-world-preview-layer') {
+        document.documentElement.classList.add('zeffi-world-framed');
+      }
+    } catch (_) { /* A directly opened game is not a trusted same-origin frame. */ }
+  </script>
   <meta name="description" content="World Zeffi standalone city builder sandbox v0.1.13: animated construction acceleration and dynamic coffee-only prices" />
   <title>Мир Зеффи — Песочница 0.1.13</title>
   <link rel="stylesheet" href="./world.css" />
@@ -61,7 +68,13 @@
       }
       function launchCity(){
         document.documentElement.classList.add('zeffi-world-ready');
-        const script=document.createElement('script');script.type='module';script.src='./app.js';document.head.appendChild(script);
+        const script=document.createElement('script');script.type='module';script.src='./app.js';
+        script.addEventListener('load',()=>{
+          if(document.documentElement.classList.contains('zeffi-world-framed')){
+            window.parent.postMessage({type:'zefirok-world-ui-ready'},location.origin);
+          }
+        },{once:true});
+        document.head.appendChild(script);
       }
       document.addEventListener('DOMContentLoaded',async()=>{
         if(!enabled){

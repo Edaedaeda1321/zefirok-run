@@ -47,6 +47,7 @@ function setCatalogOpen(isOpen){
  $('catalogToggle').setAttribute('aria-label',state.catalogOpen?'Свернуть каталог':'Открыть каталог');
  $('openBuildCatalog').setAttribute('aria-expanded',String(state.catalogOpen));
  $('openBuildCatalog').classList.toggle('is-active',state.catalogOpen);
+ $('app').classList.toggle('catalog-expanded',state.catalogOpen);
 }
 function addCatalogPrice(container,cost){
  const amounts=[['points','Очки'],['coffee','Кофе'],['treats','Зефир']];
@@ -887,7 +888,7 @@ function initialize(){
  onSpriteUpdate(()=>{if(state.visualsReady)refreshArt();});
  // A retired 2D/3D preference must never switch the released city to wireframes.
  setSpriteMode(true);
- translateStatic();readSavedCity();bindEvents();renderCategories();renderCatalog();setCatalogOpen(true);updateUI();resetView();
+ translateStatic();readSavedCity();bindEvents();renderCategories();renderCatalog();setCatalogOpen(window.innerWidth>700||window.innerHeight>=570);updateUI();resetView();
  if(SERVER_MODE){
   for(const id of ['topupWallet','undoButton','redoButton','resetButton']){$(id).hidden=true;}
   document.querySelector('.test-wallet__badge').textContent='СЕРВЕР · D1';

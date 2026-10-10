@@ -8,7 +8,12 @@
  --premium-edge:#efd3de;
  --premium-gold:#e8c27c;
  --premium-shadow:0 10px 34px rgba(102,55,71,.18),inset 0 1px rgba(255,255,255,.95);
+ --zeffi-safe-top:env(safe-area-inset-top,0px);
+ --zeffi-safe-bottom:env(safe-area-inset-bottom,0px);
 }
+/* The host overlay already applies Telegram contentSafeAreaInset. Its child
+   must never apply the device inset again (double top/bottom offset on iOS). */
+:root.zeffi-world-framed{--zeffi-safe-top:0px;--zeffi-safe-bottom:0px}
 html,body{overscroll-behavior:none}
 body{background:#d6ead0}
 .app-shell{
@@ -20,7 +25,7 @@ body{background:#d6ead0}
 }
 /* Top HUD has no opaque screen-wide bars; the world remains the background. */
 .topbar{
- position:absolute;z-index:25;top:calc(env(safe-area-inset-top) + 10px);left:clamp(10px,2.2vw,24px);right:clamp(10px,2.2vw,24px);
+ position:absolute;z-index:25;top:calc(var(--zeffi-safe-top) + 10px);left:clamp(10px,2.2vw,24px);right:clamp(10px,2.2vw,24px);
  width:auto;height:auto;min-height:72px;padding:12px 15px;display:flex;align-items:center;gap:14px;
  border:1px solid rgba(255,255,255,.98);border-radius:30px;
  background:linear-gradient(155deg,rgba(255,252,251,.97),rgba(255,244,246,.95));
@@ -49,7 +54,7 @@ body{background:#d6ead0}
 #topupWallet{margin:0;display:grid;place-items:center;width:30px;height:30px;min-width:30px;padding:0;border-radius:50%;border:1px solid #f49bb9;color:#fff;background:linear-gradient(145deg,#f68eae,#d35689);font-size:23px;line-height:1;box-shadow:0 3px 9px #cb68923d}
 /* Responsive segmented navigation: selection, locked mode, truthful save status. */
 .world-nav{
- position:absolute;z-index:24;top:calc(env(safe-area-inset-top) + 93px);left:clamp(18px,4vw,43px);right:clamp(18px,4vw,43px);
+ position:absolute;z-index:24;top:calc(var(--zeffi-safe-top) + 93px);left:clamp(18px,4vw,43px);right:clamp(18px,4vw,43px);
  width:auto;height:auto;min-height:47px;display:flex;align-items:center;gap:5px;padding:5px;
  border:1px solid #fff;border-radius:25px;background:rgba(255,250,248,.94);
  box-shadow:0 8px 23px #854f6224;backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);
@@ -65,13 +70,13 @@ body{background:#d6ead0}
 /* Canvas occupies the entire screen, not the leftover between rigid bars. */
 .map-zone{position:absolute;inset:0;width:100%;height:100%;min-height:0!important;overflow:hidden;isolation:isolate;background:#d6ecbb}
 .map-glow{background:linear-gradient(180deg,#fff4f27a 0%,transparent 26%,transparent 70%,#faede750 100%)}
-.map-heading{top:calc(env(safe-area-inset-top) + 155px);left:clamp(16px,3vw,33px);gap:7px;max-width:44%;pointer-events:none;z-index:5}
+.map-heading{top:calc(var(--zeffi-safe-top) + 155px);left:clamp(16px,3vw,33px);gap:7px;max-width:44%;pointer-events:none;z-index:5}
 .map-title{gap:3px}.map-title small{font-size:9px;letter-spacing:.23em;color:#956777;text-shadow:0 1px #fff8}
 .map-title strong{font-size:19px;color:#803e56;text-shadow:0 2px 4px #fff9}
 .map-coordinates{padding:6px 8px;font-size:9px;border:1px solid #fff;background:#fff9f2dc;box-shadow:0 3px 11px #916c7130}
 /* Collapsible city health card. All four stats remain in the DOM and live. */
 .map-metrics{
- position:absolute;top:calc(env(safe-area-inset-top) + 156px);right:clamp(10px,3vw,30px);
+ position:absolute;top:calc(var(--zeffi-safe-top) + 156px);right:clamp(10px,3vw,30px);
  z-index:6;width:clamp(148px,21vw,230px);max-width:47%;padding:7px;
  display:flex;flex-direction:column;gap:0;border:1px solid rgba(255,255,255,.95);border-radius:21px;
  background:rgba(255,251,248,.94);box-shadow:0 10px 26px #8e6c6740;backdrop-filter:blur(11px);-webkit-backdrop-filter:blur(11px);pointer-events:auto;
@@ -104,20 +109,20 @@ body{background:#d6ead0}
 .world-tools .tool-expand.is-active{background:linear-gradient(140deg,#7bbba2,#459679);color:#fff;border-color:#62a98d}
 .zoom-tools{z-index:7;right:clamp(10px,2.4vw,26px);top:57%;transform:translateY(-30%);gap:8px}
 .zoom-tools .small-round{height:42px;width:42px;border:1px solid #f2d9d3;border-radius:16px;background:rgba(255,251,248,.95);box-shadow:0 6px 15px #69544732;color:#a2597c;font-size:24px}
-.floating-notice{z-index:5;bottom:calc(env(safe-area-inset-bottom) + 80px);border-radius:16px;max-width:min(490px,calc(100% - 160px));padding:9px 12px;font-size:11px;color:#8b6971;background:#fffaf0ed;box-shadow:0 5px 15px #8d69752b}
+.floating-notice{z-index:5;bottom:calc(var(--zeffi-safe-bottom) + 80px);border-radius:16px;max-width:min(490px,calc(100% - 160px));padding:9px 12px;font-size:11px;color:#8b6971;background:#fffaf0ed;box-shadow:0 5px 15px #8d69752b}
 /* The action card has priority over the drawer. Placement automatically closes the drawer. */
-.edit-actions,.selection-panel{z-index:12;bottom:calc(env(safe-area-inset-bottom) + 88px);width:min(570px,calc(100% - 120px));background:#fff9f3f7;border:1px solid #f2cddc;border-radius:22px;box-shadow:0 11px 31px #7f52673a}
+.edit-actions,.selection-panel{z-index:12;bottom:calc(var(--zeffi-safe-bottom) + 88px);width:min(570px,calc(100% - 120px));background:#fff9f3f7;border:1px solid #f2cddc;border-radius:22px;box-shadow:0 11px 31px #7f52673a}
 .edit-buttons .solid-button,.selection-actions button:first-child{background:linear-gradient(145deg,#e985ac,#bf4d7d);border-color:#cb6590}
 /* Construction bottom sheet: world stays full-screen underneath. */
 .bottom-panel{
  position:absolute;z-index:18;left:0;right:0;bottom:0;width:100%;height:clamp(275px,43dvh,390px);min-height:0;
- display:flex;flex-direction:column;gap:9px;padding:17px clamp(12px,3vw,27px) calc(9px + env(safe-area-inset-bottom));
+ display:flex;flex-direction:column;gap:9px;padding:17px clamp(12px,3vw,27px) calc(9px + var(--zeffi-safe-bottom));
  border:1px solid #fff;border-bottom:0;border-radius:33px 33px 0 0;
  background:linear-gradient(180deg,#fffaf9f8 0%,#fff4f6fb 100%);box-shadow:0 -12px 38px #98567540;
  backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);
  transition:height .22s ease;overflow:hidden;
 }
-.bottom-panel.is-collapsed{height:calc(81px + env(safe-area-inset-bottom));}
+.bottom-panel.is-collapsed{height:calc(81px + var(--zeffi-safe-bottom));}
 .bottom-panel.is-collapsed .category-tabs,.bottom-panel.is-collapsed .catalog-list,.bottom-panel.is-collapsed .warehouse-list,.bottom-panel.is-collapsed .panel-footer{display:none!important}
 .sheet-grip{position:absolute;top:7px;left:50%;transform:translateX(-50%);width:55px;height:5px;border-radius:99px;background:#d6adbc;cursor:pointer}
 .panel-head{gap:9px;min-height:46px;padding:0 1px}
@@ -173,25 +178,28 @@ body{background:#d6ead0}
  .map-metrics{right:max(30px,calc((100vw - 1100px)/2))}
  .catalog-card{width:178px;min-width:178px;max-width:178px}
 }
-/* Mobile: put balances beneath the identity row without squeezing city title. */
+/* Mobile: keep the currency strip immediately below the compact title.
+   The outer Telegram overlay owns the native safe area and only the child
+   viewport is used for the game's controls. */
 @media (max-width:700px){
- .topbar{display:grid;grid-template-columns:minmax(0,1fr) 34px;grid-template-rows:auto auto;gap:8px 6px;top:calc(env(safe-area-inset-top) + 8px);left:10px;right:10px;padding:8px 11px 9px;border-radius:25px}
- .topbar-identity{gap:7px;min-width:0}.back-button{width:38px;height:38px}.brand{gap:8px}.brand-paw{width:40px;height:40px;border-radius:15px}.brand-paw svg{width:27px;height:27px}
- .brand-text strong{font-size:19px}.brand-text small{font-size:9px}
- .topbar-side{grid-column:2;grid-row:1}.topbar-side .help-button{width:31px;height:31px}
+ .app-shell{--zeffi-sheet-open-height:clamp(260px,calc(38dvh + var(--zeffi-safe-bottom)),340px)}
+ .topbar{display:grid;grid-template-columns:minmax(0,1fr) 30px;grid-template-rows:auto auto;gap:4px 5px;top:calc(var(--zeffi-safe-top) + 6px);left:8px;right:8px;padding:6px 9px 7px;border-radius:22px}
+ .topbar-identity{gap:5px;min-width:0}.back-button{width:33px;height:33px}.brand{gap:7px}.brand-paw{width:35px;height:35px;border-radius:13px}.brand-paw svg{width:25px;height:25px}
+ .brand-text strong{font-size:18px}.brand-text small{font-size:9px}
+ .topbar-side{grid-column:2;grid-row:1}.topbar-side .help-button{width:29px;height:29px}
  .test-wallet{grid-column:1/-1;grid-row:2;order:0;margin:0;gap:5px;width:100%}
- .test-wallet__balance{flex:1;min-width:0;padding:3px 4px;gap:4px;min-height:33px}.test-wallet__balance img{width:23px;height:23px}.test-wallet__balance b{font-size:12px}
- #topupWallet{width:26px;height:26px;min-width:26px;font-size:20px}
- .world-nav{top:calc(env(safe-area-inset-top) + 111px);left:14px;right:14px;min-height:43px;gap:3px;padding:4px;border-radius:22px}
- .world-nav button{height:34px;font-size:10px;padding:6px 9px;gap:5px}
+ .test-wallet__balance{flex:1;min-width:0;padding:2px 3px;gap:4px;min-height:29px}.test-wallet__balance img{width:22px;height:22px}.test-wallet__balance b{font-size:12px}
+ #topupWallet{width:25px;height:25px;min-width:25px;font-size:20px}
+ .world-nav{top:calc(var(--zeffi-safe-top) + 91px);left:11px;right:11px;min-height:40px;gap:3px;padding:3px;border-radius:20px}
+ .world-nav button{height:32px;font-size:10px;padding:5px 8px;gap:4px}
  .nav-icon{width:15px;height:15px}
  .world-nav__disabled small{display:none}
- .nav-notice{font-size:9px;padding:5px 7px;gap:5px}
+ .nav-notice{font-size:9px;padding:4px 6px;gap:4px}
  .nav-notice .status-icon{display:none}
- .map-heading{top:calc(env(safe-area-inset-top) + 171px);left:14px;gap:5px}
+ .map-heading{top:calc(var(--zeffi-safe-top) + 145px);left:12px;gap:5px}
  .map-title strong{font-size:17px}.map-title small{font-size:8px;letter-spacing:.13em}
  .map-coordinates{padding:5px;font-size:8px;white-space:nowrap}
- .map-metrics{top:calc(env(safe-area-inset-top) + 165px);right:10px;width:163px;max-width:46%;border-radius:18px;padding:6px}
+ .map-metrics{top:calc(var(--zeffi-safe-top) + 139px);right:8px;width:163px;max-width:46%;border-radius:18px;padding:6px}
  .metrics-toggle{font-size:9px;padding:1px 2px 4px}
  .map-metrics .metric{grid-template-columns:14px minmax(0,1fr);gap:1px 3px;min-height:42px;padding:5px 4px;border-radius:12px}
  .map-metrics .metric-icon{width:13px;height:13px}.map-metrics .metric span{font-size:8px}.map-metrics .metric strong{font-size:16px}
@@ -202,8 +210,8 @@ body{background:#d6ead0}
  .world-tools .tool-build .tool-glyph{width:25px;height:25px}.world-tools .tool-build small{font-size:10px}
  .zoom-tools{right:10px;top:57%;transform:translateY(-23%);gap:6px}
  .zoom-tools .small-round{width:36px;height:36px;border-radius:14px;font-size:22px}
- .bottom-panel{height:clamp(282px,41dvh,370px);border-radius:29px 29px 0 0;padding:17px 10px calc(8px + env(safe-area-inset-bottom));gap:7px}
- .bottom-panel.is-collapsed{height:calc(71px + env(safe-area-inset-bottom))}
+ .bottom-panel{height:var(--zeffi-sheet-open-height);border-radius:27px 27px 0 0;padding:15px 10px calc(8px + var(--zeffi-safe-bottom));gap:7px}
+ .bottom-panel.is-collapsed{height:calc(65px + var(--zeffi-safe-bottom))}
  .panel-heading{gap:8px}.panel-heading-icon{width:36px;height:36px;border-radius:13px}.panel-shop-icon{width:23px;height:23px}
  .panel-heading h2{font-size:15px}.panel-subtitle{font-size:9px}
  .panel-head-actions{gap:4px}.panel-head-actions .head-action{width:30px;height:30px;min-width:30px;font-size:18px;border-radius:11px}.panel-head-actions .catalog-toggle{width:31px;height:31px;min-width:31px}
@@ -214,8 +222,14 @@ body{background:#d6ead0}
  .catalog-copy strong{font-size:12px}.catalog-copy small{font-size:9px}
  .catalog-copy .catalog-price{min-height:24px;padding:2px 4px}.catalog-price__piece img{width:15px;height:15px}.catalog-price__piece b{font-size:9px}
  .panel-footer{font-size:8px;min-height:10px}
- .floating-notice{bottom:calc(env(safe-area-inset-bottom) + 75px);font-size:9px;padding:7px 10px;max-width:calc(100% - 138px)}
- .edit-actions,.selection-panel{bottom:calc(env(safe-area-inset-bottom) + 78px);width:calc(100% - 110px)}
+ /* When the drawer is open, the entire tool rail is placed ABOVE it, not behind it. */
+ .app-shell.catalog-expanded .world-tools{top:auto;bottom:calc(var(--zeffi-sheet-open-height) + 9px);left:9px;right:49px;transform:none;max-height:none;flex-direction:row;align-items:end;justify-content:start;gap:5px;overflow-x:auto;scrollbar-width:none}
+ .app-shell.catalog-expanded .world-tools .tool-button{width:49px;min-width:49px;min-height:45px;height:45px;border-radius:14px;margin:0;padding:3px 2px}
+ .app-shell.catalog-expanded .world-tools .tool-build{width:56px;min-width:56px;height:49px;border-radius:16px}
+ .app-shell.catalog-expanded .world-tools .tool-build .tool-glyph{width:23px;height:23px}
+ .app-shell.catalog-expanded .zoom-tools{top:auto;bottom:calc(var(--zeffi-sheet-open-height) + 64px);right:9px;transform:none;gap:5px}
+ .floating-notice{bottom:calc(var(--zeffi-safe-bottom) + 76px);font-size:9px;padding:7px 10px;max-width:calc(100% - 138px)}
+ .edit-actions,.selection-panel{bottom:calc(var(--zeffi-safe-bottom) + 78px);width:calc(100% - 110px)}
  .edit-summary{gap:4px;padding-bottom:5px}.edit-summary b{font-size:10px}.edit-summary span{font-size:8px}
  .edit-buttons button{font-size:10px;padding:7px 4px;min-height:32px}
 }
@@ -230,10 +244,50 @@ body{background:#d6ead0}
  .panel-heading h2{font-size:14px}.panel-subtitle{font-size:8px}
 }
 @media (max-height:670px) and (max-width:700px){
- .topbar{top:4px}.world-nav{top:calc(env(safe-area-inset-top) + 103px)}
- .map-heading{top:calc(env(safe-area-inset-top) + 154px)}.map-metrics{top:calc(env(safe-area-inset-top) + 151px)}
  .world-tools{top:47%;gap:3px}.world-tools .tool-button{min-height:39px}.world-tools .tool-build{height:57px}
- .bottom-panel{height:clamp(285px,51dvh,342px)}
+ .app-shell{--zeffi-sheet-open-height:clamp(245px,43dvh,290px)}
+ .app-shell.catalog-expanded .world-tools{top:auto;bottom:calc(var(--zeffi-sheet-open-height) + 7px)}
+ .app-shell.catalog-expanded .world-tools .tool-button{min-height:43px;height:43px}
+ .app-shell.catalog-expanded .world-tools .tool-build{height:46px}
+ .app-shell.catalog-expanded .zoom-tools{top:auto;bottom:calc(var(--zeffi-sheet-open-height) + 61px)}
+ .catalog-figure{height:46%;min-height:48px}
  .floating-notice{display:none}
 }
 @media (prefers-reduced-motion: reduce){.bottom-panel,.metrics-chevron{transition:none}}
+/* Compact Telegram sheets: tools never hide behind the catalogue. */
+@media (max-width:380px){
+ .app-shell.catalog-expanded .world-tools{gap:3px}
+ .app-shell.catalog-expanded .world-tools .tool-button{width:45px;min-width:45px}
+ .app-shell.catalog-expanded .world-tools .tool-build{width:52px;min-width:52px}
+}
+@media (max-width:700px) and (max-height:600px){
+ .app-shell.catalog-expanded .zoom-tools{display:none}
+}
+@media (max-width:700px) and (max-height:520px){
+ .app-shell.catalog-expanded .map-heading,.app-shell.catalog-expanded .map-metrics{display:none}
+}
+/* A short Telegram WebView must still display whole catalogue prices, not
+   silently crop the most important purchase information below the fold. */
+@media (max-width:700px) and (max-height:670px){
+ .bottom-panel{padding-top:10px;padding-bottom:3px;gap:4px}
+ .panel-head{min-height:36px;gap:5px}
+ .panel-heading-icon{width:30px;height:30px;border-radius:10px}
+ .panel-shop-icon{width:20px;height:20px}
+ .panel-heading h2{font-size:13px}
+ .panel-subtitle{font-size:8px}
+ .panel-head-actions{gap:3px}
+ .panel-head-actions .head-action{width:27px;min-width:27px;height:27px;font-size:16px}
+ .panel-head-actions .catalog-toggle{width:29px;min-width:29px}
+ #undoButton:disabled,#redoButton:disabled{display:none}
+ .category-tabs{min-height:29px;padding-bottom:2px;gap:4px}
+ .category-tabs button{min-height:27px;padding:4px 9px;font-size:9px;gap:3px}
+ .catalog-list,.warehouse-list{padding-top:0;padding-bottom:0}
+ .catalog-card{padding:5px;gap:2px;border-radius:15px}
+ .catalog-card.is-active{padding:4px}
+ .catalog-figure{height:42%;min-height:40px;border-radius:10px}
+ .catalog-copy{gap:1px}
+ .catalog-copy strong{font-size:11px;line-height:1.05}
+ .catalog-copy small{font-size:8px}
+ .catalog-copy .catalog-price{min-height:22px;padding:2px 3px;margin-top:auto}
+ .panel-footer{display:none}
+}

@@ -36386,7 +36386,7 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
     layer.id='zeffi-world-preview-layer';
     layer.setAttribute('role','dialog');
     layer.setAttribute('aria-label','Мир Зеффи — строительная песочница');
-    layer.style.cssText='position:fixed;inset:0;z-index:2147483600;display:grid;grid-template-rows:auto minmax(0,1fr);background:#fff7fa;padding:env(safe-area-inset-top,0px) 0 env(safe-area-inset-bottom,0px);box-sizing:border-box;font-family:system-ui,-apple-system,sans-serif';
+    layer.style.cssText='position:fixed;inset:0;max-height:var(--zefirok-app-height,100dvh);z-index:2147483600;display:grid;grid-template-rows:auto minmax(0,1fr);background:#fff7fa;padding:var(--zefirok-content-safe-top,env(safe-area-inset-top,0px)) 0 var(--zefirok-content-safe-bottom,env(safe-area-inset-bottom,0px));box-sizing:border-box;font-family:system-ui,-apple-system,sans-serif';
     const header=document.createElement('header');
     header.style.cssText='display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:48px;padding:5px 13px;background:linear-gradient(125deg,#fff8fb,#fff1f6);border-bottom:1px solid #f0cbd9;color:#7e4059;box-sizing:border-box';
     const back=document.createElement('button');
@@ -36432,6 +36432,14 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
       ||window.Telegram?.WebApp?.initData||'');}
     catch{try{initData=String(window.SweetRunPlatform?.auth?.legacyInitData?.()||window.Telegram?.WebApp?.initData||'');}catch{}}
     target.contentWindow.postMessage({type:'zeffi-world-init-data',requestId,initData},location.origin);
+  });
+  window.addEventListener('message',e=>{
+    if(e?.data?.type!=='zefirok-world-ui-ready' || !worldLayer)return;
+    const target=worldLayer.querySelector('iframe');
+    if(e.source!==target?.contentWindow||e.origin!==location.origin)return;
+    const header=worldLayer.querySelector('header');
+    if(header)header.style.display='none';
+    worldLayer.style.gridTemplateRows='minmax(0,1fr)';
   });
   window.addEventListener('message',e=>{
     if(e?.data?.type!=='zefirok-world-close' || !worldLayer)return;
