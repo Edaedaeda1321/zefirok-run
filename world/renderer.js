@@ -1,5 +1,5 @@
 import { dims, keyOf, connectedRoads, isObjectConnected, checkPlacement, isConstructing, rotateLocalPoint, expansionCandidates, PARCEL_SIZE } from './engine.js';
-import { drawSprite, drawCatalogSprite, catalogSpriteId, fallbackSpriteId, buildingAssetId, parkConstructionAssetId, roadMaskId } from './sprite-assets.js';
+import { drawSprite, drawCatalogSprite, catalogSpriteId, fallbackSpriteId, buildingAssetId, parkConstructionAssetId, roadMaskId, spriteMetadata } from './sprite-assets.js';
 import { drawCitizen } from './citizens.js';
 
 export const TILE_W = 72;
@@ -16,6 +16,76 @@ const P = (x, y) => {
 };
 const midpoint = (a, b, ratio = .5) => ({ x: a.x + (b.x - a.x) * ratio, y: a.y + (b.y - a.y) * ratio });
 const offset = (point, dy) => ({ x: point.x, y: point.y + dy });
+
+// Ground contact is a *visual* concern. Every completed object and its build
+// stages use the same authoritative grid position and footprint as before.
+// Most 3D buildings already end at the correct tile edge, but without a contact
+// shadow their pale foundations appear suspended above the green terrain.
+// Legacy garden / playground WebPs additionally have an undersized render scale.
+export function worldSpriteGroundFit(meta,def,rotation=0){
+ if(!meta||!def)return null;
+ if(/^extra_flower_garden_[nesw]$/.test(meta.id) && meta.assetScale>3.35){
+  // The 3x3 skirting is physically 204px across when scaled to 3px / cell.
+  return {assetScale:3};
+ }
+ if(/^extra_playground_[nesw]$/.test(meta.id) && meta.assetScale>4.6){
+  // Accommodate either the older 3x2 layout or the corrected 2x2 catalog.
+  // Both are based on the same 313px image base height in four directions.
+  const size=dims(def,rotation);
+  const logicalBottom=(size.w+size.h)*TILE_H/2;
+  return {
+   assetScale:(meta.height-meta.anchorY)/logicalBottom,
+   anchorX:meta.width/2
+  };
+ }
+ return null;
+}
+function drawPlacedSprite(ctx,id,point,def,rotation=0){
+ return drawSprite(ctx,id,point,worldSpriteGroundFit(spriteMetadata(id),def,rotation));
+}
+// A single cached radial gradient is reused across frames; no costly Canvas
+// blur/filter pass per object (important for iPhone Telegram WebViews).
+const groundShadowGradients=new WeakMap();
+function groundShadowGradient(ctx){
+ let gradient=groundShadowGradients.get(ctx);
+ if(!gradient){
+  gradient=ctx.createRadialGradient(0,0,.08,0,0,1);
+  gradient.addColorStop(0,'rgba(44,72,42,.34)');
+  gradient.addColorStop(.48,'rgba(44,72,42,.25)');
+  gradient.addColorStop(.77,'rgba(44,72,42,.09)');
+  gradient.addColorStop(1,'rgba(44,72,42,0)');
+  groundShadowGradients.set(ctx,gradient);
+ }
+ return gradient;
+}
+export function worldGroundContactLayout(item,def,meta=null,placement=null){
+ const {w,h}=dims(def,item.rotation||0);
+ const boundsWidth=(w+h)*TILE_W/2;
+ const visualScale=placement?.assetScale||meta?.assetScale||3;
+ const visualWidth=meta?.width?meta.width/visualScale:boundsWidth;
+ // A narrow bench/fountain must not cast an entire 2x2 floor-sized shadow.
+ // Allow a few pixels of soft shade past the foundation edge; otherwise
+ // most of the gradient is hidden completely by an opaque WebP pedestal.
+ const radiusX=Math.max(12,Math.min(boundsWidth*.56,visualWidth*.56));
+ const radiusY=radiusX*.40;
+ const center=P(item.x+w*.5,item.y+h*.5);
+ return {x:center.x,y:center.y+Math.min(4,radiusY*.2),radiusX,radiusY};
+}
+function drawWorldGroundContact(ctx,item,def){
+ // Flat paving *is* the ground: never draw a floating shadow below it.
+ if(def.layer==='surface')return;
+ const spriteId=catalogSpriteId(def.id,item.rotation||0,'complete');
+ const meta=spriteId?spriteMetadata(spriteId):null;
+ const placement=worldSpriteGroundFit(meta,def,item.rotation||0);
+ const m=worldGroundContactLayout(item,def,meta,placement);
+ ctx.save();
+ ctx.translate(m.x,m.y);
+ ctx.scale(m.radiusX,m.radiusY);
+ ctx.fillStyle=groundShadowGradient(ctx);
+ ctx.beginPath();ctx.arc(0,0,1,0,Math.PI*2);ctx.fill();
+ ctx.restore();
+}
+
 const rgba = (r, g, b, a) => `rgba(${r},${g},${b},${a})`;
 const palettes = {
   rose: { roof: '#e08daa', roofShade: '#bb628a', left: '#fff0ee', right: '#f3cbd4', trim: '#eed5a5' },
@@ -424,7 +494,7 @@ function drawConstructionSite(ctx,item,def,now,fx=null){
   remainingMs=Math.max(0,(1-fxProgress)*Math.max(900,Number(fx.duration||1000)));
  }
  const spriteId=parkConstructionAssetId(item.kind,item.rotation,stage)||buildingAssetId(item.kind,item.rotation,stage);
- const artReady=spriteId&&drawSprite(ctx,spriteId,P(item.x,item.y));
+ const artReady=spriteId&&drawPlacedSprite(ctx,spriteId,P(item.x,item.y),def,item.rotation||0);
  const center=P(item.x+w*.5,item.y+h*.5);
  if(!artReady){
   shadow(ctx,[A,B,C,D]);
@@ -509,11 +579,11 @@ function drawObject(ctx,item,def){
  // distinct 3D states, with the original occupancy and saved rotation intact.
  const variation=(hash(item.x||0,item.y||0)>.5)?1:0;
  const id=catalogSpriteId(def.id,item.rotation||0,'complete',variation);
- if(id && drawSprite(ctx,id,P(item.x,item.y)))return;
+ if(id && drawPlacedSprite(ctx,id,P(item.x,item.y),def,item.rotation||0))return;
  // Try another still-active sprite, if available; otherwise use procedural
  // Canvas drawing while a WebP loads or when it cannot be decoded.
  const fallbackId=fallbackSpriteId(def.id,item.rotation||0,'complete',variation);
- if(fallbackId && fallbackId!==id && drawSprite(ctx,fallbackId,P(item.x,item.y)))return;
+ if(fallbackId && fallbackId!==id && drawPlacedSprite(ctx,fallbackId,P(item.x,item.y),def,item.rotation||0))return;
  // Rotate the actual footprint geometry and facade, not only the occupied cells.
  // P(...) rotates the projected ground points while keeping building walls vertical.
  const previousRotation=objectRotation;
@@ -572,6 +642,7 @@ export function drawWorld(canvas,city,catalog,cam,overlay={}) {
  for(const item of city.objects.filter(o=>!o.stored && catalog[o.kind]?.layer==='surface')){
   if(item.x>viewport.maxX+3||item.y>viewport.maxY+3)continue;
   if(overlay.draft?.uid===item.uid && overlay.draft.type==='move')ctx.globalAlpha=.22;
+  drawWorldGroundContact(ctx,item,catalog[item.kind]);
   drawObject(ctx,item,catalog[item.kind]);
   ctx.globalAlpha=1;
   if(overlay.selectedUid===item.uid)drawOutline(ctx,item,catalog,'#fffad7',3.5);
@@ -605,6 +676,7 @@ export function drawWorld(canvas,city,catalog,cam,overlay={}) {
    for(let i=0;i<size.w;i++)for(let j=0;j<size.h;j++)drawSprite(ctx,'terrain_overlay_selected_blue_premium',P(item.x+i,item.y+j));
   }
   const now=Number.isFinite(overlay.now)?overlay.now:Date.now();
+  drawWorldGroundContact(ctx,item,def);
   const skipFx=overlay.skipAnimation?.uid===item.uid?overlay.skipAnimation:null;
   const skipElapsed=skipFx?Math.max(0,Math.min(1,(now-Number(skipFx.startAt||now))/Math.max(1,Number(skipFx.duration||1)))):0;
   const revealComplete=Boolean(skipFx&&skipElapsed>=.76);
@@ -643,6 +715,7 @@ export function drawWorld(canvas,city,catalog,cam,overlay={}) {
    const {w,h}=dims(def,draft.rotation),tint=checked.ok?'rgba(102,205,157,.44)':'rgba(232,92,121,.49)';
    for(let i=0;i<w;i++)for(let j=0;j<h;j++)drawOverlayCell(ctx,draft.x+i,draft.y+j,tint,checked.ok?'world_ground_overlay_allowed':'world_ground_overlay_blocked');
    ctx.globalAlpha=checked.ok?.76:.42;
+   drawWorldGroundContact(ctx,draft,def);
    drawObject(ctx,draft,def);ctx.globalAlpha=1;
    drawOutline(ctx,draft,catalog,checked.ok?'#fffce4':'#b52852',2.8);
   }

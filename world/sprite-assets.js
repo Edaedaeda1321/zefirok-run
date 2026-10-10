@@ -126,14 +126,18 @@ function load(meta){
  image.src=spriteUrl(meta);
  return null;
 }
-export function drawSprite(ctx,id,point){
+// Optional renderer-only ground calibration. Metadata and saved object positions
+// are never mutated; terrain, roads and normal assets keep their original scale.
+export function drawSprite(ctx,id,point,placement=null){
  if(!enabled)return false;
  const meta=manifestById.get(id);if(!meta)return false;
  const image=load(meta);
  if(!image || !image.complete || image.naturalWidth===0)return false;
- const scale=meta.assetScale||SPRITE_MANIFEST.projection.spriteScale||3;
+ const scale=placement?.assetScale||meta.assetScale||SPRITE_MANIFEST.projection.spriteScale||3;
+ const anchorX=placement?.anchorX??meta.anchorX;
+ const anchorY=placement?.anchorY??meta.anchorY;
  try{
-  ctx.drawImage(image, point.x-meta.anchorX/scale, point.y-meta.anchorY/scale, meta.width/scale, meta.height/scale);
+  ctx.drawImage(image, point.x-anchorX/scale, point.y-anchorY/scale, meta.width/scale, meta.height/scale);
   return true;
  }catch(error){console.warn('Sprite draw failed',id,error);return false;}
 }
