@@ -50,3 +50,10 @@ START_WORLD_TEST.command
 START_WORLD_TEST.bat
 .world-integration-backup/
 world/docs/
+
+# Story world standalone and installer backups are never public assets
+.world-story-v1-backup/
+.story-standalone-output/
+story-world-preview.html
+START_STORY_WORLD.html
+START_STORY_WORLD_v1.html

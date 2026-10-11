@@ -30,3 +30,10 @@ node_modules/
 /ios/**/xcuserdata/
 /ios/**/DerivedData/
 /ios/**/.swiftpm/
+
+# Local Story World installer backups / generated offline bundle
+.world-story-v1-backup/
+.story-standalone-output/
+story-world-preview.html
+START_STORY_WORLD.html
+START_STORY_WORLD_v1.html

@@ -1,0 +1,113 @@
+{
+  "version": "story-world-1.0.0",
+  "base_commit": "b1a92576eb90b94dae6e5d2bf33482c09e443c2a",
+  "dependencies": {
+    "world/engine.js": "f02d7b3eff83f248f21a4c7b142c2386445435122a472cafa241597467ef7abe",
+    "world/catalog.js": "6ac2927e2b9f22e93de48dd05ef454ce19e05c5ffeecaf178defb2494d3f771c",
+    "world/renderer.js": "5db248526749c1aa704ff9654fe9eacbf80f37ae99f346f15e62c8e445febe1b",
+    "world/citizens.js": "b726cd6ee6233a3f3ba2a11a1061db3465b6da36b1cea122e3a790a1c598ccca",
+    "world/traffic.js": "114e2893367d4747aa6b8933c53540373a2126c3918c4aca0a5c97288dee7cc5",
+    "world/sprite-assets.js": "47f89898719a3c4ae87f3379707fe46276c3d0aeab8095dc5b6bc11d2de44b2c",
+    "world/sprite-manifest.js": "0be42c564557f9b800f5dd313c62989e214d606834af29e0b02208864e3fcf19",
+    "world/economy.js": "691df0ac5d0fe679b6a7c1043a93f0f70385c7760963138c6a7ac9ab10c07d84",
+    "world/package.json": "b4bbd5e9e11eac3aa57d04c679c674c4c975cde08930bf145b6ba695829c8b5b",
+    "src/worker.js": "36d0a8e1452c966405a9346e256d50df8c0b8a520bf1a6e9811c1ca1062973dc",
+    "world/assets/terrain-no-round/tiles/terrain_grass_clean_premium.webp": "62bdd305b1fbe531ce7b7d21ef87880b63518258eef2bb6868899f87cb587f2b",
+    "world/assets/terrain-no-round/tiles/terrain_grass_floral_sparse_premium.webp": "6b9e724463200e08438aadd8804ff3ab14a3b6efbac96259b3984ab07ffce29b",
+    "world/assets/terrain-no-round/tiles/terrain_grass_stone_accent_premium.webp": "a1e512dfe58539823c06028fb9512cd30a2cade47342e2826dad020736739e5e",
+    "world/assets/terrain-no-round/tiles/terrain_grass_meadow_premium.webp": "61a7ba4e5b1f71c2149fe1d1272242e5da82a736a1701b63eb9a061f0eee16cc",
+    "world/assets/terrain-no-round/tiles/terrain_shrub_edge_premium.webp": "d1d0060d39f7bd6510b2afbfb3e23ca667a9c311698a0ceb98c3e12953139069",
+    "world/assets/terrain-no-round/tiles/terrain_flower_edge_premium.webp": "2830767f13b5d601118a487b37b82c83d929b0aadd9c378a7f08ce81649b820c",
+    "world/assets/terrain-no-round/tiles/terrain_path_sand_premium.webp": "21d0a40360ced3f4b758cbd3d4b55ec71236d61f5d68cb2b2abdaefcb6342076",
+    "world/assets/terrain-no-round/tiles/terrain_garden_soil_premium.webp": "7e23170c7b43ffaaae6638d03f5f18f55bfc03d371c6768efc917dd3c7adfe30",
+    "world/assets/terrain-no-round/tiles/terrain_plaza_round_inlay_premium.webp": "b9e7fae86e9ad0e3837dbe0efaac30720ba84148f6c36c427267fb0d646aab90",
+    "world/assets/flower-style-v1/webp/commercial/cafe_n.webp": "5242cc25c263c36f590feac88616d21c37a6222a2b2565d25db4e9f960a5d25a",
+    "world/assets/flower-style-v1/webp/commercial/bakery_n.webp": "42fead2c164d1eaa900bec016e98edfc8785535d1a9de68680826d85c880d693",
+    "world/assets/extra/webp/buildings/flower_shop_n.webp": "d72cca72ff6a45c269c4e495ff2df4b8725ca2537124fefbbde3f8d71c917043",
+    "world/assets/flower-style-v1/webp/residential/house_small_n.webp": "c009ba9254ea9d3cd81d93eb2840e861fe10b9a77615636aacf30791a1e8bf3a",
+    "world/assets/flower-style-v1/webp/commercial/coffee_kiosk_n.webp": "1f2ca00edca27727f44d7581cc7632f5755936d512a0b5c2f68027ecd1f01c6a",
+    "world/assets/new_city_pack/bus_stop/webp/world_bus_stop_n.webp": "5b2cdaaf850bb64fd68b334c0ec5040a5af2e252a2d8cfa1cc40ce84e34d67cb",
+    "world/assets/flower-style-v1/webp/residential/family_house_n.webp": "0e61ec619067a9b2dd9e3fddc15129eae4a0d2b491abe4514c53cc24b11db3f1",
+    "world/assets/flower-style-v1/webp/residential/cottage_n.webp": "26bd0806bb8014ac0f67e54ee049859d823ff2f8b791cf7832ee4111c34fcc5f",
+    "world/assets/new_city_pack/city_square/webp/world_city_square_n.webp": "0c2c3db8df642f5e57c21be0170cac0c03419b8c09947e9cceddc07c76af5353",
+    "world/assets/flower-style-v1/webp/decor/fountain_n.webp": "6d4806512088a5b7d52725dc0c519d8b259ec24a7c0335c0b388fc409203424c",
+    "world/assets/extra/webp/decor/monument_n.webp": "61f6148482a4625ea92c64a75445d150ac0be3bd679466deb3acc99dfea036c1",
+    "world/assets/new_city_pack/pond_park/webp/world_pond_park_n.webp": "7532fadad57acb5580e3535cb24a84c9a9775956e5e4dcd9d5ec74b0e34f1ebe",
+    "world/assets/extra/webp/decor/playground_n.webp": "2003011bc2e99dfcbc57310f6246ea4c07c678d751354779925a9948b4e772cb",
+    "world/assets/extra/webp/decor/flower_garden_n.webp": "0f2529886ad6b8d6d4cc9f44086f2a4145b8e4c7e45e57b7b3b625c836e22da7",
+    "world/assets/new_city_pack/bus_terminal/webp/world_bus_terminal_n.webp": "30a5f80afa41b028e19edf256e231415fb4e926d6ce5e520c6925b686af32cea",
+    "world/assets/flower-style-v1/webp/decor/bench_n.webp": "5bbf56e2e445f6260650e84a0afe485d242a7ae072c1ebd87163b9a99af15f62",
+    "world/assets/flower-style-v1/webp/decor/lamp_post_n.webp": "f52dbb096bb21edb109296725f6e3213e1370fb73632f319109a6fa642335709",
+    "world/assets/webp/decor/world_decor_flowerbed_a.webp": "2ed9587289a0701efb0b70e0ab6b408cd3b763a48628e805e366693e7e8f9d3e",
+    "world/assets/webp/decor/world_decor_flowerbed_b.webp": "3a0a188f553ccce182fa9a19c45188c54e96c57d07ff8ed35421e43e48d09ee6",
+    "world/assets/flower-style-v1/webp/decor/tree_round_w.webp": "0b4620c04f277cc97a538ac9e61da490e2c23e1b7ba7faad4fb1bd5c54d81f8c",
+    "world/assets/flower-style-v1/webp/decor/tree_round_n.webp": "e2b6d48ad4bd6f49b36d46323e19835b4c5f7aaf26800a6fe854dc1dd37c2765",
+    "world/assets/flower-style-v1/webp/decor/tree_round_e.webp": "eeba588ccdd10f24f91893d83f20d1d9cb827eb088e48abed047451af6a953d6",
+    "world/assets/flower-style-v1/webp/decor/tree_round_s.webp": "fca002417203c2b62e5789b7bf62ab901c6149d0422f0115d5c4db225bf73497",
+    "world/assets/extra/webp/decor/decor_arch.webp": "844f5ec0197005bbdfef2df2df7e3ac30d1572353aad953ca8a6b007186b85e7",
+    "world/assets/new_city_pack/botanical_garden/webp/world_botanical_garden_n.webp": "5baf449766d4221d350bae2463689d4f08aec6282b2734a33af1ec8a257ffa68",
+    "world/assets/webp/construction/parks/flower_garden_build_01_n.webp": "74dfacb59ac9300c3fc486b975ea50aba1ffd2468009ddcdbc48e5f6b5bc9174",
+    "world/assets/webp/construction/parks/flower_garden_build_02_n.webp": "a5a7768a97b4086fdc02af3ebb1f93a8c71cf974d498a16eccae12e38e59465d",
+    "world/assets/webp/construction/parks/flower_garden_build_03_n.webp": "e2b05a4dfd5a5d869542baa42a75a195555edf2930f096e1fab3b756cc02c264",
+    "assets/mir_zeffi/icon_Mir_zeffi_world_stranitca.webp": "ac205a9177d35407d15d21ef228cfb658599490911c0c6425ec9dc6e303e88f0"
+  },
+  "payloads": {
+    "story-world.html": "6a5f7e421fbac9d20064975161f4b8585551f43d87ee3018c84c83ab92432b9f",
+    "world/story/app.js": "8bcface8725a3e997752cc680d5725dff2c26316582bfb202c46bb9757d66487",
+    "world/story/boot.js": "015b8b50c02bcfb3e90a0a7f853685cc6df167ef20ee72d3af32b511ee79d9bb",
+    "world/story/entry.js": "89fa41740d2c03df5c219e42b027af1d1a52d5cfa12b4db679a0bad1d1b50d98",
+    "world/story/map.js": "7e445658e8e4da2c7fc9cb7a33f3a1869f050811ba9db6c7feae019c1fedf896",
+    "world/story/model.js": "01b8d7f29b00ed0eaedfb2f25c89c42fd06dfcc1d2c7cd6f5c9a1761498b60b9",
+    "world/story/style.css": "e79eb27ab805da978d3b20057693f8e0c3f9c5ea71bc76725b965e9fc4119bde",
+    "world/story/view.js": "55a8256f4ebf1a4a224edb383c9f792ceeb83157f746799422bff6bed6b5c993",
+    "world/tests/story-world-v1.test.mjs": "b4e187dbd44e71c46822c20975774759a1f6a58d8d15e0917290158faeff6028",
+    "world/tests/story-access-v1.test.mjs": "d211614e4254636cc34db4f7397f1b4359241d29da64e2787d67768d8bb7393b",
+    "scripts/check-world-story-v1.mjs": "72690786e9e643b348df8f07d86cf5b65628533bc6126b61a784397ddb16d99c",
+    "scripts/build-world-story-v1.py": "0b899ff5e81722dbab0565bae52aa284d55d922ac0c6a97c867e85458420dbab",
+    "world/docs/STORY_WORLD_V1_CHECKS_RU.md": "e27b7f5ed6cd4fae86a71d73bf22052df0dd61997b2447bc1429754dafed44e9"
+  },
+  "transforms": {
+    "world.html": [
+      {
+        "before": "        const script=document.createElement('script');script.type='module';script.src='./app.js';\n        script.addEventListener('load',()=>{\n          if(document.documentElement.classList.contains('zeffi-world-framed')){\n            window.parent.postMessage({type:'zefirok-world-ui-ready'},location.origin);\n",
+        "after": "        const script=document.createElement('script');script.type='module';script.src='./app.js';\n        script.addEventListener('load',()=>{\n          void import('./story/entry.js?v=1').catch(error=>console.warn('Story world entry unavailable',error));\n          if(document.documentElement.classList.contains('zeffi-world-framed')){\n            window.parent.postMessage({type:'zefirok-world-ui-ready'},location.origin);\n"
+      }
+    ],
+    "src/zeffi-world-service.js": [
+      {
+        "before": "    if(!/^\\d{4,20}$/.test(telegramId))failure(401,'WORLD_UNAUTHORIZED','Авторизация Telegram не подтверждена.');\n    assertTester(env,telegramId);\n    if(!env.DB)failure(503,'WORLD_DB_UNAVAILABLE','Основная D1 сейчас недоступна.');\n    await assertSchema(env.DB);\n",
+        "after": "    if(!/^\\d{4,20}$/.test(telegramId))failure(401,'WORLD_UNAUTHORIZED','Авторизация Telegram не подтверждена.');\n    assertTester(env,telegramId);\n    // Story-world v1: read-only access gate. NO city, profile, wallet or project writes.\n    if(new URL(request.url).pathname==='/api/world/story-access'){\n      if(env?.WORLD_STORY_ENABLED!=null&&String(env.WORLD_STORY_ENABLED).toLowerCase()!=='true')failure(403,'STORY_DISABLED','Общий сюжетный мир пока закрыт для тестирования.');\n      return reply({ok:true,access:'tester',version:'story-v1',mode:'local-demo',globalSync:false,walletWrites:false});\n    }\n    if(!env.DB)failure(503,'WORLD_DB_UNAVAILABLE','Основная D1 сейчас недоступна.');\n    await assertSchema(env.DB);\n"
+      }
+    ],
+    "scripts/check-production-gate.mjs": [
+      {
+        "before": "  ['Zeffi World residents and comfort', 'node', ['--test','world/tests/citizens.test.mjs']],\n  ['Zeffi World city life and buses', 'node', ['--test','world/tests/city-life.test.mjs']],\n  ['game task reward engine', 'node', ['scripts/check-game-task-reward-engine.mjs']],\n  ['P1 read paths', 'node', ['scripts/check-p1-read-paths.mjs']],\n",
+        "after": "  ['Zeffi World residents and comfort', 'node', ['--test','world/tests/citizens.test.mjs']],\n  ['Zeffi World city life and buses', 'node', ['--test','world/tests/city-life.test.mjs']],\n  ['Zeffi story world v1 wiring', 'node', ['scripts/check-world-story-v1.mjs']],\n  ['Zeffi story world v1', 'node', ['--test','world/tests/story-world-v1.test.mjs','world/tests/story-access-v1.test.mjs']],\n  ['game task reward engine', 'node', ['scripts/check-game-task-reward-engine.mjs']],\n  ['P1 read paths', 'node', ['scripts/check-p1-read-paths.mjs']],\n"
+      }
+    ],
+    ".gitignore": [
+      {
+        "append": "\n# Local Story World installer backups / generated offline bundle\n.world-story-v1-backup/\n.story-standalone-output/\nstory-world-preview.html\nSTART_STORY_WORLD.html\nSTART_STORY_WORLD_v1.html\n",
+        "marker": ".world-story-v1-backup/"
+      }
+    ],
+    ".assetsignore": [
+      {
+        "append": "\n# Story world standalone and installer backups are never public assets\n.world-story-v1-backup/\n.story-standalone-output/\nstory-world-preview.html\nSTART_STORY_WORLD.html\nSTART_STORY_WORLD_v1.html\n",
+        "marker": ".world-story-v1-backup/"
+      }
+    ]
+  },
+  "unique_hooks": {
+    "world.html": [
+      "import('./story/entry.js?v=1')"
+    ],
+    "src/zeffi-world-service.js": [
+      "pathname==='/api/world/story-access'"
+    ],
+    "scripts/check-production-gate.mjs": [
+      "'Zeffi story world v1 wiring'",
+      "'Zeffi story world v1'"
+    ]
+  }
+}

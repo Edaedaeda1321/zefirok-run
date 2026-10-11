@@ -214,6 +214,11 @@ export async function handleZeffiWorldApi(request,env,dependencies){
     const telegramId=String(auth?.telegramId||auth?.user?.id||'');
     if(!/^\d{4,20}$/.test(telegramId))failure(401,'WORLD_UNAUTHORIZED','Авторизация Telegram не подтверждена.');
     assertTester(env,telegramId);
+    // Story-world v1: read-only access gate. NO city, profile, wallet or project writes.
+    if(new URL(request.url).pathname==='/api/world/story-access'){
+      if(env?.WORLD_STORY_ENABLED!=null&&String(env.WORLD_STORY_ENABLED).toLowerCase()!=='true')failure(403,'STORY_DISABLED','Общий сюжетный мир пока закрыт для тестирования.');
+      return reply({ok:true,access:'tester',version:'story-v1',mode:'local-demo',globalSync:false,walletWrites:false});
+    }
     if(!env.DB)failure(503,'WORLD_DB_UNAVAILABLE','Основная D1 сейчас недоступна.');
     await assertSchema(env.DB);
     const profileReader=(id,actor)=>dependencies.ensureAuthoritativeProfileRow(env,id,actor);
