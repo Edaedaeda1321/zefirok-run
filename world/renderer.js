@@ -231,28 +231,76 @@ function drawLandscape(ctx,city,catalog,viewport){
   if(!owned(x,y+1))drawGroundEdge(ctx,D,C,'#946b43');
  }
 }
-function drawRoads(ctx, city, viewport){
- const roadSet=new Set(city.roads);
- for(const id of city.roads){
+// A continuous ground plane for the real Road network. Legacy mask sprites
+// already contain neighboring slabs; rendering a mask for EVERY road cell
+// doubles their 3D ledges at turns, junctions, and building entrances.
+// Tiles and connectors are computed once each; the top is one shared plane.
+export const ROAD_HALF_WIDTH = .38;
+export function worldRoadTopology(roadIds){
+ const roadSet=new Set(roadIds);
+ const cells=[],joins=[];
+ for(const id of roadSet){
   const [x,y]=id.split(',').map(Number);
-  if(x<viewport.minX-1||y<viewport.minY-1||x>viewport.maxX+1||y>viewport.maxY+1)continue;
-  const maskId=roadMaskId(roadSet,x,y);
-  // The provided special entrance was authored for NS (mask 05). Only choose
-  // it if the starter road actually has that connectivity; no broken seams.
-  const asset=city.lockedRoads.includes(id)&&maskId==='world_road_mask_05'?'world_road_entry_special':maskId;
-  if(drawSprite(ctx,asset,P(x,y)))continue;
-  const q=[P(x,y),P(x+1,y),P(x+1,y+1),P(x,y+1)];
-  polygon(ctx,q,'#b9a996','#d6bfab',1.2);
-  polygon(ctx,q.map(p=>({x:p.x,y:p.y-3})),'#ead8c9','#fff2dd',.9);
-  const center=P(x+.5,y+.5);
-  const adj=[[1,0],[-1,0],[0,1],[0,-1]];
-  for(const [dx,dy] of adj){
-   if(!roadSet.has(keyOf(x+dx,y+dy)))continue;
-   const toward=P(x+.5+dx*.5,y+.5+dy*.5);
-   branch(ctx,{x:center.x,y:center.y-3},{x:toward.x,y:toward.y-3},'#faf3dd',1.7);
-  }
-  if(city.lockedRoads.includes(id))ellipse(ctx,center.x,center.y-3,2.3,2.3,'#d5ae65','#fff4d2',.5);
+  cells.push({x,y});
+  if(roadSet.has(keyOf(x+1,y)))joins.push({x,y,axis:'x'});
+  if(roadSet.has(keyOf(x,y+1)))joins.push({x,y,axis:'y'});
  }
+ return {cells,joins};
+}
+function worldRoadUnionPath(ctx,cells,joins){
+ // Narrowed slightly inside each logical road tile. Building bases remain on
+ // their own tiles, with a narrow grassy clearance near the footpath.
+ const half=ROAD_HALF_WIDTH;
+ const shape=(coords)=>{
+  const pts=coords.map(([u,v])=>P(u,v));
+  ctx.moveTo(pts[0].x,pts[0].y);
+  for(let i=1;i<pts.length;i++)ctx.lineTo(pts[i].x,pts[i].y);
+  ctx.closePath();
+ };
+ for(const {x,y} of cells){
+  const u=x+.5,v=y+.5;
+  shape([[u-half,v-half],[u+half,v-half],[u+half,v+half],[u-half,v+half]]);
+ }
+ for(const {x,y,axis} of joins){
+  const u=x+.5,v=y+.5;
+  if(axis==='x')shape([[u,v-half],[u+1,v-half],[u+1,v+half],[u,v+half]]);
+  else shape([[u-half,v],[u+half,v],[u+half,v+1],[u-half,v+1]]);
+ }
+}
+function drawRoads(ctx, city, viewport){
+ const topology=worldRoadTopology(city.roads);
+ const inView=({x,y})=>x>=viewport.minX-1&&y>=viewport.minY-1&&x<=viewport.maxX+1&&y<=viewport.maxY+1;
+ const cells=topology.cells.filter(inView);
+ if(!cells.length)return;
+ const joins=topology.joins.filter(inView);
+ ctx.save();
+ ctx.beginPath();worldRoadUnionPath(ctx,cells,joins);
+ // One shared foundation and one flat cobblestone surface, rather than
+ // dozens of stacked 3D road masks. Thickness is only 3px in screen space.
+ ctx.save();ctx.translate(0,3);ctx.fillStyle='#ad9184';ctx.fill();ctx.restore();
+ ctx.fillStyle='#eee3d5';ctx.fill();
+ ctx.save();ctx.clip();
+ // Paint the pavers in fixed world coordinates. Every tile samples the same
+ // grid; elbows, T-junctions, and crossings share grout with no doubled edges.
+ for(const {x,y} of cells){
+  for(let i=0;i<4;i++)for(let j=0;j<4;j++){
+   const u=x+i*.25+.016,v=y+j*.25+.016;
+   const k=hash(x*4+i,y*4+j,17);
+   const fill=k>.83?'#efbccc':k>.65?'#f6e7df':k>.43?'#fffaf2':'#f7f0e8';
+   polygon(ctx,[P(u,v),P(u+.217,v),P(u+.217,v+.217),P(u,v+.217)],fill,'rgba(174,145,139,.20)',.36);
+  }
+ }
+ ctx.restore();
+ const locked=new Set(city.lockedRoads);
+ for(const {x,y} of cells){
+  const id=keyOf(x,y),c=P(x+.5,y+.5);
+  if(locked.has(id)){
+   // Preserve a subtle gold hint on the original protected entrance.
+   ellipse(ctx,c.x,c.y,5.2,3.1,'#dcb39a','#f8f0e1',.7);
+   ellipse(ctx,c.x,c.y,2.1,1.3,'#e2bc78');
+  }
+ }
+ ctx.restore();
 }
 function shadow(ctx,pts){const center=pts.reduce((p,q)=>({x:p.x+q.x/pts.length,y:p.y+q.y/pts.length}),{x:0,y:0});ellipse(ctx,center.x,center.y+8,Math.max(17,Math.abs(pts[1].x-pts[3].x)*.49),11,'rgba(75,112,79,.21)');}
 function drawTree(ctx,x,y,size=1,variant=0){
