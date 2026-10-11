@@ -6,7 +6,7 @@ import { dirname, join } from 'node:path';
 import { CATALOG, CATALOG_ITEMS, CATEGORIES, RETIRED_PATH_ITEMS } from '../catalog.js';
 import { SPRITE_MANIFEST } from '../sprite-manifest.js';
 import { catalogSpriteId, spriteMetadata, spriteStatus } from '../sprite-assets.js';
-import { makeInitialCity, addObject, checkPlacement, findOccupant, checkRoadStroke, applyRoadStroke, moveObject, storeObject, restoreObject, sanitizeCity, keyOf, BuildError } from '../engine.js';
+import { makeInitialCity, addObject, checkPlacement, findOccupant, checkRoadStroke, applyRoadStroke, moveObject, storeObject, restoreObject, sanitizeCity, raisedSurfaceConflicts, keyOf, BuildError } from '../engine.js';
 const root=dirname(fileURLToPath(new URL('../index.html',import.meta.url)));
 const extras=SPRITE_MANIFEST.assets.filter(a=>a.packId==='extra-v1');
 
@@ -58,18 +58,21 @@ test('9 deprecated decorative paths are hidden but remain readable, while plazas
  }
 });
 
-test('paid decorative paving can sit below buildings without changing real road connectivity',()=>{
+test('3D raised plazas no longer let houses, decor or roads float on their pillars',()=>{
  let city=makeInitialCity();
  const oldWallet=structuredClone(city.wallet), originalRoads=[...city.roads];
  city=addObject(city,CATALOG,'plaza-monument-base',16,17);
- city=addObject(city,CATALOG,'monument',17,18);
- assert.equal(city.objects.at(-1).kind,'monument');
- assert.equal(findOccupant(city,CATALOG,17,18).kind,'monument');
- assert.equal(checkPlacement(city,CATALOG,'extra-flowerbed',16,17).ok,true);
- assert.equal(checkPlacement(city,CATALOG,'extra-tree',17,18).code,'BUILDING_COLLISION');
+ assert.equal(CATALOG['plaza-monument-base'].blockingSurface,true);
+ assert.equal(checkPlacement(city,CATALOG,'cottage',17,18).code,'BUILDING_COLLISION');
+ assert.equal(checkPlacement(city,CATALOG,'monument',17,18).code,'BUILDING_COLLISION');
+ assert.equal(checkPlacement(city,CATALOG,'extra-flowerbed',16,17).code,'BUILDING_COLLISION');
  assert.equal(checkPlacement(city,CATALOG,'plaza-city-square',17,18).code,'BUILDING_COLLISION');
+ assert.equal(checkRoadStroke(city,CATALOG,[{x:16,y:17}]).code,'BUILDING_COLLISION');
+ city=addObject(city,CATALOG,'monument',20,18);
+ assert.equal(findOccupant(city,CATALOG,20,18).kind,'monument');
  assert.deepEqual(city.roads,originalRoads);
  assert.deepEqual(city.wallet,{points:oldWallet.points-CATALOG['plaza-monument-base'].price.points-CATALOG.monument.price.points,coffee:oldWallet.coffee,treats:oldWallet.treats-CATALOG['plaza-monument-base'].price.treats-CATALOG.monument.price.treats});
+ assert.equal(raisedSurfaceConflicts(city,CATALOG).length,0);
  city=sanitizeCity(JSON.parse(JSON.stringify(city)),CATALOG);
  assert.equal(city.objects.filter(x=>x.kind==='plaza-monument-base').length,1);
 });

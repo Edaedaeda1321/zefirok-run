@@ -126,10 +126,11 @@ test('purchased land charges its prior cost without double-charging existing obj
  assert.deepEqual(next.objects,original.objects);
 });
 
-test('a decorative plaza may overlap Road, and old paving-over-road saves still load',()=>{
+test('a raised plaza blocks new roads, but old overlapping saves still load',()=>{
  let city=makeInitialCity();
  city=addObject(city,CATALOG,'plaza-cozy-tiled',16,16);
- city=applyRoadStroke(city,CATALOG,[{x:16,y:16}]);
- assert.equal(city.roads.includes('16,16'),true);
+ assert.equal(checkRoadStroke(city,CATALOG,[{x:16,y:16}]).code,'BUILDING_COLLISION');
+ // Before v14 decorative plaza assets were considered flat road-compatible tiles.
+ city.roads.push('16,16');
  assert.deepEqual(sanitizeCity(JSON.parse(JSON.stringify(city)),CATALOG),city);
 });

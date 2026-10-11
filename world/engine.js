@@ -214,7 +214,7 @@ export function findOccupant(city, catalog, x, y, excludeUid = '') {
   return null;
 }
 
-export function checkPlacement(city, catalog, kind, x, y, rotation = 0, excludeUid = '') {
+export function checkPlacement(city, catalog, kind, x, y, rotation = 0, excludeUid = '', {allowLegacyRaisedOverlap=false} = {}) {
   const def = catalog[kind];
   if (!def) return { ok: false, code: 'UNKNOWN_BUILDING' };
   if (![x, y, rotation].every(isInteger)) return { ok: false, code: 'INVALID_POSITION' };
@@ -223,22 +223,52 @@ export function checkPlacement(city, catalog, kind, x, y, rotation = 0, excludeU
     if(!inBounds(city,cx,cy))return {ok:false,code:'OUTSIDE_CITY'};
   }
   for (let cx = x; cx < x + w; cx++) for (let cy = y; cy < y + h; cy++) {
-    if (def.layer !== 'surface' && city.roads.includes(keyOf(cx, cy))) return { ok: false, code: 'ROAD_COLLISION' };
-    // Paving and constructions can overlap; two surfaces or two solid
-    // objects still cannot. This permits a monument on a 3x3 plaza.
-    // Parks must also stay exclusive and never stack on each other.
+    if ((def.layer !== 'surface' || (def.blockingSurface && !allowLegacyRaisedOverlap)) && city.roads.includes(keyOf(cx, cy))) return { ok: false, code: 'ROAD_COLLISION' };
+    // Only truly flat paving can go UNDER a building. Old 3x3 plaza WebPs
+    // contain raised columns/benches/playsets: layering a house on them made
+    // it look as if the house were floating on a monument. Preserve existing
+    // overlaps ONLY while reading a legacy save; prevent all new overlaps.
     for(const other of city.objects){
       if(other.stored || other.uid===excludeUid)continue;
       const otherDef=catalog[other.kind];
       const sameLayer=(otherDef?.layer==='surface') === (def.layer==='surface');
       const bothParks=otherDef?.category==='parks' && def.category==='parks';
-      if(!sameLayer && !bothParks)continue;
+      const raisedAgainstSolid=(Boolean(def.blockingSurface)||Boolean(otherDef?.blockingSurface)) && !allowLegacyRaisedOverlap;
+      if(!sameLayer && !bothParks && !raisedAgainstSolid)continue;
       const size=dims(otherDef,other.rotation||0);
       if(cx>=other.x&&cx<other.x+size.w&&cy>=other.y&&cy<other.y+size.h)
         return {ok:false,code:'BUILDING_COLLISION'};
     }
   }
   return { ok: true, code: 'OK', w, h };
+}
+
+// Legacy cities could buy raised 3x3 plazas and place houses ON their columns.
+// Detect these invalid historic visual overlaps without breaking save loading.
+// The player may opt to store only the conflicting raised plaza, retaining ownership.
+export function raisedSurfaceConflicts(city,catalog){
+ const occupied=new Set();
+ for(const item of city.objects){
+  if(item.stored||catalog[item.kind]?.layer==='surface')continue;
+  const def=catalog[item.kind];if(!def)continue;
+  const {w,h}=dims(def,item.rotation||0);
+  for(let dx=0;dx<w;dx++)for(let dy=0;dy<h;dy++)occupied.add(keyOf(item.x+dx,item.y+dy));
+ }
+ const roads=new Set(city.roads);
+ const conflicts=[];
+ for(const item of city.objects){
+  const def=catalog[item.kind];
+  if(item.stored||!def?.blockingSurface)continue;
+  const {w,h}=dims(def,item.rotation||0);
+  let building=false,road=false;
+  for(let dx=0;dx<w;dx++)for(let dy=0;dy<h;dy++){
+   const key=keyOf(item.x+dx,item.y+dy);
+   if(occupied.has(key))building=true;
+   if(roads.has(key))road=true;
+  }
+  if(building||road)conflicts.push({uid:item.uid,kind:item.kind,building,road});
+ }
+ return conflicts;
 }
 
 function checkedPlacement(city, catalog, kind, x, y, rotation, excludeUid = '') {
@@ -354,7 +384,7 @@ export function checkRoadStroke(city, catalog, positions, { erasing = false } = 
     } else {
       // Paving is drawn beneath traffic: it must never sever a road.
       const occupant=findOccupant(city,catalog,pos.x,pos.y);
-      if(occupant && catalog[occupant.kind]?.layer!=='surface')return {ok:false,code:'BUILDING_COLLISION'};
+      if(occupant && (catalog[occupant.kind]?.layer!=='surface'||catalog[occupant.kind]?.blockingSurface))return {ok:false,code:'BUILDING_COLLISION'};
     }
   }
   return { ok: true, code: 'OK' };
@@ -616,7 +646,9 @@ export function sanitizeCity(input, catalog) {
         (ready === 0 && started !== 0) || (ready !== 0 && (started <= 0 || ready <= started || ready - started > MAX_BUILD_MS))) throw new BuildError('INVALID_SAVE');
     const item = { uid: raw.uid, kind: raw.kind, x: raw.stored ? null : Number(raw.x), y: raw.stored ? null : Number(raw.y), rotation: raw.rotation, level: raw.level, stored: raw.stored, buildStartedAt: started, buildReadyAt: ready };
     if (!item.stored) {
-      const checked = checkPlacement(city, catalog, item.kind, item.x, item.y, item.rotation);
+      // Legacy saves were allowed to put buildings/roads over 3x3 raised plazas.
+      // Do not lock out those players; future moves and purchases use strict rules.
+      const checked = checkPlacement(city, catalog, item.kind, item.x, item.y, item.rotation, '', {allowLegacyRaisedOverlap:true});
       if (!checked.ok) throw new BuildError('INVALID_SAVE');
     }
     city.objects.push(item);

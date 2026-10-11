@@ -82,7 +82,12 @@ const VISIBLE_ITEMS = [
   { id: 'fountain', buildMs: 90000, category: 'decor', titleKey: 'fountain', descriptionKey: 'fountainDescription', icon: 'fountain', w: 2, h: 2, needsRoad: false, style: 'water', height: 0 },
   { id: 'monument', buildMs: 120000, category: 'decor', titleKey: 'monument', descriptionKey: 'monumentDescription', icon: 'star', w: 2, h: 2, needsRoad: false, style: 'gold', height: 0 },
   ...NO_ROUND_TERRAIN_ITEMS,
-  ...EXTRA_CATALOG_ITEMS.filter(item => item.category !== 'paths')
+  // All eight legacy plaza WebPs contain raised fixtures (lamps, benches, a
+  // column, plinth, fences or playground). They are not flat paving, and a
+  // building may NOT stand on top of them. Keep the original 'surface' layer
+  // for old save compatibility; blockingSurfaces controls new placement and Z-order.
+  ...EXTRA_CATALOG_ITEMS.filter(item => item.category !== 'paths').map(item =>
+   item.category === 'plazas' ? {...item,blockingSurface:true} : item)
 ];
 
 // The nine old decorative path IDs remain readable for old local saves. They

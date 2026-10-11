@@ -23,7 +23,7 @@ const offset = (point, dy) => ({ x: point.x, y: point.y + dy });
 // groundAlphaBounds is produced offline from alpha>=128; no mobile pixel scans.
 // Render-only: catalog footprints, saved coordinates and server money stay intact.
 export function worldSpriteGroundFit(meta,def,rotation=0){
- if(!meta||!def||def.layer==='surface')return null;
+ if(!meta||!def||(def.layer==='surface'&&!def.blockingSurface))return null;
  const bounds=meta.groundAlphaBounds;
  if(!Array.isArray(bounds)||bounds.length!==4||!bounds.every(Number.isFinite))return null;
  const [left,,right,opaqueBottom]=bounds;
@@ -59,7 +59,7 @@ export function worldSpriteVisualDock(meta,def,rotation=0){
  const fitted=worldSpriteGroundFit(meta,def,rotation);
  if(!fitted)return null;
  // Landscape ground tiles and paving remain flush; never sink the terrain.
- if(def.layer==='surface'||def.category==='landscape'||def.category==='paths')return fitted;
+ if((def.layer==='surface'&&!def.blockingSurface)||def.category==='landscape'||def.category==='paths')return fitted;
  let burial=0;
  if(meta.packId==='new-city-premium-sprites-v3-fixed'){
   burial=def.category==='transport'?7:6;
@@ -113,7 +113,7 @@ export function worldGroundContactLayout(item,def,meta=null,placement=null){
 }
 function drawWorldGroundContact(ctx,item,def){
  // Flat paving *is* the ground: never draw a floating shadow below it.
- if(def.layer==='surface')return;
+ if(def.layer==='surface'&&!def.blockingSurface)return;
  const spriteId=catalogSpriteId(def.id,item.rotation||0,'complete');
  const meta=spriteId?spriteMetadata(spriteId):null;
  const placement=worldSpriteVisualDock(meta,def,item.rotation||0);
@@ -679,7 +679,7 @@ export function drawWorld(canvas,city,catalog,cam,overlay={}) {
  drawLandscape(ctx,city,catalog,viewport);
  // Pavement and plazas sit UNDER structures. Rendering a surface never
  // changes original occupancy of buildings or the live road graph.
- for(const item of city.objects.filter(o=>!o.stored && catalog[o.kind]?.layer==='surface')){
+ for(const item of city.objects.filter(o=>!o.stored && catalog[o.kind]?.layer==='surface' && !catalog[o.kind]?.blockingSurface)){
   if(item.x>viewport.maxX+3||item.y>viewport.maxY+3)continue;
   if(overlay.draft?.uid===item.uid && overlay.draft.type==='move')ctx.globalAlpha=.22;
   drawWorldGroundContact(ctx,item,catalog[item.kind]);
@@ -691,7 +691,9 @@ export function drawWorld(canvas,city,catalog,cam,overlay={}) {
  const connected=connectedRoads(city);
  // Buildings and citizens share one depth-sorted painter. Residents walking
  // behind a house should disappear behind it, not float over its roof.
- const layers=city.objects.filter(o=>!o.stored && catalog[o.kind]?.layer!=='surface').map(item=>{
+ // Raised decorative plazas are 3D solids for the painter, NOT floor tiles.
+ // Previously painting them first made houses appear to sit on their pillars.
+ const layers=city.objects.filter(o=>!o.stored && (catalog[o.kind]?.layer!=='surface'||catalog[o.kind]?.blockingSurface)).map(item=>{
   const size=dims(catalog[item.kind],item.rotation);
   return {type:'object',item,depth:item.x+item.y+size.w+size.h};
  });

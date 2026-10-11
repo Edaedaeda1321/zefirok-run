@@ -3,7 +3,7 @@ import { RU, tr } from './ru.js';
 import { ROAD_TILE_PRICE } from './economy.js';
 import {
  makeInitialCity, sanitizeCity, cloneCity, reconcileCityProgress, claimCityLevelReward, CITY_LEVELS, addObject, moveObject, storeObject,
- restoreObject, checkPlacement, checkRoadStroke, applyRoadStroke, cityStats,
+  restoreObject, checkPlacement, checkRoadStroke, applyRoadStroke, cityStats, raisedSurfaceConflicts,
  findOccupant, nextRotation, orthogonalPath, keyOf, dims, BuildError, inBounds,
  isObjectConnected, connectedRoads, isConstructing, constructionRemaining,
  constructionSkipPrice, skipConstruction, topUpTestWallet, buyParcel,
@@ -506,10 +506,59 @@ function updateCityLevelUI(stats){
   rewardButton.textContent='Забрать';
  }else $('cityRewardText').textContent='Все награды города получены!';
 }
+// Historic city saves may already contain a house on top of a raised plaza.
+// Warn the player and let THEM explicitly store the overlapping plaza.
+// No automatic deletion, movement, currency charge or server migration.
+let raisedRepairBusy=false;
+let raisedWarningDismissed=false;
+function ensureRaisedConflictUI(){
+ let dialog=$('raisedSurfaceConflict');
+ if(dialog)return dialog;
+ dialog=document.createElement('section');dialog.id='raisedSurfaceConflict';
+ dialog.className='world-raised-conflict';dialog.hidden=true;
+ dialog.setAttribute('role','dialog');dialog.setAttribute('aria-modal','true');
+ dialog.setAttribute('aria-labelledby','raisedSurfaceConflictTitle');
+ const content=document.createElement('div');content.className='world-raised-dialog';
+ const title=document.createElement('strong');title.id='raisedSurfaceConflictTitle';
+ const message=document.createElement('p');
+ message.textContent='На одних клетках стоит дом (или дорога) и декоративная площадь с высоким постаментом. Раньше игра разрешала такое размещение, поэтому дом выглядит висящим в воздухе. Перенеси площадь на склад — она останется твоей и её можно будет установить на свободном участке без новой покупки.';
+ const actions=document.createElement('div');actions.className='world-raised-dialog__actions';
+ const primary=document.createElement('button');primary.type='button';primary.id='raisedSurfaceStore';
+ primary.textContent='Убрать перекрытые площади на склад';
+ primary.addEventListener('click',async()=>{
+  if(raisedRepairBusy)return;
+  raisedRepairBusy=true;
+  try{
+   for(const item of raisedSurfaceConflicts(state.city,CATALOG)){
+    if(SERVER_MODE)await performServerAction('store',{uid:item.uid});
+    else applyChange(storeObject(state.city,item.uid));
+   }
+   raisedWarningDismissed=true;
+   showToast('Площадки на складе. Дом остался на земле, деньги не списаны.');
+  }catch(error){showToast(error?.message||'Не удалось переместить площадку. Попробуй снова.',true);}
+  finally{raisedRepairBusy=false;updateUI();scheduleDraw();}
+ });
+ const postpone=document.createElement('button');postpone.type='button';
+ postpone.className='world-raised-dialog__later';postpone.textContent='Позже';
+ postpone.addEventListener('click',()=>{raisedWarningDismissed=true;updateRaisedConflicts();});
+ actions.append(primary,postpone);content.append(title,message,actions);dialog.append(content);
+ document.body.append(dialog);
+ return dialog;
+}
+function updateRaisedConflicts(){
+ const clashes=raisedSurfaceConflicts(state.city,CATALOG);
+ const modal=ensureRaisedConflictUI();
+ const ready=!SERVER_MODE||state.serverReady;
+ modal.hidden=!ready||clashes.length===0||raisedWarningDismissed;
+ if(!clashes.length)return;
+ $('raisedSurfaceConflictTitle').textContent=`Найдено пересечений: ${clashes.length}`;
+ $('raisedSurfaceStore').disabled=raisedRepairBusy||(SERVER_MODE&&(!state.serverReady||state.serverBusy));
+}
 function updateUI(){
  const stats=cityStats(state.city,CATALOG);
  syncCitizens(stats);
  updateCityLevelUI(stats);
+ updateRaisedConflicts();
  $('populationCount').textContent=stats.population.toLocaleString('ru-RU');
  $('comfortCount').textContent=stats.comfort.toLocaleString('ru-RU');
  $('comfortTier').textContent=tr(`comfort_${stats.comfortTier}`);
