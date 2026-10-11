@@ -44,6 +44,16 @@ const PRICE_IMAGES = Object.freeze({
  treats: '../assets/season-pass/zefir_currency.webp'
 });
 const CATEGORY_SYMBOLS = Object.freeze({all:'▦', homes:'⌂', shops:'☕', transport:'🚌', parks:'♣', plazas:'◇', landscape:'❋', decor:'✿'});
+const CATEGORY_IMAGES = Object.freeze({
+ all:'../assets/mir_zeffi/icon_all_stroika.webp',
+ homes:'../assets/mir_zeffi/icon_house.webp',
+ shops:'../assets/mir_zeffi/icon_zavedenia.webp',
+ transport:'../assets/mir_zeffi/icon_transport.webp',
+ parks:'../assets/mir_zeffi/icon_parks.webp',
+ plazas:'../assets/mir_zeffi/icon_ploshadki.webp',
+ landscape:'../assets/mir_zeffi/icon_landshaft.webp',
+ decor:'../assets/mir_zeffi/icon_decor.webp'
+});
 function setCatalogOpen(isOpen,{animate=true}={}){
  state.catalogOpen=Boolean(isOpen);
  const panel=$('bottomPanel');
@@ -537,7 +547,19 @@ function renderCategories(){
  const el=$('categoryTabs');el.replaceChildren();
  for(const category of CATEGORIES){
   const button=document.createElement('button');button.type='button';
-  const symbol=document.createElement('span');symbol.className='category-icon';symbol.textContent=CATEGORY_SYMBOLS[category]||'✦';symbol.setAttribute('aria-hidden','true');
+  const symbol=document.createElement('span');
+   symbol.className='category-icon';symbol.setAttribute('aria-hidden','true');
+   const imagePath=CATEGORY_IMAGES[category];
+   if(imagePath){
+    const icon=document.createElement('img');
+    icon.src=imagePath;icon.alt='';icon.width=26;icon.height=26;
+    icon.loading='lazy';icon.decoding='async';
+    icon.addEventListener('error',()=>{
+     symbol.classList.remove('category-icon--art');
+     symbol.textContent=CATEGORY_SYMBOLS[category]||'✦';
+    },{once:true});
+    symbol.classList.add('category-icon--art');symbol.append(icon);
+   }else symbol.textContent=CATEGORY_SYMBOLS[category]||'✦';
   const label=document.createElement('span');label.textContent=tr(category);button.append(symbol,label);
   button.classList.toggle('is-active',state.category===category);
   button.addEventListener('click',()=>{state.category=category;state.warehouse=false;renderCategories();renderCatalog();updateUI();});

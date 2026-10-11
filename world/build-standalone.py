@@ -39,6 +39,19 @@ embedded={}
 for asset in manifest['assets']:
     content=(ROOT/asset['fileWebp']).read_bytes()
     embedded[asset['id']]='data:image/webp;base64,'+base64.b64encode(content).decode('ascii')
+# v13: icon paths work inside a self-contained file:// offline preview, too.
+ui_names=('icon_Mir_zeffi_world_stranitca.webp','icon_catolog_stroinka.webp',
+ 'icon_all_stroika.webp','icon_house.webp','icon_zavedenia.webp',
+ 'icon_transport.webp','icon_parks.webp','icon_ploshadki.webp',
+ 'icon_landshaft.webp','icon_decor.webp',
+ 'iconScore.webp','iconCoffee.webp','zefir_currency.webp')
+for name in ui_names:
+    image=(ROOT.parent/'assets'/'mir_zeffi'/name)
+    if not image.is_file():
+        raise FileNotFoundError(f'Missing Zeffi UI icon: {image}')
+    uri='data:image/webp;base64,'+base64.b64encode(image.read_bytes()).decode('ascii')
+    html=html.replace('src="../assets/mir_zeffi/'+name+'"','src="'+uri+'"')
+    source=[s.replace("'../assets/mir_zeffi/"+name+"'", "'"+uri+"'") for s in source]
 html=html.replace('</body>', '<script>window.ZeffiEmbeddedSprites='+json.dumps(embedded,separators=(',',':'))+';</script>\n<script>\n'+'\n'.join(source)+'\n</script>\n</body>')
 output=ROOT.parent/'world-v01-preview.html'
 output.write_text(html,encoding='utf-8')

@@ -1,8 +1,8 @@
 {
   "version": 2,
   "hashAlgorithm": "sha256",
-  "catalogHash": "d97c2f9ce4a59204",
-  "count": 606,
+  "catalogHash": "decc76f398781e47",
+  "count": 607,
   "images": [
     {
       "fileName": "achievements/background_achivment_panel.webp",
@@ -1659,6 +1659,14 @@
       "path": "/assets/mir_zeffi/icon_ploshadki.webp",
       "hash": "3197febb0f7c",
       "size": 91630
+    },
+    {
+      "fileName": "mir_zeffi/icon_transport.webp",
+      "label": "Icon transport",
+      "folder": "mir_zeffi",
+      "path": "/assets/mir_zeffi/icon_transport.webp",
+      "hash": "7366e38b8be9",
+      "size": 13974
     },
     {
       "fileName": "mir_zeffi/icon_zavedenia.webp",

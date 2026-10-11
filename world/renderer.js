@@ -52,8 +52,33 @@ export function worldSpriteGroundFit(meta,def,rotation=0){
  const anchorY=opaqueBottom-(targetBottom+burial)*scale;
  return {assetScale:scale,anchorX,anchorY};
 }
+// v13 visual contact: the v11 alpha footprint stays authoritative. A small
+// additional burial hides the thick painted plinths that still looked airborne.
+// Never alter the logical grid, stored coordinates or construction timers.
+export function worldSpriteVisualDock(meta,def,rotation=0){
+ const fitted=worldSpriteGroundFit(meta,def,rotation);
+ if(!fitted)return null;
+ // Landscape ground tiles and paving remain flush; never sink the terrain.
+ if(def.layer==='surface'||def.category==='landscape'||def.category==='paths')return fitted;
+ let burial=0;
+ if(meta.packId==='new-city-premium-sprites-v3-fixed'){
+  burial=def.category==='transport'?7:6;
+ }else if(def.category==='homes'||def.category==='shops'){
+  burial=8;
+ }else if(def.category==='parks'){
+  burial=8;
+ }else if(def.category==='plazas'){
+  burial=6;
+ }else if(def.category==='decor'){
+  burial=(def.id==='lamp'||def.id==='fountain'||def.id==='monument'||def.id==='extra-fountain')?7:5;
+ }else{
+  burial=4;
+ }
+ // The sprite is shifted at draw time, not by corrupting source metadata.
+ return {...fitted,anchorY:fitted.anchorY-burial*fitted.assetScale};
+}
 function drawPlacedSprite(ctx,id,point,def,rotation=0){
- return drawSprite(ctx,id,point,worldSpriteGroundFit(spriteMetadata(id),def,rotation));
+ return drawSprite(ctx,id,point,worldSpriteVisualDock(spriteMetadata(id),def,rotation));
 }
 // A single cached radial gradient is reused across frames; no costly Canvas
 // blur/filter pass per object (important for iPhone Telegram WebViews).
@@ -62,9 +87,9 @@ function groundShadowGradient(ctx){
  let gradient=groundShadowGradients.get(ctx);
  if(!gradient){
   gradient=ctx.createRadialGradient(0,0,.08,0,0,1);
-  gradient.addColorStop(0,'rgba(41,67,36,.35)');
-  gradient.addColorStop(.52,'rgba(41,67,36,.29)');
-  gradient.addColorStop(.78,'rgba(41,67,36,.20)');
+  gradient.addColorStop(0,'rgba(41,67,36,.51)');
+  gradient.addColorStop(.40,'rgba(41,67,36,.39)');
+  gradient.addColorStop(.74,'rgba(41,67,36,.22)');
   gradient.addColorStop(1,'rgba(41,67,36,0)');
   groundShadowGradients.set(ctx,gradient);
  }
@@ -80,7 +105,9 @@ export function worldGroundContactLayout(item,def,meta=null,placement=null){
  // Allow a few pixels of soft shade past the foundation edge; otherwise
  // most of the gradient is hidden completely by an opaque WebP pedestal.
  const radiusX=Math.max(12,Math.min(boundsWidth*.54,visualWidth*.65));
- const radiusY=radiusX*.40;
+ // Extend the soft contact shadow to the FRONT of the isometric base.
+ // Keep within the legacy <= half-X-radius rendering budget.
+ const radiusY=radiusX*.47;
  const center=P(item.x+w*.5,item.y+h*.5);
  return {x:center.x,y:center.y+Math.min(4,radiusY*.2),radiusX,radiusY};
 }
@@ -89,7 +116,7 @@ function drawWorldGroundContact(ctx,item,def){
  if(def.layer==='surface')return;
  const spriteId=catalogSpriteId(def.id,item.rotation||0,'complete');
  const meta=spriteId?spriteMetadata(spriteId):null;
- const placement=worldSpriteGroundFit(meta,def,item.rotation||0);
+ const placement=worldSpriteVisualDock(meta,def,item.rotation||0);
  const m=worldGroundContactLayout(item,def,meta,placement);
  ctx.save();
  ctx.translate(m.x,m.y);
