@@ -154,4 +154,56 @@ await check('insufficient shared wallet never records purchase',async()=>{
  assert.equal(receiptCount(),receiptBefore);assert.deepEqual(wallet(),before);
  db.prepare('UPDATE admin_profile_state SET wallet=?,revision=revision+1 WHERE telegram_id=?').run(original.wallet,'123456789');
 });
+// New City v10 — authoritative purchases must use new catalog quotes (no client trust).
+await check('new bus terminal is paid atomically with all three currencies and survives state reload',async()=>{
+ const before=await request('state');const money=wallet();
+ const kind='bus-terminal',expectedPrice={...CATALOG[kind].price};
+ const payload={requestId:'new-city-terminal-123456789',expectedRevision:before.revision,expectedPrice,
+  action:{kind:'place',args:{objectKind:kind,x:1,y:1,rotation:0}}};
+ const r=await request('mutate',payload);
+ assert.equal(r.status,200,r.error);
+ assert.equal(r.city.objects.at(-1).kind,kind);
+ assert.equal(r.city.objects.at(-1).buildReadyAt>r.city.objects.at(-1).buildStartedAt,true);
+ assert.equal(wallet().wallet,money.wallet-expectedPrice.points);
+ assert.equal(wallet().coffee,money.coffee-expectedPrice.coffee);
+ assert.equal(wallet().treats,money.treats-expectedPrice.treats);
+ const reloaded=await request('state');
+ assert.equal(reloaded.city.objects.at(-1).kind,kind);
+ const repeated=await request('mutate',payload);
+ assert.equal(repeated.status,200,repeated.error);assert.equal(repeated.repeated,true);
+ assert.deepEqual({...wallet()},{...money,wallet:money.wallet-expectedPrice.points,coffee:money.coffee-expectedPrice.coffee,treats:money.treats-expectedPrice.treats,revision:money.revision+1});
+});
+await check('new botanical park 4x4 purchase and price validation stay server authoritative',async()=>{
+ const before=await request('state');const money=wallet();
+ const kind='botanical-garden';const expectedPrice={...CATALOG[kind].price};
+ const action={kind:'place',args:{objectKind:kind,x:20,y:0,rotation:0}};
+ const fraudulent=await request('mutate',{requestId:'new-city-garden-bad-1234',expectedRevision:before.revision,expectedPrice:{...expectedPrice,points:1},action});
+ assert.equal(fraudulent.status,409,JSON.stringify(fraudulent));assert.equal(fraudulent.code,'WORLD_PRICE_CHANGED');
+ assert.deepEqual(wallet(),money);
+ const valid=await request('mutate',{requestId:'new-city-garden-ok-1234',expectedRevision:before.revision,expectedPrice,action});
+ assert.equal(valid.status,200,valid.error);
+ assert.equal(valid.city.objects.at(-1).kind,kind);
+ assert.equal(wallet().wallet,money.wallet-expectedPrice.points);
+ assert.equal(wallet().treats,money.treats-expectedPrice.treats);
+});
+await check('new city construction skip requires coffee and cannot be double charged',async()=>{
+ const before=await request('state');
+ const kind='pond-park';const expectedPrice={...CATALOG[kind].price};
+ const purchase=await request('mutate',{requestId:'new-city-pond-build-1234',expectedRevision:before.revision,expectedPrice,
+  action:{kind:'place',args:{objectKind:kind,x:17,y:7,rotation:0}}});
+ assert.equal(purchase.status,200,purchase.error);
+ const uid=purchase.city.objects.at(-1).uid;
+ const quote=constructionSkipPrice(purchase.city.objects.at(-1));
+ assert.equal(quote.coffee,50);
+ const money=wallet();
+ const payload={requestId:'new-city-pond-skip-1234',expectedRevision:purchase.revision,
+  expectedPrice:{points:0,coffee:quote.coffee,treats:0},action:{kind:'skip',args:{uid}}};
+ const skipped=await request('mutate',payload);
+ assert.equal(skipped.status,200,skipped.error);
+ assert.equal(wallet().coffee,money.coffee-quote.coffee);
+ assert.equal(skipped.city.objects.find(o=>o.uid===uid)?.buildReadyAt,0);
+ const repeated=await request('mutate',payload);
+ assert.equal(repeated.status,200);assert.equal(repeated.repeated,true);
+ assert.equal(wallet().coffee,money.coffee-quote.coffee);
+});
 console.log(`WORLD D1 checks: ${count} passed`);

@@ -37,10 +37,10 @@ for(const asset of manifest.assets){
  assert(fs.existsSync(local),'missing WebP '+asset.fileWebp);
  if(asset.roadMask!==null&&asset.roadMask!==undefined)roads.add(Number(asset.roadMask));
 }
-assert(manifest.assets.length===249,`expected all 249 supplied WebP entries, got ${manifest.assets.length}`);
+assert(manifest.assets.length===361,`expected all 361 supplied WebP entries, got ${manifest.assets.length}`);
 for(let i=0;i<16;i++)assert(roads.has(i),'Road connection mask '+i+' is missing');
 const app=read('world/app.js');const engine=read('world/engine.js');
 assert(app.includes('zefirok-world-v01-sandbox-local'),'sandbox wallet must remain local');
 assert(engine.includes('skipConstruction'),'construction timings unexpectedly removed');
 assert(!world.includes('api/world/purchase'),'no real wallet API allowed in stage 1');
-console.log('World integration OK: 249 WebP, 16 Road masks, modules, locked hosted entry, isolated local wallet.');
+console.log('World integration OK: 361 WebP, 16 Road masks, modules, locked hosted entry, isolated local wallet.');

@@ -59,6 +59,13 @@ const NO_ROUND_TERRAIN_ITEMS = Object.freeze([
 ]);
 
 const VISIBLE_ITEMS = [
+  { id: 'bus-terminal', category: 'transport', titleKey: 'busTerminal', descriptionKey: 'busTerminalDescription', icon: 'bus', w: 4, h: 3, needsRoad: true, style: 'rose', height: 105, buildMs: 480000 },
+  { id: 'bus-stop', category: 'transport', titleKey: 'busStop', descriptionKey: 'busStopDescription', icon: 'bus', w: 2, h: 1, needsRoad: true, style: 'rose', height: 38, buildMs: 120000 },
+  { id: 'pond-park', category: 'parks', titleKey: 'pondPark', descriptionKey: 'pondParkDescription', icon: 'fountain', w: 3, h: 3, needsRoad: false, style: 'park', height: 0, buildMs: 180000 },
+  { id: 'rose-garden', category: 'parks', titleKey: 'roseGarden', descriptionKey: 'roseGardenDescription', icon: 'flower', w: 3, h: 3, needsRoad: false, style: 'rose', height: 0, buildMs: 180000 },
+  { id: 'botanical-garden', category: 'parks', titleKey: 'botanicalGarden', descriptionKey: 'botanicalGardenDescription', icon: 'flower', w: 4, h: 4, needsRoad: false, style: 'park', height: 0, buildMs: 300000 },
+  { id: 'sports-playground', category: 'plazas', titleKey: 'sportsPlayground', descriptionKey: 'sportsPlaygroundDescription', icon: 'sun', w: 3, h: 2, needsRoad: false, style: 'mint', height: 0, buildMs: 180000 },
+  { id: 'city-square', category: 'plazas', titleKey: 'newCitySquare', descriptionKey: 'newCitySquareDescription', icon: 'star', w: 3, h: 3, needsRoad: false, style: 'gold', height: 0, buildMs: 180000 },
   { id: 'cottage', buildMs: 300000, category: 'homes', titleKey: 'cottage', descriptionKey: 'cottageDescription', icon: 'house', w: 2, h: 2, needsRoad: true, style: 'rose', height: 52 },
   { id: 'family-home', buildMs: 300000, category: 'homes', titleKey: 'familyHome', descriptionKey: 'familyHomeDescription', icon: 'house', w: 3, h: 2, needsRoad: true, style: 'butter', height: 61 },
   { id: 'villa', buildMs: 300000, category: 'homes', titleKey: 'villa', descriptionKey: 'villaDescription', icon: 'house', w: 3, h: 3, needsRoad: true, style: 'lilac', height: 72 },
@@ -90,4 +97,4 @@ export const CATALOG_ITEMS = Object.freeze(VISIBLE_ITEMS.map(item => {
 export const CATALOG = Object.freeze(Object.fromEntries(
   [...CATALOG_ITEMS, ...RETIRED_PATH_ITEMS, ...RETIRED_LANDSCAPE_ITEMS].map(item => [item.id, item])
 ));
-export const CATEGORIES = Object.freeze(['all', 'homes', 'shops', 'parks', 'plazas', 'landscape', 'decor']);
+export const CATEGORIES = Object.freeze(['all', 'homes', 'shops', 'transport', 'parks', 'plazas', 'landscape', 'decor']);

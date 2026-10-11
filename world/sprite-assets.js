@@ -79,7 +79,7 @@ export function fallbackSpriteId(kind, rotation=0, state='complete', variation=0
   const landscape=landscapeSprites.get(kind);
   if(landscape)return landscape;
  }
- return (state==='complete'?decorAssetId(kind,rotation,variation):(parkConstructionAssetId(kind,rotation,state)||buildingAssetId(kind,rotation,state)));
+ return (state==='complete'?(buildingAssetId(kind,rotation,'complete')||decorAssetId(kind,rotation,variation)):(parkConstructionAssetId(kind,rotation,state)||buildingAssetId(kind,rotation,state)));
 }
 export function catalogSpriteId(kind, rotation=0, state='complete', variation=0) {
  if(state==='complete'){

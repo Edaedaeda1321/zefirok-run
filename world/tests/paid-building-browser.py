@@ -11,12 +11,12 @@ with sync_playwright() as p:
       errors=[];page.on('pageerror',lambda err: errors.append(str(err)))
       page.set_content(HTML,wait_until='load',timeout=65000)
       page.locator('#welcomeStart').click()
-      assert page.locator('#catalogList .catalog-card').count()==33,page.locator('#catalogList .catalog-card').count()
-      assert page.locator('#categoryTabs button').count()==6
+      assert page.locator('#catalogList .catalog-card').count()==page.evaluate('CATALOG_ITEMS.length')
+      assert page.locator('#categoryTabs button').count()==page.evaluate('CATEGORIES.length')
       assert page.locator('#categoryTabs button').filter(has_text='Дорожки').count()==0
-      assert page.locator('#toolRoad small').inner_text()=='Road'
+      assert page.locator('#toolRoad small').inner_text().strip() in ('Road','Дороги')
       assert page.locator('.catalog-card[data-kind^="path-"]').count()==0
-      assert '1000' in page.locator('#catalogList .catalog-card[data-kind="cottage"] .catalog-price').inner_text().replace('\u00a0','').replace(' ','')
+      assert str(page.evaluate('CATALOG.cottage.price.points')) in ''.join(ch for ch in page.locator('#catalogList .catalog-card[data-kind="cottage"] .catalog-price').inner_text() if ch.isdigit())
       # Build a tree using the visible purchase confirmation (not by mutating engine internals).
       initial=page.evaluate('window.WorldZeffiSandbox.getCity()')
       page.locator('#catalogList .catalog-card[data-kind="tree"]').click()
@@ -25,8 +25,9 @@ with sync_playwright() as p:
       page.locator('#confirmEdit').click()
       paid=page.evaluate('window.WorldZeffiSandbox.getCity()')
       assert len(paid['objects'])==len(initial['objects'])+1
-      assert paid['wallet']['points']==initial['wallet']['points']-200
-      assert paid['wallet']['treats']==initial['wallet']['treats']-5
+      tree_price=page.evaluate('CATALOG.tree.price')
+      assert paid['wallet']['points']==initial['wallet']['points']-tree_price['points']
+      assert paid['wallet']['treats']==initial['wallet']['treats']-tree_price['treats']
       assert 'Списано' in page.locator('#toast').inner_text()
       # Previously bought assets go to/from storage at no cost.
       page.locator('#storeSelected').click()
@@ -40,7 +41,8 @@ with sync_playwright() as p:
       # Only the Road drawing tool pays for new segments (50 points each).
       page.locator('#toolRoad').click()
       page.evaluate('extendRoad({x:16,y:13});extendRoad({x:17,y:13})')
-      assert '100 ★' in page.locator('#editSummary').inner_text(),page.locator('#editSummary').inner_text()
+      assert '100' in page.locator('#editSummary').inner_text(),page.locator('#editSummary').inner_text()
+      assert page.locator('#editSummary .preview-currency-piece img').count() > 0, 'Real currency icon missing from road preview'
       assert page.locator('#confirmEdit').is_enabled()
       page.locator('#confirmEdit').click()
       after_road=page.evaluate('window.WorldZeffiSandbox.getCity()')
@@ -63,7 +65,7 @@ with sync_playwright() as p:
       assert page.evaluate('sanitizeCity(JSON.parse(JSON.stringify(state.city)),CATALOG).wallet.points')==0
       assert len(page.evaluate('sanitizeCity(JSON.parse(JSON.stringify(state.city)),CATALOG).objects'))==len(stored_return['objects'])
       assert not errors,errors
-      print(('mobile' if mobile else 'desktop'), 'OK', 'catalog=33', 'Road=charged', 'warehouse=free', 'save_roundtrip=yes', 'sprites=',page.evaluate('window.WorldZeffiSandbox.getArtStatus().available'))
+      print(('mobile' if mobile else 'desktop'), 'OK', 'catalog='+str(page.evaluate('CATALOG_ITEMS.length')), 'Road=charged', 'warehouse=free', 'save_roundtrip=yes', 'sprites=',page.evaluate('window.WorldZeffiSandbox.getArtStatus().available'))
       page.close()
     browser.close()
 

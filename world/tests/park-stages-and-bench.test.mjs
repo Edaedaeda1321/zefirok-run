@@ -45,7 +45,7 @@ test('48 separate WebP park construction sprites cover 3 stages and all directio
  }
 });
 test('park/fountain/monument construction timers survive save; adjacent parks cannot share occupied tiles',()=>{
- let city=makeInitialCity();const now=1800000000000;
+ let city=makeInitialCity();city.wallet.points=100_000;city.wallet.treats=1_000;const now=1800000000000;
  for(const kind of ['garden','playground','fountain','monument','extra-fountain']){
   const pos={garden:[16,16],playground:[20,16],fountain:[16,20],monument:[19,20],'extra-fountain':[21,21]}[kind];
   city=addObject(city,CATALOG,kind,...pos,0,now);

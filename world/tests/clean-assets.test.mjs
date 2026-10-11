@@ -17,7 +17,7 @@ function visit(path,output=[]){ for(const entry of readdirSync(path,{withFileTyp
 test('only active WebP files are packaged (no PNG, GLB or unreferenced sprites)',()=>{
  const actual=visit(join(root,'assets')).filter(p=>p.endsWith('.webp'));
  assert.deepEqual(new Set(actual),spritePaths);
- assert.equal(actual.length,249);
+ assert.equal(actual.length,361);
  assert.ok(!visit(root).some(p=>/\.(png|glb|jpg|jpeg)$/i.test(p)));
  assert.ok(!SPRITE_MANIFEST.assets.some(a=>Object.hasOwn(a,'filePng')||Object.hasOwn(a,'sourceGlb')));
  const code=readFileSync(join(root,'sprite-assets.js'),'utf-8');

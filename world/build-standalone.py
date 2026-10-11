@@ -17,6 +17,8 @@ for resource in ('assets/optimized/v0.79.5/iconScore.webp',
 source=[]
 for filename in ('economy.js','catalog.js','ru.js','engine.js','sprite-manifest.js','sprite-assets.js','citizens.js','renderer.js','app.js'):
     s=(ROOT/filename).read_text(encoding='utf-8')
+    if filename=='engine.js':
+        s=s.replace('points: 18000, coffee: 400, treats: 300','points: 800000, coffee: 6000, treats: 12000',1) # offline-only test credit
     s=re.sub(r"^import\s+(?:[\s\S]*?)\s+from\s+['\"][^'\"]+['\"];\s*",'',s,flags=re.M)
     s=re.sub(r'^export\s+', '', s, flags=re.M)
     if filename=='citizens.js':

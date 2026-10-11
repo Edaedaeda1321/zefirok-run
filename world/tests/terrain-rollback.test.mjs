@@ -41,7 +41,7 @@ test('8 new landscape objects are purchasable single-cell decor; old 0.1.7 objec
  assert.ok(CATEGORIES.includes('landscape'));
  assert.equal(CATALOG_ITEMS.filter(x=>x.category==='landscape').length,8);
  const base=makeInitialCity();
- let used=base;
+ let used=base;used.wallet.points=100_000;used.wallet.treats=1_000;
  for(const [i,id] of MODULES.entries()){
   assert.deepEqual([CATALOG[id].w,CATALOG[id].h],[1,1]);
   assert.equal(CATALOG[id].retired,undefined);

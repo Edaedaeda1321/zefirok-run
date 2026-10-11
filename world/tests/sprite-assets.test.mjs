@@ -11,8 +11,8 @@ const root=dirname(fileURLToPath(new URL('../index.html',import.meta.url)));
 const byId=new Map(SPRITE_MANIFEST.assets.map(asset=>[asset.id,asset]));
 
 test('Clean Core + Extra + Flower Style contains exactly 249 unique WebP-only sprites',()=>{
- assert.equal(SPRITE_MANIFEST.assets.length,249);
- assert.equal(byId.size,249);
+ assert.equal(SPRITE_MANIFEST.assets.length,361);
+ assert.equal(byId.size,361);
  for(const a of SPRITE_MANIFEST.assets){
   assert.equal(Object.hasOwn(a,'filePng'),false,a.id);
   assert.ok(a.fileWebp.endsWith('.webp'),a.id);
@@ -37,7 +37,7 @@ test('6 buildings use Flower Style completed sprites and keep 3 Core constructio
     assert.ok(id,`${item.catalogId} ${r} ${state}`);
     assert.equal(byId.get(id).catalogId,item.catalogId);
     assert.equal(byId.get(id).state,state);
-    if(state==='complete')assert.ok(id.startsWith('flower_v1_'));
+    if(state==='complete')assert.ok(id.startsWith(item.note.startsWith('New City v10')?'world_':'flower_v1_'));
     else assert.equal(id,buildingAssetId(item.catalogId,r,state));
     faces.add(id);
    }

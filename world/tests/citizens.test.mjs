@@ -25,13 +25,15 @@ test('starter town has two residents and 15 comfort; only one completed house',(
 });
 test('comfort comes from real completed buildings and decor; unused terrain earns none',()=>{
  const now=1000000;
- let c=addObject(initial(),CATALOG,'tree',19,19,0,now);
+ let c=initial();c.wallet.points=100_000;c.wallet.treats=1_000;
+ c=addObject(c,CATALOG,'tree',19,19,0,now);
  assert.equal(cityStats(c,CATALOG,now).comfort,17);
  c=addObject(c,CATALOG,'terrain_platform_plain_premium',20,19,0,now);
  assert.equal(cityStats(c,CATALOG,now).comfort,17);
  c=addObject(c,CATALOG,'garden',16,16,0,now);
  assert.equal(cityStats(c,CATALOG,now).comfort,17,'active construction gives zero comfort');
- assert.equal(cityStats(c,CATALOG,now+200000).comfort,35,'finished park adds 18');
+ assert.equal(cityStats(c,CATALOG,now+200000).comfort,41,'finished garden adds 24 comfort');
+ assert.equal(cityStats(c,CATALOG,now+200000).population,4,'finished garden attracts two residents');
  assert.equal(cityStats(c,CATALOG,now+200000).comfortTier,'corner');
 });
 test('population increases only when occupied buildings finish and connect to the main road',()=>{
@@ -57,7 +59,7 @@ test('losing road access removes household residents, not ownership or wallet',(
 });
 test('diverse city with homes, shops and park earns one diversity bonus',()=>{
  const now=1200000;
- let city=initial();
+ let city=initial();city.wallet.points=100_000;city.wallet.treats=1_000;
  city=applyRoadStroke(city,CATALOG,Array.from({length:8},(_,i)=>({x:15+i,y:13})));
  city=addObject(city,CATALOG,'family-home',16,11,0,now);
  city=addObject(city,CATALOG,'coffee-kiosk',21,11,0,now);
@@ -66,8 +68,8 @@ test('diverse city with homes, shops and park earns one diversity bonus',()=>{
  assert.equal(before.population,2,'not-yet-complete builds do not create residents');
  assert.equal(before.comfort,15);
  const after=cityStats(city,CATALOG,now+400000);
- assert.equal(after.population,7,'2 starter residents, 4 family, 1 cafe worker');
- assert.equal(after.comfort,65,'15 starter + 12 family + 10 cafe + 18 park + 10 diversity');
+ assert.equal(after.population,9,'2 starter residents, 4 family, 1 cafe worker, 2 park visitors');
+ assert.equal(after.comfort,71,'15 starter + 12 family + 10 cafe + 24 park + 10 diversity');
  assert.equal(after.comfortTier,'district');
 });
 test('comfort tiers and visible NPC budget grow deterministically with the city',()=>{
@@ -109,7 +111,7 @@ test('hosted and sandbox pages show residents, comfort and a rank without the ol
   assert.doesNotMatch(html,/id="connectedCount"|id="roadsCount"/);
  }
  const app=read('../app.js'),renderer=read('../renderer.js');
- assert.match(app,/buildCitizenScene\(state\.city,CATALOG,stats\.population\)/);
+ assert.match(app,/buildCitizenScene\(state\.city,CATALOG,stats\.population,Date\.now\(\),stats\.comfort\)/);
  assert.match(app,/sampleCitizenScene\(state\.citizenScene,now\)/);
  assert.match(renderer,/drawCitizen\(ctx,layer\.person/);
  assert.match(app,/document\.hidden\|\|motionReduced/);

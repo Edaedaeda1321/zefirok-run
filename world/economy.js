@@ -3,6 +3,13 @@
 export const ROAD_TILE_PRICE = Object.freeze({ points: 50, coffee: 0, treats: 0 });
 export const PARCEL_PRICE = Object.freeze({points: 1200, coffee: 0, treats: 10});
 export const OBJECT_PRICES = Object.freeze({
+  'bus-terminal': Object.freeze({ points: 27000, coffee: 35, treats: 50 }),
+  'bus-stop': Object.freeze({ points: 5500, coffee: 10, treats: 0 }),
+  'pond-park': Object.freeze({ points: 17500, coffee: 0, treats: 45 }),
+  'rose-garden': Object.freeze({ points: 16000, coffee: 0, treats: 40 }),
+  'botanical-garden': Object.freeze({ points: 32000, coffee: 0, treats: 75 }),
+  'sports-playground': Object.freeze({ points: 10800, coffee: 0, treats: 25 }),
+  'city-square': Object.freeze({ points: 12000, coffee: 0, treats: 25 }),
   'cottage': Object.freeze({ points: 1000, coffee: 0, treats: 15 }),
   'family-home': Object.freeze({ points: 2200, coffee: 0, treats: 25 }),
   'villa': Object.freeze({ points: 4500, coffee: 0, treats: 50 }),

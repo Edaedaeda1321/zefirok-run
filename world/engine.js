@@ -10,7 +10,7 @@ export { PARCEL_PRICE }; // existing API maintained; configured in economy.js
 export const SKIP_DISCOUNT_INTERVAL_MS = 60_000;
 export const SKIP_DISCOUNT_COFFEE = 25;
 export const MIN_SKIP_COFFEE = 5;
-const BUILDING_SKIP_KINDS = new Set(['cottage','family-home','villa','coffee-kiosk','coffee-house','bakery','flower-shop']);
+const BUILDING_SKIP_KINDS = new Set(['cottage','family-home','villa','coffee-kiosk','coffee-house','bakery','flower-shop','bus-terminal','bus-stop']);
 const CURRENCIES = Object.freeze(['points', 'coffee', 'treats']);
 const ZERO_PRICE = Object.freeze({ points: 0, coffee: 0, treats: 0 });
 function validatePrice(price) {
@@ -396,12 +396,16 @@ export function isObjectConnected(item, city, catalog, connected = connectedRoad
 // It never changes a save, a wallet, D1, or the price of existing objects.
 const RESIDENTS_BY_KIND = Object.freeze({
   'cottage':2, 'family-home':4, 'villa':6,
-  'coffee-kiosk':1, 'coffee-house':2, 'bakery':2, 'flower-shop':1
+  'coffee-kiosk':1, 'coffee-house':2, 'bakery':2, 'flower-shop':1,
+  'bus-terminal':3, 'bus-stop':1
 });
 const COMFORT_BY_KIND = Object.freeze({
   'cottage':6, 'family-home':10, 'villa':14,
   'coffee-kiosk':8, 'coffee-house':12, 'bakery':10, 'flower-shop':9,
   'garden':18, 'playground':15,
+  'bus-terminal':15, 'bus-stop':5,
+  'pond-park':24, 'rose-garden':20, 'botanical-garden':32,
+  'sports-playground':14, 'city-square':12,
   'tree':2, 'flowerbed':2, 'lamp':3, 'bench':3,
   'fountain':8, 'monument':10,
   'extra-tree':2, 'extra-flowerbed':2, 'extra-bush':1,
@@ -432,7 +436,7 @@ export function cityStats(city, catalog, now = Date.now()) {
     if(!def)continue;
     const underConstruction=isConstructing(item,now);
     if(underConstruction)constructing++;
-    if(['homes','shops'].includes(def.category)){
+    if(['homes','shops','transport'].includes(def.category)){
       structures++;
       if(!underConstruction)completedStructures++;
     }
@@ -449,6 +453,18 @@ export function cityStats(city, catalog, now = Date.now()) {
       population+=RESIDENTS_BY_KIND[item.kind]||0;
       comfort+=2;
     }
+  }
+  // New destination parks draw visitors; duplicate parks do not farm population.
+  // They require neither road access nor an extra economic balance change.
+  const parkVisitors=Object.freeze({'pond-park':2,'rose-garden':2,'botanical-garden':3,'sports-playground':1});
+  const seenParkKinds=Object.create(null);
+  for(const item of placed){
+    if(isConstructing(item,now))continue;
+    const bonus=parkVisitors[item.kind]||0;
+    if(!bonus)continue;
+    const n=seenParkKinds[item.kind]||0;
+    if(n<2)population+=bonus;
+    seenParkKinds[item.kind]=n+1;
   }
   if(['homes','shops','parks'].every(kind=>kinds.has(kind)))comfort+=10;
   return {

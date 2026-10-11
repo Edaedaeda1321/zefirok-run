@@ -28,7 +28,7 @@ const state = {
  skipPreparingUid: null, skipToken: 0
 };
 const iconCodes = { house: 0x1F3E1, coffee: 0x2615, cake: 0x1F370, flower: 0x1F338,
- sun: 0x2600, tree: 0x1F333, lamp: 0x1F4A1, bench: 0x1FA91, fountain: 0x26F2,
+ sun: 0x2600, bus:0x1F68C, tree: 0x1F333, lamp: 0x1F4A1, bench: 0x1FA91, fountain: 0x26F2,
  star: 0x2728 };
 const icon = kind => String.fromCodePoint(iconCodes[kind] || 0x2726);
 const SIZE = () => ({ width: canvas.getBoundingClientRect().width, height: canvas.getBoundingClientRect().height });
@@ -38,7 +38,7 @@ const PRICE_IMAGES = Object.freeze({
  coffee: '../assets/optimized/v0.79.5/iconCoffee.webp',
  treats: '../assets/season-pass/zefir_currency.webp'
 });
-const CATEGORY_SYMBOLS = Object.freeze({all:'▦', homes:'⌂', shops:'☕', parks:'♣', decor:'✿'});
+const CATEGORY_SYMBOLS = Object.freeze({all:'▦', homes:'⌂', shops:'☕', transport:'🚌', parks:'♣', plazas:'◇', landscape:'❋', decor:'✿'});
 function setCatalogOpen(isOpen,{animate=true}={}){
  state.catalogOpen=Boolean(isOpen);
  const panel=$('bottomPanel');
