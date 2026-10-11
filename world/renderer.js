@@ -17,28 +17,40 @@ const P = (x, y) => {
 const midpoint = (a, b, ratio = .5) => ({ x: a.x + (b.x - a.x) * ratio, y: a.y + (b.y - a.y) * ratio });
 const offset = (point, dy) => ({ x: point.x, y: point.y + dy });
 
-// Ground contact is a *visual* concern. Every completed object and its build
-// stages use the same authoritative grid position and footprint as before.
-// Most 3D buildings already end at the correct tile edge, but without a contact
-// shadow their pale foundations appear suspended above the green terrain.
-// Legacy garden / playground WebPs additionally have an undersized render scale.
+// Sprite docking uses *visible opaque pixels*, not the full WebP dimensions.
+// Images contain 10-30px transparent borders. Treating that border as ground
+// caused several benches, fountains and legacy parks to hover in Telegram.
+// groundAlphaBounds is produced offline from alpha>=128; no mobile pixel scans.
+// Render-only: catalog footprints, saved coordinates and server money stay intact.
 export function worldSpriteGroundFit(meta,def,rotation=0){
- if(!meta||!def)return null;
- if(/^extra_flower_garden_[nesw]$/.test(meta.id) && meta.assetScale>3.35){
-  // The 3x3 skirting is physically 204px across when scaled to 3px / cell.
-  return {assetScale:3};
+ if(!meta||!def||def.layer==='surface')return null;
+ const bounds=meta.groundAlphaBounds;
+ if(!Array.isArray(bounds)||bounds.length!==4||!bounds.every(Number.isFinite))return null;
+ const [left,,right,opaqueBottom]=bounds;
+ if(!(right>left&&opaqueBottom>=0))return null;
+ const {w,h}=dims(def,rotation);
+ const footprintWidth=(w+h)*TILE_W/2;
+ const footprintBottom=(w+h)*TILE_H/2;
+ const footprintCenterX=(w-h)*TILE_W/4;
+ let scale=meta.assetScale||3;
+ // The old Extra parks were calibrated against the transparent outer image,
+ // leaving their actual footprint only ~60% of its legal plot. Correct the
+ // image scale using the measured visible base, with a small green border.
+ if(/^extra_(flower_garden|playground)_[nesw]$/.test(meta.id)){
+  const target=(right-left)/(footprintWidth*.92);
+  if(Number.isFinite(target)&&target>1&&target<8)scale=target;
  }
- if(/^extra_playground_[nesw]$/.test(meta.id) && meta.assetScale>4.6){
-  // Accommodate either the older 3x2 layout or the corrected 2x2 catalog.
-  // Both are based on the same 313px image base height in four directions.
-  const size=dims(def,rotation);
-  const logicalBottom=(size.w+size.h)*TILE_H/2;
-  return {
-   assetScale:(meta.height-meta.anchorY)/logicalBottom,
-   anchorX:meta.width/2
-  };
- }
- return null;
+ const visualWidth=(right-left)/scale;
+ // An opaque base narrower than the plot is naturally inset on all sides;
+ // its front point must also be inset (the diamond has 2:1 slopes).
+ const inset=Math.max(0,footprintWidth-visualWidth)/4;
+ const targetBottom=footprintBottom-inset;
+ // Slightly embed foundations in the grass, eliminating the hairline seam.
+ // Identical adjustment for ready/build stages, never animation-dependent.
+ const burial=meta.packId==='new-city-premium-sprites-v3-fixed'?2.5:2;
+ const anchorX=(left+right)/2-footprintCenterX*scale;
+ const anchorY=opaqueBottom-(targetBottom+burial)*scale;
+ return {assetScale:scale,anchorX,anchorY};
 }
 function drawPlacedSprite(ctx,id,point,def,rotation=0){
  return drawSprite(ctx,id,point,worldSpriteGroundFit(spriteMetadata(id),def,rotation));
@@ -50,10 +62,10 @@ function groundShadowGradient(ctx){
  let gradient=groundShadowGradients.get(ctx);
  if(!gradient){
   gradient=ctx.createRadialGradient(0,0,.08,0,0,1);
-  gradient.addColorStop(0,'rgba(44,72,42,.34)');
-  gradient.addColorStop(.48,'rgba(44,72,42,.25)');
-  gradient.addColorStop(.77,'rgba(44,72,42,.09)');
-  gradient.addColorStop(1,'rgba(44,72,42,0)');
+  gradient.addColorStop(0,'rgba(41,67,36,.35)');
+  gradient.addColorStop(.52,'rgba(41,67,36,.29)');
+  gradient.addColorStop(.78,'rgba(41,67,36,.20)');
+  gradient.addColorStop(1,'rgba(41,67,36,0)');
   groundShadowGradients.set(ctx,gradient);
  }
  return gradient;
@@ -62,11 +74,12 @@ export function worldGroundContactLayout(item,def,meta=null,placement=null){
  const {w,h}=dims(def,item.rotation||0);
  const boundsWidth=(w+h)*TILE_W/2;
  const visualScale=placement?.assetScale||meta?.assetScale||3;
- const visualWidth=meta?.width?meta.width/visualScale:boundsWidth;
+ const alpha=meta?.groundAlphaBounds;
+ const visualWidth=alpha&&Array.isArray(alpha)?(alpha[2]-alpha[0])/visualScale:(meta?.width?meta.width/visualScale:boundsWidth);
  // A narrow bench/fountain must not cast an entire 2x2 floor-sized shadow.
  // Allow a few pixels of soft shade past the foundation edge; otherwise
  // most of the gradient is hidden completely by an opaque WebP pedestal.
- const radiusX=Math.max(12,Math.min(boundsWidth*.56,visualWidth*.56));
+ const radiusX=Math.max(12,Math.min(boundsWidth*.54,visualWidth*.65));
  const radiusY=radiusX*.40;
  const center=P(item.x+w*.5,item.y+h*.5);
  return {x:center.x,y:center.y+Math.min(4,radiusY*.2),radiusX,radiusY};

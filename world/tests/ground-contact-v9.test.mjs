@@ -26,53 +26,53 @@ test('every purchasable object gets a finite, footprint-constrained ground conta
  }
 });
 
-test('ground fit aligns flower garden foundation to its full 3x3 plot, all four facings',()=>{
- for(let rotation=0;rotation<4;rotation++){
-  const def=CATALOG.garden;
-  const id=catalogSpriteId('garden',rotation);
+test('flower garden and playground use measured opaque bounds, not the transparent WebP margins',()=>{
+ for(const kind of ['garden','playground'])for(let rotation=0;rotation<4;rotation++){
+  const def=CATALOG[kind];
+  const id=catalogSpriteId(kind,rotation);
   const a=spriteMetadata(id);
   const fit=worldSpriteGroundFit(a,def,rotation);
-  const scale=fit?.assetScale||a.assetScale;
-  assert.ok(Math.abs((a.height-a.anchorY)/scale-logicalBottom(def,rotation))<6,`${id} visibly hovers above terrain`);
-  assert.ok(a.width/scale>(def.w+def.h)*36*.8,`${id} too small for 3x3 plot`);
+  const scale=fit.assetScale;
+  const alpha=a.groundAlphaBounds;
+  const actualWidth=(alpha[2]-alpha[0])/scale;
+  const {w,h}=dims(def,rotation);
+  const footprintWidth=(w+h)*36;
+  const expectedBottom=logicalBottom(def,rotation)-Math.max(0,footprintWidth-actualWidth)/4+2;
+  const actualBottom=(alpha[3]-fit.anchorY)/scale;
+  assert.ok(Math.abs(actualBottom-expectedBottom)<.05,`${id}: visible bottom is not seated`);
+  assert.ok(actualWidth>=footprintWidth*.919,`${id}: foundation visibly undersized`);
+  assert.ok(actualWidth<=footprintWidth*.921,`${id}: foundation overshoots plot`);
  }
 });
 
-test('playground bases land on the chosen footprint, including already-corrected 2x2 installs',()=>{
+test('playground grounding also supports saved 2x2 footprint variants',()=>{
  for(let rotation=0;rotation<4;rotation++){
   const a=spriteMetadata(catalogSpriteId('playground',rotation));
-  for(const [w,h] of [[3,2],[2,2]]){
-   const def={...CATALOG.playground,w,h};
-   const fit=worldSpriteGroundFit(a,def,rotation);
-   const scale=fit?.assetScale||a.assetScale;
-   // When using the original undersized pack, placement correction is exact;
-   // an already-corrected pack can remain within +/- 6px of its own plot.
-   assert.ok(Math.abs((a.height-a.anchorY)/scale-logicalBottom(def,rotation))<6,`${a.id} not grounded for ${w}x${h}`);
-  }
+  const def={...CATALOG.playground,w:2,h:2};
+  const fit=worldSpriteGroundFit(a,def,rotation);
+  const {w,h}=dims(def,rotation);
+  const width=(a.groundAlphaBounds[2]-a.groundAlphaBounds[0])/fit.assetScale;
+  const expectedBottom=(w+h)*18-Math.max(0,(w+h)*36-width)/4+2;
+  assert.ok(Math.abs((a.groundAlphaBounds[3]-fit.anchorY)/fit.assetScale-expectedBottom)<.05);
+  assert.ok(Math.abs(width/((w+h)*36)-.92)<.002);
  }
 });
 
-test('already-grounded v6 park asset metadata is left untouched',()=>{
- for(let rot=0;rot<4;rot++){
-  const garden=spriteMetadata(catalogSpriteId('garden',rot));
-  assert.equal(worldSpriteGroundFit({...garden,assetScale:3},CATALOG.garden,rot),null);
-  const park=spriteMetadata(catalogSpriteId('playground',rot));
-  const twoByTwo={...CATALOG.playground,w:2,h:2};
-  const corrected={...park,assetScale:4.4,anchorX:park.width/2,footprint:[2,2]};
-  assert.equal(worldSpriteGroundFit(corrected,twoByTwo,rot),null);
- }
-});
-
-test('correctly anchored houses and narrow benches/fountains are not scaled up or shifted',()=>{
+test('ready houses retain their scale, while thin decor and stages get accurate ground anchors',()=>{
  for(const kind of ['cottage','family-home','villa','coffee-house','bakery','tree','bench','fountain','lamp','flowerbed']){
   for(let rotation=0;rotation<4;rotation++){
    const a=spriteMetadata(catalogSpriteId(kind,rotation));
-   if(a)assert.equal(worldSpriteGroundFit(a,CATALOG[kind],rotation),null,`${kind}/${rotation}: art must not move`);
+   if(!a||!a.groundAlphaBounds)continue;
+   const fit=worldSpriteGroundFit(a,CATALOG[kind],rotation);
+   assert.ok(Math.abs(fit.assetScale-a.assetScale)<1e-6,`${kind}/${rotation}: no scale changes`);
+   assert.ok(Number.isFinite(fit.anchorX)&&Number.isFinite(fit.anchorY));
   }
  }
  for(const kind of ['bench','fountain']){
   const def=CATALOG[kind],a=spriteMetadata(catalogSpriteId(kind));
-  const contact=worldGroundContactLayout({x:12,y:13,rotation:0},def,a);
+  const fit=worldSpriteGroundFit(a,def);
+  assert.ok((a.groundAlphaBounds[3]-fit.anchorY)/fit.assetScale>(a.groundAlphaBounds[3]-a.anchorY)/a.assetScale+2,`${kind} base is still too high`);
+  const contact=worldGroundContactLayout({x:12,y:13,rotation:0},def,a,fit);
   assert.ok(contact.radiusX < ((def.w+def.h)*36)/2*.8,`${kind} casts an entire plot-sized shadow`);
  }
 });
