@@ -5,6 +5,17 @@ export const STATE_VERSION = 2;
 export const PARCEL_SIZE = 4;
 export const INITIAL_WALLET = Object.freeze({points: 18000, coffee: 400, treats: 300});
 export const TOPUP_AMOUNT = Object.freeze({points: 10000, coffee: 200, treats: 150});
+// Progression is evaluated from authoritative completed objects, not client XP.
+// One-time modest currency grants; the Worker credits the shared player wallet atomically.
+export const CITY_LEVELS = Object.freeze([
+  Object.freeze({level:1,titleKey:'cityLevel1',residents:0,comfort:0,parks:0,shops:0,reward:null}),
+  Object.freeze({level:2,titleKey:'cityLevel2',residents:4,comfort:30,parks:1,shops:0,reward:Object.freeze({points:500,treats:5,coffee:0})}),
+  Object.freeze({level:3,titleKey:'cityLevel3',residents:8,comfort:60,parks:1,shops:1,reward:Object.freeze({points:1000,treats:10,coffee:3})}),
+  Object.freeze({level:4,titleKey:'cityLevel4',residents:15,comfort:120,parks:2,shops:1,reward:Object.freeze({points:2000,treats:20,coffee:6})}),
+  Object.freeze({level:5,titleKey:'cityLevel5',residents:25,comfort:220,parks:2,shops:2,reward:Object.freeze({points:4000,treats:35,coffee:12})})
+]);
+const INITIAL_CITY_PROGRESS = () => ({bestLevel:1,claimedLevels:[]});
+
 export { PARCEL_PRICE }; // existing API maintained; configured in economy.js
 // Only this isolated sandbox charges the demo wallet; production must use Worker.
 export const SKIP_DISCOUNT_INTERVAL_MS = 60_000;
@@ -245,6 +256,7 @@ export function makeInitialCity() {
     parcels: [],
     wallet: {...INITIAL_WALLET},
     nextId: 5,
+    progress: INITIAL_CITY_PROGRESS(),
     roads,
     lockedRoads: [keyOf(7, 13), keyOf(8, 13)],
     objects: [
@@ -261,6 +273,7 @@ export function cloneCity(city) {
     ...city,
     parcels: [...(city.parcels || [])],
     wallet: {...city.wallet},
+    progress: {bestLevel:city.progress?.bestLevel||1,claimedLevels:[...(city.progress?.claimedLevels||[])]},
     roads: [...city.roads],
     lockedRoads: [...city.lockedRoads],
     objects: city.objects.map(item => ({ ...item }))
@@ -402,12 +415,12 @@ const RESIDENTS_BY_KIND = Object.freeze({
 const COMFORT_BY_KIND = Object.freeze({
   'cottage':6, 'family-home':10, 'villa':14,
   'coffee-kiosk':8, 'coffee-house':12, 'bakery':10, 'flower-shop':9,
-  'garden':18, 'playground':15,
+  'garden':24, 'playground':15,
   'bus-terminal':15, 'bus-stop':5,
   'pond-park':24, 'rose-garden':20, 'botanical-garden':32,
   'sports-playground':14, 'city-square':12,
   'tree':2, 'flowerbed':2, 'lamp':3, 'bench':3,
-  'fountain':8, 'monument':10,
+  'fountain':8, 'monument':12,
   'extra-tree':2, 'extra-flowerbed':2, 'extra-bush':1,
   'extra-lamp':3, 'extra-bench':3, 'extra-planter':2,
   'extra-arch':5, 'extra-fountain':8, 'extra-sign':2,
@@ -420,17 +433,36 @@ export function comfortTierFor(score){
   if(score>=20)return 'corner';
   return 'empty';
 }
-export function visibleCitizenCount(population){
-  // A big city has many residents, but at most 12 animated characters on
-  // mobile. This is an animation budget, not an artificial population cap.
-  return Math.min(12,Math.max(0,Math.ceil(Math.max(0,population)/4)));
+export function visibleCitizenCount(population,comfort=0){
+  // Cosier streets draw more visible walkers, but never exceed the mobile cap.
+  const total=Math.ceil(Math.max(0,population)/4)+Math.floor(Math.max(0,comfort)/60);
+  return Math.min(12,Math.max(0,population>0?total:0));
+}
+function comfortFromCopy(kind,count,base){
+  // Prevent decorating with dozens of the same cheap 1x1 objects solely for XP.
+  const cheap=new Set(['tree','flowerbed','lamp','bench','extra-tree','extra-flowerbed',
+    'extra-bush','extra-lamp','extra-bench','extra-planter']);
+  if(!cheap.has(kind))return base;
+  if(count<=4)return base;
+  if(count<=8)return Math.max(1,Math.ceil(base/2));
+  return 1;
+}
+function achievedCityLevel(stats){
+  let level=1;
+  for(const def of CITY_LEVELS.slice(1)){
+    if(def.level!==level+1)break;
+    if(stats.population<def.residents||stats.comfort<def.comfort||
+      stats.parks<def.parks||stats.shops<def.shops)break;
+    level=def.level;
+  }
+  return level;
 }
 export function cityStats(city, catalog, now = Date.now()) {
   const connected = connectedRoads(city);
   const placed = city.objects.filter(item => !item.stored);
   let population=0,comfort=0,structures=0,completedStructures=0;
-  let constructing=0,connectedCount=0,disconnected=0;
-  const kinds=new Set();
+  let constructing=0,connectedCount=0,disconnected=0,parks=0,shops=0;
+  const kinds=new Set(),decorCopies=new Map(),parkCopies=new Map();
   for(const item of placed){
     const def=catalog[item.kind];
     if(!def)continue;
@@ -447,43 +479,91 @@ export function cityStats(city, catalog, now = Date.now()) {
     }
     if(underConstruction)continue;
     kinds.add(def.category);
-    comfort+=COMFORT_BY_KIND[item.kind]|| (def.category==='plazas'?6:0);
+    if(def.category==='parks')parks++;
+    if(def.category==='shops'&&roadAccess)shops++;
+    const copyCount=(decorCopies.get(item.kind)||0)+1;
+    decorCopies.set(item.kind,copyCount);
+    const base=COMFORT_BY_KIND[item.kind]|| (def.category==='plazas'?6:0);
+    comfort+=comfortFromCopy(item.kind,copyCount,base);
+    if(def.category==='parks'||item.kind==='sports-playground'){
+      const count=(parkCopies.get(item.kind)||0)+1;
+      parkCopies.set(item.kind,count);
+      if(count<=2)population+=({
+        'garden':2,'playground':1,'pond-park':2,'rose-garden':2,
+        'botanical-garden':3,'sports-playground':1
+      })[item.kind]||0;
+    }
     if(def.needsRoad && roadAccess){
-      // A road connection brings new citizens; disconnected buildings wait.
       population+=RESIDENTS_BY_KIND[item.kind]||0;
       comfort+=2;
     }
   }
-  // New destination parks draw visitors; duplicate parks do not farm population.
-  // They require neither road access nor an extra economic balance change.
-  const parkVisitors=Object.freeze({'pond-park':2,'rose-garden':2,'botanical-garden':3,'sports-playground':1});
-  const seenParkKinds=Object.create(null);
-  for(const item of placed){
-    if(isConstructing(item,now))continue;
-    const bonus=parkVisitors[item.kind]||0;
-    if(!bonus)continue;
-    const n=seenParkKinds[item.kind]||0;
-    if(n<2)population+=bonus;
-    seenParkKinds[item.kind]=n+1;
-  }
   if(['homes','shops','parks'].every(kind=>kinds.has(kind)))comfort+=10;
+  const qualifiedLevel=achievedCityLevel({population,comfort,parks,shops});
+  const savedLevel=Number(city.progress?.bestLevel)||1;
+  const cityLevel=Math.max(qualifiedLevel,savedLevel);
+  const claimedLevels=Array.isArray(city.progress?.claimedLevels)?[...city.progress.claimedLevels]:[];
+  const claimedSet=new Set(claimedLevels);
+  const claimableLevel=CITY_LEVELS.find(def=>def.level>1&&def.level<=cityLevel&&!claimedSet.has(def.level))?.level||null;
   return {
-    // Keep all legacy metrics for old diagnostics, clients and D1 requests.
-    buildings: placed.length, structures, completedStructures,
-    constructing, ready:placed.length-constructing,
-    roads:city.roads.length, stored:city.objects.length-placed.length,
-    connected:connectedCount, disconnected,
-    population, comfort, comfortTier:comfortTierFor(comfort),
-    visibleCitizens:visibleCitizenCount(population)
+    buildings:placed.length,structures,completedStructures,
+    constructing,ready:placed.length-constructing,
+    roads:city.roads.length,stored:city.objects.length-placed.length,
+    connected:connectedCount,disconnected,
+    population,comfort,comfortTier:comfortTierFor(comfort),parks,shops,
+    cityLevel,qualifiedLevel,levelTitleKey:CITY_LEVELS[cityLevel-1].titleKey,
+    nextCityLevel:CITY_LEVELS[cityLevel]||null,
+    claimableLevel,claimedLevels,
+    visibleCitizens:visibleCitizenCount(population,comfort)
   };
 }
+// Called by the Worker BEFORE any mutation as well as afterwards. This also
+// locks in levels earned when a building finished while the app was closed.
+export function reconcileCityProgress(city,catalog,now=Date.now()){
+  const level=cityStats(city,catalog,now).cityLevel;
+  const next=cloneCity(city);
+  next.progress.bestLevel=Math.max(next.progress.bestLevel,level);
+  return next;
+}
+// One-time payout for an earned city level. The caller MUST atomically commit
+// both this marked city state and the authoritative profile wallet credit.
+export function claimCityLevelReward(city,catalog,level,now=Date.now()){
+  if(!Number.isInteger(level)||level<2||level>CITY_LEVELS.length)throw new BuildError('INVALID_CITY_LEVEL');
+  const next=reconcileCityProgress(city,catalog,now);
+  if(next.progress.bestLevel<level)throw new BuildError('CITY_LEVEL_LOCKED');
+  if(next.progress.claimedLevels.includes(level))throw new BuildError('CITY_LEVEL_CLAIMED');
+  const reward=CITY_LEVELS[level-1].reward;
+  if(!reward)throw new BuildError('CITY_REWARD_UNAVAILABLE');
+  for(const key of CURRENCIES){
+    const amount=reward[key];
+    if(!Number.isSafeInteger(amount)||amount<0||!Number.isSafeInteger(next.wallet[key])||
+      next.wallet[key]<0||next.wallet[key]>Number.MAX_SAFE_INTEGER-amount)
+      throw new BuildError('WALLET_LIMIT');
+    next.wallet[key]+=amount;
+  }
+  next.progress.claimedLevels.push(level);
+  next.progress.claimedLevels.sort((a,b)=>a-b);
+  return next;
+}
+
 
 export function sanitizeCity(input, catalog) {
   if (!input || ![1, STATE_VERSION].includes(input.version) || input.size !== CITY_SIZE) throw new BuildError('UNSUPPORTED_SAVE');
   if (!Array.isArray(input.roads) || !Array.isArray(input.objects) || !Array.isArray(input.lockedRoads) || input.objects.length > 50000) throw new BuildError('INVALID_SAVE');
   const v2 = input.version === STATE_VERSION;
   if(v2 && (!Array.isArray(input.parcels) || !input.wallet || typeof input.wallet !== 'object')) throw new BuildError('INVALID_SAVE');
-  const city = { version: STATE_VERSION, size: CITY_SIZE, nextId: Number(input.nextId), parcels: [], wallet: {...INITIAL_WALLET}, roads: [], lockedRoads: [], objects: [] };
+  const city = { version: STATE_VERSION, size: CITY_SIZE, nextId: Number(input.nextId), parcels: [], wallet: {...INITIAL_WALLET}, progress:INITIAL_CITY_PROGRESS(), roads: [], lockedRoads: [], objects: [] };
+  // Older city rows have no progression data: migrate in memory on read.
+  // Never trust arbitrary progress formats (or ignore invalid claims silently).
+  if(input.progress!==undefined){
+    const p=input.progress;
+    if(!p||typeof p!=='object'||Array.isArray(p)||
+      !Number.isInteger(p.bestLevel)||p.bestLevel<1||p.bestLevel>CITY_LEVELS.length||
+      !Array.isArray(p.claimedLevels)||p.claimedLevels.length>4||
+      p.claimedLevels.some(l=>!Number.isInteger(l)||l<2||l>p.bestLevel)||
+      new Set(p.claimedLevels).size!==p.claimedLevels.length)throw new BuildError('INVALID_SAVE');
+    city.progress={bestLevel:p.bestLevel,claimedLevels:[...p.claimedLevels].sort((a,b)=>a-b)};
+  }
   if (!Number.isSafeInteger(city.nextId) || city.nextId < 1) throw new BuildError('INVALID_SAVE');
   if(v2){
     for(const key of ['points','coffee','treats']){

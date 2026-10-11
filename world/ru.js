@@ -1,4 +1,12 @@
 export const RU = Object.freeze({
+  cityLevel1:'Маленькое поселение',
+  cityLevel2:'Уютный уголок',
+  cityLevel3:'Милый квартал',
+  cityLevel4:'Цветущий городок',
+  cityLevel5:'Волшебная долина',
+  cityLevelLocked:'Уровень города ещё не достигнут.',
+  cityLevelClaimed:'Награда за этот уровень уже получена.',
+
   price:'Цена', testPrices:'ПОКУПКИ ЗА ТЕСТОВУЮ ВАЛЮТУ', charged:'Списано',
   instant:'Сразу', buyAndBuild:'Купить и построить', buyRoad:'Построить Road',
   retiredPathUnavailable:'Старые декоративные дорожки больше не продаются. Используй Road.',

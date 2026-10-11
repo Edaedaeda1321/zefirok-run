@@ -2,7 +2,7 @@ import { CATALOG, CATALOG_ITEMS, CATEGORIES } from './catalog.js';
 import { RU, tr } from './ru.js';
 import { ROAD_TILE_PRICE } from './economy.js';
 import {
- makeInitialCity, sanitizeCity, cloneCity, addObject, moveObject, storeObject,
+ makeInitialCity, sanitizeCity, cloneCity, reconcileCityProgress, claimCityLevelReward, CITY_LEVELS, addObject, moveObject, storeObject,
  restoreObject, checkPlacement, checkRoadStroke, applyRoadStroke, cityStats,
  findOccupant, nextRotation, orthogonalPath, keyOf, dims, BuildError, inBounds,
  isObjectConnected, connectedRoads, isConstructing, constructionRemaining,
@@ -15,6 +15,11 @@ import { buildCitizenScene, sampleCitizenScene } from './citizens.js';
 
 const STORAGE_KEY = 'zefirok-world-v01-sandbox-local';
 const SERVER_MODE = window.ZeffiWorldServerRequired === true;
+const CITY_REWARD_IMAGES = Object.freeze({
+ points:'../assets/mir_zeffi/iconScore.webp',
+ treats:'../assets/mir_zeffi/zefir_currency.webp',
+ coffee:'../assets/mir_zeffi/iconCoffee.webp'
+});
 const WELCOME_KEY = 'zefirok-world-v01-welcome-read';
 const $ = id => document.getElementById(id);
 const canvas = $('worldCanvas');
@@ -24,7 +29,7 @@ const state = {
  camera: { x: 0, y: 0, zoom: 1 },
  undo: [], redo: [], pointers: new Map(), pointerStart: null,
  gesture: null, toastTimer: null, drawScheduled: false, pointerDrag: false,
- loadingFailed: false, visualsReady: false, preparingPlacementArt: false, citizenScene: null, citizenSnapshot: null, citizenPopulation: -1, serverRevision: null, serverReady: false, serverBusy: false, serverPurchasesEnabled: false, serverInitData: '', skipAnimation: null, skipAnimationTimer: null, skipAnimationRaf: null,
+ loadingFailed: false, visualsReady: false, preparingPlacementArt: false, citizenScene: null, citizenSnapshot: null, citizenPopulation: -1, citizenComfort: -1, serverRevision: null, serverReady: false, serverBusy: false, serverPurchasesEnabled: false, serverInitData: '', skipAnimation: null, skipAnimationTimer: null, skipAnimationRaf: null,
  skipPreparingUid: null, skipToken: 0
 };
 const iconCodes = { house: 0x1F3E1, coffee: 0x2615, cake: 0x1F370, flower: 0x1F338,
@@ -86,7 +91,8 @@ const errorLabels = {
  OUTSIDE_CITY: 'outside', BUILDING_COLLISION: 'collisionBuilding', ROAD_COLLISION: 'collisionRoad',
  LOCKED_ROAD: 'locked', ROAD_STROKE_LIMIT: 'invalidPlace', ROAD_DISCONNECTED: 'invalidPlace',
  INVALID_PARCEL: 'invalidParcel', INSUFFICIENT_BALANCE: 'notEnoughCurrency', NOT_CONSTRUCTING: 'alreadyBuilt',
- NOT_AVAILABLE: 'retiredPathUnavailable', INVALID_PRICE: 'unknownError'
+ NOT_AVAILABLE: 'retiredPathUnavailable', INVALID_PRICE: 'unknownError',
+ CITY_LEVEL_LOCKED:'cityLevelLocked', CITY_LEVEL_CLAIMED:'cityLevelClaimed'
 };
 function showToast(message, isError = false) {
  const el = $('toast');
@@ -113,14 +119,15 @@ function saveCity() {
  try { localStorage.setItem(STORAGE_KEY,JSON.stringify(state.city)); }
  catch { showToast(tr('storageDisabled'),true); }
 }
-function applyChange(nextCity) {
+function applyChange(nextCity,{checkpoint=false,resetProgress=false}={}) {
  if(SERVER_MODE)throw new Error('Server mode does not accept local state writes.');
  if(state.skipAnimation)clearSkipAnimation();
- if (JSON.stringify(nextCity) === JSON.stringify(state.city)) { showToast(tr('roadNoChanges')); return false; }
- state.undo.push(cloneCity(state.city));
- if(state.undo.length>50)state.undo.shift();
- state.redo = [];
- state.city = nextCity;
+ const next=reconcileCityProgress(nextCity,CATALOG);
+ if(!resetProgress)next.progress.bestLevel=Math.max(next.progress.bestLevel,cityStats(state.city,CATALOG).cityLevel);
+ if (JSON.stringify(next) === JSON.stringify(state.city)) { showToast(tr('roadNoChanges')); return false; }
+ if(checkpoint){state.undo=[];state.redo=[];}
+ else {state.undo.push(cloneCity(state.city));if(state.undo.length>50)state.undo.shift();state.redo=[];}
+ state.city = next;
  saveCity(); updateUI(); scheduleDraw(); return true;
 }
 function serverLock(message='Подключаем личный город к серверу…', isError=false){
@@ -240,6 +247,7 @@ function quoteForAction(kind,args){
  else if(kind==='parcel')next=buyParcel(state.city,args.cx,args.cy);
  else if(kind==='road'||kind==='erase-road')next=applyRoadStroke(state.city,CATALOG,args.positions,{erasing:kind==='erase-road'});
  else if(kind==='skip')next=skipConstruction(state.city,args.uid).city;
+ else if(kind==='claim-level'){claimCityLevelReward(state.city,CATALOG,args.level);return {points:0,treats:0,coffee:0};}
  else throw new Error('Unsupported world action');
  return {points:state.city.wallet.points-next.wallet.points,treats:state.city.wallet.treats-next.wallet.treats,coffee:state.city.wallet.coffee-next.wallet.coffee};
 }
@@ -441,15 +449,57 @@ function updateSelection(){
  }
 }
 function syncCitizens(stats){
- // Rebuild routes only after saved city changes or construction finishes.
- if(state.citizenSnapshot===state.city && state.citizenPopulation===stats.population)return;
+ // Include comfort so reaching a cosier city increases street activity.
+ if(state.citizenSnapshot===state.city && state.citizenPopulation===stats.population && state.citizenComfort===stats.comfort)return;
  state.citizenSnapshot=state.city;
  state.citizenPopulation=stats.population;
- state.citizenScene=buildCitizenScene(state.city,CATALOG,stats.population);
+ state.citizenComfort=stats.comfort;
+ state.citizenScene=buildCitizenScene(state.city,CATALOG,stats.population,Date.now(),stats.comfort);
+}
+function updateCityLevelUI(stats){
+ const lvl=stats.cityLevel,def=CITY_LEVELS[lvl-1],next=stats.nextCityLevel;
+ $('cityLevelBadge').textContent=`Ур. ${lvl}`;
+ $('cityLevelName').textContent=tr(def.titleKey);
+ $('cityLevelNext').textContent=next?`До уровня ${next.level} · ${tr(next.titleKey)}`:'Максимальный уровень города!';
+ const limits=next||def;
+ for(const [value,bar,current,target] of [
+  ['cityLevelResidents','cityLevelResidentsBar',stats.population,limits.residents],
+  ['cityLevelComfort','cityLevelComfortBar',stats.comfort,limits.comfort]]){
+   $(value).textContent=`${current.toLocaleString('ru-RU')} / ${target}`;
+   $(bar).style.width=`${target?Math.min(100,Math.round(current/target*100)):100}%`;
+ }
+ const conditions=[];
+ if(limits.parks)conditions.push(`Парки: ${stats.parks} / ${limits.parks}`);
+ if(limits.shops)conditions.push(`Заведения с дорогой: ${stats.shops} / ${limits.shops}`);
+ $('cityLevelConditions').textContent=next?conditions.join(' · '):'Все этапы развития пройдены';
+ const rewardButton=$('claimCityReward');
+ const claimable=stats.claimableLevel;
+ const rewardLevel=claimable||next?.level;
+ rewardButton.hidden=!claimable;
+ rewardButton.disabled=Boolean(SERVER_MODE&&(!state.serverReady||state.serverBusy));
+ if(rewardLevel){
+  const reward=CITY_LEVELS[rewardLevel-1].reward;
+  const parts=[['points','Очки'],['treats','Зефир'],['coffee','Кофе']];
+  const text=$('cityRewardText');
+  text.replaceChildren(document.createTextNode(`${claimable?'Забрать':'Награда'} за уровень ${rewardLevel}: `));
+  const list=document.createElement('span');list.className='city-reward-currencies';
+  for(const [kind,title] of parts){
+   if(!reward[kind])continue;
+   const part=document.createElement('span');part.className='city-reward-currency';
+   const img=document.createElement('img');img.src=CITY_REWARD_IMAGES[kind];img.alt='';img.width=17;img.height=17;img.decoding='async';
+   const value=document.createElement('b');value.textContent=`+${reward[kind].toLocaleString('ru-RU')}`;
+   const label=`${title}: +${reward[kind].toLocaleString('ru-RU')}`;
+   part.title=label;part.setAttribute('aria-label',label);
+   part.append(img,value);list.append(part);
+  }
+  text.append(list);
+  rewardButton.textContent='Забрать';
+ }else $('cityRewardText').textContent='Все награды города получены!';
 }
 function updateUI(){
  const stats=cityStats(state.city,CATALOG);
  syncCitizens(stats);
+ updateCityLevelUI(stats);
  $('populationCount').textContent=stats.population.toLocaleString('ru-RU');
  $('comfortCount').textContent=stats.comfort.toLocaleString('ru-RU');
  $('comfortTier').textContent=tr(`comfort_${stats.comfortTier}`);
@@ -593,14 +643,18 @@ function undo(){
  if(SERVER_MODE)return;
  if(!state.undo.length)return;
  if(state.skipAnimation)clearSkipAnimation();
- state.redo.push(cloneCity(state.city));state.city=state.undo.pop();
+ const level=cityStats(state.city,CATALOG).cityLevel;
+ state.redo.push(cloneCity(state.city));state.city=reconcileCityProgress(state.undo.pop(),CATALOG);
+ state.city.progress.bestLevel=Math.max(level,state.city.progress.bestLevel);
  stopDraft();state.selectedUid=null;state.mode='select';saveCity();updateUI();scheduleDraw();showToast(tr('undoDone'));
 }
 function redo(){
  if(SERVER_MODE)return;
  if(!state.redo.length)return;
  if(state.skipAnimation)clearSkipAnimation();
- state.undo.push(cloneCity(state.city));state.city=state.redo.pop();
+ const level=cityStats(state.city,CATALOG).cityLevel;
+ state.undo.push(cloneCity(state.city));state.city=reconcileCityProgress(state.redo.pop(),CATALOG);
+ state.city.progress.bestLevel=Math.max(level,state.city.progress.bestLevel);
  stopDraft();state.selectedUid=null;state.mode='select';saveCity();updateUI();scheduleDraw();showToast(tr('redoDone'));
 }
 function tileFromEvent(event){
@@ -827,6 +881,16 @@ function bindEvents(){
    node.addEventListener('lostpointercapture',releaseDrag);
   });
  }
+ $('claimCityReward').addEventListener('click',async()=>{
+  const level=cityStats(state.city,CATALOG).claimableLevel;
+  if(!level)return;
+  try{
+   if(SERVER_MODE)await performServerAction('claim-level',{level});
+   else if(!applyChange(claimCityLevelReward(state.city,CATALOG,level),{checkpoint:true}))return;
+   showToast(`Награда за уровень ${level} зачислена в кошелёк!`);
+   updateUI();scheduleDraw();
+  }catch(error){showToast(error?.message||statusError(error),true);}
+ });
  $('metricsToggle').addEventListener('click',()=>{
   const panel=$('cityMetrics'),expanded=!panel.classList.contains('is-expanded');
   panel.classList.toggle('is-expanded',expanded);
@@ -878,7 +942,7 @@ function bindEvents(){
  $('resetAccept').addEventListener('click',()=>{
   if(SERVER_MODE)return;
   $('confirmModal').hidden=true;stopDraft();state.mode='select';state.selectedUid=null;state.warehouse=false;
-  applyChange(makeInitialCity());resetView();showToast(tr('resetDone'));
+  applyChange(makeInitialCity(),{resetProgress:true});resetView();showToast(tr('resetDone'));
  });
  $('helpButton').addEventListener('click',()=>{$('helpModal').hidden=false;$('helpClose').focus();});
  $('helpClose').addEventListener('click',()=>{$('helpModal').hidden=true;});

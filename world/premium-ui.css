@@ -73,7 +73,7 @@ body{background:#d6ead0}
 .map-heading{top:calc(var(--zeffi-safe-top) + 155px);left:clamp(16px,3vw,33px);gap:7px;max-width:44%;pointer-events:none;z-index:5}
 .map-title{gap:3px}.map-title small{font-size:9px;letter-spacing:.23em;color:#956777;text-shadow:0 1px #fff8}
 .map-title strong{font-size:19px;color:#803e56;text-shadow:0 2px 4px #fff9}
-.map-coordinates{display:inline-flex;align-items:center;gap:6px;padding:6px 10px;font-size:9px;font-weight:850;border:1px solid #fff;background:#fff9f2dc;box-shadow:0 3px 11px #916c7130;border-radius:999px;color:#9a7a59;white-space:nowrap}
+.map-coordinates{display:none;align-items:center;gap:6px;padding:6px 10px;font-size:9px;font-weight:850;border:1px solid #fff;background:#fff9f2dc;box-shadow:0 3px 11px #916c7130;border-radius:999px;color:#9a7a59;white-space:nowrap}
 .map-coordinates .coordinate-dot{width:9px;height:9px;flex:none;border-radius:50%;background:linear-gradient(145deg,#d7b36e,#b88c46);box-shadow:0 1px 0 rgba(255,255,255,.7)}
 /* Collapsible city health card. All four stats remain in the DOM and live. */
 .map-metrics{
@@ -121,11 +121,11 @@ body{background:#d6ead0}
  border:1px solid #fff;border-bottom:0;border-radius:33px 33px 0 0;
  background:linear-gradient(180deg,#fffaf9f8 0%,#fff4f6fb 100%);box-shadow:0 -12px 38px #98567540;
  backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);
- transition:height .28s cubic-bezier(.22,.8,.24,1),transform .28s cubic-bezier(.22,.8,.24,1),box-shadow .28s ease;overflow:hidden;transform:translateY(var(--sheet-drag-offset,0px));will-change:height,transform;
+ transition:height .24s cubic-bezier(.2,.72,.22,1),transform .24s cubic-bezier(.2,.72,.22,1),box-shadow .24s ease,opacity .18s ease;overflow:hidden;transform:translate3d(0,var(--sheet-drag-offset,0px),0);will-change:height,transform;overscroll-behavior:contain;contain:layout paint;backface-visibility:hidden;
 }
 .bottom-panel.is-collapsed{height:calc(81px + var(--zeffi-safe-bottom));}
-.bottom-panel.is-dragging,.bottom-panel.no-anim{transition:none}
-.bottom-panel .category-tabs,.bottom-panel .catalog-list,.bottom-panel .warehouse-list,.bottom-panel .panel-footer{opacity:1;transform:translateY(0);transition:opacity .2s ease,transform .24s ease;will-change:opacity,transform}
+.bottom-panel.is-dragging,.bottom-panel.no-anim{transition:none !important}
+.bottom-panel .category-tabs,.bottom-panel .catalog-list,.bottom-panel .warehouse-list,.bottom-panel .panel-footer{opacity:1;transform:translateY(0);transition:opacity .18s ease,transform .18s ease;will-change:opacity,transform}
 .bottom-panel.is-collapsed .category-tabs,.bottom-panel.is-collapsed .catalog-list,.bottom-panel.is-collapsed .warehouse-list,.bottom-panel.is-collapsed .panel-footer{opacity:0;transform:translateY(12px);pointer-events:none}
 .sheet-grip{position:absolute;top:7px;left:50%;transform:translateX(-50%);width:55px;height:5px;border-radius:99px;background:#d6adbc;cursor:pointer;transition:width .18s ease,background .18s ease;touch-action:none}
 .panel-head{touch-action:none}
@@ -296,3 +296,84 @@ body{background:#d6ead0}
  .catalog-copy .catalog-price{min-height:22px;padding:2px 3px;margin-top:auto}
  .panel-footer{display:none}
 }
+
+/* World Zeffi UI icon pack v4: user-provided 3D art (kept only in /assets/mir_zeffi). */
+.topbar .brand-paw{width:48px;height:48px;flex:none;border:0;border-radius:0;background:transparent;box-shadow:none;overflow:visible}
+.topbar .brand-paw .brand-world-art{display:block;width:100%;height:100%;object-fit:contain;filter:drop-shadow(0 3px 3px rgba(103,66,74,.14))}
+.panel-heading .panel-heading-icon{width:46px;height:46px;flex:none;border:0;border-radius:0;background:transparent;box-shadow:none}
+.panel-heading .panel-heading-icon .panel-catalog-art{display:block;width:100%;height:100%;object-fit:contain;filter:drop-shadow(0 2px 3px rgba(117,74,78,.17))}
+.category-tabs .category-icon--art{display:inline-flex;align-items:center;justify-content:center;width:26px;height:26px;flex:none}
+.category-tabs .category-icon--art img{display:block;width:26px;height:26px;object-fit:contain;filter:drop-shadow(0 1px 1px rgba(108,68,58,.14))}
+.edit-summary b{min-width:0;display:flex;align-items:center;flex-wrap:wrap;gap:3px 5px;overflow:visible;white-space:normal;text-overflow:clip;line-height:1.25}
+.edit-summary b .preview-currency-price{display:inline-flex;flex-wrap:wrap;align-items:center;justify-content:flex-start;gap:4px;min-width:0;margin:0;padding:0;text-align:left;vertical-align:middle}
+.edit-summary b .preview-currency-piece{display:inline-flex;align-items:center;gap:3px;margin:0;color:#885376;font-weight:900;white-space:nowrap;line-height:1.1}
+.edit-summary b .preview-currency-piece img{display:block;width:18px;height:18px;flex:none;object-fit:contain}
+.edit-summary b .preview-currency-value{display:inline;color:#755064;font-size:inherit;line-height:1.1;margin:0;text-align:left}
+.edit-summary b .preview-price-plus{display:inline;color:#b98b8e;font-size:11px;line-height:1;margin:0;text-align:center}
+@media(max-width:700px){
+ .topbar .brand-paw{width:37px;height:37px}
+ .panel-heading .panel-heading-icon{width:37px;height:37px}
+ .category-tabs .category-icon--art,.category-tabs .category-icon--art img{width:23px;height:23px}
+ .edit-summary b .preview-currency-piece img{width:16px;height:16px}
+}
+@media(max-height:590px){
+ .topbar .brand-paw{width:34px;height:34px}
+ .panel-heading .panel-heading-icon{width:31px;height:31px}
+ .category-tabs .category-icon--art,.category-tabs .category-icon--art img{width:20px;height:20px}
+}
+/* The placement quote needs a full-width mobile action bar so currency art
+   never stacks into a narrow column next to the confirmation controls. */
+@media(max-width:700px){
+ .edit-actions{width:calc(100% - 22px);max-width:480px}
+ .edit-summary{display:grid;grid-template-columns:minmax(0,1fr) auto;grid-template-rows:auto auto;align-items:center;column-gap:7px;row-gap:3px;padding-bottom:6px}
+ .edit-summary>small{grid-column:1;grid-row:1}
+ .edit-summary>b{grid-column:1/-1;grid-row:2;display:flex;flex-wrap:wrap;gap:3px 5px}
+ .edit-summary>span#editFeedback{grid-column:2;grid-row:1;width:auto;max-width:100%;margin:0;text-align:right;white-space:nowrap}
+ .edit-summary b .preview-currency-price{flex-wrap:nowrap;white-space:nowrap}
+}
+/* Prevent the city title from wrapping in half when the city-size badge is shown. */
+@media(max-width:700px){
+ .map-heading{flex-wrap:wrap;row-gap:2px;column-gap:7px}
+ .map-title strong{white-space:nowrap}
+}
+/* Legacy .edit-summary span rules assign width:100% to every nested span on
+   small screens. Explicitly reset those rules for inline currency chips. */
+.edit-summary b .preview-currency-price,
+.edit-summary b .preview-currency-piece,
+.edit-summary b .preview-currency-value,
+.edit-summary b .preview-price-plus{
+ width:auto;max-width:none;flex:0 0 auto;margin:0;white-space:nowrap;text-align:left;
+}
+.edit-summary b .preview-currency-price{display:inline-flex;align-items:center;justify-content:flex-start;gap:5px}
+.edit-summary b .preview-currency-value{font-size:11px;font-weight:900}
+.edit-summary b .preview-price-plus{font-size:11px}
+@media(max-width:380px){.edit-summary b .preview-currency-value{font-size:10px}}
+
+/* City progression: contained inside the existing collapsible city statistics.
+   No extra floating layers over the construction canvas. */
+.city-level-badge{font-size:9px;line-height:1;white-space:nowrap;margin-left:auto;padding:4px 6px;border-radius:999px;color:#ad5980;background:#ffe5ee;border:1px solid #f5cfde}
+.metrics-chevron{margin-left:0}
+.city-level-details{margin-top:7px;border-top:1px solid #f2dce4;padding:8px 3px 3px;display:flex;flex-direction:column;gap:5px;font-size:10px;color:#976e7f}
+.map-metrics:not(.is-expanded) .city-level-details{display:none}
+.map-metrics.is-expanded{z-index:10;width:min(285px,calc(100vw - 24px));max-width:75%;max-height:min(440px,calc(100dvh - var(--zeffi-safe-top) - 245px));overflow-y:auto;overscroll-behavior:contain;scrollbar-width:thin}
+.city-level-name{font-weight:950;color:#88465f;font-size:13px;line-height:1.25}
+.city-level-next{font-size:9px;font-weight:800;line-height:1.35;color:#b47c91}
+.city-level-row{display:flex;align-items:center;justify-content:space-between;gap:5px;font-size:10px}
+.city-level-row b{color:#8a536b;font-size:10px;white-space:nowrap}
+.city-level-track{height:6px;width:100%;border-radius:999px;background:#f2dde6;overflow:hidden}
+.city-level-track>span{display:block;width:0;height:100%;border-radius:inherit;background:linear-gradient(90deg,#f4a6c4,#d26797);transition:width .28s ease}
+.city-level-track--comfort{background:#f6e8d0}
+.city-level-track--comfort>span{background:linear-gradient(90deg,#ebd195,#d29d52)}
+.city-level-conditions{font-size:9px;line-height:1.4;font-weight:800;color:#9d6a7d}
+.city-level-reward{display:flex;align-items:center;justify-content:space-between;gap:6px;padding:7px;background:#fff4e8;border:1px solid #f4dec3;border-radius:12px}
+.city-level-reward>span{font-size:9px;line-height:1.3;font-weight:800;flex:1;min-width:0}
+.city-level-reward button{border:0;background:linear-gradient(135deg,#e88fae,#c85b87);border-radius:10px;color:white;font-weight:900;padding:7px 8px;white-space:nowrap;font-size:9px;cursor:pointer}
+.city-level-reward button:disabled{opacity:.55;cursor:wait}
+@media (max-width:700px){.map-metrics.is-expanded{width:min(285px,calc(100vw - 22px));max-width:calc(100vw - 22px);max-height:min(51dvh,340px);overflow-y:auto;overscroll-behavior:contain}.city-level-details{margin-top:5px;padding-top:6px;gap:4px}.city-level-name{font-size:11px}.metrics-toggle{gap:3px}.city-level-badge{font-size:8px;padding:3px 4px}}
+@media (max-height:590px) and (max-width:700px){.map-metrics.is-expanded{max-height:calc(100dvh - var(--zeffi-safe-top) - 195px)}}
+@media (prefers-reduced-motion:reduce){.city-level-track>span{transition:none}}
+
+/* City level currency rewards: existing image assets, no new UI artwork. */
+.city-reward-currencies{display:inline-flex;align-items:center;flex-wrap:wrap;gap:5px;vertical-align:middle}
+.city-reward-currency{display:inline-flex;align-items:center;gap:2px;white-space:nowrap;font-variant-numeric:tabular-nums;color:#995273;font-weight:900}
+.city-reward-currency img{display:inline-block;width:17px;height:17px;object-fit:contain;flex:none}

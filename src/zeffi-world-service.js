@@ -3,14 +3,14 @@
 // Tables are provisioned only by migrations/0114_zeffi_world.sql.
 import {
   makeInitialCity, sanitizeCity, addObject, moveObject, storeObject, restoreObject,
-  applyRoadStroke, buyParcel, skipConstruction, cityStats, BuildError
+  applyRoadStroke, buyParcel, skipConstruction, cityStats, reconcileCityProgress, claimCityLevelReward, CITY_LEVELS, BuildError
 } from '../world/engine.js';
 import { CATALOG } from '../world/catalog.js';
 
 const ZERO = Object.freeze({points:0,treats:0,coffee:0});
 const MAX_CITY_JSON = 180_000;
 const MAX_REQUEST_LENGTH = 20_000;
-const WORLD_ACTIONS = new Set(['place','move','store','restore','road','erase-road','parcel','skip']);
+const WORLD_ACTIONS = new Set(['place','move','store','restore','road','erase-road','parcel','skip','claim-level']);
 const RESULT_HEADERS = Object.freeze({ 'Content-Type':'application/json; charset=utf-8', 'Cache-Control':'no-store, private', 'X-Content-Type-Options':'nosniff' });
 
 class WorldError extends Error {
@@ -57,6 +57,10 @@ function canonicalAction(body){
     if(!/^obj-[1-9]\d{0,9}$/.test(String(args.uid||'')))failure(400,'BAD_ACTION','Некорректная постройка.');
     result.uid=String(args.uid);
   }
+  if(kind==='claim-level'){
+    if(!Number.isInteger(args.level)||args.level<2||args.level>5)failure(400,'BAD_ACTION','Некорректный уровень города.');
+    result.level=args.level;
+  }
   if(kind==='parcel'){
     if(!coordinate(args.cx)||!coordinate(args.cy))failure(400,'BAD_ACTION','Некорректные координаты участка.');
     Object.assign(result,{cx:args.cx,cy:args.cy});
@@ -78,6 +82,7 @@ function operate(city,action,now){
     case 'erase-road':return applyRoadStroke(city,CATALOG,action.positions,{erasing:true});
     case 'parcel':return buyParcel(city,action.cx,action.cy);
     case 'skip':return skipConstruction(city,action.uid,now).city;
+    case 'claim-level':return claimCityLevelReward(city,CATALOG,action.level,now);
     default:failure(400,'BAD_ACTION','Неизвестная операция.');
   }
 }
@@ -132,13 +137,25 @@ async function handleMutation(db,env,telegramId,body,readProfile,operationGate){
   const profileRevision=Number(profile?.revision||0);
   if(!natural(profileRevision))failure(503,'WORLD_PROFILE_NOT_READY','Баланс игрока ещё недоступен.');
   const wallet=walletFromProfile(profile);
-  const before=cityFromRow(row,wallet);
+  const before=reconcileCityProgress(cityFromRow(row,wallet),CATALOG,now);
   let next;
   try {next=operate(before,action,now);}catch(e){if(e instanceof BuildError)failure(e.code==='INSUFFICIENT_BALANCE'?409:400,e.code,e.code);throw e;}
-  const cost=priceDifference(wallet,next.wallet);
+  next=reconcileCityProgress(next,CATALOG,now);
+  const granting=action.kind==='claim-level';
+  const reward=granting?CITY_LEVELS[action.level-1].reward:ZERO;
+  // The signed client quotes ZERO for grants. The Worker alone chooses the
+  // credit amounts, and every other action is forbidden from minting money.
+  const cost=granting?{...ZERO}:priceDifference(wallet,next.wallet);
+  if(granting){
+    if(!reward||!['points','treats','coffee'].every(key=>
+      Number.isSafeInteger(next.wallet[key])&&next.wallet[key]===wallet[key]+reward[key]))
+      failure(500,'WORLD_REWARD_INVALID','Награда города рассчитана неверно.');
+  }
   if(persistedCity(before)===persistedCity(next))failure(409,'WORLD_NO_CHANGES','Нет изменений для сохранения.');
   if(!quotedPriceMatches(body.expectedPrice,cost))failure(409,'WORLD_PRICE_CHANGED','Цена изменилась. Подтвердите её повторно.');
   const bill=cost.points>0||cost.treats>0||cost.coffee>0;
+  const credit=granting&&['points','treats','coffee'].some(key=>reward[key]>0);
+  const profileTouched=bill||credit;
   if(bill){
     if(!paymentsEnabled(env))failure(403,'WORLD_PURCHASES_DISABLED','Серверные покупки пока закрыты. Балансы не списаны.');
     await operationGate(telegramId,['purchases']);
@@ -155,13 +172,17 @@ async function handleMutation(db,env,telegramId,body,readProfile,operationGate){
   if(bill){statements.push(db.prepare(`UPDATE admin_profile_state SET wallet=wallet-?,treats=treats-?,coffee=coffee-?,revision=revision+1,updated_at=?,updated_by=?
     WHERE telegram_id=? AND revision=? AND wallet>=? AND treats>=? AND coffee>=?`).bind(
       cost.points,cost.treats,cost.coffee,nowSeconds,marker,telegramId,profileRevision,cost.points,cost.treats,cost.coffee));}
+  if(credit){statements.push(db.prepare(`UPDATE admin_profile_state SET wallet=wallet+?,treats=treats+?,coffee=coffee+?,revision=revision+1,updated_at=?,updated_by=?
+    WHERE telegram_id=? AND revision=? AND wallet<=? AND treats<=? AND coffee<=?`).bind(
+      reward.points,reward.treats,reward.coffee,nowSeconds,marker,telegramId,profileRevision,
+      Number.MAX_SAFE_INTEGER-reward.points,Number.MAX_SAFE_INTEGER-reward.treats,Number.MAX_SAFE_INTEGER-reward.coffee));}
   statements.push(db.prepare(`INSERT INTO zeffi_world_operations
    (telegram_id,request_id,action_kind,city_revision,cost_points,cost_treats,cost_coffee,created_at,city_guard,profile_guard)
    VALUES (?,?,?,?,?,?,?,?,
      CASE WHEN EXISTS (SELECT 1 FROM zeffi_world_cities WHERE telegram_id=? AND revision=? AND last_request_id=?) THEN 1 ELSE 0 END,
      CASE WHEN ?=0 OR EXISTS (SELECT 1 FROM admin_profile_state WHERE telegram_id=? AND revision=? AND updated_by=?) THEN 1 ELSE 0 END)`)
     .bind(telegramId,requestId,action.kind,nextRevision,cost.points,cost.treats,cost.coffee,nowSeconds,
-      telegramId,nextRevision,requestId,bill?1:0,telegramId,profileRevision+1,marker));
+      telegramId,nextRevision,requestId,profileTouched?1:0,telegramId,profileRevision+1,marker));
   try{await db.batch(statements);}catch(error){
     const existing=await findReceipt(db,telegramId,requestId).catch(()=>null);
     if(existing){
@@ -174,7 +195,8 @@ async function handleMutation(db,env,telegramId,body,readProfile,operationGate){
   }
   const [latest,p]=await Promise.all([ensureCity(db,telegramId,now),readProfile(telegramId,'world-result')]);
   return buildView(cityFromRow(latest,walletFromProfile(p)),Number(latest.revision),paymentsEnabled(env),{
-    operation:{id:requestId,kind:action.kind,state:'completed',repeated:false},cost
+    operation:{id:requestId,kind:action.kind,state:'completed',repeated:false},cost,
+    ...(credit?{reward:{...reward}}:{})
   });
 }
 

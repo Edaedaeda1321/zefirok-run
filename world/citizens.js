@@ -31,8 +31,8 @@ function entryRoads(city,catalog,roadSet,now){
 }
 // Routes change only when the authoritative city snapshot changes. Every
 // segment stays on a connected road. Mirroring makes loops seamless.
-export function buildCitizenScene(city,catalog,population,now=Date.now()){
- const count=visibleCitizenCount(population);
+export function buildCitizenScene(city,catalog,population,now=Date.now(),comfort=0){
+ const count=visibleCitizenCount(population,comfort);
  if(!count)return {routes:[],population};
  const roads=connectedRoads(city);
  if(!roads.size)return {routes:[],population};

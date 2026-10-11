@@ -1,8 +1,8 @@
 {
   "version": 2,
   "hashAlgorithm": "sha256",
-  "catalogHash": "315142153a467303",
-  "count": 594,
+  "catalogHash": "d97c2f9ce4a59204",
+  "count": 606,
   "images": [
     {
       "fileName": "achievements/background_achivment_panel.webp",
@@ -1595,6 +1595,102 @@
       "path": "/assets/letter/pick/season4_pick_paper.webp",
       "hash": "392777f996f1",
       "size": 484826
+    },
+    {
+      "fileName": "mir_zeffi/icon_all_stroika.webp",
+      "label": "Icon all stroika",
+      "folder": "mir_zeffi",
+      "path": "/assets/mir_zeffi/icon_all_stroika.webp",
+      "hash": "3c1de87185ea",
+      "size": 26042
+    },
+    {
+      "fileName": "mir_zeffi/icon_catolog_stroinka.webp",
+      "label": "Icon catolog stroinka",
+      "folder": "mir_zeffi",
+      "path": "/assets/mir_zeffi/icon_catolog_stroinka.webp",
+      "hash": "b908ad00a435",
+      "size": 30830
+    },
+    {
+      "fileName": "mir_zeffi/icon_decor.webp",
+      "label": "Icon decor",
+      "folder": "mir_zeffi",
+      "path": "/assets/mir_zeffi/icon_decor.webp",
+      "hash": "d03c28622f4e",
+      "size": 88158
+    },
+    {
+      "fileName": "mir_zeffi/icon_house.webp",
+      "label": "Icon house",
+      "folder": "mir_zeffi",
+      "path": "/assets/mir_zeffi/icon_house.webp",
+      "hash": "6efe57a7e8b4",
+      "size": 29318
+    },
+    {
+      "fileName": "mir_zeffi/icon_landshaft.webp",
+      "label": "Icon landshaft",
+      "folder": "mir_zeffi",
+      "path": "/assets/mir_zeffi/icon_landshaft.webp",
+      "hash": "5966ffff4c0e",
+      "size": 76596
+    },
+    {
+      "fileName": "mir_zeffi/icon_Mir_zeffi_world_stranitca.webp",
+      "label": "Icon Mir zeffi world stranitca",
+      "folder": "mir_zeffi",
+      "path": "/assets/mir_zeffi/icon_Mir_zeffi_world_stranitca.webp",
+      "hash": "ac205a9177d3",
+      "size": 33770
+    },
+    {
+      "fileName": "mir_zeffi/icon_parks.webp",
+      "label": "Icon parks",
+      "folder": "mir_zeffi",
+      "path": "/assets/mir_zeffi/icon_parks.webp",
+      "hash": "537ff4ce75bb",
+      "size": 86720
+    },
+    {
+      "fileName": "mir_zeffi/icon_ploshadki.webp",
+      "label": "Icon ploshadki",
+      "folder": "mir_zeffi",
+      "path": "/assets/mir_zeffi/icon_ploshadki.webp",
+      "hash": "3197febb0f7c",
+      "size": 91630
+    },
+    {
+      "fileName": "mir_zeffi/icon_zavedenia.webp",
+      "label": "Icon zavedenia",
+      "folder": "mir_zeffi",
+      "path": "/assets/mir_zeffi/icon_zavedenia.webp",
+      "hash": "7d5a543fa6ac",
+      "size": 103422
+    },
+    {
+      "fileName": "mir_zeffi/iconCoffee.webp",
+      "label": "IconCoffee",
+      "folder": "mir_zeffi",
+      "path": "/assets/mir_zeffi/iconCoffee.webp",
+      "hash": "a79a3eee78bd",
+      "size": 13490
+    },
+    {
+      "fileName": "mir_zeffi/iconScore.webp",
+      "label": "IconScore",
+      "folder": "mir_zeffi",
+      "path": "/assets/mir_zeffi/iconScore.webp",
+      "hash": "e978a4648ab5",
+      "size": 13110
+    },
+    {
+      "fileName": "mir_zeffi/zefir_currency.webp",
+      "label": "Zefir currency",
+      "folder": "mir_zeffi",
+      "path": "/assets/mir_zeffi/zefir_currency.webp",
+      "hash": "b95507ca02a0",
+      "size": 4210
     },
     {
       "fileName": "news/cases-5.0.1.webp",

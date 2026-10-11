@@ -108,16 +108,16 @@
    <div class="topbar-identity">
     <button type="button" class="back-button" id="zeffiReturnGame" aria-label="Вернуться в Сладкий Забег"><svg class="game-icon" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg></button>
     <div class="brand">
-     <div class="brand-paw" aria-hidden="true"><svg viewBox="0 0 52 52" width="32" height="32" fill="none"><ellipse cx="26" cy="30" rx="13" ry="11" fill="#fff"/><circle cx="13" cy="19" r="5" fill="#fff"/><circle cx="23" cy="14" r="5" fill="#fff"/><circle cx="34" cy="16" r="5" fill="#fff"/><circle cx="42" cy="24" r="4" fill="#fff"/></svg></div>
+     <div class="brand-paw" aria-hidden="true"><img class="brand-world-art" src="../assets/mir_zeffi/icon_Mir_zeffi_world_stranitca.webp" alt="" width="48" height="48" decoding="async" /></div>
      <div class="brand-text"><strong data-t="app"></strong><small data-t="subtitle"></small></div>
     </div>
    </div>
    <div class="topbar-side"><button class="icon-button help-button" id="helpButton" data-title="help" aria-label="Помощь" title="Помощь">?</button></div>
    <div class="test-wallet" aria-label="Валюты города">
     <span class="test-wallet__badge" data-t="demoWallet"></span>
-    <span class="test-wallet__balance" title="Очки"><img src="../assets/optimized/v0.79.5/iconScore.webp" alt="" width="28" height="28" decoding="async"/><b id="walletPoints">0</b></span>
-    <span class="test-wallet__balance" title="Кофе"><img src="../assets/optimized/v0.79.5/iconCoffee.webp" alt="" width="28" height="28" decoding="async"/><b id="walletCoffee">0</b></span>
-    <span class="test-wallet__balance" title="Зефир"><img src="../assets/season-pass/zefir_currency.webp" alt="" width="28" height="28" decoding="async"/><b id="walletTreats">0</b></span>
+    <span class="test-wallet__balance" title="Очки"><img src="../assets/mir_zeffi/iconScore.webp" alt="" width="28" height="28" decoding="async"/><b id="walletPoints">0</b></span>
+    <span class="test-wallet__balance" title="Кофе"><img src="../assets/mir_zeffi/iconCoffee.webp" alt="" width="28" height="28" decoding="async"/><b id="walletCoffee">0</b></span>
+    <span class="test-wallet__balance" title="Зефир"><img src="../assets/mir_zeffi/zefir_currency.webp" alt="" width="28" height="28" decoding="async"/><b id="walletTreats">0</b></span>
     <button id="topupWallet" type="button" data-title="topUpWallet" aria-label="Пополнить тестовые валюты">+</button>
    </div>
   </header>
@@ -131,15 +131,25 @@
    <div class="map-glow" aria-hidden="true"></div>
    <div class="map-heading">
     <div class="map-title"><small>ZEFFI VALLEY</small><strong data-t="myCity"></strong></div>
-    <div class="map-coordinates"><span class="coordinate-dot"></span><span id="coordLabel">24 x 24</span></div>
+    <div class="map-coordinates" hidden aria-hidden="true"><span class="coordinate-dot"></span><span id="coordLabel">24 x 24</span></div>
    </div>
    <div class="map-metrics" id="cityMetrics">
-    <button type="button" class="metrics-toggle" id="metricsToggle" aria-controls="cityMetricsContent" aria-expanded="false" aria-label="Показать всю статистику города"><svg class="metrics-toggle-icon" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 20v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 20v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg> <span>Город в цифрах</span><span class="metrics-chevron">⌄</span></button>
+    <button type="button" class="metrics-toggle" id="metricsToggle" aria-controls="cityMetricsContent" aria-expanded="false" aria-label="Показать всю статистику города"><svg class="metrics-toggle-icon" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 20v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 20v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg> <span>Город в цифрах</span><b class="city-level-badge" id="cityLevelBadge">Ур. 1</b><span class="metrics-chevron">⌄</span></button>
     <div class="metrics-content" id="cityMetricsContent">
      <div class="metric metric-people"><svg class="metric-icon" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 20v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 20v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg><span data-t="population"></span><strong id="populationCount">0</strong></div>
      <div class="metric metric-comfort" id="comfortCard"><svg class="metric-icon" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.8 4.6a5.3 5.3 0 0 0-7.5 0L12 5.9l-1.3-1.3a5.3 5.3 0 0 0-7.5 7.5L12 21l8.8-8.9a5.3 5.3 0 0 0 0-7.5z"/></svg><span data-t="comfort"></span><strong id="comfortCount">0</strong><small id="comfortTier" aria-live="polite"></small></div>
      <div class="metric metric-completed"><svg class="metric-icon" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m3 11 9-8 9 8v9H3z"/><path d="M9 20v-8h6v8"/></svg><span data-t="completedStructures"></span><strong id="buildingsCount">0</strong></div>
      <div class="metric metric-build"><svg class="metric-icon" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 12-7 7a2 2 0 0 1-3-3l7-7"/><path d="m11 6 3-3 7 7-3 3"/><path d="M16 5 19 2"/></svg><span data-t="buildInProgress"></span><strong id="constructingCount">0</strong></div>
+    </div>
+    <div class="city-level-details" id="cityLevelDetails">
+     <div class="city-level-name" id="cityLevelName">Маленькое поселение</div>
+     <div class="city-level-next" id="cityLevelNext">Следующий уровень</div>
+     <div class="city-level-row"><span>Жители</span><b id="cityLevelResidents">0 / 4</b></div>
+     <div class="city-level-track"><span id="cityLevelResidentsBar"></span></div>
+     <div class="city-level-row"><span>Уют</span><b id="cityLevelComfort">0 / 30</b></div>
+     <div class="city-level-track city-level-track--comfort"><span id="cityLevelComfortBar"></span></div>
+     <div class="city-level-conditions" id="cityLevelConditions">Парк: 0 / 1</div>
+     <div class="city-level-reward"><span id="cityRewardText">Развивай город, чтобы получить подарок!</span><button type="button" id="claimCityReward" hidden>Забрать</button></div>
     </div>
    </div>
    <div class="world-tools" role="toolbar" aria-label="Инструменты города">
@@ -172,7 +182,7 @@
   <section class="bottom-panel is-open" id="bottomPanel" aria-label="Строительство">
    <div class="sheet-grip" aria-hidden="true"></div>
    <div class="panel-head">
-    <div class="panel-heading"><div class="panel-heading-icon"><svg class="panel-shop-icon" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m3 9 2-5h14l2 5-2 2H5z"/><path d="M5 11v9h14v-9M9 20v-6h6v6"/></svg></div><div class="panel-heading-label"><h2 id="panelTitle" data-t="chooseCategory"></h2><span class="panel-subtitle">Построй свой уютный городок</span></div></div>
+    <div class="panel-heading"><div class="panel-heading-icon" aria-hidden="true"><img class="panel-catalog-art" src="../assets/mir_zeffi/icon_catolog_stroinka.webp" alt="" width="46" height="46" decoding="async" /></div><div class="panel-heading-label"><h2 id="panelTitle" data-t="chooseCategory"></h2><span class="panel-subtitle">Построй свой уютный городок</span></div></div>
     <div class="panel-head-actions">
      <button class="head-action" id="warehouseButton" type="button" aria-label="Склад построек" title="Склад построек"><svg class="panel-action-icon" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 20V8l9-5 9 5v12H3z"/><path d="M9 20v-8h6v8M3 9l9 4 9-4"/></svg><b id="warehouseBadge">0</b></button>
      <button class="head-action" id="undoButton" type="button" data-title="undo" aria-label="Отменить">↶</button>
