@@ -5,7 +5,7 @@ import {
  makeInitialCity, sanitizeCity, cloneCity, reconcileCityProgress, claimCityLevelReward, CITY_LEVELS, addObject, moveObject, storeObject,
   restoreObject, checkPlacement, checkRoadStroke, applyRoadStroke, cityStats, raisedSurfaceConflicts,
  findOccupant, nextRotation, orthogonalPath, keyOf, dims, BuildError, inBounds,
- isObjectConnected, connectedRoads, isConstructing, constructionRemaining,
+ isObjectConnected, connectedRoads, buildingEffectPreview, isConstructing, constructionRemaining,
  constructionSkipPrice, skipConstruction, topUpTestWallet, buyParcel,
   expansionCandidates, expansionPrice, PARCEL_SIZE, canAfford, objectPrice, roadStrokePrice
 } from './engine.js';
@@ -102,7 +102,7 @@ const errorLabels = {
  LOCKED_ROAD: 'locked', ROAD_STROKE_LIMIT: 'invalidPlace', ROAD_DISCONNECTED: 'invalidPlace',
  INVALID_PARCEL: 'invalidParcel', INSUFFICIENT_BALANCE: 'notEnoughCurrency', NOT_CONSTRUCTING: 'alreadyBuilt',
  NOT_AVAILABLE: 'retiredPathUnavailable', INVALID_PRICE: 'unknownError',
- CITY_LEVEL_LOCKED:'cityLevelLocked', CITY_LEVEL_CLAIMED:'cityLevelClaimed'
+ CITY_LEVEL_LOCKED:'cityLevelLocked', CITY_LEVEL_CLAIMED:'cityLevelClaimed', BUILDING_LEVEL_LOCKED:'shopLevelRequired'
 };
 function showToast(message, isError = false) {
  const el = $('toast');
@@ -367,6 +367,9 @@ function findFreeSpot(kind,rotation=0,excludeUid=''){
 }
 function startPlacement(kind){
  if(!CATALOG[kind])return;
+ if(shopCurrentLevel()<shopRequiredLevel(CATALOG[kind])){showToast(shopLockedNotice(CATALOG[kind]),true);return;}
+ const short=shopShortfall(objectPrice(CATALOG,kind));
+ if(short){showToast(short,true);return;}
  state.mode='place';state.selectedUid=null;state.warehouse=false;
  state.roadDraft=[];
  const pos=findFreeSpot(kind);
@@ -556,6 +559,7 @@ function updateRaisedConflicts(){
 }
 function updateUI(){
  const stats=cityStats(state.city,CATALOG);
+ if(state.shopRenderedLevel!==stats.cityLevel){state.shopRenderedLevel=stats.cityLevel;renderCatalog();}
  syncCitizens(stats);
  updateCityLevelUI(stats);
  updateRaisedConflicts();
@@ -615,25 +619,82 @@ function renderCategories(){
   el.append(button);
  }
 }
+const SHOP_CATEGORY_PRIORITY = Object.freeze({homes:0,shops:1,parks:2,transport:3,plazas:4,decor:5,landscape:6});
+function shopRequiredLevel(def){return Number(def.minCityLevel||1);}
+function shopCurrentLevel(){return cityStats(state.city,CATALOG).cityLevel;}
+function shopShortfall(price){
+ const missing=[];
+ for(const [key,label] of [['points','очков'],['treats','зефира'],['coffee','кофе']]){
+  const n=Math.max(0,Number(price[key]||0)-Number(state.city.wallet[key]||0));
+  if(n)missing.push(`${n.toLocaleString('ru-RU')} ${label}`);
+ }
+ return missing.length?`Не хватает ${missing.join(' и ')}`:'';
+}
+function shopSortedItems(){
+ const level=shopCurrentLevel();
+ const shown=CATALOG_ITEMS.filter(def=>state.category==='all'||def.category===state.category);
+ return shown.sort((a,b)=>{
+  const lockedA=shopRequiredLevel(a)>level,lockedB=shopRequiredLevel(b)>level;
+  if(lockedA!==lockedB)return Number(lockedA)-Number(lockedB);
+  if(lockedA&&lockedB){const diff=shopRequiredLevel(a)-shopRequiredLevel(b);if(diff)return diff;}
+  const cat=(SHOP_CATEGORY_PRIORITY[a.category]??99)-(SHOP_CATEGORY_PRIORITY[b.category]??99);
+  if(cat)return cat;
+  return a.price.points-b.price.points||a.id.localeCompare(b.id);
+ });
+}
+function shopLockedNotice(def){
+ const need=shopRequiredLevel(def),actual=shopCurrentLevel();
+ return `Постройка откроется на уровне города ${need}. Сейчас у тебя уровень ${actual}. Посмотри условия в «Город в цифрах».`;
+}
 function renderCatalog(){
  const el=$('catalogList');el.replaceChildren();
- for(const def of CATALOG_ITEMS){
-  if(state.category!=='all'&&def.category!==state.category)continue;
+ for(const def of shopSortedItems()){
+  const locked=shopRequiredLevel(def)>shopCurrentLevel();
+  const price=objectPrice(CATALOG,def.id);
   const button=document.createElement('button');button.type='button';button.className='catalog-card';button.dataset.kind=def.id;
-  const fig=document.createElement('div');fig.className='catalog-figure';const thumb=document.createElement('canvas');thumb.className='building-thumbnail';thumb.setAttribute('aria-hidden','true');fig.append(thumb);drawCatalogThumbnail(thumb,def);
-  const copy=document.createElement('div');copy.className='catalog-copy';const title=document.createElement('strong');title.textContent=nameOf(def.id);
-  const size=document.createElement('small');size.textContent=`${def.w} x ${def.h}  |  ${Number(def.buildMs||0)>0?formatRemaining(def.buildMs):tr('instant')}`;
-  const cost=document.createElement('em');cost.className='catalog-price';addCatalogPrice(cost,objectPrice(CATALOG,def.id));
-  copy.append(title,size,cost);button.append(fig,copy);
-  button.addEventListener('click',()=>startPlacement(def.id));el.append(button);
+  button.classList.toggle('is-level-locked',locked);
+  button.setAttribute('aria-label',`${nameOf(def.id)}. ${locked?`Откроется на уровне ${shopRequiredLevel(def)}`:'Открыто'}; ${priceLabel(price)}`);
+  const fig=document.createElement('div');fig.className='catalog-figure';
+  const thumb=document.createElement('canvas');thumb.className='building-thumbnail';thumb.setAttribute('aria-hidden','true');fig.append(thumb);drawCatalogThumbnail(thumb,def);
+  if(locked){
+   const levelTag=document.createElement('span');levelTag.className='catalog-level-lock';
+   levelTag.textContent=`🔒 Ур. ${shopRequiredLevel(def)}`;fig.append(levelTag);
+  }
+  const copy=document.createElement('div');copy.className='catalog-copy';
+  const title=document.createElement('strong');title.textContent=nameOf(def.id);
+  const size=document.createElement('small');size.textContent=`${def.w} × ${def.h} | ${Number(def.buildMs||0)>0?formatRemaining(def.buildMs):tr('instant')}`;
+  const benefits=buildingEffectPreview(def);const bonus=document.createElement('small');bonus.className='catalog-benefits';
+  const hints=[];
+  if(benefits.population)hints.push(`+${benefits.population} жителей${benefits.limitedPopulation?'*':''}`);
+  if(benefits.comfort)hints.push(`+${benefits.comfort} уюта`);
+  if(benefits.needsRoad)hints.push('Нужна дорога');
+  bonus.textContent=hints.join(' · ');bonus.title=benefits.limitedPopulation?'Жители от первых двух таких парков':'Игровая польза объекта после завершения строительства';
+  const cost=document.createElement('em');cost.className='catalog-price';addCatalogPrice(cost,price);
+  const status=document.createElement('small');status.className='catalog-availability';status.setAttribute('aria-live','off');
+  if(locked)status.textContent=`Доступно с уровня ${shopRequiredLevel(def)}`;
+  copy.append(title,size);
+  if(hints.length)copy.append(bonus);
+  copy.append(cost,status);button.append(fig,copy);
+  button.addEventListener('click',()=>{
+   if(shopRequiredLevel(def)>shopCurrentLevel()){showToast(shopLockedNotice(def),true);return;}
+   const short=shopShortfall(price);
+   if(short){showToast(short,true);return;}
+   startPlacement(def.id);
+  });el.append(button);
  }
  renderCatalogSelection();
 }
 function renderCatalogSelection(){
- const selected=state.draft?.kind;
+ const selected=state.draft?.kind,level=shopCurrentLevel();
  $('catalogList').querySelectorAll('.catalog-card').forEach(btn=>{
+  const def=CATALOG[btn.dataset.kind];if(!def)return;
+  const locked=shopRequiredLevel(def)>level;
+  const short=shopShortfall(def.price);
   btn.classList.toggle('is-active',Boolean(selected)&&selected===btn.dataset.kind);
-  btn.classList.toggle('cannot-afford',!canAfford(state.city.wallet,objectPrice(CATALOG,btn.dataset.kind)));
+  btn.classList.toggle('is-level-locked',locked);
+  btn.classList.toggle('cannot-afford',!locked&&Boolean(short));
+  const status=btn.querySelector('.catalog-availability');
+  if(status)status.textContent=locked?`Доступно с уровня ${shopRequiredLevel(def)}`:(short||'Можно построить');
  });
 }
 function renderWarehouse(){

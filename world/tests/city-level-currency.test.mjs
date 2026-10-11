@@ -9,7 +9,9 @@ const oldSave=()=>makeInitialCity();
 const now=1800000000000;
 function level2(){
  const c=makeInitialCity(); c.wallet.points=200000;c.wallet.treats=4000;c.wallet.coffee=1000;
- return addObject(c,CATALOG,'garden',16,16,0,now-130000);
+ // Both are unlocked at city level 1 and together meet level-2 needs.
+ const shop=addObject(c,CATALOG,'coffee-kiosk',11,11,0,now-301000);
+ return addObject(shop,CATALOG,'playground',16,16,0,now-130000);
 }
 
 test('four city level milestones have fixed, modest and safe three-currency rewards',()=>{

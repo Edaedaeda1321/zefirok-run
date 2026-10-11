@@ -27,9 +27,9 @@ test('the paid catalog includes 41 items with complete costs; paths are retired 
  assert.equal(ROAD_TILE_PRICE.points,50);
 });
 
-test('each one of the three game currencies is charged correctly and only on a fresh purchase',()=>{
+test('new points/zeffir price model only charges on a fresh purchase',()=>{
  for(const [kind,pos] of [['cottage',[16,18]],['coffee-house',[16,18]],['garden',[16,18]],['plaza-cozy-tiled',[16,18]],['extra-bush',[16,18]]]){
-  const initial=makeInitialCity();
+  const initial=makeInitialCity();initial.progress.bestLevel=5;
   const result=addObject(initial,CATALOG,kind,...pos,0,1800000000000);
   beforeAfter(initial,objectPrice(CATALOG,kind),result);
   assert.equal(initial.objects.length,4);assert.equal(result.objects.length,5);
@@ -43,9 +43,9 @@ test('each one of the three game currencies is charged correctly and only on a f
  }
 });
 
-test('insufficient points or coffee or treats stops a purchase without changing the city',()=>{
- for(const [kind,short] of [['cottage','points'],['cottage','treats'],['coffee-kiosk','coffee']]){
-  const city=makeInitialCity();
+test('insufficient points or premium zeffir stops a purchase without changing the city',()=>{
+ for(const [kind,short] of [['cottage','points'],['villa','treats'],['botanical-garden','treats']]){
+  const city=makeInitialCity();city.progress.bestLevel=5;
   city.wallet[short]=objectPrice(CATALOG,kind)[short]-1;
   const snap=JSON.stringify(city);
   err(()=>addObject(city,CATALOG,kind,16,18),'INSUFFICIENT_BALANCE');
@@ -54,7 +54,7 @@ test('insufficient points or coffee or treats stops a purchase without changing 
 });
 
 test('exact money pays the price, but never creates a negative balance',()=>{
- const city=makeInitialCity();
+ const city=makeInitialCity();city.progress.bestLevel=5;
  const price=objectPrice(CATALOG,'bakery');
  city.wallet={...price};
  const built=addObject(city,CATALOG,'bakery',16,18,0,1800000000000);

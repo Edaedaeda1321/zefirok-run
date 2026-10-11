@@ -312,6 +312,12 @@ export function cloneCity(city) {
 
 export function addObject(city, catalog, kind, x, y, rotation = 0, now = Date.now()) {
   const price = objectPrice(catalog, kind);
+  const requiredLevel = Number(catalog[kind]?.minCityLevel || 1);
+  // Use the highest achieved city level. A completed building may have
+  // raised the level while the game was closed; moving/storing old
+  // purchases is never subject to this purchase-only check.
+  if(cityStats(city, catalog, now).cityLevel < requiredLevel)
+    throw new BuildError('BUILDING_LEVEL_LOCKED');
   checkedPlacement(city, catalog, kind, x, y, rotation);
   const delay = Math.max(0, Math.min(MAX_BUILD_MS, Math.floor(Number(catalog[kind]?.buildMs) || 0)));
   if (!Number.isSafeInteger(now) || now < 0 || now + delay > Number.MAX_SAFE_INTEGER) throw new BuildError('INVALID_TIME');
@@ -437,12 +443,12 @@ export function isObjectConnected(item, city, catalog, connected = connectedRoad
 
 // Non-monetary city progression is derived from authoritative city state.
 // It never changes a save, a wallet, D1, or the price of existing objects.
-const RESIDENTS_BY_KIND = Object.freeze({
+export const RESIDENTS_BY_KIND = Object.freeze({
   'cottage':2, 'family-home':4, 'villa':6,
   'coffee-kiosk':1, 'coffee-house':2, 'bakery':2, 'flower-shop':1,
   'bus-terminal':3, 'bus-stop':1
 });
-const COMFORT_BY_KIND = Object.freeze({
+export const COMFORT_BY_KIND = Object.freeze({
   'cottage':6, 'family-home':10, 'villa':14,
   'coffee-kiosk':8, 'coffee-house':12, 'bakery':10, 'flower-shop':9,
   'garden':24, 'playground':15,
@@ -456,6 +462,20 @@ const COMFORT_BY_KIND = Object.freeze({
   'extra-arch':5, 'extra-fountain':8, 'extra-sign':2,
   'extra-sweet_object':4
 });
+export const PARK_RESIDENTS_BY_KIND = Object.freeze({
+  'garden':2,'playground':1,'pond-park':2,'rose-garden':2,
+  'botanical-garden':3,'sports-playground':1
+});
+export function buildingEffectPreview(def){
+  if(!def)return {population:0,comfort:0,needsRoad:false};
+  const park=def.category==='parks'||def.id==='sports-playground';
+  return Object.freeze({
+    population: park ? (PARK_RESIDENTS_BY_KIND[def.id]||0) : (RESIDENTS_BY_KIND[def.id]||0),
+    comfort: COMFORT_BY_KIND[def.id]||(def.category==='plazas'?6:0),
+    needsRoad:Boolean(def.needsRoad),
+    limitedPopulation:park
+  });
+}
 export function comfortTierFor(score){
   if(score>=200)return 'magical';
   if(score>=100)return 'town';
@@ -518,10 +538,7 @@ export function cityStats(city, catalog, now = Date.now()) {
     if(def.category==='parks'||item.kind==='sports-playground'){
       const count=(parkCopies.get(item.kind)||0)+1;
       parkCopies.set(item.kind,count);
-      if(count<=2)population+=({
-        'garden':2,'playground':1,'pond-park':2,'rose-garden':2,
-        'botanical-garden':3,'sports-playground':1
-      })[item.kind]||0;
+      if(count<=2)population+=PARK_RESIDENTS_BY_KIND[item.kind]||0;
     }
     if(def.needsRoad && roadAccess){
       population+=RESIDENTS_BY_KIND[item.kind]||0;

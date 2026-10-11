@@ -95,9 +95,37 @@ const VISIBLE_ITEMS = [
 export const RETIRED_PATH_ITEMS = Object.freeze(EXTRA_CATALOG_ITEMS
   .filter(item => item.category === 'paths')
   .map(item => Object.freeze({ ...item, retired: true })));
+// The one canonical unlock table used by the Worker and both city UIs.
+// Previously owned buildings can still be moved/restored.
+export const SHOP_UNLOCK_LEVELS = Object.freeze({
+  'bus-terminal': 4,
+  'bus-stop': 2,
+  'pond-park': 3,
+  'rose-garden': 3,
+  'botanical-garden': 5,
+  'sports-playground': 2,
+  'city-square': 2,
+  'family-home': 2,
+  'villa': 3,
+  'coffee-house': 3,
+  'bakery': 2,
+  'garden': 3,
+  'fountain': 2,
+  'monument': 4,
+  'plaza-city-square': 3,
+  'plaza-flower-edge': 2,
+  'plaza-monument-base': 4,
+  'plaza-rest-zone': 2,
+  'plaza-playground-base': 2,
+  'plaza-bordered-shrubs': 2,
+  'plaza-prestige-podium': 4,
+  'extra-fountain': 3,
+  'extra-sweet_object': 2,
+  'terrain_podium_plaza_premium': 4,
+});
 export const CATALOG_ITEMS = Object.freeze(VISIBLE_ITEMS.map(item => {
   if (!OBJECT_PRICES[item.id]) throw new Error(`PRICE_MISSING: ${item.id}`);
-  return Object.freeze({ ...item, price: OBJECT_PRICES[item.id] });
+  return Object.freeze({ ...item, minCityLevel: SHOP_UNLOCK_LEVELS[item.id] || 1, price: OBJECT_PRICES[item.id] });
 }));
 export const CATALOG = Object.freeze(Object.fromEntries(
   [...CATALOG_ITEMS, ...RETIRED_PATH_ITEMS, ...RETIRED_LANDSCAPE_ITEMS].map(item => [item.id, item])

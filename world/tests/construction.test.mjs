@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {CATALOG, CATALOG_ITEMS} from '../catalog.js';
 import {makeInitialCity,addObject,moveObject,storeObject,restoreObject,isConstructing,constructionRemaining,cityStats,sanitizeCity,cloneCity,BuildError} from '../engine.js';
-const fresh=()=>makeInitialCity();
+const fresh=()=>{const city=makeInitialCity();city.progress.bestLevel=5;return city;};
 test('all houses and shops have meaningful construction durations while decorations are instant',()=>{
  for(const kind of ['cottage','family-home','villa','coffee-kiosk','coffee-house','bakery','flower-shop'])assert.ok(CATALOG[kind].buildMs>=20000);
  for(const kind of ['tree','flowerbed','bench'])assert.equal(CATALOG[kind].buildMs||0,0);

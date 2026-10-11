@@ -389,3 +389,20 @@ body{background:#d6ead0}
 .world-raised-dialog button{appearance:none;border:0;border-radius:12px;padding:12px 14px;background:#cf6894;color:white;font-size:12px;line-height:1.25;font-weight:850;cursor:pointer;min-height:44px}
 .world-raised-dialog button.world-raised-dialog__later{color:#a35c7c;background:#fff;border:1px solid #efc6d7}
 .world-raised-dialog button:disabled{opacity:.55;cursor:wait}
+
+/* v17: Shop progression; compact enough for the Telegram bottom sheet. */
+.catalog-card.is-level-locked{border-color:#dfcbd3;background:linear-gradient(160deg,#fdf8f9,#f3eaed)}
+.catalog-card.is-level-locked .building-thumbnail{opacity:.57;filter:grayscale(.44) saturate(.75)}
+.catalog-card.is-level-locked .catalog-figure::after{opacity:.35}
+.catalog-level-lock{position:absolute;z-index:3;top:6px;right:6px;padding:5px 7px;border-radius:9px;background:#fff9faed;color:#955778;box-shadow:0 1px 6px #8c486229;border:1px solid #eac4d4;font-size:10px;font-weight:900;white-space:nowrap}
+.catalog-card .catalog-benefits{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:850;font-size:9px;color:#a56384}
+.catalog-card .catalog-availability{display:block;white-space:normal;font-weight:850;font-size:9px;line-height:1.2;color:#4f976e;min-height:11px}
+.catalog-card.is-level-locked .catalog-availability{color:#a56083}
+.catalog-card.cannot-afford .catalog-availability{color:#a67a43}
+.catalog-card.cannot-afford{opacity:1}
+@media(max-width:700px){
+ .catalog-card .catalog-benefits{font-size:9px}
+ .catalog-card .catalog-availability{font-size:9px}
+ .catalog-level-lock{font-size:9px;padding:4px 5px}
+}
+

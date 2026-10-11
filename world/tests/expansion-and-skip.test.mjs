@@ -7,7 +7,7 @@ import {
   buyParcel, topUpTestWallet, checkPlacement, applyRoadStroke,
   isConstructing, constructionSkipPrice, skipConstruction, BuildError
 } from '../engine.js';
-const seed = () => makeInitialCity();
+const seed = () => {const city=makeInitialCity();city.progress.bestLevel=5;return city;};
 const fail = (work,code) => assert.throws(work,error=>error instanceof BuildError && error.code===code);
 
 test('rotating buildings rotates actual asymmetric facade anchor even for square buildings',()=>{

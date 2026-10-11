@@ -9,7 +9,7 @@ import {
 import { CATALOG } from '../catalog.js';
 import { buildCitizenScene, sampleCitizenScene } from '../citizens.js';
 
-const initial=()=>makeInitialCity();
+const initial=()=>{const city=makeInitialCity();city.progress.bestLevel=5;return city;};
 const read=p=>readFileSync(new URL(p,import.meta.url),'utf8');
 
 test('starter town has two residents and 15 comfort; only one completed house',()=>{

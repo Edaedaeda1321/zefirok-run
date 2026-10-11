@@ -6,6 +6,7 @@ export const RU = Object.freeze({
   cityLevel5:'Волшебная долина',
   cityLevelLocked:'Уровень города ещё не достигнут.',
   cityLevelClaimed:'Награда за этот уровень уже получена.',
+  shopLevelRequired:'Повышай уровень города, чтобы открыть эту постройку.',
 
   price:'Цена', testPrices:'ПОКУПКИ ЗА ТЕСТОВУЮ ВАЛЮТУ', charged:'Списано',
   instant:'Сразу', buyAndBuild:'Купить и построить', buyRoad:'Построить Road',

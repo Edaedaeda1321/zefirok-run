@@ -10,6 +10,7 @@ const NOW = 1_800_000_000_000;
 const rich = () => {
  const city = makeInitialCity();
  city.wallet = {points: 5_000_000, treats: 10_000, coffee: 10_000};
+ city.progress.bestLevel=3; // Previously earned tier, so the prestige-park construction suite remains valid.
  return city;
 };
 
@@ -37,7 +38,7 @@ test('v12 preserves new transport and new park prices, construction and populati
  assert.equal(stats.parks,2);
  assert.equal(stats.population,6,'2 starter residents + 2 pond visitors + 2 rose garden visitors');
  assert.ok(stats.comfort>=24+20);
- assert.equal(stats.cityLevel,2,'New City parks contribute to city level progression');
+ assert.equal(stats.cityLevel,3,'Previously earned city level is permanent while new parks improve live stats');
 });
 
 test('v12 never awards park population from objects still under construction or on storage',()=>{
@@ -59,12 +60,12 @@ test('v12 persists level on city storage and grants reward exactly once even on 
  assert.deepEqual(city,original,'claim cannot mutate original city snapshot');
  assert.equal(next.wallet.points,city.wallet.points+500);
  assert.equal(next.wallet.treats,city.wallet.treats+5);
- assert.equal(next.progress.bestLevel,2);
+ assert.equal(next.progress.bestLevel,3);
  assert.deepEqual(next.progress.claimedLevels,[2]);
  assert.throws(()=>claimCityLevelReward(next,CATALOG,2,NOW),e=>e instanceof BuildError&&e.code==='CITY_LEVEL_CLAIMED');
  const offMap=storeObject(next,next.objects.at(-1).uid);
  assert.equal(cityStats(offMap,CATALOG,NOW).qualifiedLevel,1);
- assert.equal(cityStats(offMap,CATALOG,NOW).cityLevel,2);
+ assert.equal(cityStats(offMap,CATALOG,NOW).cityLevel,3);
  assert.deepEqual(reconcileCityProgress(offMap,CATALOG,NOW).progress.claimedLevels,[2]);
  assert.deepEqual(sanitizeCity(JSON.parse(JSON.stringify(offMap)),CATALOG),offMap);
 });

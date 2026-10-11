@@ -59,7 +59,7 @@ test('9 deprecated decorative paths are hidden but remain readable, while plazas
 });
 
 test('3D raised plazas no longer let houses, decor or roads float on their pillars',()=>{
- let city=makeInitialCity();
+ let city=makeInitialCity();city.progress.bestLevel=5;
  const oldWallet=structuredClone(city.wallet), originalRoads=[...city.roads];
  city=addObject(city,CATALOG,'plaza-monument-base',16,17);
  assert.equal(CATALOG['plaza-monument-base'].blockingSurface,true);

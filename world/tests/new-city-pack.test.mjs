@@ -11,13 +11,13 @@ import {makeInitialCity, addObject, moveObject, storeObject, restoreObject, sani
 const root=fileURLToPath(new URL('../',import.meta.url));
 const newPack=SPRITE_MANIFEST.assets.filter(item=>item.packId==='new-city-premium-sprites-v3-fixed');
 const spec=Object.freeze({
- 'bus-terminal':{w:4,h:3,category:'transport',points:27000,coffee:35,treats:50,building:true},
- 'bus-stop':{w:2,h:1,category:'transport',points:5500,coffee:10,treats:0,building:true},
- 'pond-park':{w:3,h:3,category:'parks',points:17500,coffee:0,treats:45},
- 'rose-garden':{w:3,h:3,category:'parks',points:16000,coffee:0,treats:40},
+ 'bus-terminal':{w:4,h:3,category:'transport',points:27000,coffee:0,treats:50,building:true},
+ 'bus-stop':{w:2,h:1,category:'transport',points:7500,coffee:0,treats:0,building:true},
+ 'pond-park':{w:3,h:3,category:'parks',points:17500,coffee:0,treats:30},
+ 'rose-garden':{w:3,h:3,category:'parks',points:16000,coffee:0,treats:25},
  'botanical-garden':{w:4,h:4,category:'parks',points:32000,coffee:0,treats:75},
- 'sports-playground':{w:3,h:2,category:'plazas',points:10800,coffee:0,treats:25},
- 'city-square':{w:3,h:3,category:'plazas',points:12000,coffee:0,treats:25}
+ 'sports-playground':{w:3,h:2,category:'plazas',points:10800,coffee:0,treats:0},
+ 'city-square':{w:3,h:3,category:'plazas',points:12000,coffee:0,treats:12}
 });
 const names=Object.keys(spec);
 test('seven real shop entries, fixed dimensions and priced three-currency quotes',()=>{
@@ -75,7 +75,7 @@ test('server-authoritative purchases, rotation, store, restore and existing save
  const restored=sanitizeCity(JSON.parse(JSON.stringify(before)),CATALOG);
  assert.deepEqual(restored,before);
  for(const id of names){
-  let city=makeInitialCity();city.wallet={points:999999,coffee:99999,treats:99999};
+  let city=makeInitialCity();city.progress.bestLevel=5;city.wallet={points:999999,coffee:99999,treats:99999};
   const money={...city.wallet};
   const position=id==='botanical-garden'?[16,17]:[17,17];
   assert.equal(checkPlacement(city,CATALOG,id,...position,0).ok,true,id);
@@ -103,7 +103,7 @@ test('construction skip uses 70 coffee for transport and 50 for parks and square
 });
 test('new parks contribute comfort/visitors only after construction, and two-copy cap prevents population farming',()=>{
  const now=1700000000000;
- let city=makeInitialCity();city.wallet.points=999999;city.wallet.treats=99999;
+ let city=makeInitialCity();city.progress.bestLevel=5;city.wallet.points=999999;city.wallet.treats=99999;
  city=addObject(city,CATALOG,'pond-park',17,17,0,now);
  const current=cityStats(city,CATALOG,now);
  const future=cityStats(city,CATALOG,now+CATALOG['pond-park'].buildMs+1);

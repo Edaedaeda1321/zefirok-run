@@ -10,7 +10,7 @@ import { addObject,makeInitialCity,roadStrokePrice,buyParcel,constructionSkipPri
 const db=new DatabaseSync(':memory:');
 db.exec(`CREATE TABLE admin_profile_state(telegram_id TEXT PRIMARY KEY,wallet INTEGER NOT NULL,treats INTEGER NOT NULL,coffee INTEGER NOT NULL,revision INTEGER NOT NULL,updated_at INTEGER NOT NULL DEFAULT 0,updated_by TEXT NOT NULL DEFAULT '');`);
 db.exec(readFileSync(new URL('../migrations/0114_zeffi_world.sql',import.meta.url),'utf8'));
-db.prepare('INSERT INTO admin_profile_state(telegram_id,wallet,treats,coffee,revision) VALUES (?,?,?,?,1)').run('123456789',100000,2000,1000);
+db.prepare('INSERT INTO admin_profile_state(telegram_id,wallet,treats,coffee,revision) VALUES (?,?,?,?,1)').run('123456789',500000,2000,1000);
 class Statement{
  constructor(sql,args=[]){this.sql=sql;this.args=args;}
  bind(...args){return new Statement(this.sql,args);}
@@ -47,7 +47,7 @@ const receiptCount=()=>driver.prepare('SELECT COUNT(*) AS n FROM zeffi_world_ope
 let state=await request('state');
 await check('signed player can create and load city in same DB',()=>{
  assert.equal(state.status,200);assert.equal(state.revision,0);assert.equal(state.city.objects.length,4);
- assert.equal(state.city.wallet.points,100000);
+ assert.equal(state.city.wallet.points,500000);
 });
 await check('unsigned request denied',async()=>{const r=await handleZeffiWorldApi(new Request(url+'state',{method:'POST',body:JSON.stringify({initData:'wrong'})}),env,deps);assert.equal(r.status,401);});
 await check('default disabled feature fails closed',async()=>{assert.equal((await request('state',{}, {...env,WORLD_ENABLED:''})).status,403);});
@@ -64,7 +64,7 @@ const opID='world-buy-cottage-123456789';
 let first=await request('mutate',{requestId:opID,expectedRevision:0,expectedPrice:price,action});
 await check('building purchase updates shared wallet and city',()=>{
  assert.equal(first.status,200,first.error);assert.equal(first.revision,1);
- assert.equal(first.city.objects.length,5);assert.equal(wallet().wallet,100000-price.points);
+ assert.equal(first.city.objects.length,5);assert.equal(wallet().wallet,500000-price.points);
  assert.equal(wallet().treats,2000-price.treats);assert.equal(receiptCount(),1);
 });
 await check('retry is idempotent without second charge',async()=>{
@@ -133,8 +133,8 @@ await check('building acceleration charges only shared coffee once',async()=>{
 });
 await check('park acceleration starts at 50 coffee in the same profile',async()=>{
  const prev=await request('state');
- const park={objectKind:'garden',x:17,y:3,rotation:0};
- const price={...CATALOG.garden.price};
+ const park={objectKind:'playground',x:17,y:3,rotation:0};
+ const price={...CATALOG.playground.price};
  const build=await request('mutate',{requestId:'world-accelerate-garden-build-12',expectedRevision:prev.revision,expectedPrice:price,action:{kind:'place',args:park}});
  assert.equal(build.status,200,build.error);
  const uid=build.city.objects.at(-1).uid;
@@ -154,6 +154,21 @@ await check('insufficient shared wallet never records purchase',async()=>{
  assert.equal(receiptCount(),receiptBefore);assert.deepEqual(wallet(),before);
  db.prepare('UPDATE admin_profile_state SET wallet=?,revision=revision+1 WHERE telegram_id=?').run(original.wallet,'123456789');
 });
+// v17: test both the rejection path and the approved purchase path. The
+// following seed modifies only this in-memory SQLite fixture, never the Worker.
+await check('prestige purchase denied at city level 1 without a debit or receipt',async()=>{
+ const before=await request('state'),money=wallet(),receipts=receiptCount();
+ const kind='bus-terminal',expectedPrice={...CATALOG[kind].price};
+ const rejected=await request('mutate',{requestId:'world-v17-locked-terminal-01',expectedRevision:before.revision,expectedPrice,
+   action:{kind:'place',args:{objectKind:kind,x:1,y:1,rotation:0}}});
+ assert.equal(rejected.status,400,JSON.stringify(rejected));
+ assert.equal(rejected.code,'BUILDING_LEVEL_LOCKED');
+ assert.deepEqual(wallet(),money);assert.equal(receiptCount(),receipts);
+});
+const savedWorldRow=db.prepare('SELECT state_json FROM zeffi_world_cities WHERE telegram_id=?').get('123456789');
+const unlockedTestCity=JSON.parse(savedWorldRow.state_json);
+unlockedTestCity.progress.bestLevel=5;
+db.prepare('UPDATE zeffi_world_cities SET state_json=? WHERE telegram_id=?').run(JSON.stringify(unlockedTestCity),'123456789');
 // New City v10 — authoritative purchases must use new catalog quotes (no client trust).
 await check('new bus terminal is paid atomically with all three currencies and survives state reload',async()=>{
  const before=await request('state');const money=wallet();

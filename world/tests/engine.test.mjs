@@ -8,7 +8,7 @@ import {
   sanitizeCity, BuildError
 } from '../engine.js';
 
-const fresh=()=>makeInitialCity();
+const fresh=()=>{const city=makeInitialCity();city.progress.bestLevel=5;return city;};
 const rejectCode=(fn,code)=>assert.throws(fn,error=>error instanceof BuildError&&error.code===code);
 
 test('sandbox startup includes a 24x24 map, four objects and protected road entrance',()=>{

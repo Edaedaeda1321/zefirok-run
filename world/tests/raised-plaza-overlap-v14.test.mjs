@@ -11,7 +11,7 @@ const PLAZAS=CATALOG_ITEMS.filter(def=>def.id.startsWith('plaza-'));
 const OLD_LOCATION={x:18,y:18};
 function oldOverlappingCity({raisedFirst=true,includeRoad=false}={}){
  // v13 let a 2x2 building occupy part of a raised 3x3 plaza in either order.
- let city=makeInitialCity();
+ let city=makeInitialCity();city.progress.bestLevel=5;
  city=addObject(city,CATALOG,'plaza-monument-base',OLD_LOCATION.x,OLD_LOCATION.y);
  if(raisedFirst){
   city.objects.push({uid:`obj-${city.nextId++}`,kind:'cottage',x:19,y:19,rotation:0,level:1,stored:false,buildStartedAt:0,buildReadyAt:0});
@@ -34,7 +34,7 @@ test('all eight precomposed raised plazas are recognized, flat paving retains se
 });
 
 test('cannot build on a 3D plaza postament in either purchase order or add roads through its fixtures',()=>{
- let city=makeInitialCity();
+ let city=makeInitialCity();city.progress.bestLevel=5;
  city=addObject(city,CATALOG,'plaza-monument-base',18,18);
  for(const kind of ['cottage','family-home','monument','tree','plaza-rest-zone']){
   assert.equal(checkPlacement(city,CATALOG,kind,19,19).code,'BUILDING_COLLISION',kind);
