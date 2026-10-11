@@ -29,12 +29,31 @@ function entryRoads(city,catalog,roadSet,now){
  }
  return entries.sort((a,b)=>String(a.uid).localeCompare(String(b.uid)));
 }
+// Legacy saves can contain Road below raised plazas (or other 3D objects).
+// Road rendering itself does not make those cells walkable: previously NPCs
+// travelled THROUGH the plinth and appeared inside a house/playground.
+// This mask is visual-only. It does not alter the authoritative road graph,
+// connectivity, the city save, wallet, or any purchased building.
+export function walkableCitizenRoads(city,catalog,roads=connectedRoads(city)){
+ const walkable=new Set(roads);
+ for(const item of city.objects){
+  if(item.stored)continue;
+  const def=catalog[item.kind];
+  if(!def || (def.layer==='surface'&&!def.blockingSurface))continue;
+  const {w,h}=dims(def,item.rotation||0);
+  for(let x=item.x;x<item.x+w;x++)for(let y=item.y;y<item.y+h;y++){
+   walkable.delete(keyOf(x,y));
+  }
+ }
+ return walkable;
+}
 // Routes change only when the authoritative city snapshot changes. Every
-// segment stays on a connected road. Mirroring makes loops seamless.
+// segment stays on a safe connected road, not underneath 3D footprints.
+// Mirroring makes loops seamless; filtering cannot cause jumps/teleports.
 export function buildCitizenScene(city,catalog,population,now=Date.now(),comfort=0){
  const count=visibleCitizenCount(population,comfort);
  if(!count)return {routes:[],population};
- const roads=connectedRoads(city);
+ const roads=walkableCitizenRoads(city,catalog);
  if(!roads.size)return {routes:[],population};
  const roadIds=[...roads].sort();
  const neighbors=new Map(roadIds.map(id=>{const {x,y}=tileIdToPoint(id);return [id,DIRECTIONS.map(([dx,dy])=>keyOf(x+dx,y+dy)).filter(other=>roads.has(other))];}));

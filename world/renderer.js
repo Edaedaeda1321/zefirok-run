@@ -5,6 +5,13 @@ import { drawCitizen } from './citizens.js';
 export const TILE_W = 72;
 export const TILE_H = 36;
 export const PROJECT_FOCUS = Object.freeze({ x: 11.5, y: 12 });
+// The painter key is the isometric ground center, NOT the southernmost
+// footprint corner. This is crucial for walkers on roads beside buildings:
+// south/east-side walkers must draw in front; north/west-side walkers behind.
+export function worldObjectPainterDepth(item,def){
+ const {w,h}=dims(def,item.rotation||0);
+ return item.x+item.y+(w+h)/2;
+}
 let objectRotation = null;
 const P = (x, y) => {
   if(objectRotation){
@@ -689,13 +696,14 @@ export function drawWorld(canvas,city,catalog,cam,overlay={}) {
  }
  drawRoads(ctx,city,viewport);
  const connected=connectedRoads(city);
- // Buildings and citizens share one depth-sorted painter. Residents walking
- // behind a house should disappear behind it, not float over its roof.
- // Raised decorative plazas are 3D solids for the painter, NOT floor tiles.
- // Previously painting them first made houses appear to sit on their pillars.
+ // Isometric objects are sorted by their *ground footprint center*, not
+ // their farthest south corner. The old south-corner value made a person
+ // walking on the road IN FRONT of a park get painted UNDER its foundation.
+ // Both objects and people use the same projected ground-depth convention.
+ // Raised plazas remain solid members of this painter (v14 invariant).
  const layers=city.objects.filter(o=>!o.stored && (catalog[o.kind]?.layer!=='surface'||catalog[o.kind]?.blockingSurface)).map(item=>{
-  const size=dims(catalog[item.kind],item.rotation);
-  return {type:'object',item,depth:item.x+item.y+size.w+size.h};
+  const def=catalog[item.kind];
+  return {type:'object',item,depth:worldObjectPainterDepth(item,def)};
  });
  for(const person of overlay.citizens||[]){
   if(person.x<viewport.minX-2||person.y<viewport.minY-2||person.x>viewport.maxX+2||person.y>viewport.maxY+2)continue;
