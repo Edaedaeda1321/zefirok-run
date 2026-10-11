@@ -390,11 +390,14 @@ body{background:#d6ead0}
 .world-raised-dialog button.world-raised-dialog__later{color:#a35c7c;background:#fff;border:1px solid #efc6d7}
 .world-raised-dialog button:disabled{opacity:.55;cursor:wait}
 
-/* v17: Shop progression; compact enough for the Telegram bottom sheet. */
+/* v18: Locked shop art follows the season-pass reward treatment. */
 .catalog-card.is-level-locked{border-color:#dfcbd3;background:linear-gradient(160deg,#fdf8f9,#f3eaed)}
-.catalog-card.is-level-locked .building-thumbnail{opacity:.57;filter:grayscale(.44) saturate(.75)}
-.catalog-card.is-level-locked .catalog-figure::after{opacity:.35}
-.catalog-level-lock{position:absolute;z-index:3;top:6px;right:6px;padding:5px 7px;border-radius:9px;background:#fff9faed;color:#955778;box-shadow:0 1px 6px #8c486229;border:1px solid #eac4d4;font-size:10px;font-weight:900;white-space:nowrap}
+.catalog-card.is-level-locked .catalog-figure{background:linear-gradient(155deg,#faf8f8,#eeecee)}
+.catalog-card.is-level-locked .catalog-figure .building-thumbnail{opacity:.53;filter:grayscale(.85) saturate(.68);transform:scale(.96);transition:opacity .2s ease,filter .2s ease,transform .2s ease}
+.catalog-card.is-level-locked .catalog-figure::after{opacity:.14}
+/* Deliberately a div, not span: the base world.css has .catalog-figure span. */
+.catalog-figure .catalog-lock-mark{position:absolute;inset:0;z-index:3;display:grid;place-items:center;width:100%;height:100%;pointer-events:none;line-height:normal;filter:none}
+.catalog-figure .catalog-lock-icon{display:block;width:34px;height:34px;max-width:40%;max-height:48%;object-fit:contain;filter:drop-shadow(0 4px 7px rgba(111,70,40,.18))}
 .catalog-card .catalog-benefits{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:850;font-size:9px;color:#a56384}
 .catalog-card .catalog-availability{display:block;white-space:normal;font-weight:850;font-size:9px;line-height:1.2;color:#4f976e;min-height:11px}
 .catalog-card.is-level-locked .catalog-availability{color:#a56083}
@@ -403,6 +406,6 @@ body{background:#d6ead0}
 @media(max-width:700px){
  .catalog-card .catalog-benefits{font-size:9px}
  .catalog-card .catalog-availability{font-size:9px}
- .catalog-level-lock{font-size:9px;padding:4px 5px}
+ .catalog-figure .catalog-lock-icon{width:29px;height:29px}
 }
 

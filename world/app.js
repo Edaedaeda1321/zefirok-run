@@ -12,6 +12,7 @@ import {
 import { drawWorld, drawCatalogThumbnail, screenToTile, isoToScreen, PROJECT_FOCUS } from './renderer.js';
 import { onSpriteUpdate, setSpriteMode, spriteStatus, preloadBuildFrames, preloadSpriteSet, spriteManifest, catalogSpriteId, parkConstructionAssetId, buildingAssetId } from './sprite-assets.js';
 import { buildCitizenScene, sampleCitizenScene } from './citizens.js';
+import { buildBusScene, sampleBusScene } from './traffic.js';
 
 const STORAGE_KEY = 'zefirok-world-v01-sandbox-local';
 const SERVER_MODE = window.ZeffiWorldServerRequired === true;
@@ -29,7 +30,7 @@ const state = {
  camera: { x: 0, y: 0, zoom: 1 },
  undo: [], redo: [], pointers: new Map(), pointerStart: null,
  gesture: null, toastTimer: null, drawScheduled: false, pointerDrag: false,
- loadingFailed: false, visualsReady: false, preparingPlacementArt: false, citizenScene: null, citizenSnapshot: null, citizenPopulation: -1, citizenComfort: -1, serverRevision: null, serverReady: false, serverBusy: false, serverPurchasesEnabled: false, serverInitData: '', skipAnimation: null, skipAnimationTimer: null, skipAnimationRaf: null,
+ loadingFailed: false, visualsReady: false, preparingPlacementArt: false, citizenScene: null, trafficScene: null, citizenSnapshot: null, citizenPopulation: -1, citizenComfort: -1, serverRevision: null, serverReady: false, serverBusy: false, serverPurchasesEnabled: false, serverInitData: '', skipAnimation: null, skipAnimationTimer: null, skipAnimationRaf: null,
  skipPreparingUid: null, skipToken: 0
 };
 const iconCodes = { house: 0x1F3E1, coffee: 0x2615, cake: 0x1F370, flower: 0x1F338,
@@ -315,6 +316,7 @@ function scheduleDraw(){
     selectedUid:state.selectedUid,draft:state.draft,mode:state.mode,
     roadDraft:state.roadDraft,roadValid:state.roadValid, expansionDraft:state.expansionDraft,
     now, citizens:sampleCitizenScene(state.citizenScene,now),
+    buses:sampleBusScene(state.trafficScene,now),
     skipAnimation: state.skipAnimation ? {...state.skipAnimation} : null
   });
  });
@@ -468,6 +470,7 @@ function syncCitizens(stats){
  state.citizenPopulation=stats.population;
  state.citizenComfort=stats.comfort;
  state.citizenScene=buildCitizenScene(state.city,CATALOG,stats.population,Date.now(),stats.comfort);
+ state.trafficScene=buildBusScene(state.city,CATALOG,Date.now());
 }
 function updateCityLevelUI(stats){
  const lvl=stats.cityLevel,def=CITY_LEVELS[lvl-1],next=stats.nextCityLevel;
@@ -657,8 +660,13 @@ function renderCatalog(){
   const fig=document.createElement('div');fig.className='catalog-figure';
   const thumb=document.createElement('canvas');thumb.className='building-thumbnail';thumb.setAttribute('aria-hidden','true');fig.append(thumb);drawCatalogThumbnail(thumb,def);
   if(locked){
-   const levelTag=document.createElement('span');levelTag.className='catalog-level-lock';
-   levelTag.textContent=`🔒 Ур. ${shopRequiredLevel(def)}`;fig.append(levelTag);
+   // Match the season pass: dim the reward art and layer the existing 3D lock.
+   // Use a div (not span): world.css gives every .catalog-figure span a 38px font.
+   const mark=document.createElement('div');mark.className='catalog-lock-mark';
+   mark.setAttribute('aria-hidden','true');
+   const icon=document.createElement('img');icon.className='catalog-lock-icon';
+   icon.src='../assets/ui/icon_closed.webp';icon.alt='';icon.decoding='async';
+   mark.append(icon);fig.append(mark);
   }
   const copy=document.createElement('div');copy.className='catalog-copy';
   const title=document.createElement('strong');title.textContent=nameOf(def.id);
@@ -1117,7 +1125,7 @@ function bindEvents(){
  const motionReduced=window.matchMedia?.('(prefers-reduced-motion: reduce)');
  setInterval(()=>{
   if(document.hidden||motionReduced?.matches||!state.visualsReady)return;
-  if(!state.citizenScene?.routes?.length)return;
+  if(!state.citizenScene?.routes?.length&&!state.trafficScene?.routes?.length)return;
   scheduleDraw();
  },125);
  // Wall-clock countdown: construction continues while the page is closed.

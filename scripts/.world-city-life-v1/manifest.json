@@ -1,0 +1,68 @@
+{
+  "name": "Мир Зеффи — Живой город",
+  "version": "1.0.0-autoinstall",
+  "source": "Archive 2026-10-11 + source-compatible anchored patches",
+  "payloads": {
+    "world/citizens.js": "b726cd6ee6233a3f3ba2a11a1061db3465b6da36b1cea122e3a790a1c598ccca",
+    "world/traffic.js": "114e2893367d4747aa6b8933c53540373a2126c3918c4aca0a5c97288dee7cc5",
+    "world/tests/city-life.test.mjs": "f2b29e2bc7786b1f3a10bf590d06af9386958c475de4265323035aea89afb7f4"
+  },
+  "transforms": {
+    "world/app.js": [
+      {
+        "label": "world/app.js original lines 15-14",
+        "before": "import { buildCitizenScene, sampleCitizenScene } from './citizens.js';\n\n",
+        "after": "import { buildCitizenScene, sampleCitizenScene } from './citizens.js';\nimport { buildBusScene, sampleBusScene } from './traffic.js';\n\n"
+      },
+      {
+        "label": "world/app.js original lines 32-32",
+        "before": " gesture: null, toastTimer: null, drawScheduled: false, pointerDrag: false,\n loadingFailed: false, visualsReady: false, preparingPlacementArt: false, citizenScene: null, citizenSnapshot: null, citizenPopulation: -1, citizenComfort: -1, serverRevision: null, serverReady: false, serverBusy: false, serverPurchasesEnabled: false, serverInitData: '', skipAnimation: null, skipAnimationTimer: null, skipAnimationRaf: null,\n skipPreparingUid: null, skipToken: 0\n",
+        "after": " gesture: null, toastTimer: null, drawScheduled: false, pointerDrag: false,\n loadingFailed: false, visualsReady: false, preparingPlacementArt: false, citizenScene: null, trafficScene: null, citizenSnapshot: null, citizenPopulation: -1, citizenComfort: -1, serverRevision: null, serverReady: false, serverBusy: false, serverPurchasesEnabled: false, serverInitData: '', skipAnimation: null, skipAnimationTimer: null, skipAnimationRaf: null,\n skipPreparingUid: null, skipToken: 0\n"
+      },
+      {
+        "label": "world/app.js original lines 318-317",
+        "before": "    now, citizens:sampleCitizenScene(state.citizenScene,now),\n    skipAnimation: state.skipAnimation ? {...state.skipAnimation} : null\n",
+        "after": "    now, citizens:sampleCitizenScene(state.citizenScene,now),\n    buses:sampleBusScene(state.trafficScene,now),\n    skipAnimation: state.skipAnimation ? {...state.skipAnimation} : null\n"
+      },
+      {
+        "label": "world/app.js original lines 471-470",
+        "before": " state.citizenScene=buildCitizenScene(state.city,CATALOG,stats.population,Date.now(),stats.comfort);\n}\n",
+        "after": " state.citizenScene=buildCitizenScene(state.city,CATALOG,stats.population,Date.now(),stats.comfort);\n state.trafficScene=buildBusScene(state.city,CATALOG,Date.now());\n}\n"
+      },
+      {
+        "label": "world/app.js original lines 1125-1125",
+        "before": "  if(document.hidden||motionReduced?.matches||!state.visualsReady)return;\n  if(!state.citizenScene?.routes?.length)return;\n  scheduleDraw();\n",
+        "after": "  if(document.hidden||motionReduced?.matches||!state.visualsReady)return;\n  if(!state.citizenScene?.routes?.length&&!state.trafficScene?.routes?.length)return;\n  scheduleDraw();\n"
+      }
+    ],
+    "world/renderer.js": [
+      {
+        "label": "bus painter import",
+        "before": "import { drawCitizen } from './citizens.js';\n",
+        "after": "import { drawCitizen } from './citizens.js';\nimport { drawBus } from './traffic.js';\n"
+      },
+      {
+        "label": "depth sorted city visitors and buses",
+        "before": " const layers=city.objects.filter(o=>!o.stored && (catalog[o.kind]?.layer!=='surface'||catalog[o.kind]?.blockingSurface)).map(item=>{\n  const def=catalog[item.kind];\n  return {type:'object',item,depth:worldObjectPainterDepth(item,def)};\n });\n for(const person of overlay.citizens||[]){\n  if(person.x<viewport.minX-2||person.y<viewport.minY-2||person.x>viewport.maxX+2||person.y>viewport.maxY+2)continue;\n  layers.push({type:'citizen',person,depth:person.x+person.y});\n }\n layers.sort((a,b)=>a.depth-b.depth||(a.type==='citizen'?-1:1));\n for(const layer of layers){\n  if(layer.type==='citizen'){\n   const pos=P(layer.person.x,layer.person.y);\n   drawCitizen(ctx,layer.person,pos.x,pos.y,overlay.now);\n   continue;\n  }\n",
+        "after": " const layers=city.objects.filter(o=>!o.stored && (catalog[o.kind]?.layer!=='surface'||catalog[o.kind]?.blockingSurface)).map(item=>{\n  const def=catalog[item.kind];\n  return {type:'object',item,depth:worldObjectPainterDepth(item,def)};\n });\n const activityObjects=new Map(city.objects.filter(o=>!o.stored).map(o=>[o.uid,o]));\n for(const person of overlay.citizens||[]){\n  if(person.x<viewport.minX-2||person.y<viewport.minY-2||person.x>viewport.maxX+2||person.y>viewport.maxY+2)continue;\n  let depth=person.x+person.y;\n  if(['bench','play','fountain','park'].includes(person.action)&&person.venueUid){\n   // A resident playing on a raised playground must be painted OVER its\n   // podium, rather than disappearing behind the park asset silhouette.\n   const venue=activityObjects.get(person.venueUid);\n   if(venue&&catalog[venue.kind])depth=Math.max(depth,worldObjectPainterDepth(venue,catalog[venue.kind])+.05);\n  }\n  layers.push({type:'citizen',person,depth});\n }\n for(const bus of overlay.buses||[]){\n  if(bus.x<viewport.minX-2||bus.y<viewport.minY-2||bus.x>viewport.maxX+2||bus.y>viewport.maxY+2)continue;\n  layers.push({type:'bus',bus,depth:bus.x+bus.y});\n }\n // At an equal ground depth, structures go first, then vehicles and people.\n // Sitting people can be seen above a bench without raising the whole sprite.\n const typeDepth={object:0,bus:1,citizen:2};\n layers.sort((a,b)=>a.depth-b.depth||typeDepth[a.type]-typeDepth[b.type]);\n for(const layer of layers){\n  if(layer.type==='citizen'){\n   const pos=P(layer.person.x,layer.person.y);\n   drawCitizen(ctx,layer.person,pos.x,pos.y,overlay.now);\n   continue;\n  }\n  if(layer.type==='bus'){\n   const pos=P(layer.bus.x,layer.bus.y);\n   drawBus(ctx,layer.bus,pos.x,pos.y);\n   continue;\n  }\n"
+      }
+    ],
+    "scripts/check-production-gate.mjs": [
+      {
+        "label": "scripts/check-production-gate.mjs original lines 119-118",
+        "before": "  ['Zeffi World residents and comfort', 'node', ['--test','world/tests/citizens.test.mjs']],\n  ['game task reward engine', 'node', ['scripts/check-game-task-reward-engine.mjs']],\n",
+        "after": "  ['Zeffi World residents and comfort', 'node', ['--test','world/tests/citizens.test.mjs']],\n  ['Zeffi World city life and buses', 'node', ['--test','world/tests/city-life.test.mjs']],\n  ['game task reward engine', 'node', ['scripts/check-game-task-reward-engine.mjs']],\n"
+      }
+    ],
+    "scripts/check-world-integration.mjs": [
+      {
+        "label": "scripts/check-world-integration.mjs original lines 13-13",
+        "before": "const ignore=read('.assetsignore');\nconst modules=['app.js','engine.js','renderer.js','catalog.js','economy.js','ru.js','sprite-assets.js','sprite-manifest.js','world.css'];\nfor(const f of modules) assert(fs.existsSync(path.join(root,'world',f)),`missing runtime ${f}`);\n",
+        "after": "const ignore=read('.assetsignore');\nconst modules=['app.js','engine.js','renderer.js','catalog.js','economy.js','ru.js','sprite-assets.js','sprite-manifest.js','citizens.js','traffic.js','world.css'];\nfor(const f of modules) assert(fs.existsSync(path.join(root,'world',f)),`missing runtime ${f}`);\n"
+      }
+    ]
+  },
+  "strict_old_sha256": {
+    "world/citizens.js": "3ea110c0a964b0aa7e9c3d080671c357e75f915d886f37de1492024f15b09450"
+  }
+}

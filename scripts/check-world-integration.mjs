@@ -10,7 +10,7 @@ const entry=read('index.html');
 const world=read('world.html');
 const sandbox=read('world/index.html');
 const ignore=read('.assetsignore');
-const modules=['app.js','engine.js','renderer.js','catalog.js','economy.js','ru.js','sprite-assets.js','sprite-manifest.js','world.css'];
+const modules=['app.js','engine.js','renderer.js','catalog.js','economy.js','ru.js','sprite-assets.js','sprite-manifest.js','citizens.js','traffic.js','world.css'];
 for(const f of modules) assert(fs.existsSync(path.join(root,'world',f)),`missing runtime ${f}`);
 assert(entry.includes('data-srcdoc="'),'runner iframe missing');
 assert(entry.includes('" title="Сладкий Забег"></iframe>'),'runner iframe boundary missing');

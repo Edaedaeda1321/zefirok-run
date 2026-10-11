@@ -1,6 +1,7 @@
 import { dims, keyOf, connectedRoads, isObjectConnected, checkPlacement, isConstructing, rotateLocalPoint, expansionCandidates, PARCEL_SIZE } from './engine.js';
 import { drawSprite, drawCatalogSprite, catalogSpriteId, fallbackSpriteId, buildingAssetId, parkConstructionAssetId, roadMaskId, spriteMetadata } from './sprite-assets.js';
 import { drawCitizen } from './citizens.js';
+import { drawBus } from './traffic.js';
 
 export const TILE_W = 72;
 export const TILE_H = 36;
@@ -753,15 +754,35 @@ export function drawWorld(canvas,city,catalog,cam,overlay={}) {
   const def=catalog[item.kind];
   return {type:'object',item,depth:worldObjectPainterDepth(item,def)};
  });
+ const activityObjects=new Map(city.objects.filter(o=>!o.stored).map(o=>[o.uid,o]));
  for(const person of overlay.citizens||[]){
   if(person.x<viewport.minX-2||person.y<viewport.minY-2||person.x>viewport.maxX+2||person.y>viewport.maxY+2)continue;
-  layers.push({type:'citizen',person,depth:person.x+person.y});
+  let depth=person.x+person.y;
+  if(['bench','play','fountain','park'].includes(person.action)&&person.venueUid){
+   // A resident playing on a raised playground must be painted OVER its
+   // podium, rather than disappearing behind the park asset silhouette.
+   const venue=activityObjects.get(person.venueUid);
+   if(venue&&catalog[venue.kind])depth=Math.max(depth,worldObjectPainterDepth(venue,catalog[venue.kind])+.05);
+  }
+  layers.push({type:'citizen',person,depth});
  }
- layers.sort((a,b)=>a.depth-b.depth||(a.type==='citizen'?-1:1));
+ for(const bus of overlay.buses||[]){
+  if(bus.x<viewport.minX-2||bus.y<viewport.minY-2||bus.x>viewport.maxX+2||bus.y>viewport.maxY+2)continue;
+  layers.push({type:'bus',bus,depth:bus.x+bus.y});
+ }
+ // At an equal ground depth, structures go first, then vehicles and people.
+ // Sitting people can be seen above a bench without raising the whole sprite.
+ const typeDepth={object:0,bus:1,citizen:2};
+ layers.sort((a,b)=>a.depth-b.depth||typeDepth[a.type]-typeDepth[b.type]);
  for(const layer of layers){
   if(layer.type==='citizen'){
    const pos=P(layer.person.x,layer.person.y);
    drawCitizen(ctx,layer.person,pos.x,pos.y,overlay.now);
+   continue;
+  }
+  if(layer.type==='bus'){
+   const pos=P(layer.bus.x,layer.bus.y);
+   drawBus(ctx,layer.bus,pos.x,pos.y);
    continue;
   }
   const item=layer.item;

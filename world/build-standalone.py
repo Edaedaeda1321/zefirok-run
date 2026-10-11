@@ -25,6 +25,13 @@ for filename in ('economy.js','catalog.js','ru.js','engine.js','sprite-manifest.
         # Avoid same-named module-private hash() from renderer.js in the inline bundle.
         s=re.sub(r'\bhash\(', 'citizenHash(', s)
     if filename=='app.js':
+        # Reuse the exact same WebP as the season pass. Offline HTML must inline
+        # it so the lock also works over file:// without network access.
+        lock_path=ROOT.parent/'assets/ui/icon_closed.webp'
+        lock_token="'../assets/ui/icon_closed.webp'"
+        if s.count(lock_token)!=1:
+            raise ValueError('Expected one shop lock icon reference in app.js')
+        s=s.replace(lock_token,"'data:image/webp;base64,"+base64.b64encode(lock_path.read_bytes()).decode('ascii')+"'")
         # Offline proof avoids blocking on upfront decode of 100+ embedded images;
         # real web entries retain full fail-safe sprite preload.
         s=s.replace('}else void bootLocalArt();', '}else {state.visualsReady=true;refreshArt();}')

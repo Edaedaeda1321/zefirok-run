@@ -116,6 +116,7 @@ const steps = [
   ['Zeffi World wiring', 'node', ['scripts/check-world-api-wiring.mjs']],
   ['Zeffi World shared D1', 'node', ['--no-warnings','--experimental-sqlite','scripts/check-zeffi-world-integration.mjs']],
   ['Zeffi World residents and comfort', 'node', ['--test','world/tests/citizens.test.mjs']],
+  ['Zeffi World city life and buses', 'node', ['--test','world/tests/city-life.test.mjs']],
   ['game task reward engine', 'node', ['scripts/check-game-task-reward-engine.mjs']],
   ['P1 read paths', 'node', ['scripts/check-p1-read-paths.mjs']],
   ['P2 hardening', 'node', ['scripts/check-p2-hardening.mjs']]
