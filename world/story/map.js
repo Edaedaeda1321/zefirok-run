@@ -23,18 +23,28 @@ export const isPlaceOpen=(place,state)=>state.chapter>=place.chapter;
 export const lockedDistricts=state=>DISTRICTS.filter(d=>!isPlaceOpen(d,state));
 const contains=(b,x,y)=>x>=b[0]&&y>=b[1]&&x<b[0]+b[2]&&y<b[1]+b[3];
 export function buildStoryMap(state, now=Date.now()) {
- const city={version:2,size:STORY_MAP_SIZE,parcels:[],wallet:{points:0,coffee:0,treats:0},progress:{bestLevel:1,claimedLevels:[]},nextId:1,roads:[],lockedRoads:['7,13'],objects:[]};
- const roads=new Set();
- function line(x1,y1,x2,y2) {
+ const city={version:2,size:STORY_MAP_SIZE,parcels:[],wallet:{points:0,coffee:0,treats:0},progress:{bestLevel:1,claimedLevels:[]},nextId:1,roads:[],busRoads:[],lockedRoads:['7,13'],objects:[]};
+ const roads=new Set(),busRoads=new Set();
+ function line(target,x1,y1,x2,y2) {
   if(x1!==x2&&y1!==y2)throw new Error('Story road must be orthogonal');
   const dx=Math.sign(x2-x1),dy=Math.sign(y2-y1);let x=x1,y=y1;
-  for(;;){roads.add(keyOf(x,y));if(x===x2&&y===y2)break;x+=dx;y+=dy;}
+  for(;;){target.add(keyOf(x,y));if(x===x2&&y===y2)break;x+=dx;y+=dy;}
  }
- for(const y of [13,19,31,39])line(7,y,41,y);
- line(7,13,7,39);line(19,7,19,41);line(31,8,31,39);
- line(13,25,13,39);line(19,23,31,23);line(19,26,31,26);line(23,23,23,29);
- if(state.chapter>=2)line(31,28,40,28);
+ for(const y of [13,19,31,39])line(roads,7,y,41,y);
+ line(roads,7,13,7,39);line(roads,19,7,19,41);line(roads,31,8,31,39);
+ line(roads,13,25,13,39);line(roads,19,23,31,23);line(roads,19,26,31,26);line(roads,23,23,23,29);
+ if(state.chapter>=2)line(roads,31,28,40,28);
+ // Dedicated asphalt lane for public transport in the shared story city.
+ // It is visual + routing-only and stays separate from the pedestrian paths.
+ // The line deliberately avoids decorative objects so routing stays connected.
+ line(busRoads,15,14,15,17);
+ line(busRoads,15,17,31,17);
+ line(busRoads,19,17,19,33);
+ line(busRoads,12,33,19,33);
+ line(busRoads,31,17,31,35);
+ line(busRoads,31,35,38,35);
  city.roads=[...roads];
+ city.busRoads=[...busRoads];
  const occupied=new Set(roads);let sequence=0;
  function place(kind,x,y,rotation=0,uid='',extra={},optional=false) {
   const def=CATALOG[kind];if(!def)throw new Error('Missing catalog item '+kind);
@@ -74,9 +84,18 @@ export function buildStoryMap(state, now=Date.now()) {
  return city;
 }
 export function validateStoryMap(city) {
- const occupied=new Set(),roads=new Set(city.roads),connected=connectedRoads(city),errors=[];
+ const occupied=new Set(),roads=new Set(city.roads),connected=connectedRoads(city),busRoads=new Set(city.busRoads||[]),errors=[];
  if(city.size!==STORY_MAP_SIZE)errors.push('wrong map size');
  if(connected.size!==roads.size)errors.push('disconnected roads');
+ if(busRoads.size){
+  const queue=[...[...busRoads].slice(0,1)],seen=new Set(queue);
+  const dirs=[[1,0],[-1,0],[0,1],[0,-1]];
+  for(let i=0;i<queue.length;i++)for(const [dx,dy] of dirs){
+   const [x,y]=queue[i].split(',').map(Number),next=keyOf(x+dx,y+dy);
+   if(busRoads.has(next)&&!seen.has(next)){seen.add(next);queue.push(next);}
+  }
+  if(seen.size!==busRoads.size)errors.push('disconnected bus roads');
+ }
  const uids=new Set();
  for(const item of city.objects){
   if(uids.has(item.uid))errors.push('duplicate uid '+item.uid);uids.add(item.uid);

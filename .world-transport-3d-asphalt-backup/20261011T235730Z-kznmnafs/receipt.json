@@ -1,0 +1,25 @@
+{
+  "version": "world-transport-3d-asphalt-1.0.0",
+  "files": [
+    {
+      "path": "world/traffic.js",
+      "before_sha256": "114e2893367d4747aa6b8933c53540373a2126c3918c4aca0a5c97288dee7cc5",
+      "after_sha256": "f3d82da3d541e5f858a4355833ab10359b1a38f66ba1440b6ec1aa59ce3ddef4"
+    },
+    {
+      "path": "world/renderer.js",
+      "before_sha256": "5db248526749c1aa704ff9654fe9eacbf80f37ae99f346f15e62c8e445febe1b",
+      "after_sha256": "5a32d3d7291ac4c7fe44f6e667a7781757b8eecf8e40709bca64ecffdd08e96b"
+    },
+    {
+      "path": "world/story/map.js",
+      "before_sha256": "7e445658e8e4da2c7fc9cb7a33f3a1869f050811ba9db6c7feae019c1fedf896",
+      "after_sha256": "4428e1e342e038710b3da1165fc382891423531dadb6a15ae4fb07735d6844f2"
+    },
+    {
+      "path": "world/tests/story-world-v1.test.mjs",
+      "before_sha256": "b4e187dbd44e71c46822c20975774759a1f6a58d8d15e0917290158faeff6028",
+      "after_sha256": "7c77ba142fa1754ba7e186aabc176420785b47232894cbcb8a526dfea8cd2214"
+    }
+  ]
+}

@@ -237,6 +237,7 @@ function drawLandscape(ctx,city,catalog,viewport){
 // doubles their 3D ledges at turns, junctions, and building entrances.
 // Tiles and connectors are computed once each; the top is one shared plane.
 export const ROAD_HALF_WIDTH = .38;
+export const BUS_ROAD_HALF_WIDTH = .46;
 export function worldRoadTopology(roadIds){
  const roadSet=new Set(roadIds);
  const cells=[],joins=[];
@@ -248,10 +249,9 @@ export function worldRoadTopology(roadIds){
  }
  return {cells,joins};
 }
-function worldRoadUnionPath(ctx,cells,joins){
+function worldRoadUnionPath(ctx,cells,joins,half=ROAD_HALF_WIDTH){
  // Narrowed slightly inside each logical road tile. Building bases remain on
  // their own tiles, with a narrow grassy clearance near the footpath.
- const half=ROAD_HALF_WIDTH;
  const shape=(coords)=>{
   const pts=coords.map(([u,v])=>P(u,v));
   ctx.moveTo(pts[0].x,pts[0].y);
@@ -303,6 +303,45 @@ function drawRoads(ctx, city, viewport){
  }
  ctx.restore();
 }
+
+function drawBusRoads(ctx, city, viewport){
+ const topology=worldRoadTopology(city.busRoads||[]);
+ const inView=({x,y})=>x>=viewport.minX-1&&y>=viewport.minY-1&&x<=viewport.maxX+1&&y<=viewport.maxY+1;
+ const cells=topology.cells.filter(inView);
+ if(!cells.length)return;
+ const joins=topology.joins.filter(inView);
+ ctx.save();
+ ctx.beginPath();worldRoadUnionPath(ctx,cells,joins,BUS_ROAD_HALF_WIDTH);
+ ctx.save();ctx.translate(0,4);ctx.fillStyle='#686d74';ctx.fill();ctx.restore();
+ ctx.fillStyle='#3d444d';ctx.fill();
+ ctx.save();ctx.clip();
+ for(const {x,y} of cells){
+  const c=P(x+.5,y+.5);
+  ellipse(ctx,c.x,c.y,16,6.6,'rgba(255,255,255,.05)');
+  for(let i=0;i<4;i++){
+   const u=x+i*.25+.032,v=y+.06+((i%2)*.03);
+   const p1=P(u,v),p2=P(u+.19,v+.19),p3=P(u+.44,v+.44),p4=P(u+.69,v+.69);
+   // soft asphalt grain; fixed in world space
+   ellipse(ctx,p1.x,p1.y,1.9,0.7,'rgba(255,255,255,.030)');
+   ellipse(ctx,p2.x,p2.y,1.8,0.65,'rgba(255,255,255,.022)');
+   ellipse(ctx,p3.x,p3.y,1.6,0.55,'rgba(0,0,0,.035)');
+   ellipse(ctx,p4.x,p4.y,1.5,0.5,'rgba(255,255,255,.018)');
+  }
+ }
+ ctx.restore();
+ // Light edge highlight to keep the asphalt road premium and readable.
+ ctx.beginPath();worldRoadUnionPath(ctx,cells,joins,BUS_ROAD_HALF_WIDTH);
+ ctx.lineWidth=1.4;ctx.strokeStyle='rgba(255,243,225,.44)';ctx.stroke();
+ // dashed center line drawn on long straight connections only
+ ctx.save();
+ ctx.strokeStyle='rgba(255,240,196,.9)';ctx.lineWidth=1.6;ctx.setLineDash([8,8]);ctx.lineCap='round';
+ for(const {x,y,axis} of joins){
+  const mid=P(x+.5,y+.5),end=axis==='x'?P(x+1.5,y+.5):P(x+.5,y+1.5);
+  ctx.beginPath();ctx.moveTo(mid.x,mid.y);ctx.lineTo(end.x,end.y);ctx.stroke();
+ }
+ ctx.restore();
+}
+
 function shadow(ctx,pts){const center=pts.reduce((p,q)=>({x:p.x+q.x/pts.length,y:p.y+q.y/pts.length}),{x:0,y:0});ellipse(ctx,center.x,center.y+8,Math.max(17,Math.abs(pts[1].x-pts[3].x)*.49),11,'rgba(75,112,79,.21)');}
 function drawTree(ctx,x,y,size=1,variant=0){
   const p=P(x,y);
@@ -744,6 +783,7 @@ export function drawWorld(canvas,city,catalog,cam,overlay={}) {
   if(overlay.selectedUid===item.uid)drawOutline(ctx,item,catalog,'#fffad7',3.5);
  }
  drawRoads(ctx,city,viewport);
+ drawBusRoads(ctx,city,viewport);
  const connected=connectedRoads(city);
  // Isometric objects are sorted by their *ground footprint center*, not
  // their farthest south corner. The old south-corner value made a person
