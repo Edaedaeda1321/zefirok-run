@@ -16,7 +16,8 @@ const target={
 };
 
 test('style pack contributes 40 independent images in 10 groups, not missing terrain',()=>{
- assert.equal(SPRITE_MANIFEST.assets.length,365);
+ assert.equal(SPRITE_MANIFEST.assets.filter(a=>a.packId!=='park-belkino-story-v1').length,365);
+ assert.equal(SPRITE_MANIFEST.assets.filter(a=>a.packId==='park-belkino-story-v1').length,4);
  assert.equal(flower.length,40);
  assert.equal(CATALOG_ITEMS.length,49);
  assert.deepEqual(new Set(flower.map(a=>a.catalogId)),new Set(Object.keys(target)));

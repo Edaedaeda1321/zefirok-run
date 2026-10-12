@@ -8,6 +8,7 @@
  <meta name="robots" content="noindex,nofollow" />
  <title>Мир Зеффи — общий город · v1</title>
  <link rel="stylesheet" href="./story/style.css?v=1" />
+ <script id="zeffi-story-embedded-safearea">try{if(window.parent!==window||window.Telegram?.WebApp)document.documentElement.classList.add('zeffi-story-embedded');}catch(_){}</script>
 </head>
 <body>
  <main class="access-screen" id="accessGate" aria-live="polite">
@@ -26,6 +27,10 @@
    <div class="brand-copy"><span class="eyebrow">МИР ЗЕФФИ</span><h1>Общий город</h1></div>
    <button id="modeBadge" class="mode-badge" type="button">V1 · ТЕСТ</button>
   </header>
+  <nav class="world-mode-bar" aria-label="Режимы Мира Зеффи">
+   <span class="world-mode-current" aria-current="page">Общий город</span>
+   <button id="openPersonalCity" class="world-mode-link" type="button" aria-label="Открыть свой личный район для тестирования">Мой район <span aria-hidden="true">↗</span></button>
+  </nav>
   <div class="demo-notice"><span class="notice-dot"></span><span id="demoNotice">Локальный тест. Реальные валюты не списываются.</span></div>
   <nav class="district-strip" id="districtStrip" aria-label="Быстрый переход в район"></nav>
   <section class="map-zone" id="mapZone" aria-label="Сюжетная карта 48 на 48 клеток">

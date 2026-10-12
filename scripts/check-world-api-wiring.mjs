@@ -39,8 +39,9 @@ assert(main.includes('Мир Зеффи ещё строится!'));
 assert(world.includes('const enabled=local;'), 'normal hosted /world.html stays locked');
 assert(world.includes("get('world_tester')==='1'"), 'tester route explicitly requested');
 assert(world.includes('async function isAuthorizedTester()'), 'hosted city must check server authorization');
-assert(world.includes('payload?.ok===true&&payload?.serverAuthoritative===true'), 'server authorization required before city modules');
-assert(world.includes('if(testerRequest&&await isAuthorizedTester()){launchCity();return;}'), 'no city before server approval');
+assert(world.includes('personal.payload?.serverAuthoritative===true') && world.includes("request('/api/world/state')"), 'signed server-authoritative personal city remains guarded');
+assert(world.includes("request('/api/world/story-access')") && world.includes("story.payload?.access==='tester'") && world.includes('story.payload?.walletWrites===false'), 'local personal sandbox requires a second signed tester-only read-only gate');
+assert(world.includes('const testerAccess=testerRequest?await isAuthorizedTester():null;') && world.includes('if(testerAccess){launchCity(testerAccess);return;}') && world.includes('window.ZeffiWorldServerRequired=access.server===true'), 'both tester personal modes require authorization before modules');
 assert(world.includes('event.source!==window.parent||event.origin!==location.origin'), 'World auth messages must be same-origin parent');
 // The personal-city iframe keeps its original guarded entry. An allowlisted
 // tester now enters the *separate* read-only story world instead of requiring

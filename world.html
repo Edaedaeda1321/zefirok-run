@@ -16,6 +16,11 @@
   <title>Мир Зеффи — Песочница 0.1.13</title>
   <link rel="stylesheet" href="./world.css" />
   <link rel="stylesheet" href="./premium-ui.css" />
+  <style id="zeffi-dual-world-tester-style">
+   [hidden]{display:none!important}
+   .world-tester-sandbox-note{padding:6px 12px;flex:0 0 auto;font:700 10px/1.35 system-ui,-apple-system,sans-serif;text-align:center;letter-spacing:.01em;color:#8b5a75;background:#fff2df;border-bottom:1px solid #ead4c4}
+   @media(max-width:480px){.world-tester-sandbox-note{padding:5px 8px;font-size:9px}}
+  </style>
   <script id="zeffi-world-preview-access">
     (()=>{
       const local=location.protocol==='file:'||/^(localhost|127\.0\.0\.1|\[::1\])$/i.test(location.hostname);
@@ -52,21 +57,37 @@
       }
       async function isAuthorizedTester(){
         const initData=await acquireTelegramInitData();
-        if(!initData)return false;
+        if(!initData)return null;
         const controller=new AbortController();
-        const timer=setTimeout(()=>controller.abort(),8000);
-        try{
-          const response=await fetch('/api/world/state',{
+        const timer=setTimeout(()=>controller.abort(),9000);
+        const request=async path=>{
+          const response=await fetch(path,{
             method:'POST',headers:{'Content-Type':'application/json'},
             credentials:'same-origin',cache:'no-store',signal:controller.signal,
             body:JSON.stringify({initData})
           });
-          if(!response.ok)return false;
-          const payload=await response.json();
-          return payload?.ok===true&&payload?.serverAuthoritative===true;
-        }catch{return false;}finally{clearTimeout(timer);}
+          const payload=await response.json().catch(()=>null);
+          return {response,payload};
+        };
+        try{
+          // Existing D1-authoritative personal city keeps all its existing server gates.
+          // When WORLD_ENABLED is disabled, do not enable real wallet operations.
+          const personal=await request('/api/world/state').catch(()=>null);
+          if(personal?.response.ok && personal.payload?.ok===true && personal.payload?.serverAuthoritative===true)
+            return {server:true};
+          // Deliberately isolated sandbox, available only when the signed story gate approves.
+          const story=await request('/api/world/story-access');
+          if(story.response.ok && story.payload?.ok===true && story.payload?.access==='tester' &&
+             story.payload?.mode==='local-demo' && story.payload?.walletWrites===false)
+            return {server:false};
+          return null;
+        }catch{return null;}finally{clearTimeout(timer);}
       }
-      function launchCity(){
+      function launchCity(access={server:false}){
+        window.ZeffiWorldServerRequired=access.server===true;
+        window.ZeffiWorldPreviewAllowed=!window.ZeffiWorldServerRequired;
+        window.ZeffiWorldTesterPersonalSandbox=!window.ZeffiWorldServerRequired;
+        document.getElementById('worldTesterLocalNotice').hidden=window.ZeffiWorldServerRequired;
         document.documentElement.classList.add('zeffi-world-ready');
         const script=document.createElement('script');script.type='module';script.src='./app.js';
         script.addEventListener('load',()=>{
@@ -79,7 +100,8 @@
       }
       document.addEventListener('DOMContentLoaded',async()=>{
         if(!enabled){
-          if(testerRequest&&await isAuthorizedTester()){launchCity();return;}
+          const testerAccess=testerRequest?await isAuthorizedTester():null;
+          if(testerAccess){launchCity(testerAccess);return;}
           // Everyone without a signed, allowlisted Telegram session gets only
           // this static teaser, not city modules or wallet operations.
           document.title='Мир Зеффи — скоро открытие';
@@ -127,6 +149,7 @@
    <button type="button" class="world-nav__disabled" id="commonButton"><svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 20v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 20v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg><span data-t="commonWorld"></span> <small data-t="commonLater"></small></button>
    <div class="nav-notice" title="Состояние синхронизации"><span class="notice-dot"></span><span id="saveStatus" data-t="local"></span><svg class="status-icon" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 5 5L20 7"/></svg></div>
   </nav>
+  <div id="worldTesterLocalNotice" class="world-tester-sandbox-note" hidden>МОЙ РАЙОН · ТЕСТОВАЯ ПЕСОЧНИЦА · сохраняется только в этом браузере · реальные валюты не списываются</div>
   <section class="map-zone" aria-label="City builder area" id="mapZone">
    <canvas id="worldCanvas" aria-label="Isometric construction map" tabindex="0"></canvas>
    <div class="map-glow" aria-hidden="true"></div>

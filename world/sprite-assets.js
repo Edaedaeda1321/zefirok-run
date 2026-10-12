@@ -6,6 +6,7 @@ import { SPRITE_MANIFEST } from './sprite-manifest.js';
 const manifestById = new Map(SPRITE_MANIFEST.assets.map(asset => [asset.id, asset]));
 const buildingNames = new Map(SPRITE_MANIFEST.buildingCompatibility.map(item => [item.catalogId, item.buildingId]));
 const extraDirectional = new Map(SPRITE_MANIFEST.assets.filter(a=>a.packId==='extra-v1'&&a.facing).map(a=>[`${a.catalogId}:${a.facing}`,a.id]));
+const storyParkDirectional = new Map(SPRITE_MANIFEST.assets.filter(a=>a.packId==='park-belkino-story-v1'&&a.facing).map(a=>[`${a.catalogId}:${a.facing}`,a.id]));
 const landmarkDirectional = new Map(SPRITE_MANIFEST.assets.filter(a=>a.packId==='white-rabbit-zephirok-review-v1'&&a.facing).map(a=>[`${a.catalogId}:${a.facing}`,a.id]));
 const flowerDirectional = new Map(SPRITE_MANIFEST.assets.filter(a=>a.packId==='flower-style-v1'&&a.facing).map(a=>[`${a.catalogId}:${a.facing}`,a.id]));
 // Extra-v1 catalog variants represent the SAME city items as the four
@@ -73,6 +74,8 @@ export function decorAssetId(catalogId, rotation = 0, variation = 0) {
 export function fallbackSpriteId(kind, rotation=0, state='complete', variation=0) {
  if(state==='complete'){
   const direction=FACINGS[((rotation%4)+4)%4];
+  const storyPark=storyParkDirectional.get(`${kind}:${direction}`);
+  if(storyPark)return storyPark;
   const landmark=landmarkDirectional.get(`${kind}:${direction}`);
   if(landmark)return landmark;
   const extra=extraDirectional.get(`${kind}:${direction}`);

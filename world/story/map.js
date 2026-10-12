@@ -3,11 +3,14 @@ import { CATALOG } from '../catalog.js';
 import { dims, keyOf, connectedRoads, isObjectConnected } from '../engine.js';
 import { projectStatus } from './model.js';
 export const STORY_MAP_SIZE=48;
+// Static 9x9 story landmark: never registered in the live shop or server catalog.
+export const STORY_PARK_BELKINO_KIND='story-park-belkino';
+export const STORY_CATALOG=Object.freeze({...CATALOG,[STORY_PARK_BELKINO_KIND]:Object.freeze({id:STORY_PARK_BELKINO_KIND,category:'parks',titleKey:'pondPark',descriptionKey:'pondParkDescription',icon:'leaf',w:9,h:9,needsRoad:false,style:'park',height:0,buildMs:0})});
 export const MAP_VERSION='zeffi-story-map-v1';
 export const DISTRICTS=Object.freeze([
  {id:'square',title:'Центральная площадь',short:'Площадь',icon:'spark',focus:[25,25],bounds:[19,19,13,13],chapter:0,kind:'fountain',description:'Сердце общего города: встречи, прогулки и будущие сюжетные сцены.'},
  {id:'cafe',title:'Кафе «Зефирок»',short:'Зефирок',icon:'coffee',focus:[10.1,11.4],bounds:[7,7,11,12],chapter:0,kind:'white-rabbit-zephirok',description:'Кафе-кондитерская «Зефирок» находится в одном здании с «Белым Кроликом».'},
- {id:'belkino',title:'Парк Белкино',short:'Белкино',icon:'leaf',focus:[11.5,29],bounds:[7,24,11,15],chapter:0,kind:'pond-park',description:'Тихие дорожки, пруд и цветы. В этой части карты предусмотрено место для истории «Тайны Белкино».'},
+ {id:'belkino',title:'Парк Белкино',short:'Белкино',icon:'leaf',focus:[12.5,26.5],bounds:[7,21,11,18],chapter:0,kind:STORY_PARK_BELKINO_KIND,description:'Большой парк с ротондой у пруда, зелёными фигурами, историческими руинами и прогулочными дорожками. Здесь запланирована история «Тайны Белкино».'},
  {id:'friends',title:'Квартал друзей',short:'Друзья',icon:'home',focus:[33,11],bounds:[27,6,15,12],chapter:0,kind:'cottage',description:'Уютный жилой квартал. Будущие участки персонажей пока не закреплены за героями: их откроем вместе с сюжетом.'},
  {id:'station',title:'Городская станция',short:'Станция',icon:'bus',focus:[36,37],bounds:[33,33,11,10],chapter:0,kind:'bus-terminal',description:'Автобусы связывают кафе, центральную часть города и парк. Это декоративный транспорт: без билетов и списаний.'},
  {id:'festival',title:'Площадка событий',short:'События',icon:'flag',focus:[25,36],bounds:[21,33,9,6],chapter:1,kind:'city-square',description:'Место будущих событий. В v1 можно посмотреть открытие площадки в тестовом сценарии, но активных событий и наград здесь ещё нет.'},
@@ -35,6 +38,11 @@ export function buildStoryMap(state, now=Date.now()) {
  for(const y of [13,19,31,39])line(roads,7,y,41,y);
  line(roads,7,13,7,39);line(roads,19,7,19,41);line(roads,31,8,31,39);
  line(roads,13,25,13,39);line(roads,19,23,31,23);line(roads,19,26,31,26);line(roads,23,23,23,29);
+ // The 9x9 park fills x=8..16,y=22..30. Remove only the interior
+ // dead-end spur; the southern pedestrian corridor at y=31 is retained.
+ for(let y=25;y<=30;y++)roads.delete(keyOf(13,y));
+ // The eastern edge has a walkable sidewalk. Buses remain on x=18 asphalt.
+ line(roads,17,22,17,31);
  if(state.chapter>=2)line(roads,31,28,40,28);
  // Dedicated asphalt lane for public transport in the shared story city.
  // It is visual + routing-only and stays separate from the pedestrian paths.
@@ -58,7 +66,7 @@ export function buildStoryMap(state, now=Date.now()) {
  }
  const occupied=new Set([...roads,...busRoads]);let sequence=0;
  function place(kind,x,y,rotation=0,uid='',extra={},optional=false) {
-  const def=CATALOG[kind];if(!def)throw new Error('Missing catalog item '+kind);
+  const def=STORY_CATALOG[kind];if(!def)throw new Error('Missing catalog item '+kind);
   const {w,h}=dims(def,rotation),cells=[];
   for(let xx=x;xx<x+w;xx++)for(let yy=y;yy<y+h;yy++){
    if(xx<0||yy<0||xx>=STORY_MAP_SIZE||yy>=STORY_MAP_SIZE||occupied.has(keyOf(xx,yy))){if(optional)return false;throw new Error(`Story overlap: ${kind} at ${xx},${yy}`);}
@@ -73,8 +81,10 @@ export function buildStoryMap(state, now=Date.now()) {
  place('villa',34,14);place('flower-shop',38,14);place('bus-stop',29,16,0,'story-stop-square');
  place('city-square',20,20);place('coffee-kiosk',27,21);place('fountain',24,24,0,'story-fountain');
  place('monument',27,28);place('flower-shop',20,27);
- place('pond-park',8,27,0,'story-pond');place('playground',14,27);place('garden',8,34);
- place('coffee-kiosk',8,21);place('bus-stop',11,32,0,'story-stop-park');
+ // One large authored park replaces the old tiny pond and the internal
+ // playground; keep a public playground south of the walking path instead.
+ place(STORY_PARK_BELKINO_KIND,8,22,0,'story-pond');place('playground',10,37);place('garden',8,34);
+ place('coffee-kiosk',8,20);place('bus-stop',11,32,0,'story-stop-park');
  place('bus-terminal',34,36,0,'story-terminal');place('family-home',38,32);place('cottage',38,40);
  if(state.chapter>=1){place('city-square',25,35,0,'story-festival');place('extra-arch',24,34);place('flowerbed',28,38);}
  // No second White Rabbit villa: both places point to story-cafe.
@@ -83,7 +93,7 @@ export function buildStoryMap(state, now=Date.now()) {
  if(status!=='funding')place('garden',14,34,0,'story-community-garden',status==='building'?{buildStartedAt:state.project.startedAt,buildReadyAt:state.project.readyAt}:{});
  // Keep the future project's footprint reserved even during funding.
  if(status==='funding')for(let x=14;x<17;x++)for(let y=34;y<37;y++)occupied.add(keyOf(x,y));
- const furnishings=[['bench',22,24],['bench',26,25],['bench',25,27],['lamp',21,24],['lamp',29,24],['flowerbed',26,24],['flowerbed',24,27],['bench',12,27],['bench',12,35],['bench',17,32],['lamp',17,12],['lamp',10,14],['bench',14,14],['flowerbed',17,15],['lamp',30,18],['bench',33,38],['lamp',40,38],['flowerbed',32,18]];
+ const furnishings=[['bench',22,24],['bench',26,25],['bench',25,27],['lamp',21,24],['lamp',29,24],['flowerbed',26,24],['flowerbed',24,27],['bench',12,35],['bench',17,32],['lamp',17,12],['lamp',10,14],['bench',14,14],['flowerbed',17,15],['lamp',30,18],['bench',33,38],['lamp',40,38],['flowerbed',32,18]];
  for(const [kind,x,y]of furnishings)place(kind,x,y,0,'',{},true);
  const closed=lockedDistricts(state);
  for(let x=4;x<44;x+=2)for(let y=4;y<44;y+=2){
@@ -111,7 +121,7 @@ export function validateStoryMap(city) {
  const uids=new Set();
  for(const item of city.objects){
   if(uids.has(item.uid))errors.push('duplicate uid '+item.uid);uids.add(item.uid);
-  const def=CATALOG[item.kind];if(!def){errors.push('missing kind '+item.kind);continue;}
+  const def=STORY_CATALOG[item.kind];if(!def){errors.push('missing kind '+item.kind);continue;}
   const {w,h}=dims(def,item.rotation);
   for(let x=item.x;x<item.x+w;x++)for(let y=item.y;y<item.y+h;y++){
    const key=keyOf(x,y);
@@ -119,7 +129,7 @@ export function validateStoryMap(city) {
    if(roads.has(key)||busRoads.has(key)||occupied.has(key))errors.push('overlap '+key);
    occupied.add(key);
   }
-  if(def.needsRoad && !isObjectConnected(item,city,CATALOG,connected,0))errors.push('no road '+item.uid);
+  if(def.needsRoad && !isObjectConnected(item,city,STORY_CATALOG,connected,0))errors.push('no road '+item.uid);
  }
  const crossings=new Map((city.crosswalks||[]).map(c=>[c.id,c]));
  for(const id of busRoads){

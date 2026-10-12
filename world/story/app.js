@@ -1,4 +1,5 @@
-import { CATALOG } from '../catalog.js';
+// The story-only 9x9 landmark is not part of the live shop/server catalog.
+import { STORY_CATALOG as CATALOG } from './map.js';
 import { drawWorld, isoToScreen } from '../renderer.js';
 import { preloadSpriteSet, onSpriteUpdate, spriteStatus } from '../sprite-assets.js';
 import { buildCitizenScene, sampleCitizenScene } from '../citizens.js';
@@ -74,7 +75,7 @@ export async function startStoryWorld({mode='standalone'}={}) {
  }
  function focusPlace(id,overview=false){
   const place=placeById(id)||placeById('square');refreshFocus(place.id);
-  const target=centerCamera(...place.focus,overview?(size.width<650?.29:.48):(size.width<650?.95:1.02));
+  const target=centerCamera(...place.focus,overview?(size.width<650?.29:.48):place.id==='belkino'?(size.width<650?.60:.76):(size.width<650?.95:1.02));
   tween=paused||reduce.matches?null:{from:{...cam},to:target,start:performance.now()};
   if(!tween)cam=target;
   $('mapHint').style.opacity='0';layoutDirty=true;schedule();
@@ -87,7 +88,7 @@ export async function startStoryWorld({mode='standalone'}={}) {
   const ctx=overlay.getContext('2d');ctx.setTransform(dpr,0,0,dpr,0,0);ctx.clearRect(0,0,size.width,size.height);
   for(const place of PLACES){
    const button=markerElements.get(place.id),pt=isoToScreen(...place.focus,size,cam);
-   const rise=isPlaceOpen(place,state)?(place.id==='community-garden'?52:75)*cam.zoom:46*cam.zoom;
+   const rise=isPlaceOpen(place,state)?(place.id==='belkino'?195:place.id==='community-garden'?52:75)*cam.zoom:46*cam.zoom;
    const y=pt.y-rise;
    button.hidden=pt.x<55||pt.x>size.width-52||y<100||y>size.height-125;
    button.style.left=`${pt.x}px`;button.style.top=`${y}px`;
@@ -204,6 +205,7 @@ export async function startStoryWorld({mode='standalone'}={}) {
  listen(panel,'click',e=>{if(e.target===panel){const b=panel.getBoundingClientRect();if(e.clientX<b.left||e.clientX>b.right||e.clientY<b.top||e.clientY>b.bottom)closePanel();}});
  listen($('modeBadge'),'click',()=>openPanel('test'));listen($('projectBanner'),'click',()=>openPanel('project'));
  listen($('returnWorld'),'click',()=>{if(mode==='standalone'){openPanel('test');toast('Это автономная сборка общего мира. Личный город здесь не загружается.');}else if(window.parent!==window)window.parent.postMessage({type:'zefirok-world-close'},location.origin);else location.assign(new URL('../',document.baseURI).href);});
+ listen($('openPersonalCity'),'click',()=>{if(mode==='standalone'){openPanel('test');toast('Личный район доступен в Telegram после входа тестером.');return;}location.assign(new URL('../world.html?world_tester=1',document.baseURI).href);});
  listen(document.querySelector('.bottom-nav'),'click',e=>{const b=e.target.closest('[data-nav]');if(!b)return;if(b.dataset.nav==='map')focusPlace('square');else openPanel(b.dataset.nav==='districts'?'districts':b.dataset.nav==='project'?'project':'test');});
  function changeZoom(factor,x=size.width/2,y=size.height/2){tween=null;cam=zoomCamera(cam,size,x,y,cam.zoom*factor);layoutDirty=true;schedule();}
  listen($('zoomIn'),'click',()=>changeZoom(1.2));listen($('zoomOut'),'click',()=>changeZoom(1/1.2));

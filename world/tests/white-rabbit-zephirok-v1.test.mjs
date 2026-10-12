@@ -69,7 +69,8 @@ test('white rabbit: 4 separately loaded WebP variants, review-only direction met
   assert.deepEqual(disk.assets.find(x=>x.id===spriteId),meta);
  }
  assert.equal(new Set(ids).size,4);
- assert.equal(SPRITE_MANIFEST.assets.length,365);
+ assert.equal(SPRITE_MANIFEST.assets.filter(a=>a.packId!=='park-belkino-story-v1').length,365);
+ assert.equal(SPRITE_MANIFEST.assets.filter(a=>a.packId==='park-belkino-story-v1').length,4);
  assert.equal(SPRITE_MANIFEST.assets.filter(x=>x.catalogId===id).length,4);
  assert.ok(requiredStorySpriteIds().includes(ids[0]));
 });
