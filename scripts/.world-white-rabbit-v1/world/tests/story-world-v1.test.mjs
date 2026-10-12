@@ -1,0 +1,44 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import {createDemoState,sanitizeDemoState,contribute,simulateCommunityHelp,addDemoMaterials,projectStatus,projectTotal,openProject,setDemoChapter,visitPlace,loadDemo,saveDemo,resetDemo,DEMO_STORAGE_KEY,BUILD_DURATION_MS} from '../story/model.js';
+import {buildStoryMap,validateStoryMap,STORY_MAP_SIZE,lockedDistricts,placeById,isPlaceOpen} from '../story/map.js';
+import {centerCamera,worldAt,zoomCamera,requiredStorySpriteIds} from '../story/view.js';
+import {isoToScreen} from '../renderer.js';
+import {spriteMetadata} from '../sprite-assets.js';
+import {CATALOG} from '../catalog.js';
+import {makeInitialCity} from '../engine.js';
+import {buildCitizenScene} from '../citizens.js';
+import {buildBusScene} from '../traffic.js';
+const funded=(now=100000)=>{let s=createDemoState();for(let i=0;i<4;i++)s=simulateCommunityHelp(s,now);return s;};
+test('story v1: personal city remains 24x24; story map is 48x48',()=>{assert.equal(makeInitialCity().size,24);assert.equal(STORY_MAP_SIZE,48);assert.equal(STORY_MAP_SIZE**2/makeInitialCity().size**2,4);});
+test('story v1: initial funding is explicitly local demo with 400 materials',()=>{const s=createDemoState();assert.equal(projectTotal(s),340);assert.equal(s.materials,400);assert.equal(projectStatus(s),'funding');assert.equal(s.project.personal,0);});
+test('story v1: contribution is immutable and subtracts only local materials',()=>{const s=createDemoState(),before=JSON.stringify(s),r=contribute(s,50,100);assert.equal(JSON.stringify(s),before);assert.equal(r.accepted,50);assert.equal(r.state.materials,350);assert.equal(r.state.project.personal,50);assert.equal(projectTotal(r.state),390);});
+test('story v1: invalid contribution amounts fail without mutation',()=>{for(const n of [-50,0,1,49,1000,NaN,Infinity,'50'])assert.throws(()=>contribute(createDemoState(),n));});
+test('story v1: insufficient local materials never increment progress',()=>{const s={...createDemoState(),materials:10};assert.throws(()=>contribute(s,25),/INSUFFICIENT/);assert.equal(projectTotal(s),340);});
+test('story v1: last donation is capped to remaining need, not overcharged',()=>{const s=createDemoState();s.project.community=995;const r=contribute(s,100,1000);assert.equal(r.accepted,5);assert.equal(r.state.materials,395);assert.equal(projectTotal(r.state),1000);assert.equal(r.state.project.readyAt,1000+BUILD_DURATION_MS);});
+test('story v1: community simulation is not a personal donation',()=>{const s=simulateCommunityHelp(createDemoState(),1000);assert.equal(s.project.community,540);assert.equal(s.project.personal,0);assert.equal(s.materials,400);});
+test('story v1: funding -> construction -> opening -> active',()=>{const s=funded(100000);assert.equal(projectStatus(s,100001),'building');assert.equal(projectStatus(s,s.project.readyAt-1),'building');assert.equal(projectStatus(s,s.project.readyAt),'opening');const opened=openProject(s,s.project.readyAt);assert.equal(projectStatus(opened,s.project.readyAt),'active');assert.throws(()=>openProject(opened,s.project.readyAt),/NOT_READY/);});
+test('story v1: cannot donate after construction begins or open early',()=>{const s=funded();assert.throws(()=>contribute(s,25,100001),/NOT_FUNDING/);assert.throws(()=>simulateCommunityHelp(s,100001),/NOT_FUNDING/);assert.throws(()=>openProject(s,100001),/NOT_READY/);});
+test('story v1: saved construction resumes without resetting its timer',()=>{const s=funded(100000),loaded=sanitizeDemoState(JSON.parse(JSON.stringify(s)),120000);assert.equal(loaded.project.readyAt,s.project.readyAt);assert.equal(projectStatus(loaded,200000),'opening');});
+test('story v1: corrupt save is bounded and cannot corrupt renderer inputs',()=>{for(const raw of [null,42,'x',[],{version:999},{version:1,materials:Infinity,chapter:500,visited:['<script>'],project:{personal:-9,community:NaN}}]){const s=sanitizeDemoState(raw,1000);assert.equal(s.version,1);assert.ok(s.materials>=0&&s.materials<=10000);assert.ok(s.chapter>=0&&s.chapter<=2);assert.ok(projectTotal(s)<=1000);assert.deepEqual(validateStoryMap(buildStoryMap(s,1000)),[]);}});
+test('story v1: invalid saved construction dates restart only the demo timer',()=>{const s=sanitizeDemoState({version:1,project:{personal:1000,community:500,startedAt:-1,readyAt:2,opened:true}},1000);assert.equal(projectTotal(s),1000);assert.equal(s.project.opened,false);assert.equal(s.project.readyAt,46000);});
+test('story v1: demo material topup is capped',()=>{const s={...createDemoState(),materials:9990};assert.equal(addDemoMaterials(s).materials,10000);assert.equal(s.materials,9990);});
+test('story v1: chapter changes are explicit and do not reset project',()=>{const s=contribute(createDemoState(),25,1000).state;assert.equal(setDemoChapter(s,2).project.personal,25);assert.equal(s.chapter,0);for(const ch of [-1,3,1.5,'1'])assert.throws(()=>setDemoChapter(s,ch));});
+test('story v1: story unlocks are independent of local donation progress',()=>{const s=createDemoState();assert.equal(isPlaceOpen(placeById('rabbit'),s),false);assert.equal(isPlaceOpen(placeById('festival'),s),false);assert.equal(isPlaceOpen(placeById('festival'),setDemoChapter(s,1)),true);assert.equal(isPlaceOpen(placeById('rabbit'),setDemoChapter(s,2)),true);assert.equal(isPlaceOpen(placeById('mystery'),setDemoChapter(s,2)),false);});
+test('story v1: discover only known places and do not duplicate visits',()=>{const s=visitPlace(visitPlace(createDemoState(),'cafe'),'cafe');assert.deepEqual(s.visited,['cafe']);assert.throws(()=>visitPlace(s,'unknown'));});
+test('story v1: unavailable storage is fail-soft',()=>{const storage={getItem(){throw Error('blocked');},setItem(){throw Error('quota');},removeItem(){throw Error('blocked');}};assert.equal(loadDemo(storage).persistent,false);assert.equal(saveDemo(storage,createDemoState()),false);assert.equal(resetDemo(storage).version,1);});
+test('story v1: reset touches only the story key, never personal-city storage',()=>{const values=new Map([['zefirok-world-v01-sandbox-local','keep'],['wallet','keep-too']]);const storage={getItem:k=>values.get(k)||null,setItem:(k,v)=>values.set(k,v),removeItem:k=>values.delete(k)};saveDemo(storage,createDemoState());assert.ok(values.has(DEMO_STORAGE_KEY));resetDemo(storage);assert.deepEqual([...values.entries()],[['zefirok-world-v01-sandbox-local','keep'],['wallet','keep-too']]);});
+for(let chapter=0;chapter<3;chapter++)for(const phase of ['funding','building','opening','active'])test(`story v1: valid geometry and connectivity for chapter ${chapter}, ${phase}`,()=>{
+ let s=phase==='funding'?createDemoState():funded(100000);s=setDemoChapter(s,chapter);const now=phase==='building'?100001:200000;if(phase==='active')s=openProject(s,now);
+ const city=buildStoryMap(s,now);assert.deepEqual(validateStoryMap(city),[]);assert.ok(city.objects.length>=130);
+ for(const d of lockedDistricts(s)){const[x,y,w,h]=d.bounds;assert.ok(city.roads.every(key=>{const[a,b]=key.split(',').map(Number);return !(a>=x&&a<x+w&&b>=y&&b<y+h);}),`road crosses ${d.id}`);}
+ assert.equal(city.objects.filter(o=>o.uid==='story-cafe'&&o.kind==='white-rabbit-zephirok').length,1);
+ assert.equal(city.objects.some(o=>o.uid==='story-rabbit'),false); // one physical building
+
+ assert.equal(!!city.objects.find(o=>o.uid==='story-festival'),chapter>=1);
+ assert.equal(!!city.objects.find(o=>o.uid==='story-community-garden'),phase!=='funding');
+});
+test('story v1: original citizen cap and dedicated transit lanes still work',()=>{const c=buildStoryMap(createDemoState()),people=buildCitizenScene(c,CATALOG,100,Date.now(),400),buses=buildBusScene(c,CATALOG);assert.equal(people.routes.length,12);assert.equal(buses.routes.length,2);const transit=new Set(c.busRoads?.length?c.busRoads:c.roads);for(const bus of buses.routes){assert.ok(bus.stops.length>=2);for(const cell of bus.track)assert.ok(transit.has(`${cell.x},${cell.y}`));}});
+test('story v1: all selected existing WebP assets are available',()=>{const ids=requiredStorySpriteIds();assert.ok(ids.length>25&&ids.length<80);for(const id of ids){const m=spriteMetadata(id);assert.ok(m.fileWebp.endsWith('.webp'));assert.ok(fs.existsSync(new URL('../'+m.fileWebp,import.meta.url)),id);}});
+test('story v1: projection and pinch zoom preserve the world anchor',()=>{const size={width:390,height:620},cam=centerCamera(25,25,.86);for(const [x,y]of[[100,200],[195,310],[310,400]]){const world=worldAt(x,y,size,cam),screen=isoToScreen(world.x,world.y,size,cam);assert.ok(Math.abs(screen.x-x)<1e-7&&Math.abs(screen.y-y)<1e-7);const zoomed=zoomCamera(cam,size,x,y,1.2),after=worldAt(x,y,size,zoomed);assert.ok(Math.abs(world.x-after.x)<1e-7&&Math.abs(world.y-after.y)<1e-7);}});

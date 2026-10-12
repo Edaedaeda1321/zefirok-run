@@ -71,6 +71,8 @@ const VISIBLE_ITEMS = [
   { id: 'villa', buildMs: 300000, category: 'homes', titleKey: 'villa', descriptionKey: 'villaDescription', icon: 'house', w: 3, h: 3, needsRoad: true, style: 'lilac', height: 72 },
   { id: 'coffee-kiosk', buildMs: 300000, category: 'shops', titleKey: 'coffeeKiosk', descriptionKey: 'coffeeKioskDescription', icon: 'coffee', w: 2, h: 2, needsRoad: true, style: 'coffee', height: 44 },
   { id: 'coffee-house', buildMs: 300000, category: 'shops', titleKey: 'coffeeHouse', descriptionKey: 'coffeeHouseDescription', icon: 'coffee', w: 3, h: 3, needsRoad: true, style: 'rose', height: 63 },
+  // One iconic building houses both White Rabbit and Cafe Zephirok.
+  { id: 'white-rabbit-zephirok', buildMs: 900000, category: 'shops', titleKey: 'whiteRabbitZephirok', descriptionKey: 'whiteRabbitZephirokDescription', icon: 'coffee', w: 4, h: 4, needsRoad: true, style: 'rose', height: 115 },
   { id: 'bakery', buildMs: 300000, category: 'shops', titleKey: 'bakery', descriptionKey: 'bakeryDescription', icon: 'cake', w: 3, h: 2, needsRoad: true, style: 'butter', height: 56 },
   { id: 'flower-shop', buildMs: 300000, category: 'shops', titleKey: 'flowerShop', descriptionKey: 'flowerShopDescription', icon: 'flower', w: 2, h: 2, needsRoad: true, style: 'mint', height: 45 },
   { id: 'garden', buildMs: 120000, category: 'parks', titleKey: 'garden', descriptionKey: 'gardenDescription', icon: 'flower', w: 3, h: 3, needsRoad: false, style: 'park', height: 0 },
@@ -103,6 +105,7 @@ export const SHOP_UNLOCK_LEVELS = Object.freeze({
   'pond-park': 3,
   'rose-garden': 3,
   'botanical-garden': 5,
+  'white-rabbit-zephirok': 5,
   'sports-playground': 2,
   'city-square': 2,
   'family-home': 2,

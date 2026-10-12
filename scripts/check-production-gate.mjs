@@ -120,6 +120,7 @@ const steps = [
   ['Zeffi story world v1 wiring', 'node', ['scripts/check-world-story-v1.mjs']],
   ['Zeffi story world v1', 'node', ['--test','world/tests/story-world-v1.test.mjs','world/tests/story-access-v1.test.mjs']],
   ['Zeffi city transport v2', 'node', ['scripts/check-world-city-fix-v2.mjs']],
+  ['Zeffi White Rabbit / Zephirok landmark', 'node', ['scripts/check-world-white-rabbit-v1.mjs']],
   ['game task reward engine', 'node', ['scripts/check-game-task-reward-engine.mjs']],
   ['P1 read paths', 'node', ['scripts/check-p1-read-paths.mjs']],
   ['P2 hardening', 'node', ['scripts/check-p2-hardening.mjs']]

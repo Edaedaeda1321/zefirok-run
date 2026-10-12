@@ -1,0 +1,198 @@
+{
+  "version": "zeffi-white-rabbit-zephirok-v1.0.0",
+  "base_commit": "77477fe960ee7bda19633cd1e4a5847a834d5828",
+  "targets": {
+    "world/assets/white-rabbit-zephirok-v1/building_white_rabbit_zephirok_se.webp": {
+      "before": [
+        null
+      ],
+      "after": "01e551430539fe4a3dcaab4a2d120a4a8bdafd5fbdbac66edd09dcc58eb3531b",
+      "size": 136224
+    },
+    "world/assets/white-rabbit-zephirok-v1/building_white_rabbit_zephirok_sw.webp": {
+      "before": [
+        null
+      ],
+      "after": "1669f79ac0f8ab2946552ab86406580f1e7f9ea24bfb9aded59b06b39ef72b3b",
+      "size": 135342
+    },
+    "world/assets/white-rabbit-zephirok-v1/building_white_rabbit_zephirok_nw.webp": {
+      "before": [
+        null
+      ],
+      "after": "bca178a5d2f9fa6031c0d6abf3243f2bf251fecbd7b354813fe6f66003505b0c",
+      "size": 117886
+    },
+    "world/assets/white-rabbit-zephirok-v1/building_white_rabbit_zephirok_ne.webp": {
+      "before": [
+        null
+      ],
+      "after": "915fe8dd4463665a92328f4d4aebc247ada3a85a70c1a70d4c3079f43670385f",
+      "size": 153380
+    },
+    "world/catalog.js": {
+      "before": [
+        "6ac2927e2b9f22e93de48dd05ef454ce19e05c5ffeecaf178defb2494d3f771c"
+      ],
+      "after": "47e9e1dae7569bd93ca1594ece8ca1aea123d6ee301785bed3ae0bb465ad1306",
+      "size": 17179
+    },
+    "world/economy.js": {
+      "before": [
+        "691df0ac5d0fe679b6a7c1043a93f0f70385c7760963138c6a7ac9ab10c07d84"
+      ],
+      "after": "ddf49ff3a5845fa1398b463dca18fd10ef0b89747d8e2e49d1d8e17c431dc1c2",
+      "size": 4104
+    },
+    "world/engine.js": {
+      "before": [
+        "f02d7b3eff83f248f21a4c7b142c2386445435122a472cafa241597467ef7abe"
+      ],
+      "after": "8f3bc07ee4f95d4345ea3717021634a49da17372aab61923cb56c4ab16054261",
+      "size": 32524
+    },
+    "world/ru.js": {
+      "before": [
+        "d31bbdc1feff91263e3313a8bcd6bc6aa5c48ebd7cb2dd0b58bc63a56b7fc4a4"
+      ],
+      "after": "5a2bc44445059bb737824ae790694a19df9be09d2286834c081b4e62c8fb76c1",
+      "size": 26961
+    },
+    "world/sprite-manifest.js": {
+      "before": [
+        "0be42c564557f9b800f5dd313c62989e214d606834af29e0b02208864e3fcf19"
+      ],
+      "after": "57463fdf166e3480f7fec89ddb941a103eff5695af4a5afb92daa8b16d3b06ee",
+      "size": 207321
+    },
+    "world/assets/manifest.json": {
+      "before": [
+        "7cb29641b3d9af05677c18dbbb129fa05c7b9e9ab72e9533e1407e6287053aa2"
+      ],
+      "after": "d247c07921a0dd8a98360ea764522e4f4b3ccdefe57ae4aa935e1a3ea7269b07",
+      "size": 207156
+    },
+    "world/sprite-assets.js": {
+      "before": [
+        "47f89898719a3c4ae87f3379707fe46276c3d0aeab8095dc5b6bc11d2de44b2c"
+      ],
+      "after": "870359eda89a22c7a5abf59102524ccbff553f4dd0f098f9288a946a3d6c47a4",
+      "size": 9698
+    },
+    "world/story/map.js": {
+      "before": [
+        "0fc23fa67566d973c81a2a1dc3cfc7e63f0592478aa5c12ae5bd00d113a8baac"
+      ],
+      "after": "ffe11409e784fe57cb6eb10fa0157463c74badb3b651634d50e08d37c04e6962",
+      "size": 11141
+    },
+    "world/story/app.js": {
+      "before": [
+        "e2140921d22f6ddad1ee13fc73ecfd3e15619394bc8609525699712db0d4b489"
+      ],
+      "after": "e44f9f47088499966dc5b95f0721208a5c522f8ba2825f94c6b6bb4209e89c93",
+      "size": 29795
+    },
+    "world/tests/engine.test.mjs": {
+      "before": [
+        "7c9bf72a0ec205a2a83292f176214e60e4700251152f3d7da737000068161923"
+      ],
+      "after": "a746609e329e9f9484910635df32c8c20af7f8e5e9e056c7ed38631d5b91d6b7",
+      "size": 7483
+    },
+    "world/tests/paid-economy.test.mjs": {
+      "before": [
+        "f48f49a8fc15f6e81143775d3548dd45fe937ea3a339be47decbbb5ccbbc1af0"
+      ],
+      "after": "d42f46256c05995104ad6b170f72ed2af588a39d3225e7abc968d32dc92307be",
+      "size": 6545
+    },
+    "world/tests/shop-progression-v17.test.mjs": {
+      "before": [
+        "48c099f8bacae85baf0adf5d339c3b28dda3895904dd512aaacbc16cc477e07c"
+      ],
+      "after": "18c35bb2196933aa55d4e37ac59b1217b741936faa6684e7b2882259abbc64ad",
+      "size": 5018
+    },
+    "world/tests/world-pricing-v7.test.mjs": {
+      "before": [
+        "a8c175cadf67d7a79c90a9bd399ed29efebf9c303b1cfefa4a0a2477221e1e58"
+      ],
+      "after": "a3dcf0a62133a8e789d24afc32fe8eaeb6381fa0d93281cde8f8b449c0175aa1",
+      "size": 3683
+    },
+    "world/tests/flower-style.test.mjs": {
+      "before": [
+        "dd69f1be80b32c77706478c8182e41f6708edbb25c338344a5f1fb465a3956cb"
+      ],
+      "after": "6eb965c83c06be707511353bdf456990c0e3fddd471f5482581fee663e4fcd37",
+      "size": 3810
+    },
+    "scripts/check-world-shop-v17.mjs": {
+      "before": [
+        "91a360ec1b1b1a09fa366a5fe3223e27bc088d7cfd3bc5798412673d162b2bcb"
+      ],
+      "after": "17da360bfe5c299b647c985412d59016ac95d6b431382e54360f837f3df192cb",
+      "size": 2482
+    },
+    "world/tests/sprite-assets.test.mjs": {
+      "before": [
+        "b9a96b2e35ee29e6a76cf53474a9e7b5262c960fc3d145679d10ef7968db6ee1"
+      ],
+      "after": "ac3cd30344fb350c0c1c55f702995c07eabd22ef2398e7159f801f5e1e1fda62",
+      "size": 4769
+    },
+    "world/tests/clean-assets.test.mjs": {
+      "before": [
+        "22f784132fa17496f0a9d7a9a00e5ad50dddff998e08da7ee213abba844ec430"
+      ],
+      "after": "be8a6f9fdf8feb1cada9c01706ed00b0e84af246e92f6c193933073c4cf95203",
+      "size": 3765
+    },
+    "world/tests/story-world-v1.test.mjs": {
+      "before": [
+        "7c77ba142fa1754ba7e186aabc176420785b47232894cbcb8a526dfea8cd2214"
+      ],
+      "after": "b33a83f1ef731b89e6f6304861e4c1f4bd738bd58b7983def6e97ad3ca11afe8",
+      "size": 8732
+    },
+    "world/tests/white-rabbit-zephirok-v1.test.mjs": {
+      "before": [
+        null
+      ],
+      "after": "7923b87b54b23e10bd5d18344685154d9e1adf640e7ffbd55eb3ede7d2aab2b0",
+      "size": 6305
+    },
+    "scripts/check-world-white-rabbit-v1.mjs": {
+      "before": [
+        null
+      ],
+      "after": "0cf65af0b482a107919523c614eca050bc84ef97b2053b2e3a8dc001aea52b83",
+      "size": 1546
+    },
+    "scripts/check-production-gate.mjs": {
+      "before": [
+        "fca73cf247bca6ec18759790c8eab9c2f6d8d35aa182bfb1be8338b8b88b5358"
+      ],
+      "after": "38affb93cdac23c2ee0b7900764839ad0ae7f64d9fadaa1e957b0742b080830f",
+      "size": 9701
+    }
+  },
+  "dependencies": {
+    "world/renderer.js": "a4c76137cb903c5c3850ad27f046a3ea40987a7f20bf7e86d6ab06d3626d826d",
+    "world/story/view.js": "55a8256f4ebf1a4a224edb383c9f792ceeb83157f746799422bff6bed6b5c993",
+    "world/story/model.js": "01b8d7f29b00ed0eaedfb2f25c89c42fd06dfcc1d2c7cd6f5c9a1761498b60b9",
+    "world/app.js": "7bfd5c5686fad3954b2b2cac5758cdd09ec9448e7792b42e83f5dc427e496213",
+    "src/zeffi-world-service.js": "dfc2c484c0c3f853cbdabc22b3c7ca153b5984547fa2171dda979f23993ff7b5",
+    "scripts/build-world-story-v1.py": "fa1d8df60e90d7f3b92e8be117905b249fefcb006620f0e483118ef8bcb8dfae",
+    "world/bus-art.js": "6a974207af5687d48ccad684c38baebee1c64bf06c45795aae9a542909226e8e"
+  },
+  "ignore_rules": {
+    ".gitignore": [
+      ".world-white-rabbit-v1-backup/"
+    ],
+    ".assetsignore": [
+      ".world-white-rabbit-v1-backup/"
+    ]
+  }
+}

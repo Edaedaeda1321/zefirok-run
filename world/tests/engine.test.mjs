@@ -17,8 +17,8 @@ test('sandbox startup includes a 24x24 map, four objects and protected road entr
  assert.ok(city.roads.includes('7,13'));
 });
 test('catalog has independent names, stable IDs, sizes and complete categories',()=>{
- assert.equal(CATALOG_ITEMS.length,48);
- assert.equal(new Set(CATALOG_ITEMS.map(x=>x.id)).size,48);
+ assert.equal(CATALOG_ITEMS.length,49);
+ assert.equal(new Set(CATALOG_ITEMS.map(x=>x.id)).size,49);
  for(const entry of CATALOG_ITEMS){assert.ok(entry.titleKey);assert.ok(entry.w>=1&&entry.h>=1);assert.equal(CATALOG[entry.id],entry);}
  assert.deepEqual([...new Set(CATALOG_ITEMS.map(x=>x.category))].sort(),['decor','homes','landscape','parks','plazas','shops','transport']);
 });

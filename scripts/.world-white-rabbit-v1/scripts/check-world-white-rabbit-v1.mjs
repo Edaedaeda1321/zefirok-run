@@ -1,0 +1,24 @@
+#!/usr/bin/env node
+// New landmark release checks. Does not change balances, maps or player data.
+import assert from 'node:assert/strict';
+import { spawnSync } from 'node:child_process';
+import { readFileSync } from 'node:fs';
+import { CATALOG, CATALOG_ITEMS } from '../world/catalog.js';
+import { SPRITE_MANIFEST } from '../world/sprite-manifest.js';
+import { OBJECT_PRICES } from '../world/economy.js';
+import { buildStoryMap, validateStoryMap, placeById } from '../world/story/map.js';
+import { createDemoState, setDemoChapter } from '../world/story/model.js';
+const id='white-rabbit-zephirok';
+assert.equal(CATALOG_ITEMS.length,49);
+assert.equal(CATALOG[id].minCityLevel,5);
+assert.deepEqual(OBJECT_PRICES[id],{points:120000,coffee:0,treats:300});
+assert.equal(SPRITE_MANIFEST.assets.filter(a=>a.catalogId===id).length,4);
+assert.equal(placeById('cafe').uid,placeById('rabbit').uid);
+for(let c=0;c<3;c++)assert.deepEqual(validateStoryMap(buildStoryMap(setDemoChapter(createDemoState(),c))),[]);
+const worker=readFileSync(new URL('../src/zeffi-world-service.js',import.meta.url),'utf8');
+assert.match(worker,/addObject\(city,CATALOG/);
+const source=readFileSync(new URL('../world/story/app.js',import.meta.url),'utf8');
+assert.ok(source.includes("openPlace('cafe')"));
+const tests=spawnSync(process.execPath,['--test','world/tests/white-rabbit-zephirok-v1.test.mjs'],{stdio:'inherit'});
+assert.equal(tests.status,0,'Landmark regression tests');
+console.log('White Rabbit / Zephirok v1: map + two pins + server purchase gate + 4 WebPs PASS');

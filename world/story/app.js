@@ -222,7 +222,9 @@ export async function startStoryWorld({mode='standalone'}={}) {
  function endPointer(e){
   if(!pointers.has(e.pointerId))return;const p=eventPoint(e),wasTap=!moved&&pointers.size===1&&e.type==='pointerup';pointers.delete(e.pointerId);pinch=null;
   if(pointers.size===1){drag={point:[...pointers.values()][0],cam:{...cam}};moved=true;}else drag=null;
-  if(wasTap){const at=worldAt(p.x,p.y,size,cam);const place=[...PLACES].reverse().find(d=>{const[x,y,w,h]=d.bounds;return at.x>=x&&at.y>=y&&at.x<x+w&&at.y<y+h;});if(place)openPlace(place.id);}
+  if(wasTap){const at=worldAt(p.x,p.y,size,cam);const sharedCafe=city.objects.find(o=>o.uid==='story-cafe');
+   if(sharedCafe&&at.x>=sharedCafe.x&&at.x<sharedCafe.x+4&&at.y>=sharedCafe.y&&at.y<sharedCafe.y+4){openPlace('cafe');return;}
+   const place=[...PLACES].reverse().find(d=>{const[x,y,w,h]=d.bounds;return at.x>=x&&at.y>=y&&at.x<x+w&&at.y<y+h;});if(place)openPlace(place.id);}
  }
  listen(canvas,'pointerup',endPointer);listen(canvas,'pointercancel',endPointer);
  listen(canvas,'keydown',e=>{if(panel.open)return;let used=true;if(e.key==='+'||e.key==='=')changeZoom(1.2);else if(e.key==='-')changeZoom(1/1.2);else if(e.key==='Home')focusPlace('square');else if(e.key===' ')pause();else if(['ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.key)){tween=null;cam.x+=e.key==='ArrowLeft'?45:e.key==='ArrowRight'?-45:0;cam.y+=e.key==='ArrowUp'?45:e.key==='ArrowDown'?-45:0;cam=clampCamera(cam,size);layoutDirty=true;schedule();}else used=false;if(used)e.preventDefault();});

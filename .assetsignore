@@ -69,3 +69,6 @@ START_STORY_WORLD_v1_3.html
 
 # Local-only Bus Rose v3 backups
 .world-bus-rose-v3-backup/
+
+# Local-only White Rabbit / Zephirok v1 backups
+.world-white-rabbit-v1-backup/

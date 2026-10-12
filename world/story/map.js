@@ -6,21 +6,23 @@ export const STORY_MAP_SIZE=48;
 export const MAP_VERSION='zeffi-story-map-v1';
 export const DISTRICTS=Object.freeze([
  {id:'square',title:'Центральная площадь',short:'Площадь',icon:'spark',focus:[25,25],bounds:[19,19,13,13],chapter:0,kind:'fountain',description:'Сердце общего города: встречи, прогулки и будущие сюжетные сцены.'},
- {id:'cafe',title:'Кафе «Зефирок»',short:'Зефирок',icon:'coffee',focus:[11.5,12],bounds:[7,7,11,12],chapter:0,kind:'coffee-house',description:'Знакомая вывеска, кофе и сладости. Отсюда начинается прогулка по миру «Сладкого Забега».'},
+ {id:'cafe',title:'Кафе «Зефирок»',short:'Зефирок',icon:'coffee',focus:[10.1,11.4],bounds:[7,7,11,12],chapter:0,kind:'white-rabbit-zephirok',description:'Кафе-кондитерская «Зефирок» находится в одном здании с «Белым Кроликом».'},
  {id:'belkino',title:'Парк Белкино',short:'Белкино',icon:'leaf',focus:[11.5,29],bounds:[7,24,11,15],chapter:0,kind:'pond-park',description:'Тихие дорожки, пруд и цветы. В этой части карты предусмотрено место для истории «Тайны Белкино».'},
  {id:'friends',title:'Квартал друзей',short:'Друзья',icon:'home',focus:[33,11],bounds:[27,6,15,12],chapter:0,kind:'cottage',description:'Уютный жилой квартал. Будущие участки персонажей пока не закреплены за героями: их откроем вместе с сюжетом.'},
  {id:'station',title:'Городская станция',short:'Станция',icon:'bus',focus:[36,37],bounds:[33,33,11,10],chapter:0,kind:'bus-terminal',description:'Автобусы связывают кафе, центральную часть города и парк. Это декоративный транспорт: без билетов и списаний.'},
  {id:'festival',title:'Площадка событий',short:'События',icon:'flag',focus:[25,36],bounds:[21,33,9,6],chapter:1,kind:'city-square',description:'Место будущих событий. В v1 можно посмотреть открытие площадки в тестовом сценарии, но активных событий и наград здесь ещё нет.'},
- {id:'rabbit',title:'«Белый Кролик»',short:'Кролик',icon:'star',focus:[38,26],bounds:[33,21,10,9],chapter:2,kind:'villa',description:'Резерв сюжетной локации «Белый Кролик». После открытия появится тестовое здание; его уникальный сюжетный арт ещё предстоит создать.'},
+ {id:'rabbit',title:'«Белый Кролик»',short:'Кролик',icon:'star',focus:[11.3,9.8],bounds:[9,9,4,4],chapter:2,kind:'white-rabbit-zephirok',description:'«Белый Кролик» и кафе «Зефирок» делят одно здание. Сюжетные подробности «Белого Кролика» откроются позже.'},
  {id:'mystery',title:'Неизвестный район',short:'Тайна',icon:'lock',focus:[24,8],bounds:[21,4,6,8],chapter:99,kind:'botanical-garden',description:'Здесь появится новая часть города. Название, герой и условия открытия пока не объявлены.'}
 ]);
 export const PLACES=Object.freeze([
- ...DISTRICTS.map(d=>({...d,uid:({square:'story-fountain',cafe:'story-cafe',belkino:'story-pond',friends:'story-home',station:'story-terminal',festival:'story-festival',rabbit:'story-rabbit'})[d.id]||null})),
+ ...DISTRICTS.map(d=>({...d,uid:({square:'story-fountain',cafe:'story-cafe',belkino:'story-pond',friends:'story-home',station:'story-terminal',festival:'story-festival',rabbit:'story-cafe'})[d.id]||null})),
  {id:'community-garden',title:'Сад встреч',short:'Строим вместе',icon:'heart',focus:[15.5,35.5],bounds:[14,34,3,3],chapter:0,kind:'garden',uid:'story-community-garden',description:'Первый пробный городской проект. Поможем обустроить новый сад у парка Белкино. Вклад и помощь сообщества в этой версии имитируются только на вашем устройстве.'}
 ]);
 export const placeById=id=>PLACES.find(p=>p.id===id)||null;
 export const isPlaceOpen=(place,state)=>state.chapter>=place.chapter;
-export const lockedDistricts=state=>DISTRICTS.filter(d=>!isPlaceOpen(d,state));
+// The Rabbit storyline is locked until chapter 2, but the shared physical cafe
+// is already open. Never grey-out the same occupied building plot.
+export const lockedDistricts=state=>DISTRICTS.filter(d=>d.id!=='rabbit'&&!isPlaceOpen(d,state));
 const contains=(b,x,y)=>x>=b[0]&&y>=b[1]&&x<b[0]+b[2]&&y<b[1]+b[3];
 export function buildStoryMap(state, now=Date.now()) {
  const city={version:2,size:STORY_MAP_SIZE,parcels:[],wallet:{points:0,coffee:0,treats:0},progress:{bestLevel:1,claimedLevels:[]},nextId:1,roads:[],busRoads:[],lockedRoads:['7,13'],objects:[]};
@@ -65,7 +67,7 @@ export function buildStoryMap(state, now=Date.now()) {
   for(const cell of cells)occupied.add(cell);
   city.objects.push({uid:uid||`story-decor-${++sequence}`,kind,x,y,rotation,level:1,stored:false,buildStartedAt:0,buildReadyAt:0,...extra});return true;
  }
- place('coffee-house',10,10,0,'story-cafe');place('bakery',14,11);place('flower-shop',8,14);
+ place('white-rabbit-zephirok',9,9,0,'story-cafe');place('bakery',14,11);place('flower-shop',8,14);
  place('cottage',11,14);place('coffee-kiosk',8,17);place('bus-stop',16,14,0,'story-stop-cafe');
  place('family-home',28,9);place('cottage',32,10,0,'story-home');place('bakery',35,11);
  place('villa',34,14);place('flower-shop',38,14);place('bus-stop',29,16,0,'story-stop-square');
@@ -75,7 +77,8 @@ export function buildStoryMap(state, now=Date.now()) {
  place('coffee-kiosk',8,21);place('bus-stop',11,32,0,'story-stop-park');
  place('bus-terminal',34,36,0,'story-terminal');place('family-home',38,32);place('cottage',38,40);
  if(state.chapter>=1){place('city-square',25,35,0,'story-festival');place('extra-arch',24,34);place('flowerbed',28,38);}
- if(state.chapter>=2){place('villa',35,25,0,'story-rabbit');place('bench',39,27);place('flowerbed',38,25);}
+ // No second White Rabbit villa: both places point to story-cafe.
+ if(state.chapter>=2){place('bench',39,27);place('flowerbed',38,25);}
  const status=projectStatus(state,now);
  if(status!=='funding')place('garden',14,34,0,'story-community-garden',status==='building'?{buildStartedAt:state.project.startedAt,buildReadyAt:state.project.readyAt}:{});
  // Keep the future project's footprint reserved even during funding.

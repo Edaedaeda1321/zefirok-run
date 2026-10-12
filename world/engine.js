@@ -21,7 +21,7 @@ export { PARCEL_PRICE }; // existing API maintained; configured in economy.js
 export const SKIP_DISCOUNT_INTERVAL_MS = 60_000;
 export const SKIP_DISCOUNT_COFFEE = 25;
 export const MIN_SKIP_COFFEE = 5;
-const BUILDING_SKIP_KINDS = new Set(['cottage','family-home','villa','coffee-kiosk','coffee-house','bakery','flower-shop','bus-terminal','bus-stop']);
+const BUILDING_SKIP_KINDS = new Set(['cottage','family-home','villa','coffee-kiosk','coffee-house','bakery','flower-shop','bus-terminal','bus-stop','white-rabbit-zephirok']);
 const CURRENCIES = Object.freeze(['points', 'coffee', 'treats']);
 const ZERO_PRICE = Object.freeze({ points: 0, coffee: 0, treats: 0 });
 function validatePrice(price) {
@@ -445,12 +445,12 @@ export function isObjectConnected(item, city, catalog, connected = connectedRoad
 // It never changes a save, a wallet, D1, or the price of existing objects.
 export const RESIDENTS_BY_KIND = Object.freeze({
   'cottage':2, 'family-home':4, 'villa':6,
-  'coffee-kiosk':1, 'coffee-house':2, 'bakery':2, 'flower-shop':1,
+  'coffee-kiosk':1, 'coffee-house':2, 'bakery':2, 'flower-shop':1, 'white-rabbit-zephirok':5,
   'bus-terminal':3, 'bus-stop':1
 });
 export const COMFORT_BY_KIND = Object.freeze({
   'cottage':6, 'family-home':10, 'villa':14,
-  'coffee-kiosk':8, 'coffee-house':12, 'bakery':10, 'flower-shop':9,
+  'coffee-kiosk':8, 'coffee-house':12, 'bakery':10, 'flower-shop':9, 'white-rabbit-zephirok':48,
   'garden':24, 'playground':15,
   'bus-terminal':15, 'bus-stop':5,
   'pond-park':24, 'rose-garden':20, 'botanical-garden':32,

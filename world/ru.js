@@ -13,6 +13,8 @@ export const RU = Object.freeze({
   retiredPathUnavailable:'Старые декоративные дорожки больше не продаются. Используй Road.',
 
   transport:'Транспорт',
+  whiteRabbitZephirok:'Белый Кролик · кафе «Зефирок»',
+  whiteRabbitZephirokDescription:'Знаковое объединённое здание: «Белый Кролик» и кондитерская «Зефирок». Престижный объект для 5-го уровня города.',
   busTerminal:"Автобусный вокзал Зеффи", busTerminalDescription:"Вокзал 4×3 с платформами. Нужна связь с дорогой.",
   busStop:"Остановка «Сладкая»", busStopDescription:"Небольшая остановка 2×1. Нужна связь с дорогой.",
   pondPark:"Парк с прудом", pondParkDescription:"Сказочный парк с мостиком и водоёмом, 3×3.",

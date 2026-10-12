@@ -19,7 +19,7 @@ function visit(path,output=[]){ for(const entry of readdirSync(path,{withFileTyp
 test('only live sprites and one retained legacy bus atlas are packaged (no PNG or GLB)',()=>{
  const actual=visit(join(root,'assets')).filter(p=>p.endsWith('.webp'));
  assert.deepEqual(new Set(actual),spritePaths);
- assert.equal(actual.length,363); // 361 existing images + new atlas + old atlas for cached clients
+ assert.equal(actual.length,spritePaths.size); // 361 existing images + new atlas + old atlas for cached clients
  assert.ok(!visit(root).some(p=>/\.(png|glb|jpg|jpeg)$/i.test(p)));
  assert.ok(!SPRITE_MANIFEST.assets.some(a=>Object.hasOwn(a,'filePng')||Object.hasOwn(a,'sourceGlb')));
  const code=readFileSync(join(root,'sprite-assets.js'),'utf-8');
