@@ -9,7 +9,23 @@ const story=read('story-world.html'), personal=read('world.html'), css=read('wor
 let checks=0;
 const ck=(label,pass)=>{assert.ok(pass,label);console.log('PASS '+label);checks++;};
 ck('common story header exposes switch to personal city',story.includes('id="openPersonalCity"')&&story.includes('Общий город'));
-ck('auth flow still loads hosted story only after signed server access',story.includes('./story/boot.js?v=2')&&read('world/story/boot.js').includes("fetch('/api/world/story-access'"));
+// Follow the cache-busted hosted boot script instead of pinning the old v=2.
+// Keep the safety contract: a signed Telegram session, read-only server gate,
+// and tester/contract checks MUST precede importing the playable city code.
+const storyBoot=read('world/story/boot.js');
+const bootTags=[...story.matchAll(/<script\b[^>]*\bsrc="\.\/story\/boot\.js\?v=[1-9]\d*"[^>]*>\s*<\/script>/g)];
+const signedGate=storyBoot.indexOf("fetch('/api/world/story-access'");
+const testerValidation=storyBoot.indexOf("payload?.access!=='tester'");
+const modeValidation=storyBoot.indexOf("payload?.mode!=='local-demo'");
+const versionValidation=storyBoot.indexOf("payload?.version!=='story-v1'");
+const appImport=storyBoot.search(/await\s+import\(['"]\.\/app\.js\?v=[1-9]\d*['"]\)/);
+ck('auth flow still loads hosted story only after signed server access',
+  bootTags.length===1 && bootTags[0][0].includes('type="module"') &&
+  storyBoot.includes('if(!initData)') &&
+  storyBoot.includes("credentials:'same-origin'") && storyBoot.includes("cache:'no-store'") &&
+  signedGate>=0 && testerValidation>signedGate && modeValidation>signedGate &&
+  versionValidation>signedGate && appImport>testerValidation &&
+  appImport>modeValidation && appImport>versionValidation);
 ck('embedded Telegram viewport excludes second top safe inset',story.includes('zeffi-story-embedded')&&css.includes('html.zeffi-story-embedded .story-header{padding-top:8px'));
 ck('compact mobile controls and city switch are styled',css.includes('@media(max-width:650px)')&&css.includes('.world-mode-current,.world-mode-link'));
 ck('common city switch stays behind loaded tester story app',app.includes("listen($('openPersonalCity'),'click'")&&app.includes("new URL('../world.html?world_tester=1'"));

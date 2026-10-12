@@ -33,7 +33,7 @@ async function launch(){
    payload=await response.json().catch(()=>null);
    if(!response.ok||payload?.ok!==true||payload?.access!=='tester'||payload?.mode!=='local-demo'||payload?.version!=='story-v1')throw new Error(payload?.error||'Сервер пока не открыл эту карту для тестеров.');
   }finally{clearTimeout(timer);}
-  const {startStoryWorld}=await import('./app.js?v=2');
+  const {startStoryWorld}=await import('./app.js?v=4');
   await startStoryWorld({mode:'tester'});
   if(window.parent!==window)window.parent.postMessage({type:'zefirok-world-ui-ready'},location.origin);
  }catch(error){

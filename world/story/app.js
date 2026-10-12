@@ -48,24 +48,23 @@ export async function startStoryWorld({mode='standalone'}={}) {
  }
  function refreshHUD(){
   const status=projectStatus(state),percent=Math.round(projectTotal(state)/PROJECT_GOAL*100);
-  $('modeBadge').textContent=mode==='standalone'?'V1.3 · АВТОНОМНО':'V1.3 · ТЕСТЕР';
-  $('demoNotice').textContent='Локальный тест. Реальные валюты не списываются.';
+  $('modeBadge').title=mode==='standalone'?'Меню автономной проверки':'Меню тестера';
   $('bannerPercent').textContent=status==='active'?'Открыт':status==='building'?clock(state.project.readyAt-Date.now()):`${percent}%`;
   $('bannerBar').style.width=`${percent}%`;
   $('bannerStatus').textContent=status==='funding'?`${money(projectTotal(state))} / ${money(PROJECT_GOAL)} · только на этом устройстве`:status==='building'?'Достраиваем сад. Можно продолжать прогулку.':status==='opening'?'Сад готов! Нажмите, чтобы открыть.':'Совместный проект завершён в локальном тесте';
-  $('bannerArt').src=artUrl('garden');
+  $('bannerTitle').textContent='Сад встреч';
   $('pauseLife').innerHTML=icon(paused?'play':'pause');$('pauseLife').setAttribute('aria-pressed',String(paused));
   $('pauseLife').setAttribute('aria-label',paused?'Продолжить анимацию':'Приостановить анимацию');
-  for(const button of $('districtStrip').querySelectorAll('button')){
-   const place=placeById(button.dataset.district);button.classList.toggle('locked',!isPlaceOpen(place,state));
-   button.setAttribute('aria-pressed',String(button.dataset.district===focusId));
-  }
+  $('projectBanner').setAttribute('aria-label',`Городские стройки. Сад встреч: ${percent}%`);
  }
  function refreshMarkers(){
   for(const place of PLACES){
    let button=markerElements.get(place.id);
    if(!button){button=document.createElement('button');button.type='button';button.className='map-marker';button.dataset.place=place.id;$('mapMarkers').append(button);markerElements.set(place.id,button);}
-   const locked=!isPlaceOpen(place,state);button.innerHTML=icon(locked?'lock':place.icon)+`<span>${esc(place.short)}</span>`;
+   const locked=!isPlaceOpen(place,state);
+   // White Rabbit shares a single physical building with Zephirok. One marker,
+   // with both destinations in its bottom sheet, prevents stacked buttons.
+   button.innerHTML=icon(locked?'lock':place.icon)+`<span>${esc(place.id==='cafe'?'Зефирок · Кролик':place.short)}</span>`;
    button.dataset.locked=String(locked);button.dataset.project=String(place.id==='community-garden');
    button.setAttribute('aria-label',`${place.title}${locked?' — пока закрыто':''}`);
   }
@@ -78,7 +77,7 @@ export async function startStoryWorld({mode='standalone'}={}) {
   const target=centerCamera(...place.focus,overview?(size.width<650?.29:.48):place.id==='belkino'?(size.width<650?.60:.76):(size.width<650?.95:1.02));
   tween=paused||reduce.matches?null:{from:{...cam},to:target,start:performance.now()};
   if(!tween)cam=target;
-  $('mapHint').style.opacity='0';layoutDirty=true;schedule();
+  layoutDirty=true;schedule();
  }
  function poly(ctx,points,fill,stroke='',width=1){ctx.beginPath();points.forEach((pt,i)=>i?ctx.lineTo(pt.x,pt.y):ctx.moveTo(pt.x,pt.y));ctx.closePath();if(fill){ctx.fillStyle=fill;ctx.fill();}if(stroke){ctx.strokeStyle=stroke;ctx.lineWidth=width;ctx.stroke();}}
  function projectedBounds(bounds){const[x,y,w,h]=bounds;return [[x,y],[x+w,y],[x+w,y+h],[x,y+h]].map(([a,b])=>isoToScreen(a,b,size,cam));}
@@ -90,21 +89,12 @@ export async function startStoryWorld({mode='standalone'}={}) {
    const button=markerElements.get(place.id),pt=isoToScreen(...place.focus,size,cam);
    const rise=isPlaceOpen(place,state)?(place.id==='belkino'?195:place.id==='community-garden'?52:75)*cam.zoom:46*cam.zoom;
    const y=pt.y-rise;
-   button.hidden=pt.x<55||pt.x>size.width-52||y<100||y>size.height-125;
+   const compact=size.width<650;
+   const isSharedRabbit=place.id==='rabbit';
+   const onlyAtCloseZoom=compact&&cam.zoom<.67&&!['cafe','square','belkino','festival','community-garden'].includes(place.id);
+   button.hidden=isSharedRabbit||onlyAtCloseZoom||pt.x<34||pt.x>size.width-34||y<20||y>size.height-105;
    button.style.left=`${pt.x}px`;button.style.top=`${y}px`;
   }
-  paintMiniMap();
- }
- function paintMiniMap(){
-  const mini=$('miniMap'),ctx=mini.getContext('2d'),w=264,h=212;mini.width=w;mini.height=h;
-  const to=(x,y)=>({x:w/2+(x-y)*2.38,y:12+(x+y)*1.7});
-  ctx.clearRect(0,0,w,h);poly(ctx,[to(0,0),to(48,0),to(48,48),to(0,48)],'#c7ddad','#9ab985',1.5);
-  ctx.fillStyle='#fbf4df';for(const road of city.roads){const[x,y]=road.split(',').map(Number);const pt=to(x+.5,y+.5);ctx.fillRect(pt.x-1.4,pt.y-1,2.8,2);}
-  ctx.fillStyle='#606673';for(const road of city.busRoads||[]){const[x,y]=road.split(',').map(Number);const pt=to(x+.5,y+.5);ctx.fillRect(pt.x-1.4,pt.y-1,2.8,2);}
-  for(const d of lockedDistricts(state)){const[x,y,a,b]=d.bounds;poly(ctx,[to(x,y),to(x+a,y),to(x+a,y+b),to(x,y+b)],'#c7c4cf');}
-  for(const d of DISTRICTS){const pt=to(...d.focus);ctx.beginPath();ctx.arc(pt.x,pt.y,3,0,Math.PI*2);ctx.fillStyle=isPlaceOpen(d,state)?'#b27096':'#918394';ctx.fill();}
-  const corners=[[0,0],[size.width,0],[size.width,size.height],[0,size.height]].map(([x,y])=>{const p=worldAt(x,y,size,cam);return to(p.x,p.y);});
-  poly(ctx,corners,'#ffffff20','#a56589',2);
  }
  function frame(t){
   raf=0;if(disposed||document.hidden)return;
@@ -131,8 +121,11 @@ export async function startStoryWorld({mode='standalone'}={}) {
  function pause(){if(paused){pauseOffset+=Date.now()-pauseAt;paused=false;}else{pauseAt=Date.now();paused=true;}refreshHUD();schedule();}
  function statusLabel(place){return isPlaceOpen(place,state)?'Доступно для прогулки':place.chapter===99?'Будущий район':`Тестовый сюжет · этап ${place.chapter+1}`;}
  function cardArt(place,locked=false){return `<div class="panel-art${locked?' locked':''}"><img src="${artUrl(place.kind)}" alt="${esc(place.title)}" />${locked?'<span class="art-question">?</span>':''}</div>`;}
- function openPanel(kind){selectedPanel=kind;renderPanel();if(!panel.open)panel.showModal();haptic();}
- function closePanel(){panel.close();selectedPanel='';}
+ function selectTab(tab){document.querySelectorAll('.bottom-nav [data-nav]').forEach(b=>{
+  if(b.dataset.nav===tab)b.setAttribute('aria-current','page');else b.removeAttribute('aria-current');
+ });}
+ function openPanel(kind){selectedPanel=kind;renderPanel();selectTab(kind==='buildings'||kind==='project'||kind==='festival-project'?'buildings':kind==='history'||kind.startsWith('place:')?'history':'map');if(!panel.open)panel.showModal();haptic();}
+ function closePanel(){if(panel.open)panel.close();selectedPanel='';selectTab('map');}
  function openPlace(id){
   const place=placeById(id);if(!place)return;
   if(id==='community-garden'){openPanel('project');return;}
@@ -141,9 +134,14 @@ export async function startStoryWorld({mode='standalone'}={}) {
  }
  function renderPanel(){
   const focused=document.activeElement?.getAttribute?.('data-action');let html='';
-  if(selectedPanel==='districts'){
-   html=`<span class="eyebrow">БОЛЬШОЙ СЮЖЕТНЫЙ МИР</span><h2 id="panelTitle">Районы города</h2><p>48 × 48 клеток: в четыре раза больше по площади, чем стартовый личный город. Выберите район — камера перенесёт вас туда.</p>`;
+  if(selectedPanel==='history'||selectedPanel==='districts'){
+   html=`<span class="eyebrow">ИСТОРИЯ ГОРОДА</span><h2 id="panelTitle">Открывайте Мир Зеффи</h2><p>Исследуйте места на карте. Новые районы и события появятся по мере развития сюжета.</p>`;
    html+=DISTRICTS.map(d=>`<button class="district-row" data-go="${d.id}"><span class="row-icon">${icon(isPlaceOpen(d,state)?d.icon:'lock')}</span><span class="row-copy"><strong>${esc(d.title)}</strong><small>${statusLabel(d)}</small></span><span class="row-arrow">›</span></button>`).join('');
+  }else if(selectedPanel==='buildings'){
+   const gardenTotal=projectTotal(state),gardenPercent=Math.round(100*gardenTotal/PROJECT_GOAL);
+   html=`<span class="eyebrow">СТРОИМ ВМЕСТЕ · ДЕМО</span><h2 id="panelTitle">Городские стройки</h2><p>Помогайте городу расти. Постройки постепенно меняются прямо на карте.</p>`;
+   html+=`<button type="button" class="buildings-row" data-action="project"><img src="${artUrl('garden')}" alt="" /><span class="buildings-details"><strong>Сад встреч</strong><small>${STATUS[projectStatus(state)]} · ${money(gardenTotal)} / ${money(PROJECT_GOAL)} материалов</small><span class="mini-track"><span style="width:${gardenPercent}%"></span></span></span><span class="buildings-percent">${gardenPercent}% ›</span></button>`;
+   html+='<div class="demo-box">Сбор тестовый и сохраняется только на этом устройстве. Реальные валюты не списываются.</div>';
   }else if(selectedPanel==='project'){
    const s=projectStatus(state),total=projectTotal(state),percent=Math.round(total/PROJECT_GOAL*100),place=placeById('community-garden');
    html=`<span class="eyebrow">ГОРОДСКОЙ ПРОЕКТ · ДЕМО</span><h2 id="panelTitle">Сад встреч</h2><span class="status-pill">${icon(s==='active'?'check':'heart')}${STATUS[s]}</span>${cardArt(place)}<p>Новый сад рядом с парком Белкино. Пройдите пробный цикл: сбор материалов, стройка и открытие.</p><div class="panel-progress"><div><span>${money(total)} / ${money(PROJECT_GOAL)} материалов</span><strong>${percent}%</strong></div><span class="mini-track"><span style="width:${percent}%"></span></span></div><div class="project-stats"><div class="stat-box"><small>Ваш тестовый вклад</small><strong>${money(state.project.personal)}</strong></div><div class="stat-box"><small>Тестовые материалы</small><strong>${money(state.materials)}</strong></div></div>`;
@@ -160,10 +158,10 @@ export async function startStoryWorld({mode='standalone'}={}) {
    const place=placeById(selectedPanel.slice(6));if(!place)return;
    const locked=!isPlaceOpen(place,state);
    html=`<span class="eyebrow">${locked?'БУДУЩЕЕ ГОРОДА':'МЕСТО НА КАРТЕ'}</span><h2 id="panelTitle">${esc(place.title)}</h2><span class="status-pill">${icon(locked?'lock':'check')}${statusLabel(place)}</span>${cardArt(place,locked)}<p>${esc(place.description)}</p>`;
-   if(place.id==='cafe')html+='<div class="demo-box">Главная героиня — Зеффи, кремово-белая пушистая собачка. Кафе «Зефирок» остаётся её знакомым местом, а не новым придуманным заведением.</div>';
+   if(place.id==='cafe')html+='<button class="secondary" data-action="open-rabbit">Белый Кролик · это же здание →</button>';
    if(place.id==='rabbit')html+='<div class="demo-box">Архитектура пока условная: используется существующая модель из каталога, а не утверждённый арт стоматологии. Сюжетные сцены ещё не подключены.</div>';
    if(place.id==='friends')html+='<p class="panel-footnote">Название квартала — рабочее название прототипа. Новые биографии или дома персонажей здесь не назначаются.</p>';
-   if(locked&&place.chapter<99)html+='<p class="panel-footnote">Для проверки появления здания выберите следующий сценарий во вкладке «Тест v1».</p>';
+   if(locked&&place.chapter<99)html+='<p class="panel-footnote">Для проверки открытия района используйте меню тестера в верхнем углу.</p>';
    html+=`<button class="primary" data-go="${place.id}">${icon('target')}Показать на карте</button>`;
    if(locked&&place.chapter<99)html+='<button class="secondary" data-action="test">Перейти к тестовым сценариям</button>';
    if(place.id==='belkino')html+='<button class="secondary" data-action="project">Помочь построить Сад встреч</button>';
@@ -185,14 +183,12 @@ export async function startStoryWorld({mode='standalone'}={}) {
    else if(action==='test')openPanel('test');
    else if(action==='pause'){pause();if(selectedPanel)renderPanel();}
   }catch(error){
-   const messages={INSUFFICIENT_DEMO_MATERIALS:'Недостаточно тестовых материалов. Добавьте их во вкладке «Тест v1».',PROJECT_NOT_FUNDING:'Сбор уже завершён.',PROJECT_NOT_READY:'Сад ещё не готов к открытию.'};
+   const messages={INSUFFICIENT_DEMO_MATERIALS:'Недостаточно тестовых материалов. Добавьте их в меню тестера.',PROJECT_NOT_FUNDING:'Сбор уже завершён.',PROJECT_NOT_READY:'Сад ещё не готов к открытию.'};
    toast(messages[error.message]||'Не удалось выполнить тестовое действие.');
   }
  }
  $('returnWorld').innerHTML=icon('back');$('zoomIn').innerHTML=icon('plus');$('zoomOut').innerHTML=icon('minus');$('centerMap').innerHTML=icon('target');$('closePanel').innerHTML=icon('close');
  for(const element of document.querySelectorAll('[data-icon]'))element.innerHTML=icon(element.dataset.icon);
- $('districtStrip').innerHTML=DISTRICTS.map(d=>`<button class="district-chip" data-district="${d.id}" aria-pressed="${d.id==='square'}">${icon(d.icon)}${esc(d.short)}</button>`).join('');
- listen($('districtStrip'),'click',e=>{const button=e.target.closest('[data-district]');if(button)focusPlace(button.dataset.district);});
  listen($('mapMarkers'),'click',e=>{const button=e.target.closest('[data-place]');if(button)openPlace(button.dataset.place);});
  listen($('panelContent'),'click',e=>{
   const b=e.target.closest('button');if(!b||b.disabled)return;
@@ -201,12 +197,12 @@ export async function startStoryWorld({mode='standalone'}={}) {
   if(b.dataset.chapter){store(setDemoChapter(state,Number(b.dataset.chapter)));rebuild();renderPanel();toast('Тестовый сценарий карты изменён. Сюжет игрока не затронут.');}
   if(b.dataset.go){closePanel();focusPlace(b.dataset.go);}
  });
- listen($('closePanel'),'click',closePanel);listen(panel,'close',()=>{selectedPanel='';});
+ listen($('closePanel'),'click',closePanel);listen(panel,'close',()=>{selectedPanel='';selectTab('map');});
  listen(panel,'click',e=>{if(e.target===panel){const b=panel.getBoundingClientRect();if(e.clientX<b.left||e.clientX>b.right||e.clientY<b.top||e.clientY>b.bottom)closePanel();}});
- listen($('modeBadge'),'click',()=>openPanel('test'));listen($('projectBanner'),'click',()=>openPanel('project'));
+ listen($('modeBadge'),'click',()=>openPanel('test'));listen($('projectBanner'),'click',()=>openPanel('buildings'));
  listen($('returnWorld'),'click',()=>{if(mode==='standalone'){openPanel('test');toast('Это автономная сборка общего мира. Личный город здесь не загружается.');}else if(window.parent!==window)window.parent.postMessage({type:'zefirok-world-close'},location.origin);else location.assign(new URL('../',document.baseURI).href);});
  listen($('openPersonalCity'),'click',()=>{if(mode==='standalone'){openPanel('test');toast('Личный район доступен в Telegram после входа тестером.');return;}location.assign(new URL('../world.html?world_tester=1',document.baseURI).href);});
- listen(document.querySelector('.bottom-nav'),'click',e=>{const b=e.target.closest('[data-nav]');if(!b)return;if(b.dataset.nav==='map')focusPlace('square');else openPanel(b.dataset.nav==='districts'?'districts':b.dataset.nav==='project'?'project':'test');});
+ listen(document.querySelector('.bottom-nav'),'click',e=>{const b=e.target.closest('[data-nav]');if(!b)return;if(b.dataset.nav==='map'){closePanel();focusPlace('square');}else openPanel(b.dataset.nav==='history'?'history':'buildings');});
  function changeZoom(factor,x=size.width/2,y=size.height/2){tween=null;cam=zoomCamera(cam,size,x,y,cam.zoom*factor);layoutDirty=true;schedule();}
  listen($('zoomIn'),'click',()=>changeZoom(1.2));listen($('zoomOut'),'click',()=>changeZoom(1/1.2));
  listen($('centerMap'),'click',()=>focusPlace('square'));listen($('pauseLife'),'click',pause);
@@ -219,7 +215,7 @@ export async function startStoryWorld({mode='standalone'}={}) {
   if(!pointers.has(e.pointerId))return;const p=eventPoint(e);pointers.set(e.pointerId,p);
   if(pointers.size>=2&&pinch){const now=pinchValue();cam=zoomCamera(pinch.cam,size,pinch.x,pinch.y,pinch.cam.zoom*now.d/pinch.d);cam.x+=now.x-pinch.x;cam.y+=now.y-pinch.y;cam=clampCamera(cam,size);}
   else if(drag){const dx=p.x-drag.point.x,dy=p.y-drag.point.y;if(Math.hypot(dx,dy)>6)moved=true;if(moved)cam=clampCamera({...drag.cam,x:drag.cam.x+dx,y:drag.cam.y+dy},size);}
-  if(moved){$('mapHint').style.opacity='0';layoutDirty=true;schedule();}
+  if(moved){layoutDirty=true;schedule();}
  });
  function endPointer(e){
   if(!pointers.has(e.pointerId))return;const p=eventPoint(e),wasTap=!moved&&pointers.size===1&&e.type==='pointerup';pointers.delete(e.pointerId);pinch=null;
@@ -230,8 +226,6 @@ export async function startStoryWorld({mode='standalone'}={}) {
  }
  listen(canvas,'pointerup',endPointer);listen(canvas,'pointercancel',endPointer);
  listen(canvas,'keydown',e=>{if(panel.open)return;let used=true;if(e.key==='+'||e.key==='=')changeZoom(1.2);else if(e.key==='-')changeZoom(1/1.2);else if(e.key==='Home')focusPlace('square');else if(e.key===' ')pause();else if(['ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.key)){tween=null;cam.x+=e.key==='ArrowLeft'?45:e.key==='ArrowRight'?-45:0;cam.y+=e.key==='ArrowUp'?45:e.key==='ArrowDown'?-45:0;cam=clampCamera(cam,size);layoutDirty=true;schedule();}else used=false;if(used)e.preventDefault();});
- listen($('miniMap'),'click',e=>{const rect=e.currentTarget.getBoundingClientRect();const x=(e.clientX-rect.left)*264/rect.width,y=(e.clientY-rect.top)*212/rect.height,dx=(x-132)/2.38,dy=(y-12)/1.7;cam=clampCamera(centerCamera((dx+dy)/2,(dy-dx)/2,cam.zoom),size);tween=null;layoutDirty=true;schedule();});
- listen($('miniMap'),'keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();focusPlace('square',true);}});
  listen(document,'visibilitychange',()=>{if(document.hidden){if(raf)cancelAnimationFrame(raf);raf=0;clearInterval(ticker);ticker=0;}else{tick();resize();if(!ticker)ticker=setInterval(tick,1000);}});
  listen(reduce,'change',()=>{if(reduce.matches&&!paused){pauseAt=Date.now();paused=true;}refreshHUD();schedule();});
  const observer=new ResizeObserver(resize);observer.observe(zone);

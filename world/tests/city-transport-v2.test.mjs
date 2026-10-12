@@ -83,7 +83,18 @@ test('city v2: future district is painted below structures, never as the final s
  const renderer=fs.readFileSync(new URL('../renderer.js',import.meta.url),'utf8'),app=fs.readFileSync(new URL('../story/app.js',import.meta.url),'utf8');
  const begin=renderer.indexOf('export function drawWorld('),body=renderer.slice(begin);
  assert.ok(body.indexOf('drawWorldGroundZones(')>body.indexOf('drawLandscape('));assert.ok(body.indexOf('drawWorldGroundZones(')<body.indexOf('const layers='));
- const paint=app.slice(app.indexOf('function paintOverlay('),app.indexOf('function paintMiniMap('));assert.ok(!paint.includes('lockedDistricts'));assert.ok(!paint.includes('rgba(214,213,217'));
+ // The map-first UI intentionally removed the mini-map. Isolate only the
+ // overlay painter, instead of slicing to -1 and accidentally scanning frame(),
+ // which correctly sends future district zones into drawWorld's GROUND layer.
+ const overlayStart=app.indexOf('function paintOverlay(');
+ assert.ok(overlayStart>=0,'story overlay painter is missing');
+ const overlayEnds=['function paintMiniMap(','function frame(']
+  .map(name=>app.indexOf(name,overlayStart+'function paintOverlay('.length))
+  .filter(index=>index>overlayStart);
+ assert.ok(overlayEnds.length>0,'cannot isolate story overlay painter');
+ const paint=app.slice(overlayStart,Math.min(...overlayEnds));
+ assert.ok(!paint.includes('lockedDistricts'),'future districts must never be painted by the screen overlay');
+ assert.ok(!paint.includes('rgba(214,213,217'),'opaque future district screen veil must not return');
 });
 test('city v2: visual changes introduce no API writes, migrations, or live economy calls',()=>{
  for(const file of ['../bus-art.js','../traffic.js','../story/map.js']){const source=fs.readFileSync(new URL(file,import.meta.url),'utf8');assert.ok(!/\bfetch\s*\(|\/api\/|\.batch\(|\.prepare\(|localStorage\.clear/.test(source));}
