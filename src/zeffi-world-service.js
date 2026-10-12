@@ -204,7 +204,9 @@ async function handleMutation(db,env,telegramId,body,readProfile,operationGate){
 // second Telegram verification or a parallel player-wallet implementation.
 export async function handleZeffiWorldApi(request,env,dependencies){
   try{
-    if(!worldEnabled(env))failure(403,'WORLD_DISABLED','Мир Зеффи пока не включён на сервере.');
+    // The signed, tester-only story-access route is independent of the personal-city switch.
+    // Keep personal state, D1 and all economy mutations fail-closed under WORLD_ENABLED.
+    if(new URL(request.url).pathname!=='/api/world/story-access'&&!worldEnabled(env))failure(403,'WORLD_DISABLED','Мир Зеффи пока не включён на сервере.');
     if(request.method!=='POST')failure(405,'METHOD_NOT_ALLOWED','Используйте POST.');
     const text=await request.text();
     if(text.length>MAX_REQUEST_LENGTH)failure(413,'WORLD_REQUEST_TOO_LARGE','Слишком большой запрос.');

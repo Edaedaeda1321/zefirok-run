@@ -25,7 +25,7 @@ async function launch(){
  $('accessTitle').textContent='Проверяем доступ…';
  try{
   const initData=await acquireInitData();
-  if(!initData)throw new Error('Откройте «Общий мир» из Мира Зеффи внутри игры. Нужна авторизованная сессия тестера.');
+  if(!initData)throw new Error('Откройте «Мир Зеффи» из «Сладкого Забега» в Telegram. Требуется подписанная сессия тестера.');
   const controller=new AbortController();const timer=setTimeout(()=>controller.abort(),10000);
   let payload;
   try{
@@ -33,7 +33,7 @@ async function launch(){
    payload=await response.json().catch(()=>null);
    if(!response.ok||payload?.ok!==true||payload?.access!=='tester'||payload?.mode!=='local-demo'||payload?.version!=='story-v1')throw new Error(payload?.error||'Сервер пока не открыл эту карту для тестеров.');
   }finally{clearTimeout(timer);}
-  const {startStoryWorld}=await import('./app.js?v=1');
+  const {startStoryWorld}=await import('./app.js?v=2');
   await startStoryWorld({mode:'tester'});
   if(window.parent!==window)window.parent.postMessage({type:'zefirok-world-ui-ready'},location.origin);
  }catch(error){

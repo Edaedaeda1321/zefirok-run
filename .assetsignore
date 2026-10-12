@@ -72,3 +72,7 @@ START_STORY_WORLD_v1_3.html
 
 # Local-only White Rabbit / Zephirok v1 backups
 .world-white-rabbit-v1-backup/
+
+# Local-only Story World tester entry assets and backups
+.world-story-tester-entry-v1-backup/
+/scripts/.world-story-tester-entry-v1/
