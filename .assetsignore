@@ -57,3 +57,12 @@ world/docs/
 story-world-preview.html
 START_STORY_WORLD.html
 START_STORY_WORLD_v1.html
+
+# City Fix v2 local-only files
+.world-city-fix-v2-backup/
+.world-transport-3d-asphalt-backup/
+.world-transport-style-backup/
+START_STORY_WORLD_v1_3.html
+
+# City Fix v2 local-only files
+.world-checks-v2-1-backup/

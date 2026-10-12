@@ -42,6 +42,8 @@ test('8 new landscape objects are purchasable single-cell decor; old 0.1.7 objec
  assert.equal(CATALOG_ITEMS.filter(x=>x.category==='landscape').length,8);
  const base=makeInitialCity();
  let used=base;used.wallet.points=100_000;used.wallet.treats=1_000;
+ // v17 gates decorative modules as well; exercise purchase at the required level.
+ used.progress.bestLevel=Math.max(...MODULES.map(id=>CATALOG[id].minCityLevel));
  for(const [i,id] of MODULES.entries()){
   assert.deepEqual([CATALOG[id].w,CATALOG[id].h],[1,1]);
   assert.equal(CATALOG[id].retired,undefined);
@@ -66,4 +68,13 @@ test('previous saves keep their elevation objects, footprint, ownership and wall
  assert.equal(expansionPrice(loaded).points,1200);
  const expanded=buyParcel(loaded,6,2);
  assert.equal(expansionPrice(expanded).points,2400);
+});
+
+test('level-gated landscape still rejects a new purchase without changing the city',()=>{
+ const city=makeInitialCity();city.wallet={points:100_000,coffee:1_000,treats:1_000};
+ const before=JSON.stringify(city);
+ assert.equal(CATALOG.terrain_podium_plaza_premium.minCityLevel,4);
+ assert.throws(()=>addObject(city,CATALOG,'terrain_podium_plaza_premium',19,19),
+  e=>e instanceof BuildError&&e.code==='BUILDING_LEVEL_LOCKED');
+ assert.equal(JSON.stringify(city),before);
 });

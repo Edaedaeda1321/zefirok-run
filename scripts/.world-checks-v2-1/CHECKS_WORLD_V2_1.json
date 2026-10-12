@@ -1,0 +1,55 @@
+{
+  "baseline_main": "3679387d0980d9d3e95a24461874d91836ef1f28",
+  "requires": "installed City Fix v2",
+  "world_tests_before": {
+    "total": 227,
+    "pass": 216,
+    "fail": 11
+  },
+  "world_tests_after": {
+    "total": 228,
+    "pass": 228,
+    "fail": 0
+  },
+  "new_negative_tests": 1,
+  "upgrade_checks": 14,
+  "city_v2_regression_tests": 22,
+  "city_v2_wiring_checks": 14,
+  "story_wiring_checks": 28,
+  "world_d1_checks": 21,
+  "local_production_gate_checks": 61,
+  "full_wrangler_d1": "NOT COMPLETED: offline npm returned ENOTCACHED for wrangler@4.131.1",
+  "installer_safety": {
+    "passed": 10,
+    "checks": [
+      "read-only preflight leaves the entire worktree unchanged",
+      "atomic apply updates only expected files, records verifiable backups and preserves runtime dependencies",
+      "second apply is idempotent; no extra backups or duplicate ignore rules",
+      "the prior v2 installer accepts the repaired checksums as ALREADY",
+      "unknown user edits cause failure before any project write",
+      "corrupt payload is rejected without changing the project",
+      "symlink dependency is rejected; outside files are untouched",
+      "editor race between preflight and apply preserves the external edit",
+      "injected failure on second write rolls back the first write",
+      "reproduced cached Git whitespace failure; repair + git add resolves it without editing the index"
+    ]
+  },
+  "protected_files_unchanged": [
+    "world/engine.js",
+    "world/catalog.js",
+    "world/economy.js",
+    "world/renderer.js",
+    "world/citizens.js",
+    "world/traffic.js",
+    "world/bus-art.js",
+    "world/story/map.js",
+    "world/story/app.js",
+    "world/assets/transport-v2/bus-atlas.webp",
+    "src/worker.js",
+    "src/zeffi-world-service.js",
+    "update.sh",
+    "scripts/check-production-gate.mjs"
+  ],
+  "runtime_app_change": "exactly one trailing ASCII space removed",
+  "deployed": false
+}

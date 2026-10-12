@@ -33,7 +33,10 @@ const ui=readFileSync(new URL('../world/app.js',import.meta.url),'utf8');
 const css=readFileSync(new URL('../world/premium-ui.css',import.meta.url),'utf8');
 const worker=readFileSync(new URL('../src/zeffi-world-service.js',import.meta.url),'utf8');
 assert.match(ui,/shopSortedItems\(/);
-assert.match(ui,/catalog-level-lock/);
+// v18 replaces the oversized v17 banner with a DIV and the shared lock icon.
+assert.match(ui,/createElement\('div'\);mark\.className='catalog-lock-mark'/);
+assert.match(ui,/icon\.className='catalog-lock-icon'/);
+assert.doesNotMatch(ui,/catalog-level-lock/);
 assert.match(ui,/shopShortfall\(/);
 assert.match(css,/catalog-card\.is-level-locked/);
 assert.match(worker,/addObject\(city,CATALOG/);

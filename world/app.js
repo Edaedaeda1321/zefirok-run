@@ -116,7 +116,7 @@ function showToast(message, isError = false) {
 function translateStatic() {
  document.querySelectorAll('[data-t]').forEach(el=>{ el.textContent = tr(el.dataset.t); });
  document.querySelectorAll('[data-title]').forEach(el=>{ el.title=tr(el.dataset.title);el.setAttribute('aria-label',tr(el.dataset.title)); });
- document.title = `${tr('app')} — ${tr('myCity')}`; 
+ document.title = `${tr('app')} — ${tr('myCity')}`;
 }
 function readSavedCity() {
  if(SERVER_MODE)return;
@@ -1142,6 +1142,7 @@ function bindEvents(){
 }
 function initialize(){
  onSpriteUpdate(()=>{if(state.visualsReady)refreshArt();});
+ window.addEventListener('zeffi-transit-sprites-ready',()=>{if(state.visualsReady)scheduleDraw();});
  // A retired 2D/3D preference must never switch the released city to wireframes.
  setSpriteMode(true);
  translateStatic();readSavedCity();bindEvents();renderCategories();renderCatalog();setCatalogOpen(window.innerWidth>700||window.innerHeight>=570);updateUI();resetView();

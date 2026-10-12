@@ -1,0 +1,111 @@
+{
+  "version": "zeffi-city-fix-v2",
+  "verified_main": "3679387d0980d9d3e95a24461874d91836ef1f28",
+  "targets": {
+    "world/app.js": {
+      "before": [
+        "b9e6d4b89e66cdaa119d79cee76dad0e633c2f13b4e5ee7cf2fb9bce86c4a217"
+      ],
+      "after": "7bfd5c5686fad3954b2b2cac5758cdd09ec9448e7792b42e83f5dc427e496213"
+    },
+    "world/citizens.js": {
+      "before": [
+        "b726cd6ee6233a3f3ba2a11a1061db3465b6da36b1cea122e3a790a1c598ccca"
+      ],
+      "after": "ca93d2608f5c09406cf0152147d156d27b0d7faf425fac99436a1b73236f571e"
+    },
+    "world/traffic.js": {
+      "before": [
+        "f3d82da3d541e5f858a4355833ab10359b1a38f66ba1440b6ec1aa59ce3ddef4"
+      ],
+      "after": "96883e6b78d94da0fac5932eb1f6a1eb86b97b05a335436918745ec6cfc80402"
+    },
+    "world/renderer.js": {
+      "before": [
+        "5a32d3d7291ac4c7fe44f6e667a7781757b8eecf8e40709bca64ecffdd08e96b"
+      ],
+      "after": "a4c76137cb903c5c3850ad27f046a3ea40987a7f20bf7e86d6ab06d3626d826d"
+    },
+    "world/story/map.js": {
+      "before": [
+        "4428e1e342e038710b3da1165fc382891423531dadb6a15ae4fb07735d6844f2"
+      ],
+      "after": "0fc23fa67566d973c81a2a1dc3cfc7e63f0592478aa5c12ae5bd00d113a8baac"
+    },
+    "world/story/app.js": {
+      "before": [
+        "8bcface8725a3e997752cc680d5725dff2c26316582bfb202c46bb9757d66487"
+      ],
+      "after": "e2140921d22f6ddad1ee13fc73ecfd3e15619394bc8609525699712db0d4b489"
+    },
+    "world/tests/clean-assets.test.mjs": {
+      "before": [
+        "6fd4059ff8ec22a89f9eb94ee1b1394113c3b5bb881ebd7d91f39d49bb3944a5"
+      ],
+      "after": "b3855351294c47f35c6c9e5bce94ab6980478f6538a21bf2f9de48c1b5c4ccdd"
+    },
+    "scripts/build-world-story-v1.py": {
+      "before": [
+        "0b899ff5e81722dbab0565bae52aa284d55d922ac0c6a97c867e85458420dbab"
+      ],
+      "after": "4d223b87da43dae84ec429f90e81bdd5515c982e00ef348fa65c8315864b1dbf"
+    },
+    "scripts/check-production-gate.mjs": {
+      "before": [
+        "d747acd6fc17aad16f136fb7d3481e8af937c3592f41681647f16360c1ecfd8d"
+      ],
+      "after": "fca73cf247bca6ec18759790c8eab9c2f6d8d35aa182bfb1be8338b8b88b5358"
+    },
+    "world/bus-art.js": {
+      "before": [
+        null
+      ],
+      "after": "4c1bb2f20c2d66d8201d3d19f1ec75ff628cbdd17831055cabee4ceb0285087b"
+    },
+    "world/assets/transport-v2/bus-atlas.webp": {
+      "before": [
+        null
+      ],
+      "after": "1a438384e356beaff5081de592eefffbcd855b8f3fa0b67f513ba9873423729e"
+    },
+    "world/assets/transport-v2/manifest.json": {
+      "before": [
+        null
+      ],
+      "after": "ac4c29bd9f517b97ecafe3e94c2dc2d12de8c81a50faec16a50ee6df7e33dfe2"
+    },
+    "world/tests/city-transport-v2.test.mjs": {
+      "before": [
+        null
+      ],
+      "after": "8368ab0e2f9aeb0554b395c15d08ae4398e17dfcc94ad2078c80eb55ac7e2341"
+    },
+    "scripts/check-world-city-fix-v2.mjs": {
+      "before": [
+        null
+      ],
+      "after": "22562e48ab4d8b811dc8a7d19c315cb48dd035ad02611a2ec7ed1b7c5283ab1f"
+    }
+  },
+  "dependencies": {
+    "world/engine.js": "f02d7b3eff83f248f21a4c7b142c2386445435122a472cafa241597467ef7abe",
+    "world/catalog.js": "6ac2927e2b9f22e93de48dd05ef454ce19e05c5ffeecaf178defb2494d3f771c",
+    "world/sprite-assets.js": "47f89898719a3c4ae87f3379707fe46276c3d0aeab8095dc5b6bc11d2de44b2c",
+    "world/sprite-manifest.js": "0be42c564557f9b800f5dd313c62989e214d606834af29e0b02208864e3fcf19",
+    "world/story/model.js": "01b8d7f29b00ed0eaedfb2f25c89c42fd06dfcc1d2c7cd6f5c9a1761498b60b9"
+  },
+  "ignore_rules": {
+    ".gitignore": [
+      ".world-city-fix-v2-backup/",
+      ".world-transport-3d-asphalt-backup/",
+      ".world-transport-style-backup/",
+      "START_STORY_WORLD_v1_3.html"
+    ],
+    ".assetsignore": [
+      ".world-city-fix-v2-backup/",
+      ".world-transport-3d-asphalt-backup/",
+      ".world-transport-style-backup/",
+      "START_STORY_WORLD_v1_3.html"
+    ]
+  }
+}

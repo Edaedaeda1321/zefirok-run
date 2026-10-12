@@ -1,0 +1,96 @@
+{
+  "version": "zeffi-world-checks-v2.1",
+  "verified_main": "3679387d0980d9d3e95a24461874d91836ef1f28",
+  "requires": "City Fix v2 already installed; no runtime behavior changes",
+  "targets": {
+    "world/tests/extra-pack.test.mjs": {
+      "before": [
+        "fd6de602c02240f0e91e2775c617325e8ea27d907303e19d824805f39e4038b7"
+      ],
+      "after": "f72208aefbcf4f94a77cf2a91c87b71c4d00e70d8acb0a5cd6ae3c7f4f68d31d"
+    },
+    "world/tests/park-ground-contact.test.mjs": {
+      "before": [
+        "a9791d9a51b1b53769ea50c45722814b4c6a56cd7ddd6beee8dfde2424342b99"
+      ],
+      "after": "8ffb7b18898ba28c4161b25c1f9050a6ceb246a646bcdb98355aa05b388bd1fc"
+    },
+    "world/tests/shop-progression-v17.test.mjs": {
+      "before": [
+        "56f776ecc7fd1bf0367f51d7813dd1394e174ed589453d40be86c2906c384da6"
+      ],
+      "after": "48c099f8bacae85baf0adf5d339c3b28dda3895904dd512aaacbc16cc477e07c"
+    },
+    "world/tests/terrain-rollback.test.mjs": {
+      "before": [
+        "ef404af41f7ef78daabc4037de9d2fdbe7aba860f451fd5b58da5f3ac6dcf591"
+      ],
+      "after": "7b86f4f044874c61dea9e61836423cb6e07dd8bb4583345fb34f2064f425b3e5"
+    },
+    "world/tests/visual-ground-icons-v13.test.mjs": {
+      "before": [
+        "a7e473ebb85c6730ac4e0c753f65d8c725666c7492b922557ea113912b4781c8"
+      ],
+      "after": "6fee41381aa8806fab519fb2e9af7a0f91f8bd111ae2025faae29166d0805707"
+    },
+    "world/tests/world-pricing-v7.test.mjs": {
+      "before": [
+        "0fe948b514dc0fae158ef361f2076201aee08542b02166ffb1e504b3f3689e41"
+      ],
+      "after": "a8c175cadf67d7a79c90a9bd399ed29efebf9c303b1cfefa4a0a2477221e1e58"
+    },
+    "world/app.js": {
+      "before": [
+        "056c4fa5f8d871f10ec14bee8340e01bb1ea4e0fddd409cec61d7f12d922eedf"
+      ],
+      "after": "7bfd5c5686fad3954b2b2cac5758cdd09ec9448e7792b42e83f5dc427e496213"
+    },
+    "scripts/.world-city-fix-v2/world/app.js": {
+      "before": [
+        "056c4fa5f8d871f10ec14bee8340e01bb1ea4e0fddd409cec61d7f12d922eedf"
+      ],
+      "after": "7bfd5c5686fad3954b2b2cac5758cdd09ec9448e7792b42e83f5dc427e496213"
+    },
+    "scripts/.world-city-fix-v2/manifest.json": {
+      "before": [
+        "675f3455f1e99b447a2dfe219ac6286d8c2a5d8f2ac3b20bb4eac4da7e8b045d"
+      ],
+      "after": "ec4bba041e8b8136f18f07bb31933396d8e3244f795796ded95f1992d9035e17"
+    },
+    "scripts/check-world-checks-v2-1.mjs": {
+      "before": [
+        null
+      ],
+      "after": "6a7c8290945fcf47ef1fa7f4886d8b3418163985fee329b9eeecf869a3b47247"
+    },
+    "scripts/check-world-shop-v17.mjs": {
+      "before": [
+        "956093a8772c0cb45332893837ac7b2dc269ce258ff5a7c036bfa0cf6e272884"
+      ],
+      "after": "91a360ec1b1b1a09fa366a5fe3223e27bc088d7cfd3bc5798412673d162b2bcb"
+    }
+  },
+  "dependencies": {
+    "world/engine.js": "f02d7b3eff83f248f21a4c7b142c2386445435122a472cafa241597467ef7abe",
+    "world/economy.js": "691df0ac5d0fe679b6a7c1043a93f0f70385c7760963138c6a7ac9ab10c07d84",
+    "world/catalog.js": "6ac2927e2b9f22e93de48dd05ef454ce19e05c5ffeecaf178defb2494d3f771c",
+    "world/sprite-manifest.js": "0be42c564557f9b800f5dd313c62989e214d606834af29e0b02208864e3fcf19",
+    "world/sprite-assets.js": "47f89898719a3c4ae87f3379707fe46276c3d0aeab8095dc5b6bc11d2de44b2c",
+    "world/renderer.js": "a4c76137cb903c5c3850ad27f046a3ea40987a7f20bf7e86d6ab06d3626d826d",
+    "world/traffic.js": "96883e6b78d94da0fac5932eb1f6a1eb86b97b05a335436918745ec6cfc80402",
+    "world/citizens.js": "ca93d2608f5c09406cf0152147d156d27b0d7faf425fac99436a1b73236f571e",
+    "world/bus-art.js": "4c1bb2f20c2d66d8201d3d19f1ec75ff628cbdd17831055cabee4ceb0285087b",
+    "world/story/app.js": "e2140921d22f6ddad1ee13fc73ecfd3e15619394bc8609525699712db0d4b489",
+    "world/story/map.js": "0fc23fa67566d973c81a2a1dc3cfc7e63f0592478aa5c12ae5bd00d113a8baac",
+    "src/zeffi-world-service.js": "dfc2c484c0c3f853cbdabc22b3c7ca153b5984547fa2171dda979f23993ff7b5",
+    "scripts/apply-world-city-fix-v2.py": "69102219753652ff2aef6ba4b985529e23e614983425eabe4f55ac9b59246eac"
+  },
+  "ignore_rules": {
+    ".gitignore": [
+      ".world-checks-v2-1-backup/"
+    ],
+    ".assetsignore": [
+      ".world-checks-v2-1-backup/"
+    ]
+  }
+}

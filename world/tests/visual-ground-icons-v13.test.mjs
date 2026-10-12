@@ -53,9 +53,12 @@ test('v13: old buildings and premium decor are grounded without rescaling or mov
   if(!base){assert.equal(docked,null);continue;}
   assert.equal(docked.assetScale,base.assetScale);
   assert.equal(docked.anchorX,base.anchorX);
-  if(def.category==='landscape'||def.category==='paths'||def.layer==='surface')
-   assert.equal(docked.anchorY,base.anchorY,`${id}: terrain must not be sunk`);
-  else assert.ok(docked.anchorY<base.anchorY,`${id} should be placed closer to soil`);
+  if(def.category==='landscape'||def.category==='paths'||(def.layer==='surface'&&!def.blockingSurface))
+   assert.equal(docked.anchorY,base.anchorY,`${id}: flat terrain must not be sunk`);
+  else {
+   assert.ok(docked.anchorY<base.anchorY,`${id} should be placed closer to soil`);
+   if(def.blockingSurface)assert.ok(Math.abs((base.anchorY-docked.anchorY)/base.assetScale-6)<1e-7,`${id}: solid v14 plaza uses six-pixel render docking`);
+  }
   const m=worldGroundContactLayout({x:11,y:12,rotation},def,meta,docked);
   assert.ok(m.radiusY>0&&m.radiusY<m.radiusX*.5);
  }

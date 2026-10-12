@@ -4,12 +4,13 @@ import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { dirname, join, relative } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { SPRITE_MANIFEST } from '../sprite-manifest.js';
+import { BUS_ART } from '../bus-art.js';
 import { CATALOG, CATALOG_ITEMS, RETIRED_PATH_ITEMS } from '../catalog.js';
 import { catalogSpriteId, spriteMetadata } from '../sprite-assets.js';
 import { makeInitialCity, sanitizeCity } from '../engine.js';
 const root=dirname(fileURLToPath(new URL('../index.html',import.meta.url)));
 const ids=new Set(SPRITE_MANIFEST.assets.map(a=>a.id));
-const spritePaths=new Set(SPRITE_MANIFEST.assets.map(a=>a.fileWebp));
+const spritePaths=new Set([...SPRITE_MANIFEST.assets.map(a=>a.fileWebp),BUS_ART.file.replace(/^\.\//,'')]);
 function visit(path,output=[]){ for(const entry of readdirSync(path,{withFileTypes:true})){
  const full=join(path,entry.name);if(entry.isDirectory())visit(full,output);else output.push(relative(root,full).replaceAll('\\','/'));
 }return output; }
@@ -17,7 +18,7 @@ function visit(path,output=[]){ for(const entry of readdirSync(path,{withFileTyp
 test('only active WebP files are packaged (no PNG, GLB or unreferenced sprites)',()=>{
  const actual=visit(join(root,'assets')).filter(p=>p.endsWith('.webp'));
  assert.deepEqual(new Set(actual),spritePaths);
- assert.equal(actual.length,361);
+ assert.equal(actual.length,362); // 361 existing world images + one runtime bus atlas
  assert.ok(!visit(root).some(p=>/\.(png|glb|jpg|jpeg)$/i.test(p)));
  assert.ok(!SPRITE_MANIFEST.assets.some(a=>Object.hasOwn(a,'filePng')||Object.hasOwn(a,'sourceGlb')));
  const code=readFileSync(join(root,'sprite-assets.js'),'utf-8');

@@ -2,7 +2,7 @@ import { CATALOG } from '../catalog.js';
 import { drawWorld, isoToScreen } from '../renderer.js';
 import { preloadSpriteSet, onSpriteUpdate, spriteStatus } from '../sprite-assets.js';
 import { buildCitizenScene, sampleCitizenScene } from '../citizens.js';
-import { buildBusScene, sampleBusScene } from '../traffic.js';
+import { buildBusScene, sampleBusScene, preloadBusArt, busArtStatus } from '../traffic.js';
 import { createDemoState, loadDemo, saveDemo, resetDemo, contribute, simulateCommunityHelp, addDemoMaterials, openProject, setDemoChapter, visitPlace, projectStatus, projectTotal, PROJECT_GOAL } from './model.js';
 import { DISTRICTS, PLACES, placeById, isPlaceOpen, lockedDistricts, buildStoryMap, validateStoryMap } from './map.js';
 import { icon, escapeText as esc, artUrl, requiredStorySpriteIds, centerCamera, worldAt, zoomCamera, clampCamera } from './view.js';
@@ -21,6 +21,7 @@ export async function startStoryWorld({mode='standalone'}={}) {
  const timeout=new Promise((_,reject)=>{loadTimer=setTimeout(()=>reject(new Error('Загрузка заняла слишком много времени. Повторите попытку.')),20000);});
  const warm=await Promise.race([preloadSpriteSet(requiredStorySpriteIds(),{pin:true,onProgress:p=>{$('loadProgress').value=Math.round(p.done/p.total*100);}}),timeout]).finally(()=>clearTimeout(loadTimer));
  if(warm.failed)throw new Error(`Не удалось загрузить ${warm.failed} игровых изображений. Проверьте, что сборка распакована полностью.`);
+ await preloadBusArt();
  booted=true;
  const canvas=$('storyCanvas'),overlay=$('storyOverlay'),zone=$('mapZone'),panel=$('storyPanel');
  let storage=null;try{storage=window.localStorage;}catch{}
@@ -46,7 +47,7 @@ export async function startStoryWorld({mode='standalone'}={}) {
  }
  function refreshHUD(){
   const status=projectStatus(state),percent=Math.round(projectTotal(state)/PROJECT_GOAL*100);
-  $('modeBadge').textContent=mode==='standalone'?'V1 · АВТОНОМНО':'V1 · ТЕСТЕР';
+  $('modeBadge').textContent=mode==='standalone'?'V1.3 · АВТОНОМНО':'V1.3 · ТЕСТЕР';
   $('demoNotice').textContent='Локальный тест. Реальные валюты не списываются.';
   $('bannerPercent').textContent=status==='active'?'Открыт':status==='building'?clock(state.project.readyAt-Date.now()):`${percent}%`;
   $('bannerBar').style.width=`${percent}%`;
@@ -84,16 +85,6 @@ export async function startStoryWorld({mode='standalone'}={}) {
   const dpr=Math.min(devicePixelRatio||1,2),w=Math.round(size.width*dpr),h=Math.round(size.height*dpr);
   if(overlay.width!==w||overlay.height!==h){overlay.width=w;overlay.height=h;}
   const ctx=overlay.getContext('2d');ctx.setTransform(dpr,0,0,dpr,0,0);ctx.clearRect(0,0,size.width,size.height);
-  for(const district of lockedDistricts(state)){
-   const pts=projectedBounds(district.bounds);ctx.save();ctx.setLineDash([5*cam.zoom,6*cam.zoom]);
-   poly(ctx,pts,'rgba(214,213,217,.89)','#fbf7fb',2);ctx.restore();
-   const p=isoToScreen(...district.focus,size,cam);ctx.textAlign='center';ctx.fillStyle='#9e93a5';ctx.font=`750 ${Math.max(18,58*cam.zoom)}px system-ui`;ctx.fillText('?',p.x,p.y+15*cam.zoom);
-   ctx.font=`700 ${Math.max(7,10*cam.zoom)}px system-ui`;ctx.fillStyle='#8c8494';ctx.fillText(district.chapter===99?'БУДУЩИЙ РАЙОН':'ОТКРОЕТСЯ ПО СЮЖЕТУ',p.x,p.y+32*cam.zoom);
-  }
-  if(projectStatus(state)==='funding'){
-   const pts=projectedBounds([14,34,3,3]);poly(ctx,pts,'rgba(253,226,188,.88)','#d2a971',2);
-   const p=isoToScreen(15.5,35.5,size,cam);ctx.textAlign='center';ctx.fillStyle='#ad855c';ctx.font=`700 ${Math.max(10,21*cam.zoom)}px system-ui`;ctx.fillText('+',p.x,p.y+4*cam.zoom);
-  }
   for(const place of PLACES){
    const button=markerElements.get(place.id),pt=isoToScreen(...place.focus,size,cam);
    const rise=isPlaceOpen(place,state)?(place.id==='community-garden'?52:75)*cam.zoom:46*cam.zoom;
@@ -108,6 +99,7 @@ export async function startStoryWorld({mode='standalone'}={}) {
   const to=(x,y)=>({x:w/2+(x-y)*2.38,y:12+(x+y)*1.7});
   ctx.clearRect(0,0,w,h);poly(ctx,[to(0,0),to(48,0),to(48,48),to(0,48)],'#c7ddad','#9ab985',1.5);
   ctx.fillStyle='#fbf4df';for(const road of city.roads){const[x,y]=road.split(',').map(Number);const pt=to(x+.5,y+.5);ctx.fillRect(pt.x-1.4,pt.y-1,2.8,2);}
+  ctx.fillStyle='#606673';for(const road of city.busRoads||[]){const[x,y]=road.split(',').map(Number);const pt=to(x+.5,y+.5);ctx.fillRect(pt.x-1.4,pt.y-1,2.8,2);}
   for(const d of lockedDistricts(state)){const[x,y,a,b]=d.bounds;poly(ctx,[to(x,y),to(x+a,y),to(x+a,y+b),to(x,y+b)],'#c7c4cf');}
   for(const d of DISTRICTS){const pt=to(...d.focus);ctx.beginPath();ctx.arc(pt.x,pt.y,3,0,Math.PI*2);ctx.fillStyle=isPlaceOpen(d,state)?'#b27096':'#918394';ctx.fill();}
   const corners=[[0,0],[size.width,0],[size.width,size.height],[0,size.height]].map(([x,y])=>{const p=worldAt(x,y,size,cam);return to(p.x,p.y);});
@@ -119,7 +111,7 @@ export async function startStoryWorld({mode='standalone'}={}) {
   const live=!paused&&!reduce.matches;
   if(dirty||t-lastFrame>=1000/30){
    const start=performance.now(),now=Date.now(),ambient=(paused?pauseAt:now)-pauseOffset;
-   drawWorld(canvas,city,CATALOG,cam,{now,citizens:sampleCitizenScene(citizens,ambient),buses:sampleBusScene(buses,ambient)});
+   drawWorld(canvas,city,CATALOG,cam,{now,groundZones:[...lockedDistricts(state).map(d=>({bounds:d.bounds,future:d.chapter===99})),...(projectStatus(state)==='funding'?[{bounds:[14,34,3,3],project:true}]:[])],citizens:sampleCitizenScene(citizens,ambient),buses:sampleBusScene(buses,ambient)});
    if(layoutDirty){paintOverlay();layoutDirty=false;}
    drawTimes.push(performance.now()-start);if(drawTimes.length>120)drawTimes.shift();lastFrame=t;dirty=false;
   }
@@ -243,7 +235,7 @@ export async function startStoryWorld({mode='standalone'}={}) {
  gate.hidden=true;$('storyShell').hidden=false;
  rebuild();resize();ticker=setInterval(tick,1000);
  if(!persistent)toast('Локальное сохранение недоступно. Можно тестировать без сохранения.');
- window.ZeffiStoryDiagnostics=()=>({version:'1.0.0',mode,mapSize:city.size,objects:city.objects.length,roads:city.roads.length,citizens:citizens.routes.length,buses:buses.routes.length,chapter:state.chapter,project:projectStatus(state),projectTotal:projectTotal(state),personalContribution:state.project.personal,materials:state.materials,paused,hidden:document.hidden,frameScheduled:!!raf,renderSamples:drawTimes.length,averageRenderMs:drawTimes.length?Math.round(drawTimes.reduce((a,b)=>a+b,0)/drawTimes.length*100)/100:0,assets:spriteStatus(),persistent,globalSync:false,walletWrites:false});
+ window.ZeffiStoryDiagnostics=()=>({version:'1.3.0',transport:busArtStatus(),crosswalks:city.crosswalks.length,mode,mapSize:city.size,objects:city.objects.length,roads:city.roads.length,citizens:citizens.routes.length,buses:buses.routes.length,chapter:state.chapter,project:projectStatus(state),projectTotal:projectTotal(state),personalContribution:state.project.personal,materials:state.materials,paused,hidden:document.hidden,frameScheduled:!!raf,renderSamples:drawTimes.length,averageRenderMs:drawTimes.length?Math.round(drawTimes.reduce((a,b)=>a+b,0)/drawTimes.length*100)/100:0,assets:spriteStatus(),persistent,globalSync:false,walletWrites:false});
  function dispose(){if(disposed)return;disposed=true;if(raf)cancelAnimationFrame(raf);raf=0;clearInterval(ticker);clearTimeout(toastTimer);observer.disconnect();onSpriteUpdate(()=>{});for(const off of disposers)off();}
  // bfcache keeps the document alive; only final navigation tears listeners down.
  listen(window,'pagehide',e=>{if(e.persisted){if(raf)cancelAnimationFrame(raf);raf=0;clearInterval(ticker);ticker=0;}else dispose();});

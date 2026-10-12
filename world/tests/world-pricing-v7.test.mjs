@@ -19,16 +19,18 @@ const checkRunBand=(ids,min,max)=>{
  }
 };
 
-test('starter HOMES and small shops take about 3-4 ordinary runs from empty wallet',()=>{
- checkRunBand(['cottage','coffee-kiosk','flower-shop'],3,4);
- // Only three ordinary runs cannot buy the full building; four can.
- for(const kind of ['cottage','coffee-kiosk','flower-shop']){
+test('current v17 starter prices fit 4/4/5 illustrative runs, not the retired v7 band',()=>{
+ checkRunBand(['cottage','coffee-kiosk'],3,4);
+ checkRunBand(['flower-shop'],4,5);
+ // README_MIR_ZEFFI_SHOP_PROGRESSION_V17_RU.md supersedes the v7 estimate.
+ // These are controlled test budgets, not measurements of real player income.
+ for(const [kind,runs] of [['cottage',4],['coffee-kiosk',4],['flower-shop',5]]){
   const city=makeInitialCity();
-  city.wallet={points:3*RUN_EARNINGS.points,coffee:3*RUN_EARNINGS.coffee,treats:3*RUN_EARNINGS.treats};
+  city.wallet={points:(runs-1)*RUN_EARNINGS.points,coffee:(runs-1)*RUN_EARNINGS.coffee,treats:(runs-1)*RUN_EARNINGS.treats};
   assert.equal(canAfford(city.wallet,objectPrice(CATALOG,kind)),false,kind);
   assert.throws(()=>addObject(city,CATALOG,kind,16,18,0,1800000000000),
    error=>error instanceof BuildError&&error.code==='INSUFFICIENT_BALANCE');
-  city.wallet={points:4*RUN_EARNINGS.points,coffee:4*RUN_EARNINGS.coffee,treats:4*RUN_EARNINGS.treats};
+  city.wallet={points:runs*RUN_EARNINGS.points,coffee:runs*RUN_EARNINGS.coffee,treats:runs*RUN_EARNINGS.treats};
   const built=addObject(city,CATALOG,kind,16,18,0,1800000000000);
   assert.equal(built.objects.at(-1).kind,kind);
  }
@@ -37,7 +39,8 @@ test('starter HOMES and small shops take about 3-4 ordinary runs from empty wall
 test('large buildings and parks cost meaningfully more than smaller ones',()=>{
  checkRunBand(['family-home','bakery','playground'],6,8);
  checkRunBand(['villa','coffee-house','garden'],10,14);
- assert.ok(runsOf('plaza-prestige-podium')>=15);
+ assert.deepEqual(objectPrice(CATALOG,'plaza-prestige-podium'),{points:16500,coffee:0,treats:30});
+ assert.equal(runsOf('plaza-prestige-podium'),11);
  for(const sequence of [
   ['cottage','family-home','villa'],
   ['coffee-kiosk','bakery','coffee-house'],
@@ -49,10 +52,12 @@ test('large buildings and parks cost meaningfully more than smaller ones',()=>{
  }
 });
 
-test('all 41 catalog prices are positive, safe integers and still server-quoteable',()=>{
- assert.equal(CATALOG_ITEMS.length,41);
+test('all 48 current catalog prices are positive, safe integers and still server-quoteable',()=>{
+ assert.equal(CATALOG_ITEMS.length,48);
+ assert.deepEqual(CATALOG_ITEMS.map(x=>x.id).sort(),Object.keys(OBJECT_PRICES).sort());
  for(const item of CATALOG_ITEMS){
   assert.deepEqual(item.price,OBJECT_PRICES[item.id],item.id);
+  assert.equal(item.price.coffee,0,`${item.id}: coffee is for acceleration, not purchasing`);
   for(const key of ['points','coffee','treats']){
    assert.ok(Number.isSafeInteger(item.price[key])&&item.price[key]>=0,`${item.id}/${key}`);
   }

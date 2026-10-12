@@ -237,7 +237,7 @@ function drawLandscape(ctx,city,catalog,viewport){
 // doubles their 3D ledges at turns, junctions, and building entrances.
 // Tiles and connectors are computed once each; the top is one shared plane.
 export const ROAD_HALF_WIDTH = .38;
-export const BUS_ROAD_HALF_WIDTH = .46;
+export const BUS_ROAD_HALF_WIDTH = .565;
 export function worldRoadTopology(roadIds){
  const roadSet=new Set(roadIds);
  const cells=[],joins=[];
@@ -304,42 +304,65 @@ function drawRoads(ctx, city, viewport){
  ctx.restore();
 }
 
-function drawBusRoads(ctx, city, viewport){
- const topology=worldRoadTopology(city.busRoads||[]);
- const inView=({x,y})=>x>=viewport.minX-1&&y>=viewport.minY-1&&x<=viewport.maxX+1&&y<=viewport.maxY+1;
- const cells=topology.cells.filter(inView);
+// Cached topology, not re-created for every vehicle or rasterized road tile.
+const transitTopologyCache=new WeakMap();
+function drawBusRoads(ctx,city,viewport){
+ if(!city.busRoads?.length)return;
+ let data=transitTopologyCache.get(city);
+ if(!data||data.source!==city.busRoads){
+  data={source:city.busRoads,topology:worldRoadTopology(city.busRoads),ids:new Set(city.busRoads),crossings:new Map((city.crosswalks||[]).map(c=>[c.id,c]))};
+  transitTopologyCache.set(city,data);
+ }
+ const inView=({x,y})=>x>=viewport.minX-2&&y>=viewport.minY-2&&x<=viewport.maxX+2&&y<=viewport.maxY+2;
+ const cells=data.topology.cells.filter(inView),joins=data.topology.joins.filter(inView);
  if(!cells.length)return;
- const joins=topology.joins.filter(inView);
  ctx.save();
- ctx.beginPath();worldRoadUnionPath(ctx,cells,joins,BUS_ROAD_HALF_WIDTH);
- ctx.save();ctx.translate(0,4);ctx.fillStyle='#686d74';ctx.fill();ctx.restore();
- ctx.fillStyle='#3d444d';ctx.fill();
+ // Paint two unions, never stroke the overlapping per-cell rectangles.
+ // This removes the old "railway sleepers" and restores Canvas state balance.
+ ctx.beginPath();worldRoadUnionPath(ctx,cells,joins,.62);
+ ctx.save();ctx.translate(0,2);ctx.fillStyle='#948f87';ctx.fill();ctx.restore();
+ ctx.fillStyle='#d4cbbc';ctx.fill();
+ ctx.beginPath();worldRoadUnionPath(ctx,cells,joins,.565);ctx.fillStyle='#515967';ctx.fill();
  ctx.save();ctx.clip();
  for(const {x,y} of cells){
-  const c=P(x+.5,y+.5);
-  ellipse(ctx,c.x,c.y,16,6.6,'rgba(255,255,255,.05)');
-  for(let i=0;i<4;i++){
-   const u=x+i*.25+.032,v=y+.06+((i%2)*.03);
-   const p1=P(u,v),p2=P(u+.19,v+.19),p3=P(u+.44,v+.44),p4=P(u+.69,v+.69);
-   // soft asphalt grain; fixed in world space
-   ellipse(ctx,p1.x,p1.y,1.9,0.7,'rgba(255,255,255,.030)');
-   ellipse(ctx,p2.x,p2.y,1.8,0.65,'rgba(255,255,255,.022)');
-   ellipse(ctx,p3.x,p3.y,1.6,0.55,'rgba(0,0,0,.035)');
-   ellipse(ctx,p4.x,p4.y,1.5,0.5,'rgba(255,255,255,.018)');
+  for(let k=0;k<3;k++){
+   const u=x+.15+hash(x+k,y+31)*.7,v=y+.15+hash(x+17,y+k)*.7,p=P(u,v);
+   ellipse(ctx,p.x,p.y,.65,.27,'rgba(233,230,220,.09)');
   }
  }
  ctx.restore();
- // Light edge highlight to keep the asphalt road premium and readable.
- ctx.beginPath();worldRoadUnionPath(ctx,cells,joins,BUS_ROAD_HALF_WIDTH);
- ctx.lineWidth=1.4;ctx.strokeStyle='rgba(255,243,225,.44)';ctx.stroke();
- // dashed center line drawn on long straight connections only
- ctx.save();
- ctx.strokeStyle='rgba(255,240,196,.9)';ctx.lineWidth=1.6;ctx.setLineDash([8,8]);ctx.lineCap='round';
- for(const {x,y,axis} of joins){
-  const mid=P(x+.5,y+.5),end=axis==='x'?P(x+1.5,y+.5):P(x+.5,y+1.5);
-  ctx.beginPath();ctx.moveTo(mid.x,mid.y);ctx.lineTo(end.x,end.y);ctx.stroke();
+ ctx.strokeStyle='#ede3ca';ctx.lineWidth=1.15;ctx.lineCap='butt';
+ for(const {x,y} of cells){
+  const id=keyOf(x,y);if(data.crossings.has(id))continue;
+  const L=data.ids.has(keyOf(x-1,y)),R=data.ids.has(keyOf(x+1,y)),U=data.ids.has(keyOf(x,y-1)),D=data.ids.has(keyOf(x,y+1));
+  let a,b;
+  if(L&&R&&!U&&!D){a=P(x+.28,y+.5);b=P(x+.72,y+.5);}
+  else if(U&&D&&!L&&!R){a=P(x+.5,y+.28);b=P(x+.5,y+.72);}
+  else continue;
+  ctx.beginPath();ctx.moveTo(a.x,a.y);ctx.lineTo(b.x,b.y);ctx.stroke();
+ }
+ for(const c of data.crossings.values()){
+  if(!inView(c))continue;
+  for(let k=0;k<7;k++){
+   const a=-.51+k*.155,b=a+.095;
+   const coords=c.axis==='x'?[[a,-.33],[b,-.33],[b,.33],[a,.33]]:[[-.33,a],[.33,a],[.33,b],[-.33,b]];
+   polygon(ctx,coords.map(([u,v])=>P(c.x+.5+u,c.y+.5+v)),'#fff4dc');
+  }
  }
  ctx.restore();
+}
+// Reserved ground is part of the world, not a screen-space veil over roofs.
+export function drawWorldGroundZones(ctx,zones=[]){
+ for(const zone of zones){
+  if(!Array.isArray(zone.bounds)||zone.bounds.length!==4)continue;
+  const[x,y,w,h]=zone.bounds;if(![x,y,w,h].every(Number.isFinite)||w<=0||h<=0)continue;
+  ctx.save();ctx.setLineDash([5,6]);
+  polygon(ctx,[P(x,y),P(x+w,y),P(x+w,y+h),P(x,y+h)],zone.project?'rgba(253,226,188,.88)':'rgba(214,213,217,.92)',zone.project?'#d2a971':'#fbf7fb',1.8);
+  ctx.setLineDash([]);const p=P(x+w/2,y+h/2);ctx.textAlign='center';ctx.fillStyle=zone.project?'#ad855c':'#9e93a5';
+  ctx.font=zone.project?'700 21px system-ui':'750 58px system-ui';ctx.fillText(zone.project?'+':'?',p.x,p.y+15);
+  if(!zone.project){ctx.font='700 10px system-ui';ctx.fillStyle='#8c8494';ctx.fillText(zone.future?'БУДУЩИЙ РАЙОН':'ОТКРОЕТСЯ ПО СЮЖЕТУ',p.x,p.y+32);}
+  ctx.restore();
+ }
 }
 
 function shadow(ctx,pts){const center=pts.reduce((p,q)=>({x:p.x+q.x/pts.length,y:p.y+q.y/pts.length}),{x:0,y:0});ellipse(ctx,center.x,center.y+8,Math.max(17,Math.abs(pts[1].x-pts[3].x)*.49),11,'rgba(75,112,79,.21)');}
@@ -772,6 +795,7 @@ export function drawWorld(canvas,city,catalog,cam,overlay={}) {
  const coords=[screenToTile(0,0,{width,height},cam),screenToTile(width,0,{width,height},cam),screenToTile(width,height,{width,height},cam),screenToTile(0,height,{width,height},cam)];
  const viewport={minX:Math.min(...coords.map(p=>p.x))-8,maxX:Math.max(...coords.map(p=>p.x))+8,minY:Math.min(...coords.map(p=>p.y))-8,maxY:Math.max(...coords.map(p=>p.y))+8};
  drawLandscape(ctx,city,catalog,viewport);
+ drawWorldGroundZones(ctx,overlay.groundZones||[]);
  // Pavement and plazas sit UNDER structures. Rendering a surface never
  // changes original occupancy of buildings or the live road graph.
  for(const item of city.objects.filter(o=>!o.stored && catalog[o.kind]?.layer==='surface' && !catalog[o.kind]?.blockingSurface)){

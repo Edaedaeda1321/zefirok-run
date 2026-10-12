@@ -12,7 +12,7 @@ export const DISTRICTS=Object.freeze([
  {id:'station',title:'Городская станция',short:'Станция',icon:'bus',focus:[36,37],bounds:[33,33,11,10],chapter:0,kind:'bus-terminal',description:'Автобусы связывают кафе, центральную часть города и парк. Это декоративный транспорт: без билетов и списаний.'},
  {id:'festival',title:'Площадка событий',short:'События',icon:'flag',focus:[25,36],bounds:[21,33,9,6],chapter:1,kind:'city-square',description:'Место будущих событий. В v1 можно посмотреть открытие площадки в тестовом сценарии, но активных событий и наград здесь ещё нет.'},
  {id:'rabbit',title:'«Белый Кролик»',short:'Кролик',icon:'star',focus:[38,26],bounds:[33,21,10,9],chapter:2,kind:'villa',description:'Резерв сюжетной локации «Белый Кролик». После открытия появится тестовое здание; его уникальный сюжетный арт ещё предстоит создать.'},
- {id:'mystery',title:'Неизвестный район',short:'Тайна',icon:'lock',focus:[24.5,8],bounds:[21,4,8,8],chapter:99,kind:'botanical-garden',description:'Здесь появится новая часть города. Название, герой и условия открытия пока не объявлены.'}
+ {id:'mystery',title:'Неизвестный район',short:'Тайна',icon:'lock',focus:[24,8],bounds:[21,4,6,8],chapter:99,kind:'botanical-garden',description:'Здесь появится новая часть города. Название, герой и условия открытия пока не объявлены.'}
 ]);
 export const PLACES=Object.freeze([
  ...DISTRICTS.map(d=>({...d,uid:({square:'story-fountain',cafe:'story-cafe',belkino:'story-pond',friends:'story-home',station:'story-terminal',festival:'story-festival',rabbit:'story-rabbit'})[d.id]||null})),
@@ -38,14 +38,23 @@ export function buildStoryMap(state, now=Date.now()) {
  // It is visual + routing-only and stays separate from the pedestrian paths.
  // The line deliberately avoids decorative objects so routing stays connected.
  line(busRoads,15,14,15,17);
- line(busRoads,15,17,31,17);
- line(busRoads,19,17,19,33);
- line(busRoads,12,33,19,33);
- line(busRoads,31,17,31,35);
- line(busRoads,31,35,38,35);
+ line(busRoads,15,17,32,17);
+ line(busRoads,18,17,18,33);
+ line(busRoads,12,33,18,33);
+ line(busRoads,32,17,32,35);
+ line(busRoads,32,35,38,35);
  city.roads=[...roads];
  city.busRoads=[...busRoads];
- const occupied=new Set(roads);let sequence=0;
+ city.crosswalks=[];
+ for(const id of city.busRoads){
+  if(!roads.has(id))continue;
+  const [x,y]=id.split(',').map(Number);
+  const horizontal=busRoads.has(keyOf(x-1,y))&&busRoads.has(keyOf(x+1,y))&&!busRoads.has(keyOf(x,y-1))&&!busRoads.has(keyOf(x,y+1));
+  const vertical=busRoads.has(keyOf(x,y-1))&&busRoads.has(keyOf(x,y+1))&&!busRoads.has(keyOf(x-1,y))&&!busRoads.has(keyOf(x+1,y));
+  if(!horizontal&&!vertical)throw new Error('Crosswalk must be on a straight asphalt segment: '+id);
+  city.crosswalks.push({id,x,y,axis:vertical?'x':'y'});
+ }
+ const occupied=new Set([...roads,...busRoads]);let sequence=0;
  function place(kind,x,y,rotation=0,uid='',extra={},optional=false) {
   const def=CATALOG[kind];if(!def)throw new Error('Missing catalog item '+kind);
   const {w,h}=dims(def,rotation),cells=[];
@@ -88,7 +97,7 @@ export function validateStoryMap(city) {
  if(city.size!==STORY_MAP_SIZE)errors.push('wrong map size');
  if(connected.size!==roads.size)errors.push('disconnected roads');
  if(busRoads.size){
-  const queue=[...[...busRoads].slice(0,1)],seen=new Set(queue);
+  const queue=[...busRoads].slice(0,1),seen=new Set(queue);
   const dirs=[[1,0],[-1,0],[0,1],[0,-1]];
   for(let i=0;i<queue.length;i++)for(const [dx,dy] of dirs){
    const [x,y]=queue[i].split(',').map(Number),next=keyOf(x+dx,y+dy);
@@ -104,10 +113,23 @@ export function validateStoryMap(city) {
   for(let x=item.x;x<item.x+w;x++)for(let y=item.y;y<item.y+h;y++){
    const key=keyOf(x,y);
    if(x<0||y<0||x>=city.size||y>=city.size)errors.push('out of bounds '+key);
-   if(roads.has(key)||occupied.has(key))errors.push('overlap '+key);
+   if(roads.has(key)||busRoads.has(key)||occupied.has(key))errors.push('overlap '+key);
    occupied.add(key);
   }
   if(def.needsRoad && !isObjectConnected(item,city,CATALOG,connected,0))errors.push('no road '+item.uid);
+ }
+ const crossings=new Map((city.crosswalks||[]).map(c=>[c.id,c]));
+ for(const id of busRoads){
+  const [x,y]=id.split(',').map(Number);
+  if(!Number.isSafeInteger(x)||!Number.isSafeInteger(y)||x<0||y<0||x>=city.size||y>=city.size)errors.push('invalid asphalt cell '+id);
+  if(roads.has(id)&&!crossings.has(id))errors.push('shared road outside crosswalk '+id);
+ }
+ for(const c of crossings.values()){
+  if(!busRoads.has(c.id)||!roads.has(c.id)||!['x','y'].includes(c.axis)){errors.push('invalid crosswalk '+c.id);continue;}
+  for(const sign of [-1,1]){
+   const id=keyOf(c.x+(c.axis==='x'?sign:0),c.y+(c.axis==='y'?sign:0));
+   if(!roads.has(id)||busRoads.has(id))errors.push('crosswalk lacks pedestrian exit '+c.id);
+  }
  }
  return errors;
 }

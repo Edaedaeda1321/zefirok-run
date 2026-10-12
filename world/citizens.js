@@ -29,12 +29,12 @@ export function adjacentRoadAccess(item,def,roadSet){
  return [...new Set(adjacent)].filter(id=>roadSet.has(id)).sort();
 }
 function entryRoads(city,catalog,roadSet,now){
- const entries=[];
+ const entries=[],asphalt=new Set(city.busRoads||[]);
  for(const item of city.objects){
   const def=catalog[item.kind];
   if(item.stored||!def||!['homes','shops'].includes(def.category)||isConstructing(item,now))continue;
   if(!isObjectConnected(item,city,catalog,roadSet,now))continue;
-  const access=adjacentRoadAccess(item,def,roadSet);
+  const access=adjacentRoadAccess(item,def,roadSet).filter(id=>!asphalt.has(id));
   if(access.length)entries.push({uid:item.uid,access});
  }
  return entries.sort((a,b)=>String(a.uid).localeCompare(String(b.uid)));
@@ -50,12 +50,21 @@ export function walkableCitizenRoads(city,catalog,roads=connectedRoads(city)){
   const {w,h}=dims(def,item.rotation||0);
   for(let x=item.x;x<item.x+w;x++)for(let y=item.y;y<item.y+h;y++)walkable.delete(keyOf(x,y));
  }
+ if(Array.isArray(city.busRoads)){
+  const gates=new Set((city.crosswalks||[]).filter(c=>c&&['x','y'].includes(c.axis)).map(c=>c.id));
+  for(const id of city.busRoads)if(!gates.has(id))walkable.delete(id);
+ }
  return walkable;
 }
-export function roadNeighborMap(roads){
+export function roadNeighborMap(roads,crosswalks=[]){
+ const gates=new Map(crosswalks.map(c=>[c.id,c.axis]));
  return new Map([...roads].map(id=>{
   const {x,y}=tileIdToPoint(id);
-  return [id,DIRECTIONS.map(([dx,dy])=>keyOf(x+dx,y+dy)).filter(other=>roads.has(other))];
+  return [id,DIRECTIONS.filter(([dx,dy])=>{
+   const next=keyOf(x+dx,y+dy);if(!roads.has(next))return false;
+   for(const at of [id,next]){const axis=gates.get(at);if(axis==='x'&&dy!==0||axis==='y'&&dx!==0)return false;}
+   return true;
+  }).map(([dx,dy])=>keyOf(x+dx,y+dy))];
  }));
 }
 // Bounded breadth-first search prevents cutting across unrelated road islands
@@ -88,13 +97,13 @@ function activityFor(kind){
  return null;
 }
 function activityVenues(city,catalog,roads,now){
- const venues=[];
+ const venues=[],asphalt=new Set(city.busRoads||[]);
  for(const item of city.objects){
   if(item.stored||isConstructing(item,now))continue;
   const def=catalog[item.kind],activity=activityFor(item.kind);
   if(!def||!activity)continue;
   if(def.needsRoad&&!isObjectConnected(item,city,catalog,roads,now))continue;
-  const access=adjacentRoadAccess(item,def,roads);
+  const access=adjacentRoadAccess(item,def,roads).filter(id=>!asphalt.has(id));
   if(access.length)venues.push({uid:item.uid,activity,item,def,access});
  }
  return venues.sort((a,b)=>a.uid.localeCompare(b.uid));
@@ -150,16 +159,21 @@ function visitingRoute(start,venues,neighbors,i,role){
  }
  return {track,stops,timed,duration:timed.reduce((sum,segment)=>sum+segment.duration,0)};
 }
-function roamingTrack(start,neighbors,i){
+function roamingTrack(start,neighbors,i,crossings=new Set()){
  const path=[start];let previous='',cursor=start;
  for(let step=0;step<MAX_ROUTE_STEPS;step++){
-  if(step>0&&step%7===0){path.push(cursor);continue;}
+  if(step>0&&step%7===0&&!crossings.has(cursor)){path.push(cursor);continue;}
   const adjacent=neighbors.get(cursor)||[];
   if(!adjacent.length){path.push(cursor);continue;}
   const forward=adjacent.filter(id=>id!==previous);
   const choices=forward.length?forward:adjacent;
   const next=choices[hash(`${i}:${cursor}:${step}`)%choices.length];
   path.push(next);previous=cursor;cursor=next;
+ }
+ // A roaming route must not turn around or wait on a crossing.
+ if(crossings.has(cursor)){
+  const exit=(neighbors.get(cursor)||[]).find(id=>id!==previous&&!crossings.has(id));
+  if(exit)path.push(exit);
  }
  return path.concat(path.slice(0,-1).reverse()).map(tileIdToPoint);
 }
@@ -170,7 +184,7 @@ export function buildCitizenScene(city,catalog,population,now=Date.now(),comfort
  if(!count)return {routes:[],population};
  const roads=walkableCitizenRoads(city,catalog);
  if(!roads.size)return {routes:[],population};
- const neighbors=roadNeighborMap(roads);
+ const neighbors=roadNeighborMap(roads,city.crosswalks||[]);
  const homes=entryRoads(city,catalog,roads,now);
  if(!homes.length)return {routes:[],population};
  const venues=activityVenues(city,catalog,roads,now),reservations=new Map(),routes=[];
@@ -187,7 +201,7 @@ export function buildCitizenScene(city,catalog,population,now=Date.now(),comfort
   if(activityRoute){
    for(const stop of activityRoute.stops)reservations.set(stop.uid,(reservations.get(stop.uid)||0)+1);
   }
-  const track=activityRoute?.track||roamingTrack(start,neighbors,i);
+  const track=activityRoute?.track||roamingTrack(start,neighbors,i,new Set((city.crosswalks||[]).map(c=>c.id)));
   routes.push({id:`citizen-${i}`,variant:i%OUTFITS.length,role,track,
    offset:hash(`${i}:${origin.uid}:phase`)%(activityRoute?.duration||8500),
    ...(activityRoute?{stops:activityRoute.stops,timed:activityRoute.timed,duration:activityRoute.duration}:{})});

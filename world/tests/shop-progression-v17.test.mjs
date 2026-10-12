@@ -53,6 +53,8 @@ test('v17: level 1 house can be bought with points only and stores with the paid
 
 test('v17: previously earned level remains unlocked after loss of buildings',()=>{
  const city=unlocked(makeInitialCity(),4);
+ // Level persistence, not the starter-wallet budget, is under test.
+ city.wallet={...objectPrice(CATALOG,'bus-terminal')};
  const before=cityStats(city,CATALOG,now);
  assert.equal(before.cityLevel,4);
  const bought=addObject(city,CATALOG,'bus-terminal',17,17,0,now);
@@ -63,12 +65,15 @@ test('v17: previously earned level remains unlocked after loss of buildings',()=
 
 test('v17: existing expensive purchases can be moved and stored even if current unlock level is insufficient',()=>{
  let city=unlocked(makeInitialCity(),5);
+ city.wallet={...objectPrice(CATALOG,'botanical-garden')};
  city=addObject(city,CATALOG,'botanical-garden',17,17,0,now);
+ const paidWallet={...city.wallet};
  const uid=city.objects.at(-1).uid;
  city.progress.bestLevel=1; // deliberately emulate a legacy save with a previously bought object
  city=moveObject(city,CATALOG,uid,18,18);
  city=storeObject(city,uid);
  city=restoreObject(city,CATALOG,uid,17,17);
+ assert.deepEqual(city.wallet,paidWallet,'moves and warehouse operations never recharge ownership');
  assert.equal(city.objects.at(-1).uid,uid);
  assert.deepEqual(sanitizeCity(JSON.parse(JSON.stringify(city)),CATALOG),city);
 });
