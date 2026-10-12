@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
+import {createHash} from 'node:crypto';
 import {CATALOG} from '../catalog.js';
 import {dims,keyOf,makeInitialCity} from '../engine.js';
 import {buildStoryMap,validateStoryMap,lockedDistricts} from '../story/map.js';
@@ -44,16 +45,29 @@ test('city v2: an explicit empty transit graph never falls back to sidewalks',()
 test('city v2: legacy personal cities retain their own roads; map and wallet stay unchanged',()=>{
  const c=makeInitialCity();const before=JSON.stringify(c);buildBusScene(c,CATALOG);buildCitizenScene(c,CATALOG,20,0,50);assert.equal(JSON.stringify(c),before);assert.ok(!Object.hasOwn(c,'busRoads'));
 });
-test('city v2: bus orientation preserves zero components and distinguishes all four directions',()=>{
- assert.equal(busModelHeading({dx:1,dy:0}),0);assert.equal(busModelHeading({dx:0,dy:1}),4);assert.equal(busModelHeading({dx:-1,dy:0}),8);assert.equal(busModelHeading({dx:0,dy:-1}),12);
- for(let n=0;n<16;n++)assert.equal(busModelHeading({heading:n*Math.PI/8}),n);
+test('city v3: approved four-direction bus sprites select all correct road headings',()=>{
+ assert.equal(busModelHeading({dx:1,dy:0}),0); // south-east
+ assert.equal(busModelHeading({dx:0,dy:1}),1); // south-west
+ assert.equal(busModelHeading({dx:-1,dy:0}),2); // north-west
+ assert.equal(busModelHeading({dx:0,dy:-1}),3); // north-east
+ for(let n=0;n<4;n++)assert.equal(busModelHeading({heading:n*Math.PI/2}),n);
+ assert.equal(busModelHeading({heading:-Math.PI/2}),3);
+ assert.equal(busModelHeading({heading:Math.PI*2}),0);
+ assert.equal(busModelHeading({heading:Math.PI/4-.001}),0);
+ assert.equal(busModelHeading({heading:Math.PI/4+.001}),1);
 });
-test('city v2: model atlas metadata and bounds cover 32 independently rendered views',()=>{
- const m=JSON.parse(fs.readFileSync(new URL('../assets/transport-v2/manifest.json',import.meta.url),'utf8'));
- assert.equal(m.frames.length,32);assert.equal(m.headings,16);assert.equal(BUS_ART.width,320);assert.equal(BUS_ART.height,256);
- assert.equal(new Set(m.frames.map(f=>`${f.x},${f.y}`)).size,32);
- for(const f of m.frames){assert.ok(f.x>=0&&f.x+f.width<=1280&&f.y>=0&&f.y+f.height<=2048);assert.equal(f.anchorX,160);assert.equal(f.anchorY,184);}
- const data=fs.readFileSync(new URL('../assets/transport-v2/bus-atlas.webp',import.meta.url));assert.equal(data.toString('ascii',0,4),'RIFF');assert.equal(data.toString('ascii',8,12),'WEBP');assert.ok(data.length<500000);
+test('city v3: one compact alpha-WebP atlas contains exactly four authored bus facings',()=>{
+ const m=JSON.parse(fs.readFileSync(new URL('../assets/transport-v3/manifest.json',import.meta.url),'utf8'));
+ assert.equal(m.version,'3.0.0');assert.equal(m.headings,4);assert.equal(m.variantCount,1);
+ assert.equal(m.frames.length,4);assert.deepEqual(m.frames.map(f=>f.direction),['se','sw','nw','ne']);
+ assert.deepEqual(BUS_ART.directions,['se','sw','nw','ne']);
+ assert.equal(BUS_ART.width,384);assert.equal(BUS_ART.height,384);assert.equal(BUS_ART.anchorX,192);assert.equal(BUS_ART.anchorY,302);
+ assert.equal(new Set(m.frames.map(f=>f.sourceSha256)).size,4);
+ assert.equal(new Set(m.frames.map(f=>`${f.x},${f.y}`)).size,4);
+ for(const f of m.frames){assert.ok(f.x>=0&&f.x+f.width<=768&&f.y>=0&&f.y+f.height<=768);assert.equal(f.anchorX,192);assert.equal(f.anchorY,302);}
+ const data=fs.readFileSync(new URL('../assets/transport-v3/bus-rose-atlas.webp',import.meta.url));
+ assert.equal(data.toString('ascii',0,4),'RIFF');assert.equal(data.toString('ascii',8,12),'WEBP');assert.ok(data.length<500000);
+ assert.equal(createHash('sha256').update(data).digest('hex'),m.atlasSha256);
 });
 test('city v2: both complete bus loops remain on asphalt, with no positional seam at stops',()=>{
  const c=map(),roads=new Set(c.busRoads),scene=buildBusScene(c,CATALOG),before=JSON.stringify(scene);

@@ -75,7 +75,7 @@ def build(output: Path) -> None:
     html = html.replace('href="../world.html?world_tester=1"', 'href="#"')
     html = re.sub(r'<title>.*?</title>', '<title>Мир Зеффи — общий город · автономный v1.3</title>', html)
     program = "(() => {\n'use strict';\nconst M=Object.create(null);\nwindow.ZeffiEmbeddedSprites=" + json.dumps(sprites, separators=(',', ':')) + ';\n' + '\n'.join(compiled)
-    atlas = ROOT / 'world/assets/transport-v2/bus-atlas.webp'
+    atlas = ROOT / 'world/assets/transport-v3/bus-rose-atlas.webp'
     program += '\nwindow.ZeffiEmbeddedBusAtlas=' + json.dumps('data:image/webp;base64,'+base64.b64encode(atlas.read_bytes()).decode('ascii')) + ';\n'
     program += "\nM['world/story/app.js'].startStoryWorld({mode:'standalone'}).catch(error=>{console.error(error);document.getElementById('accessGate').hidden=false;document.getElementById('accessMessage').textContent='Не удалось загрузить автономный мир: '+error.message;const retry=document.getElementById('accessRetry');if(retry){retry.hidden=false;retry.onclick=()=>location.reload();}});\n})();"
     if '</script' in program.lower():

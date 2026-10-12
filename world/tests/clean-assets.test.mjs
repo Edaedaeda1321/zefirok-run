@@ -10,15 +10,16 @@ import { catalogSpriteId, spriteMetadata } from '../sprite-assets.js';
 import { makeInitialCity, sanitizeCity } from '../engine.js';
 const root=dirname(fileURLToPath(new URL('../index.html',import.meta.url)));
 const ids=new Set(SPRITE_MANIFEST.assets.map(a=>a.id));
-const spritePaths=new Set([...SPRITE_MANIFEST.assets.map(a=>a.fileWebp),BUS_ART.file.replace(/^\.\//,'')]);
+const legacyBusAtlas='assets/transport-v2/bus-atlas.webp'; // Required for cached v2 clients during rollout.
+const spritePaths=new Set([...SPRITE_MANIFEST.assets.map(a=>a.fileWebp),BUS_ART.file.replace(/^\.\//,''),legacyBusAtlas]);
 function visit(path,output=[]){ for(const entry of readdirSync(path,{withFileTypes:true})){
  const full=join(path,entry.name);if(entry.isDirectory())visit(full,output);else output.push(relative(root,full).replaceAll('\\','/'));
 }return output; }
 
-test('only active WebP files are packaged (no PNG, GLB or unreferenced sprites)',()=>{
+test('only live sprites and one retained legacy bus atlas are packaged (no PNG or GLB)',()=>{
  const actual=visit(join(root,'assets')).filter(p=>p.endsWith('.webp'));
  assert.deepEqual(new Set(actual),spritePaths);
- assert.equal(actual.length,362); // 361 existing world images + one runtime bus atlas
+ assert.equal(actual.length,363); // 361 existing images + new atlas + old atlas for cached clients
  assert.ok(!visit(root).some(p=>/\.(png|glb|jpg|jpeg)$/i.test(p)));
  assert.ok(!SPRITE_MANIFEST.assets.some(a=>Object.hasOwn(a,'filePng')||Object.hasOwn(a,'sourceGlb')));
  const code=readFileSync(join(root,'sprite-assets.js'),'utf-8');

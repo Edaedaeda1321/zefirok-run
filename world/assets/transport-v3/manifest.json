@@ -1,0 +1,101 @@
+{
+  "version": "3.0.0",
+  "name": "Zeffi rose city bus - user authored four directions",
+  "projection": "isometric 2:1 (grid x/y to screen axes)",
+  "source": "Mir_Zeffi_Bus_Rose_4_Directions(3).zip - original RGBA PNG 1254x1254",
+  "assetConvention": "four real views of the same bus; no sprite rotation, mirroring, or painted extra directions",
+  "atlas": "bus-rose-atlas.webp",
+  "atlasSha256": "c60b31432e03445e7275df1e3df7573deacd000c087e5ed31c0ac3c801cf9a20",
+  "atlasWidth": 768,
+  "atlasHeight": 768,
+  "frameWidth": 384,
+  "frameHeight": 384,
+  "columns": 2,
+  "anchor": [
+    192,
+    302
+  ],
+  "runtimeScale": 0.27,
+  "headings": 4,
+  "directionMapping": {
+    "x+": "se",
+    "y+": "sw",
+    "x-": "nw",
+    "y-": "ne"
+  },
+  "variantCount": 1,
+  "frames": [
+    {
+      "heading": 0,
+      "direction": "se",
+      "source": "bus_rose_se.png",
+      "sourceSha256": "e79451efa3b172509d40ecb5a30852bbf13780727aa133ba0f6b3983c476de08",
+      "x": 0,
+      "y": 0,
+      "width": 384,
+      "height": 384,
+      "anchorX": 192,
+      "anchorY": 302,
+      "opaqueBounds": [
+        22,
+        65,
+        362,
+        350
+      ]
+    },
+    {
+      "heading": 1,
+      "direction": "sw",
+      "source": "bus_rose_sw.png",
+      "sourceSha256": "cccc6e3855adbdf52c9b5928990452c13810f5678af1b30b4d57dcb5979e40bd",
+      "x": 384,
+      "y": 0,
+      "width": 384,
+      "height": 384,
+      "anchorX": 192,
+      "anchorY": 302,
+      "opaqueBounds": [
+        22,
+        56,
+        362,
+        350
+      ]
+    },
+    {
+      "heading": 2,
+      "direction": "nw",
+      "source": "bus_rose_nw.png",
+      "sourceSha256": "6ad0526157b4acb7e642f3fb1a38758da607e229a56d90d0cbdc03f0fe0bdc91",
+      "x": 0,
+      "y": 384,
+      "width": 384,
+      "height": 384,
+      "anchorX": 192,
+      "anchorY": 302,
+      "opaqueBounds": [
+        22,
+        55,
+        362,
+        350
+      ]
+    },
+    {
+      "heading": 3,
+      "direction": "ne",
+      "source": "bus_rose_ne.png",
+      "sourceSha256": "60065e603340d430df857fa573526a3a9e16529aefe27a818d707d7736a01ce3",
+      "x": 384,
+      "y": 384,
+      "width": 384,
+      "height": 384,
+      "anchorX": 192,
+      "anchorY": 302,
+      "opaqueBounds": [
+        22,
+        76,
+        362,
+        350
+      ]
+    }
+  ]
+}

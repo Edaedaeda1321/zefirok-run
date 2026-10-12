@@ -66,3 +66,6 @@ START_STORY_WORLD_v1_3.html
 
 # City Fix v2 local-only files
 .world-checks-v2-1-backup/
+
+# Local-only Bus Rose v3 backups
+.world-bus-rose-v3-backup/

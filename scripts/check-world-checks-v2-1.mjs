@@ -33,10 +33,24 @@ for(const name of tests){
   assert.equal(result.status,0,result.stderr);
  });
 }
-check('previous City Fix v2 installer remains idempotent',()=>{
+check('previous City Fix v2 install contract is preserved, and protected against downgrade of bus v3 art',()=>{
+ const v3Path='world/assets/transport-v3/manifest.json';
+ const current=fs.existsSync(path.join(root,v3Path))?JSON.parse(read(v3Path).toString('utf8')):null;
  const result=spawnSync('python3',['scripts/apply-world-city-fix-v2.py','--check'],{cwd:root,encoding:'utf8'});
- assert.equal(result.status,0,result.stdout+result.stderr);
- assert.match(result.stdout,/Preflight PASSED: 0 change\(s\)/);
+ if(current?.version==='3.0.0'){
+  // Reinstalling the old v2 package must NOT silently put procedural art over
+  // the player's newer approved sprites. Only known bus art targets may differ.
+  assert.equal(result.status,1,'old installer must refuse downgrade');
+  const allowed=new Set(['world/bus-art.js','world/tests/city-transport-v2.test.mjs',
+   'world/tests/clean-assets.test.mjs','scripts/build-world-story-v1.py']);
+  assert.match(result.stderr,/Unrecognized current version: (?:world\/bus-art\.js|world\/tests\/(?:city-transport-v2|clean-assets)\.test\.mjs|scripts\/build-world-story-v1\.py)/);
+  for(const [rel,info] of Object.entries(manifest.targets))if(!allowed.has(rel))assert.equal(sha(read(rel)),info.after,rel);
+  assert.equal(sha(read('world/assets/transport-v3/bus-rose-atlas.webp')),current.atlasSha256);
+  assert.equal(current.frames.length,4);
+ }else{
+  assert.equal(result.status,0,result.stdout+result.stderr);
+  assert.match(result.stdout,/Preflight PASSED: 0 change\(s\)/);
+ }
 });
 for(const name of ['check-world-shop-v17.mjs','check-world-shop-lock-v18.mjs'])check('compatible guard '+name,()=>{
  const result=spawnSync(process.execPath,['scripts/'+name],{cwd:root,encoding:'utf8'});

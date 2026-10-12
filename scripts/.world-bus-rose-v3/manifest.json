@@ -1,0 +1,74 @@
+{
+  "version": "zeffi-bus-rose-four-v3",
+  "main_baseline": "258f4ef494e2b266c02f6e59e9da3ab605df262e",
+  "asset_source": "Mir_Zeffi_Bus_Rose_4_Directions(3).zip",
+  "dependencies": {
+    "world/traffic.js": "96883e6b78d94da0fac5932eb1f6a1eb86b97b05a335436918745ec6cfc80402",
+    "world/renderer.js": "a4c76137cb903c5c3850ad27f046a3ea40987a7f20bf7e86d6ab06d3626d826d",
+    "world/story/app.js": "e2140921d22f6ddad1ee13fc73ecfd3e15619394bc8609525699712db0d4b489",
+    "world/app.js": "7bfd5c5686fad3954b2b2cac5758cdd09ec9448e7792b42e83f5dc427e496213",
+    "world/assets/transport-v2/bus-atlas.webp": "1a438384e356beaff5081de592eefffbcd855b8f3fa0b67f513ba9873423729e",
+    "world/assets/transport-v2/manifest.json": "ac4c29bd9f517b97ecafe3e94c2dc2d12de8c81a50faec16a50ee6df7e33dfe2"
+  },
+  "targets": {
+    "world/bus-art.js": {
+      "before": [
+        "4c1bb2f20c2d66d8201d3d19f1ec75ff628cbdd17831055cabee4ceb0285087b"
+      ],
+      "after": "6a974207af5687d48ccad684c38baebee1c64bf06c45795aae9a542909226e8e"
+    },
+    "world/assets/transport-v3/bus-rose-atlas.webp": {
+      "before": [
+        null
+      ],
+      "after": "c60b31432e03445e7275df1e3df7573deacd000c087e5ed31c0ac3c801cf9a20"
+    },
+    "world/assets/transport-v3/manifest.json": {
+      "before": [
+        null
+      ],
+      "after": "c2bf6ce8f151e8b8029962a8b58bb8dff2e4e2175038d5a4de62de8d93f5a5ed"
+    },
+    "world/tests/city-transport-v2.test.mjs": {
+      "before": [
+        "8368ab0e2f9aeb0554b395c15d08ae4398e17dfcc94ad2078c80eb55ac7e2341"
+      ],
+      "after": "a31d9290ea35876f25888b74a7c805e919e8cad39166886014a3ba0a227cb8c8"
+    },
+    "world/tests/bus-rose-v3.test.mjs": {
+      "before": [
+        null
+      ],
+      "after": "8db28db24fbd878d06350141f4c0ef4530698c3aec6ec22b4b6f4ebe602b3df8"
+    },
+    "world/tests/clean-assets.test.mjs": {
+      "before": [
+        "b3855351294c47f35c6c9e5bce94ab6980478f6538a21bf2f9de48c1b5c4ccdd"
+      ],
+      "after": "22f784132fa17496f0a9d7a9a00e5ad50dddff998e08da7ee213abba844ec430"
+    },
+    "scripts/build-world-story-v1.py": {
+      "before": [
+        "4d223b87da43dae84ec429f90e81bdd5515c982e00ef348fa65c8315864b1dbf"
+      ],
+      "after": "fa1d8df60e90d7f3b92e8be117905b249fefcb006620f0e483118ef8bcb8dfae"
+    },
+    "scripts/check-world-checks-v2-1.mjs": {
+      "before": [
+        "6a7c8290945fcf47ef1fa7f4886d8b3418163985fee329b9eeecf869a3b47247"
+      ],
+      "after": "94526377376c8953c6474b94a446236e9c66a0bc8fed5ab6d2ec9d709c380209"
+    }
+  },
+  "ignore_rules": {
+    ".gitignore": [
+      ".world-bus-rose-v3-backup/"
+    ],
+    ".assetsignore": [
+      ".world-bus-rose-v3-backup/"
+    ]
+  },
+  "installer_dependencies": {
+    "scripts/check-world-bus-rose-v3.mjs": "58dd25c1696359c8cfeaf26dccf4da3061dd4b254efc9e554b1f0e5cca1bdd89"
+  }
+}
