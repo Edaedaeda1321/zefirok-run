@@ -9,6 +9,7 @@ if(button && !button.dataset.storyV1){
  button.setAttribute('aria-label','Общий сюжетный мир — тест v1');
  button.addEventListener('click',event=>{
   event.preventDefault();event.stopImmediatePropagation();
-  location.assign(new URL('../story-world.html?story_tester=1',document.baseURI).href);
+  if(window.parent!==window)window.parent.postMessage({type:'zefirok-world-switch',view:'story'},location.origin);
+  else location.assign(new URL('../story-world.html?story_tester=1',document.baseURI).href);
  },{capture:true});
 }

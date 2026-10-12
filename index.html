@@ -35280,7 +35280,7 @@ html &gt; body.zefirok-game-expanded{height:var(--zefirok-visible-height,100dvh)
     if(!switched||screen.hidden){root.querySelectorAll('.screen').forEach(node=&gt;{node.hidden=node!==screen;});}
     window.requestAnimationFrame(()=&gt;screen.querySelector('[data-world-back]')?.focus({preventScroll:true}));
     // Guests remain on the existing coming-soon page. Successful testers
-    // enter the common city only after the Worker authorizes story-access.
+    // enter the personal city only after the Worker authorizes story-access.
     void openForTester(token);
   }
   function back(){
@@ -36412,7 +36412,18 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
     if(e?.data?.type!=='zeffi-world-tester-open')return;
     const runner=document.querySelector(ROOT_FRAME_SELECTOR);
     if(e.source!==runner?.contentWindow||e.origin!==location.origin)return;
-    openWorld('story');
+    openWorld('personal');
+  });
+  // Recreate the overlay on a verified request from its currently active
+  // World iframe. Every destination performs its own signed server tester gate.
+  window.addEventListener('message',e=>{
+    if(e?.data?.type!=='zefirok-world-switch'||!worldLayer)return;
+    const target=worldLayer.querySelector('iframe');
+    if(e.source!==target?.contentWindow||e.origin!==location.origin)return;
+    const view=e.data.view;
+    if(view!=='personal'&&view!=='story')return;
+    closeWorld();
+    openWorld(view);
   });
   window.addEventListener('message',e=>{
     if(e?.data?.type!=='zeffi-world-request-init-data'||!worldLayer)return;
