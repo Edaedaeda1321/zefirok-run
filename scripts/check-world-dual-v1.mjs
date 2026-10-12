@@ -32,6 +32,7 @@ ck('common city switch uses verified parent overlay when framed, and guarded dir
 ck('common story back returns to runner, not locked personal city',app.includes("{type:'zefirok-world-close'}"));
 ck('personal world exposes guarded common city switch',personal.includes('id="commonButton"')&&read('world/story/entry.js').includes("event.stopImmediatePropagation()")&&read('world/story/entry.js').includes("window.parent.postMessage({type:'zefirok-world-switch',view:'story'},location.origin)"));
 ck('personal fallback uses read-only signed story gate, not URL-only authorization',personal.includes("request('/api/world/story-access')")&&personal.includes("request('/api/world/state')")&&personal.includes('world_tester'));
+ck('personal nav is synchronously bound AFTER tester decision and BEFORE slow city modules',personal.includes('function enableCommonStoryNavigation(){')&&personal.includes('enableCommonStoryNavigation();')&&personal.includes("location.assign(new URL('../story-world.html',document.baseURI).href)")&&personal.includes("event.stopImmediatePropagation();")&&personal.indexOf('enableCommonStoryNavigation();')>personal.indexOf('function launchCity(')&&personal.indexOf('enableCommonStoryNavigation();')<personal.indexOf("script.src='./app.js'"));
 ck('personal sandbox sets existing client to local mode BEFORE load',personal.indexOf('window.ZeffiWorldServerRequired=access.server===true')<personal.indexOf("script.src='./app.js'"));
 ck('personal banner makes local-only storage and no wallet writes explicit',personal.includes('worldTesterLocalNotice')&&personal.includes('реальные валюты не списываются'));
 ck('existing personal D1/purchase protection is untouched',service.includes('WORLD_ENABLED')&&service.includes('WORLD_PURCHASES_ENABLED')&&service.includes('assertTester(env,telegramId);'));
@@ -42,20 +43,23 @@ ck('iframe switch is source-checked and cannot request arbitrary destinations',r
 const raw=personal.match(/<script id="zeffi-world-preview-access">([\s\S]*?)<\/script>/)?.[1];
 assert.ok(raw,'personal bootstrap inline script missing');
 async function simulate({signed=true,allowStory=true,allowPersonal=false,explicit=false,requestFlag=true}={}){
- const calls=[],scripts=[],classes=[],styleNodes=[];
- const banner={hidden:true},elements={worldTesterLocalNotice:banner};let callback;
- const head={append(el){styleNodes.push(el);},appendChild(el){scripts.push(el);}};
+ const calls=[],scripts=[],classes=[],styleNodes=[],navigation=[],lifecycle=[];
+ const banner={hidden:true},elements={worldTesterLocalNotice:banner};let callback,navHandler=null;
+ const common={dataset:{},style:{},classList:{remove(s){lifecycle.push('class:'+s);}},
+   removeAttribute(){},setAttribute(){},querySelector(){return {removeAttribute(){},textContent:''}},
+   addEventListener(name,fn,options){if(name==='click'){assert.equal(options.capture,true);navHandler=fn;lifecycle.push('nav-bound');}}};
+ const head={append(el){styleNodes.push(el);},appendChild(el){lifecycle.push('module-added');scripts.push(el);}};
  const document={
-   head,
+   head,baseURI:'https://zefirok.test/world/',
    documentElement:{classList:{add(s){classes.push(s)},contains(){return false}}},
    body:{style:{cssText:''},innerHTML:''},
-   getElementById(id){return elements[id]||{hidden:false}},
+   getElementById(id){return id==='commonButton'?common:(elements[id]||{hidden:false})},
    querySelectorAll(){return []},
    addEventListener(name,fn){if(name==='DOMContentLoaded')callback=fn},
    createElement(tag){return{tag,style:{},addEventListener(){}}},
  };
  const window={Telegram:{WebApp:{initData:signed?'SIGNED_TELEGRAM':'',initDataUnsafe:{user:{id:12345}}}},document};window.parent=window;
- const location={protocol:'https:',hostname:'zefirok.test',origin:'https://zefirok.test',search:requestFlag?'?world_tester=1':'?world_preview=1'};
+ const location={protocol:'https:',hostname:'zefirok.test',origin:'https://zefirok.test',search:requestFlag?'?world_tester=1':'?world_preview=1',assign(url){navigation.push(url)}};
  const response=(ok,payload,status=ok?200:403)=>({ok,status,async json(){return payload}});
  const fetch=async(path,opts)=>{
    calls.push(path);
@@ -65,20 +69,28 @@ async function simulate({signed=true,allowStory=true,allowPersonal=false,explici
    if(path==='/api/world/story-access')return allowStory?response(true,{ok:true,access:'tester',mode:'local-demo',walletWrites:false}):response(false,{ok:false,code:'WORLD_NOT_AVAILABLE'});
    throw Error('unrecognized route '+path);
  };
- const context={window,document,location,URLSearchParams,AbortController,setTimeout,clearTimeout,fetch,console};
+ const context={window,document,location,URL,URLSearchParams,AbortController,setTimeout,clearTimeout,fetch,console};
  runInNewContext(raw,context,{timeout:3000});
  assert.equal(typeof callback,'function');
  await callback();
- return {window,classes,scripts,calls,banner,body:document.body.innerHTML};
+ return {window,classes,scripts,calls,banner,body:document.body.innerHTML,common,navHandler,navigation,lifecycle};
 }
 const personalD1=await simulate({allowPersonal:true});
 ck('authorized signed tester loads existing D1 personal city',personalD1.scripts.length===1&&personalD1.window.ZeffiWorldServerRequired===true&&personalD1.calls.join(',')==='/api/world/state');
+ck('D1 personal city binds usable common-city button before module loads',personalD1.common.dataset.storyV1==='1'&&typeof personalD1.navHandler==='function'&&personalD1.lifecycle.indexOf('nav-bound')>=0&&personalD1.lifecycle.indexOf('nav-bound')<personalD1.lifecycle.indexOf('module-added'));
+let blockedD1=0;personalD1.navHandler({preventDefault(){blockedD1++},stopImmediatePropagation(){blockedD1++}});
+ck('D1 personal city opens guarded story URL from the same iframe',blockedD1===2&&personalD1.navigation.length===1&&personalD1.navigation[0]==='https://zefirok.test/story-world.html');
 const personalSandbox=await simulate({allowPersonal:false,allowStory:true});
 ck('disabled personal D1 loads signed local sandbox',personalSandbox.scripts.length===1&&personalSandbox.window.ZeffiWorldServerRequired===false&&personalSandbox.window.ZeffiWorldPreviewAllowed===true&&personalSandbox.calls.join(',')==='/api/world/state,/api/world/story-access'&&personalSandbox.banner.hidden===false);
+ck('signed sandbox also has working common-city navigation',typeof personalSandbox.navHandler==='function'&&personalSandbox.common.dataset.storyV1==='1'&&personalSandbox.lifecycle.indexOf('nav-bound')<personalSandbox.lifecycle.indexOf('module-added'));
+personalSandbox.navHandler({preventDefault(){},stopImmediatePropagation(){}});
+ck('sandbox navigates into separately signed story page',personalSandbox.navigation.length===1&&personalSandbox.navigation[0]==='https://zefirok.test/story-world.html');
 const nonTester=await simulate({allowStory:false});
 ck('non-tester denied both personal modes and sees teaser',nonTester.scripts.length===0&&nonTester.body.includes('ПОКА НЕДОСТУПНО'));
+ck('non-tester never gets an enabled story button',nonTester.navHandler===null&&nonTester.common.dataset.storyV1===undefined&&nonTester.navigation.length===0);
 const unsigned=await simulate({signed:false});
 ck('unsigned player cannot open personal sandbox',unsigned.scripts.length===0&&unsigned.calls.length===0);
+ck('unsigned player never gets an enabled story button',unsigned.navHandler===null&&unsigned.common.dataset.storyV1===undefined);
 const flagOnly=await simulate({requestFlag:false});
 ck('URL preview flag never bypasses tester authentication',flagOnly.scripts.length===0&&flagOnly.calls.length===0);
 ck('personal test never adds new balance/write endpoints',!/\/api\/world\/mutate/.test(raw)&&!app.includes('/api/world/mutate'));

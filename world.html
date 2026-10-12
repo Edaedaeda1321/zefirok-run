@@ -83,7 +83,29 @@
           return null;
         }catch{return null;}finally{clearTimeout(timer);}
       }
+      // Bind the common-city button synchronously after the signed tester
+      // decision. Never depend on app.js load or a lazy entry.js import: a
+      // partially loaded city must still be able to enter the shared story.
+      function enableCommonStoryNavigation(){
+        const button=document.getElementById('commonButton');
+        if(!button||button.dataset.storyV1==='1')return;
+        button.dataset.storyV1='1';
+        button.classList.remove('world-nav__disabled');
+        button.removeAttribute('disabled');
+        button.removeAttribute('aria-disabled');
+        button.style.opacity='1';button.style.cursor='pointer';
+        const caption=button.querySelector('small');
+        if(caption){caption.removeAttribute('data-t');caption.textContent='ТЕСТ';}
+        button.setAttribute('aria-label','Открыть общий сюжетный город');
+        button.addEventListener('click',event=>{
+          event.preventDefault();event.stopImmediatePropagation();
+          // Navigate this exact iframe, so an unrelated/stale parent message
+          // cannot interfere. The destination verifies signed initData again.
+          location.assign(new URL('../story-world.html',document.baseURI).href);
+        },{capture:true});
+      }
       function launchCity(access={server:false}){
+        enableCommonStoryNavigation();
         window.ZeffiWorldServerRequired=access.server===true;
         window.ZeffiWorldPreviewAllowed=!window.ZeffiWorldServerRequired;
         window.ZeffiWorldTesterPersonalSandbox=!window.ZeffiWorldServerRequired;
