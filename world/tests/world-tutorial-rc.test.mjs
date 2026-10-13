@@ -69,7 +69,7 @@ test('hosted pages have separate tutorials and never auto-confirm purchases or f
  assert.match(story,/configureStoryTutorial\(progress\?\.story\)/);
  assert.match(story,/if\(worldTutorial\?\.active\(\)\)panel\.show\(\)/);
  assert.match(htmlStory,/id="storyTutorialHelp"/);
- assert.match(html,/tutorial\.css\?v=rc-guide1/);
+ assert.match(html,/tutorial\.css\?v=rc-guide2/);
  assert.match(guide,/createWorldTutorial/);
  assert.match(guide,/e\.target\.closest\(selector\)/,'dynamic cards must be handled even after UI re-render');
  assert.doesNotMatch(guide,/fetch\(|\/api\/world\/mutate|contribute\(|wallet\s*=/);

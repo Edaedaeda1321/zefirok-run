@@ -12,7 +12,7 @@ const root=process.cwd(),read=p=>fs.readFileSync(path.join(root,p),'utf8');let c
 function check(label,test){assert.ok(test,label);checks++;console.log('OK '+label);}
 const html=read('story-world.html'),boot=read('world/story/boot.js'),app=read('world/story/app.js'),model=read('world/story/model.js'),entry=read('world/story/entry.js'),world=read('world.html'),service=read('src/zeffi-world-service.js'),gate=read('scripts/check-production-gate.mjs'),runner=read('index.html'),worker=read('src/worker.js');
 const once=(text,needle)=>text.split(needle).length===2;
-check('separate hosted page with production auth loader',once(html,'./story/boot.js?v=rc-guide1')&&html.includes('<base href="./world/"'));
+check('separate hosted page with production auth loader',once(html,'./story/boot.js?v=rc-guide2')&&html.includes('<base href="./world/"'));
 
 check('candidate game button requires signed authoritative personal state',runner.includes("fetch('/api/world/state'")&&runner.includes("data?.serverAuthoritative!==true")&&!runner.includes("fetch('/api/world/story-access'"));
 check('tester navigation opens personal city first, with guarded common story switch',runner.includes("openWorld('personal');")&&runner.includes("frame.src=view==='story'?'./story-world.html'")&&runner.includes("e?.data?.type!=='zefirok-world-switch'")&&runner.includes("button.addEventListener('click',()=>openWorld())"));
@@ -23,7 +23,7 @@ check('single common-world navigation hook',once(world,"import('./story/entry.js
 check('signed same-origin Telegram auth bridge',boot.includes('event.source!==window.parent||event.origin!==location.origin')&&boot.includes('zeffi-world-request-init-data')&&boot.includes('initData'));
 check('URL flags and localhost do not authorize hosted entry',!/(?:location\.(?:hostname|protocol)|URLSearchParams|localStorage|initDataUnsafe\s*[.\[])/.test(boot.replace(/^\/\/.*$/gm,'')));
 check('one bounded access API, no cache',once(boot,"fetch('/api/world/story-access'")&&boot.includes('AbortController')&&boot.includes("cache:'no-store'")&&boot.includes("credentials:'same-origin'"));
-check('app imported only after server access response',boot.indexOf("await import('./app.js?v=rc-guide1')")>boot.indexOf("payload?.access!=='tester'")&&boot.includes("payload?.mode!=='local-demo'"));
+check('app imported only after server access response',boot.indexOf("await import('./app.js?v=rc-guide2')")>boot.indexOf("payload?.access!=='tester'")&&boot.includes("payload?.mode!=='local-demo'"));
 check('existing signed tester assertion precedes new API branch',service.indexOf('assertTester(env,telegramId);')<service.indexOf("pathname==='/api/world/story-access'"));
 const begin=service.indexOf("pathname==='/api/world/story-access'"),end=service.indexOf("// Zeffi shared fund v1: independent signed community endpoints",begin),branch=service.slice(begin,end);
 check('read-only access gate exits before D1/schema/player writes',begin>0&&end>begin&&branch.includes("return reply({ok:true,access:'tester'")&&!/(?:ensureCity|profileReader|opGate|\.prepare\(|\.batch\(|walletFromProfile)/.test(branch));

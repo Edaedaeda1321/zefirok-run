@@ -8,7 +8,7 @@ import { createDemoState, loadDemo, saveDemo, resetDemo, contribute, simulateCom
 import { DISTRICTS, PLACES, placeById, isPlaceOpen, lockedDistricts, STORY_FESTIVAL_KINDS, buildStoryMap, validateStoryMap } from './map.js';
 import { icon, escapeText as esc, artUrl, requiredStorySpriteIds, centerCamera, worldAt, zoomCamera, clampCamera } from './view.js';
 import {createSharedFundClient, sharedFundQuote, mapStateWithFund} from './shared-fund.js';
-import {createWorldTutorial} from '../tutorial.js';
+import {createWorldTutorial} from '../tutorial.js?v=rc-guide2';
 
 const $=id=>document.getElementById(id);
 const STATUS={funding:'Сбор материалов',building:'Строительство',opening:'Готов к открытию',active:'Сад открыт'};

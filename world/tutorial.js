@@ -46,6 +46,22 @@ export function createWorldTutorial({mode,steps,save,onFinish=()=>{},onStep=()=>
   card.style.left=`${x}px`;card.style.top=`${Math.max(9,Math.min(h-cardH-9,y))}px`;
  }
  function queueLayout(){if(!scheduled&&active()){scheduled=true;requestAnimationFrame(layout);}}
+ // Bottom sheets expand with a CSS height transition. The target can still be
+ // below the viewport during the first animation frame; re-measure after the
+ // sheet/child transition instead of leaving the entire screen dimmed.
+ function afterTransition(event){
+  if(!active())return;
+  const element=target();
+  if(element&&(event.target===element||event.target?.contains?.(element)))queueLayout();
+ }
+ function scrollHighlightedIntoView(item){
+  if(!item.scrollCatalog)return;
+  const element=target();
+  // Only scroll the horizontal catalogue/tabs, never pan the isometric map.
+  if(element?.closest?.('.catalog-list,.category-tabs')){
+   element.scrollIntoView?.({block:'nearest',inline:'nearest'});
+  }
+ }
  function persist(value){
   if(replay||value===lastNext)return;
   lastNext=value;
@@ -64,9 +80,15 @@ export function createWorldTutorial({mode,steps,save,onFinish=()=>{},onStep=()=>
   next.textContent=item.actionLabel||'Продолжить';
   skip.textContent=replay?'Закрыть':'Пропустить';
   item.enter?.();onStep(stepIndex);
-  // Only the building list scrolls: scrolling an isometric map marker can move the scene.
-  if(item.scrollCatalog){target()?.scrollIntoView?.({block:'nearest',inline:'nearest'});}
+  scrollHighlightedIntoView(item);
   queueLayout();
+  // Fallback for iOS WebViews where transitionend can be skipped/interrupted.
+  // This is one extra measurement, not a rendering/polling loop.
+  setTimeout(()=>{
+   if(!active()||current()!==item)return;
+   scrollHighlightedIntoView(item);
+   queueLayout();
+  },340);
  }
  function advance(){
   if(!active())return;
@@ -101,6 +123,7 @@ export function createWorldTutorial({mode,steps,save,onFinish=()=>{},onStep=()=>
   queueMicrotask(()=>{if(active()&&current()===item)advance();});
  }
  document.addEventListener('click',click);
+ document.addEventListener('transitionend',afterTransition,true);
  skip.addEventListener('click',()=>stop(false));next.addEventListener('click',()=>advance());
  window.addEventListener('resize',queueLayout,{passive:true});window.addEventListener('scroll',queueLayout,{passive:true,capture:true});
  document.addEventListener('focusin',queueLayout,{passive:true});

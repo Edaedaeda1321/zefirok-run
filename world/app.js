@@ -13,7 +13,7 @@ import { drawWorld, drawCatalogThumbnail, screenToTile, isoToScreen, PROJECT_FOC
 import { onSpriteUpdate, setSpriteMode, spriteStatus, preloadBuildFrames, preloadSpriteSet, spriteManifest, catalogSpriteId, parkConstructionAssetId, buildingAssetId } from './sprite-assets.js';
 import { buildCitizenScene, sampleCitizenScene } from './citizens.js';
 import { buildBusScene, sampleBusScene } from './traffic.js';
-import {createWorldTutorial} from './tutorial.js';
+import {createWorldTutorial} from './tutorial.js?v=rc-guide2';
 
 const STORAGE_KEY = 'zefirok-world-v01-sandbox-local';
 const SERVER_MODE = window.ZeffiWorldServerRequired === true;
@@ -995,7 +995,7 @@ function setupPersonalTutorial(step){
  worldTutorial=createWorldTutorial({mode:'personal',save,onFinish:()=>showToast('Отлично! Теперь ты знаешь основы своего города ✨'),steps:[
   {title:'Привет! Это твой городок',text:'Я Зеффи! Покажу, как выбирать постройки, размещать их и развивать город. Никаких обязательных трат.',actionLabel:'Начать'},
   {title:'Открой строительство',text:'Нажми на «Строить». Здесь собраны дома, парки и украшения.',target:'#openBuildCatalog',trigger:'click',enter:()=>setCatalogOpen(false)},
-  {title:'Найди жилые дома',text:'Выбери категорию «Жильё» — так проще найти первый домик.',target:'[data-category="homes"]',trigger:'click',enter:()=>{state.warehouse=false;setCatalogOpen(true);renderCategories();renderCatalog();}},
+  {title:'Найди жилые дома',text:'Выбери категорию «Жильё» — так проще найти первый домик.',target:'[data-category="homes"]',trigger:'click',scrollCatalog:true,enter:()=>{state.warehouse=false;setCatalogOpen(true);renderCategories();renderCatalog();}},
   {title:'Выбери постройку',text:'Нажми на домик и посмотри его цену и уровень открытия. Если он доступен, увидишь макет на карте — без списания очков.',target:tutorialHomeTarget,trigger:'click',optional:true,actionLabel:'Далее',scrollCatalog:true,enter:()=>{state.category='homes';state.warehouse=false;renderCategories();renderCatalog();setCatalogOpen(true);}},
   {title:'Попробуй разместить',text:'Коснись карты, чтобы передвинуть макет. Подтверждать покупку не обязательно — можно продолжить без расходов.',target:()=>state.draft?'#worldCanvas':null,trigger:'signal:map-picked',optional:true,actionLabel:'Далее без покупки'},
   {title:'Посмотри развитие города',text:'Нажми «Город в цифрах»: здесь жители, уют, уровни и будущие награды. Вот ты и освоился!',target:'#metricsToggle',trigger:'click',enter:()=>{if(state.draft)cancelEdit();setCatalogOpen(false);}}

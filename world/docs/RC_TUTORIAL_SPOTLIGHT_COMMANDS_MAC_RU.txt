@@ -1,0 +1,39 @@
+Мир Зеффи — исправление подсветки шага 3 (Release Candidate)
+
+1. Откройте Terminal в папке zefirok-run. Перед установкой убедитесь, что ваши изменения сохранены:
+
+    git status --short
+
+Если есть важные незакоммиченные изменения — остановитесь и сохраните/сверьте их, прежде чем распаковывать патч.
+
+2. Скачайте Mir_Zeffi_RC_Tutorial_Step3_Spotlight_Fix_20261013.zip в Загрузки, затем:
+
+    unzip -o "$HOME/Downloads/Mir_Zeffi_RC_Tutorial_Step3_Spotlight_Fix_20261013.zip" -d .
+
+3. Проверки:
+
+    node --check world/tutorial.js
+    node --check world/app.js
+    node --check world/story/app.js
+    node --test world/tests/tutorial-spotlight-reflow.test.mjs
+    node --test world/tests/world-tutorial-rc.test.mjs
+    node scripts/check-production-gate.mjs --skip-d1
+    git diff --check
+
+4. Добавьте ТОЛЬКО файлы исправления, без git add -A (в корне уже бывают резервные папки и архивы):
+
+    git add world.html story-world.html world/tutorial.js world/app.js world/story/app.js world/story/boot.js scripts/check-world-dual-v1.mjs scripts/check-world-api-wiring.mjs scripts/check-world-story-v1.mjs scripts/check-world-catalog-rc-ui.mjs world/tests/festival-hall-stages-v1.test.mjs world/tests/world-tutorial-rc.test.mjs world/tests/tutorial-spotlight-reflow.test.mjs world/docs/RC_TUTORIAL_SPOTLIGHT_FIX_20261013_RU.md world/docs/RC_TUTORIAL_SPOTLIGHT_COMMANDS_MAC_RU.txt
+    git diff --cached --check
+    git diff --cached --stat
+    git commit -m "Fix Zeffi World tutorial spotlight after catalogue animation"
+    git push origin main
+
+5. Production (только после успешного push и при пройденных проверках):
+
+    ./update.sh
+
+Новых миграций D1 НЕТ. WORLD_ENABLED и WORLD_TESTER_IDS НЕ менять.
+
+6. В Telegram на разрешённом аккаунте: пройти шаги 2->3, убедиться, что подсвечено «Жильё», нажать его, проверить переход к шагу 4. Повторить при сворачивании/разворачивании панели и после перезапуска на незавершённом шаге 3.
+
+Важно: этот архив НЕ обновляет GitHub и production сам. После деплоя проверить iPhone и Android.
