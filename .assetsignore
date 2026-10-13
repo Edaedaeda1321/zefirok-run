@@ -76,3 +76,6 @@ START_STORY_WORLD_v1_3.html
 # Local-only Story World tester entry assets and backups
 .world-story-tester-entry-v1-backup/
 /scripts/.world-story-tester-entry-v1/
+
+# Closed World RC: source image packs are not public game assets
+Mir_Zeffi_Park_Belkino_4_Views_v1/

@@ -9,6 +9,7 @@ import { CATALOG } from '../world/catalog.js';
 import {handleCommunityFund} from './zeffi-community-fund.js';
 import {handleZeffiStory} from './zeffi-story-progress.js';
 import {readWorldTutorial,writeWorldTutorial} from './zeffi-world-tutorial.js';
+import {residentRequestState,residentMutationStatements,claimResidentRequest} from './zeffi-resident-requests.js';
 
 const ZERO = Object.freeze({points:0,treats:0,coffee:0});
 const MAX_CITY_JSON = 180_000;
@@ -29,6 +30,18 @@ const walletFromProfile = p=>({points:Number(p?.wallet||0),treats:Number(p?.trea
 const persistedCity = city=>JSON.stringify({...city,wallet:{...ZERO}});
 const worldEnabled = env=>String(env?.WORLD_ENABLED||'').toLowerCase()==='true';
 const paymentsEnabled = env=>String(env?.WORLD_PURCHASES_ENABLED||'').toLowerCase()==='true';
+// Optional kill switch. Default-on is safe within WORLD_ENABLED + signed allowlist.
+const residentsEnabled = env=>String(env?.WORLD_RESIDENT_REQUESTS_ENABLED??'true').toLowerCase()==='true';
+async function residentEnvelope(db,env,telegramId,city){
+ if(!residentsEnabled(env))return {enabled:false,requests:[],daily:{claimed:0,limit:2}};
+ try{return await residentRequestState(db,telegramId,city);}
+ catch(error){
+  // An unapplied optional RC migration must not break existing cities or paid
+  // construction. Claim API remains fail-closed until 0119 is installed.
+  console.warn('World resident requests unavailable',error?.message||String(error));
+  return {enabled:false,requests:[],daily:{claimed:0,limit:2}};
+ }
+}
 
 function assertTester(env,telegramId){
   // Explicit allowlist, never trust URL flags or a Telegram username.
@@ -128,7 +141,8 @@ async function handleMutation(db,env,telegramId,body,readProfile,operationGate){
   const prior=await findReceipt(db,telegramId,requestId);
   if(prior){
     const [row,profile]=await Promise.all([ensureCity(db,telegramId,Date.now()),readProfile(telegramId,'world-retry')]);
-    return buildView(cityFromRow(row,walletFromProfile(profile)),Number(row.revision),paymentsEnabled(env),{repeated:true,operation:{id:requestId,kind:prior.action_kind,state:'completed',repeated:true},cost:{points:Number(prior.cost_points),treats:Number(prior.cost_treats),coffee:Number(prior.cost_coffee)}});
+    const city=cityFromRow(row,walletFromProfile(profile));
+    return buildView(city,Number(row.revision),paymentsEnabled(env),{repeated:true,operation:{id:requestId,kind:prior.action_kind,state:'completed',repeated:true},cost:{points:Number(prior.cost_points),treats:Number(prior.cost_treats),coffee:Number(prior.cost_coffee)},residentRequests:await residentEnvelope(db,env,telegramId,city)});
   }
   const action=canonicalAction(body.action);
   await operationGate(telegramId,[]);
@@ -179,6 +193,14 @@ async function handleMutation(db,env,telegramId,body,readProfile,operationGate){
     WHERE telegram_id=? AND revision=? AND wallet<=? AND treats<=? AND coffee<=?`).bind(
       reward.points,reward.treats,reward.coffee,nowSeconds,marker,telegramId,profileRevision,
       Number.MAX_SAFE_INTEGER-reward.points,Number.MAX_SAFE_INTEGER-reward.treats,Number.MAX_SAFE_INTEGER-reward.coffee));}
+  // Only confirmed brand-new purchases/roads can complete event-based requests.
+  // Optional schema detection is fail-soft so a missing 0119 does not block a paid build.
+  if(residentsEnabled(env)&&((action.kind==='place'&&['flowerbed','extra-flowerbed'].includes(action.objectKind))||action.kind==='road')){
+    try{
+      await db.prepare('SELECT request_id FROM zeffi_world_resident_requests LIMIT 1').all();
+      statements.push(...residentMutationStatements(db,telegramId,action,cityStats(before,CATALOG,now),cityStats(next,CATALOG,now),now));
+    }catch(error){console.warn('Resident event tracking unavailable',error?.message||String(error));}
+  }
   statements.push(db.prepare(`INSERT INTO zeffi_world_operations
    (telegram_id,request_id,action_kind,city_revision,cost_points,cost_treats,cost_coffee,created_at,city_guard,profile_guard)
    VALUES (?,?,?,?,?,?,?,?,
@@ -190,15 +212,18 @@ async function handleMutation(db,env,telegramId,body,readProfile,operationGate){
     const existing=await findReceipt(db,telegramId,requestId).catch(()=>null);
     if(existing){
       const [latest,p]=await Promise.all([ensureCity(db,telegramId,now),readProfile(telegramId,'world-race-retry')]);
-      return buildView(cityFromRow(latest,walletFromProfile(p)),Number(latest.revision),paymentsEnabled(env),{repeated:true,operation:{id:requestId,kind:existing.action_kind,state:'completed',repeated:true}});
+      const city=cityFromRow(latest,walletFromProfile(p));
+      return buildView(city,Number(latest.revision),paymentsEnabled(env),{repeated:true,operation:{id:requestId,kind:existing.action_kind,state:'completed',repeated:true},residentRequests:await residentEnvelope(db,env,telegramId,city)});
     }
     // A CAS change, concurrent wallet mutation or SQLite CHECK failure can
     // legitimately abort the transaction; do not retry with a new request ID.
     failure(409,'WORLD_STATE_CONFLICT','Баланс или город изменился одновременно. Обновите город перед повтором.');
   }
   const [latest,p]=await Promise.all([ensureCity(db,telegramId,now),readProfile(telegramId,'world-result')]);
-  return buildView(cityFromRow(latest,walletFromProfile(p)),Number(latest.revision),paymentsEnabled(env),{
+  const latestCity=cityFromRow(latest,walletFromProfile(p));
+  return buildView(latestCity,Number(latest.revision),paymentsEnabled(env),{
     operation:{id:requestId,kind:action.kind,state:'completed',repeated:false},cost,
+    residentRequests:await residentEnvelope(db,env,telegramId,latestCity),
     ...(credit?{reward:{...reward}}:{})
   });
 }
@@ -260,7 +285,22 @@ export async function handleZeffiWorldApi(request,env,dependencies){
       // One read in the existing world/state response; no separate onboarding startup call.
       // Missing optional tutorial migration must never prevent opening an existing city.
       const tutorial=await readWorldTutorial(env.DB,telegramId).catch(()=>null);
-      return reply(buildView(cityFromRow(row,walletFromProfile(profile)),Number(row.revision),paymentsEnabled(env),{tutorial}));
+      const city=cityFromRow(row,walletFromProfile(profile));
+      return reply(buildView(city,Number(row.revision),paymentsEnabled(env),{tutorial,residentRequests:await residentEnvelope(env.DB,env,telegramId,city)}));
+    }
+    if(pathname==='/api/world/resident/claim'){
+      if(!residentsEnabled(env))failure(403,'RESIDENT_REQUESTS_DISABLED','Просьбы жителей временно недоступны.');
+      try{await env.DB.prepare('SELECT request_id FROM zeffi_world_resident_requests LIMIT 1').all();}
+      catch{failure(503,'RESIDENT_SCHEMA_NOT_READY','Просьбы жителей пока недоступны. Прогресс города сохранён.');}
+      const result=await claimResidentRequest({db:env.DB,telegramId,
+        requestId:body.residentRequestId,claimRequestId:body.requestId,
+        readProfile:profileReader,operationGate:opGate});
+      if(result.status!==200)return reply({ok:false,code:result.code,error:result.error},result.status);
+      const [row,profile]=await Promise.all([ensureCity(env.DB,telegramId,Date.now()),profileReader(telegramId,'resident-claim:state')]);
+      const city=cityFromRow(row,walletFromProfile(profile));
+      return reply({ok:true,claimed:true,repeated:result.repeated,reward:result.reward,
+        residentRequests:await residentEnvelope(env.DB,env,telegramId,city),
+        wallet:walletFromProfile(profile)});
     }
     if(pathname==='/api/world/mutate'){
       const result=await handleMutation(env.DB,env,telegramId,body,profileReader,opGate);

@@ -35243,21 +35243,21 @@ html &gt; body.zefirok-game-expanded{height:var(--zefirok-visible-height,100dvh)
   const host=()=&gt;window.zefirokTaskHost||{};
   let openToken=0;
   async function openForTester(token){
-    // Only a server-signed, explicitly allowlisted tester may enter the read-only story.
-    // No tester identifiers or trusted balances are stored in the browser.
+    // Only a signed, allowlisted tester with an authoritative D1 city
+    // may enter the personal World; story-access is not personal authorization.
     const initData=String(host().auth?.()||window.SweetRunPlatform?.auth?.legacyInitData?.()||window.Telegram?.WebApp?.initData||'');
     if(!initData||window.parent===window)return;
     const controller=new AbortController();
     const timer=window.setTimeout(()=&gt;controller.abort(),8500);
     try{
-      const response=await fetch('/api/world/story-access',{
+      const response=await fetch('/api/world/state',{
         method:'POST',headers:{'Content-Type':'application/json'},
         credentials:'same-origin',cache:'no-store',signal:controller.signal,
         body:JSON.stringify({initData})
       });
       if(!response.ok)return;
       const data=await response.json();
-      if(data?.ok!==true||data?.access!=='tester'||data?.mode!=='local-demo'||data?.version!=='story-v1')return;
+      if(data?.ok!==true||data?.serverAuthoritative!==true||!Number.isSafeInteger(data?.revision))return;
       if(token!==openToken||screen.hidden)return;
       // The game runs as about:srcdoc. Its location.origin is not a reliable
       // targetOrigin even with a same-origin sandbox. Read the embedding frame's
@@ -35279,8 +35279,8 @@ html &gt; body.zefirok-game-expanded{height:var(--zefirok-visible-height,100dvh)
     try{const fn=host().world;if(typeof fn==='function'){fn();switched=true;}}catch{}
     if(!switched||screen.hidden){root.querySelectorAll('.screen').forEach(node=&gt;{node.hidden=node!==screen;});}
     window.requestAnimationFrame(()=&gt;screen.querySelector('[data-world-back]')?.focus({preventScroll:true}));
-    // Guests remain on the existing coming-soon page. Successful testers
-    // enter the personal city only after the Worker authorizes story-access.
+    // Guests stay on the coming-soon page; testers enter the personal city
+    // only after the Worker confirms signed server-authoritative city state.
     void openForTester(token);
   }
   function back(){
@@ -36385,7 +36385,7 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
     const layer=document.createElement('div');
     layer.id='zeffi-world-preview-layer';
     layer.setAttribute('role','dialog');
-    layer.setAttribute('aria-label',view==='story'?'Мир Зеффи — общий сюжетный город':'Мир Зеффи — строительная песочница');
+    layer.setAttribute('aria-label',view==='story'?'Мир Зеффи — общий сюжетный город':'Мир Зеффи — мой район');
     layer.style.cssText='position:fixed;inset:0;max-height:var(--zefirok-app-height,100dvh);z-index:2147483600;display:grid;grid-template-rows:auto minmax(0,1fr);background:#fff7fa;padding:var(--zefirok-content-safe-top,env(safe-area-inset-top,0px)) 0 var(--zefirok-content-safe-bottom,env(safe-area-inset-bottom,0px));box-sizing:border-box;font-family:system-ui,-apple-system,sans-serif';
     const header=document.createElement('header');
     header.style.cssText='display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:48px;padding:5px 13px;background:linear-gradient(125deg,#fff8fb,#fff1f6);border-bottom:1px solid #f0cbd9;color:#7e4059;box-sizing:border-box';
@@ -36393,7 +36393,7 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
     back.type='button';back.textContent='← В Сладкий Забег';back.setAttribute('aria-label','Вернуться в Сладкий Забег');
     back.style.cssText='border:1px solid #e7b4c8;background:#fff;color:#a3466e;border-radius:14px;padding:9px 12px;font-size:12px;font-weight:800;cursor:pointer';
     back.addEventListener('click',closeWorld);
-    const note=document.createElement('span');note.textContent=view==='story'?'Общий город · тестеры':'Мир Зеффи · тестовая песочница';
+    const note=document.createElement('span');note.textContent=view==='story'?'Общий город':'Мир Зеффи · Мой район';
     note.style.cssText='font-size:11px;font-weight:750;text-align:right';
     header.append(back,note);
     const frame=document.createElement('iframe');
@@ -36401,7 +36401,7 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
     frame.setAttribute('allow','clipboard-write');
     frame.setAttribute('referrerpolicy','no-referrer');
     frame.style.cssText='width:100%;height:100%;border:0;background:#fff8fa;display:block;min-width:0;min-height:0';
-    frame.src=view==='story'?'./story-world.html':(location.protocol==='file:'?'./world-preview.html':'./world.html?world_tester=1');
+    frame.src=view==='story'?'./story-world.html':(location.protocol==='file:'?'./world-preview.html':'./world.html');
     layer.append(header,frame);
     document.body.append(layer);
     worldLayer=layer;

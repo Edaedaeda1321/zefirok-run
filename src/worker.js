@@ -2205,7 +2205,7 @@ export default {
         // Preserve existing legal acceptance requirements for spend operations.
         // The server module additionally enforces explicit tester access and
         // fail-closed feature flags before using the shared D1 wallet.
-        if(url.pathname==="/api/world/mutate"){
+        if(url.pathname==="/api/world/mutate"||url.pathname==="/api/world/resident/claim"){
           const legalGate=await enforceLegalAcceptanceForRequest(request,env);
           if(legalGate)return legalGate;
         }

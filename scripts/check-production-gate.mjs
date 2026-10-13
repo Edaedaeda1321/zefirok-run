@@ -91,7 +91,8 @@ const steps = [
   ['player collection source status UX', 'node', ['scripts/check-player-collection-source-status.mjs']],
   ['rating dethrone delivery', 'node', ['scripts/check-rating-dethrone-delivery.mjs']],
   ['rating finale + winner notice', 'node', ['--no-warnings','--experimental-sqlite','scripts/check-rating-finale-delivery.mjs']],
-  ['rating finale popup + winner/dethrone safeguards', 'node', ['scripts/check-rating-finale-popup-v2.mjs']],
+  // Rating finale popup v2 was never committed to main; its check cannot execute.
+  // Keep the existing rating dethrone and finale regression tests above.
   ['player directory integrity', 'node', ['scripts/check-player-directory-integrity.mjs']],
   ['case opening stability', 'node', ['scripts/check-case-stability.mjs']],
   ['Elite+ XP lifetime', 'node', ['scripts/check-elite-plus-xp-lifetime.mjs']],
@@ -120,6 +121,7 @@ const steps = [
   ['Zeffi World RC catalogue and no-select UI', 'node', ['scripts/check-world-catalog-rc-ui.mjs']],
   ['Zeffi World guided tutorials (D1 + UI)', 'node', ['--no-warnings','--experimental-sqlite','--test','world/tests/world-tutorial-rc.test.mjs']],
   ['Zeffi World shared D1', 'node', ['--no-warnings','--experimental-sqlite','scripts/check-zeffi-world-integration.mjs']],
+  ['Zeffi World resident requests RC-3', 'node', ['--no-warnings','--experimental-sqlite','--test','world/tests/resident-requests-rc3.test.mjs']],
   ['Zeffi World residents and comfort', 'node', ['--test','world/tests/citizens.test.mjs']],
   ['Zeffi World city life and buses', 'node', ['--test','world/tests/city-life.test.mjs']],
   ['Zeffi story world v1 wiring', 'node', ['scripts/check-world-story-v1.mjs']],
