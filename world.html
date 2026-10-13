@@ -12,10 +12,10 @@
       }
     } catch (_) { /* A directly opened game is not a trusted same-origin frame. */ }
   </script>
-  <meta name="description" content="World Zeffi standalone city builder sandbox v0.1.13: animated construction acceleration and dynamic coffee-only prices" />
-  <title>Мир Зеффи — Песочница 0.1.13</title>
+  <meta name="description" content="Мир Зеффи — уютный город с личным районом, строительством и общими проектами." />
+  <title>Мир Зеффи — Мой район</title>
   <link rel="stylesheet" href="./world.css" />
-  <link rel="stylesheet" href="./premium-ui.css" />
+  <link rel="stylesheet" href="./premium-ui.css?v=rc-catalog2" />
   <style id="zeffi-dual-world-tester-style">
    [hidden]{display:none!important}
    .world-tester-sandbox-note{padding:6px 12px;flex:0 0 auto;font:700 10px/1.35 system-ui,-apple-system,sans-serif;text-align:center;letter-spacing:.01em;color:#8b5a75;background:#fff2df;border-bottom:1px solid #ead4c4}
@@ -24,11 +24,10 @@
   <script id="zeffi-world-preview-access">
     (()=>{
       const local=location.protocol==='file:'||/^(localhost|127\.0\.0\.1|\[::1\])$/i.test(location.hostname);
-      // Normal hosted visitors always see the teaser, even with the old
-      // ?world_preview=1 URL. The new ?world_tester=1 route only asks the Worker
-      // whether a signed Telegram session is authorized; it grants no access.
+      // Hosted access is decided exclusively by signed Telegram auth, the
+      // WORLD_ENABLED server switch and WORLD_TESTER_IDS. URL flags cannot
+      // unlock World. Offline developer preview remains separate.
       const enabled=local;
-      const testerRequest=!local&&new URLSearchParams(location.search).get('world_tester')==='1';
       window.ZeffiWorldServerRequired=!local;
       window.ZeffiWorldPreviewAllowed=local;
       if(!local){
@@ -70,16 +69,13 @@
           return {response,payload};
         };
         try{
-          // Existing D1-authoritative personal city keeps all its existing server gates.
-          // When WORLD_ENABLED is disabled, do not enable real wallet operations.
-          const personal=await request('/api/world/state').catch(()=>null);
-          if(personal?.response.ok && personal.payload?.ok===true && personal.payload?.serverAuthoritative===true)
+          // A failed personal-city state request must NEVER fall back to a
+          // browser-local wallet or unsynchronised construction progress.
+          const personal=await request('/api/world/state');
+          if(personal.response.ok && personal.payload?.ok===true &&
+             personal.payload?.serverAuthoritative===true &&
+             Number.isSafeInteger(personal.payload?.revision))
             return {server:true};
-          // Deliberately isolated sandbox, available only when the signed story gate approves.
-          const story=await request('/api/world/story-access');
-          if(story.response.ok && story.payload?.ok===true && story.payload?.access==='tester' &&
-             story.payload?.mode==='local-demo' && story.payload?.walletWrites===false)
-            return {server:false};
           return null;
         }catch{return null;}finally{clearTimeout(timer);}
       }
@@ -95,7 +91,7 @@
         button.removeAttribute('aria-disabled');
         button.style.opacity='1';button.style.cursor='pointer';
         const caption=button.querySelector('small');
-        if(caption){caption.removeAttribute('data-t');caption.textContent='ТЕСТ';}
+        if(caption){caption.removeAttribute('data-t');caption.textContent='';}
         button.setAttribute('aria-label','Открыть общий сюжетный город');
         button.addEventListener('click',event=>{
           event.preventDefault();event.stopImmediatePropagation();
@@ -108,12 +104,11 @@
         enableCommonStoryNavigation();
         window.ZeffiWorldServerRequired=access.server===true;
         window.ZeffiWorldPreviewAllowed=!window.ZeffiWorldServerRequired;
-        window.ZeffiWorldTesterPersonalSandbox=!window.ZeffiWorldServerRequired;
         document.getElementById('worldTesterLocalNotice').hidden=window.ZeffiWorldServerRequired;
         document.documentElement.classList.add('zeffi-world-ready');
-        const script=document.createElement('script');script.type='module';script.src='./app.js';
+        const script=document.createElement('script');script.type='module';script.src='./app.js?v=rc-catalog2';
         script.addEventListener('load',()=>{
-          void import('./story/entry.js?v=2').catch(error=>console.warn('Story world entry unavailable',error));
+          void import('./story/entry.js?v=3').catch(error=>console.warn('Story world entry unavailable',error));
           if(document.documentElement.classList.contains('zeffi-world-framed')){
             window.parent.postMessage({type:'zefirok-world-ui-ready'},location.origin);
           }
@@ -122,8 +117,8 @@
       }
       document.addEventListener('DOMContentLoaded',async()=>{
         if(!enabled){
-          const testerAccess=testerRequest?await isAuthorizedTester():null;
-          if(testerAccess){launchCity(testerAccess);return;}
+          const candidateAccess=await isAuthorizedTester();
+          if(candidateAccess?.server===true){launchCity(candidateAccess);return;}
           // Everyone without a signed, allowlisted Telegram session gets only
           // this static teaser, not city modules or wallet operations.
           document.title='Мир Зеффи — скоро открытие';
@@ -163,7 +158,7 @@
     <span class="test-wallet__balance" title="Очки"><img src="../assets/mir_zeffi/iconScore.webp" alt="" width="28" height="28" decoding="async"/><b id="walletPoints">0</b></span>
     <span class="test-wallet__balance" title="Кофе"><img src="../assets/mir_zeffi/iconCoffee.webp" alt="" width="28" height="28" decoding="async"/><b id="walletCoffee">0</b></span>
     <span class="test-wallet__balance" title="Зефир"><img src="../assets/mir_zeffi/zefir_currency.webp" alt="" width="28" height="28" decoding="async"/><b id="walletTreats">0</b></span>
-    <button id="topupWallet" type="button" data-title="topUpWallet" aria-label="Пополнить тестовые валюты">+</button>
+    <button id="topupWallet" type="button" data-title="topUpWallet" aria-label="Локальное пополнение">+</button>
    </div>
   </header>
   <nav class="world-nav" aria-label="Выбор мира">
@@ -171,7 +166,7 @@
    <button type="button" class="world-nav__disabled" id="commonButton"><svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 20v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 20v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg><span data-t="commonWorld"></span> <small data-t="commonLater"></small></button>
    <div class="nav-notice" title="Состояние синхронизации"><span class="notice-dot"></span><span id="saveStatus" data-t="local"></span><svg class="status-icon" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 5 5L20 7"/></svg></div>
   </nav>
-  <div id="worldTesterLocalNotice" class="world-tester-sandbox-note" hidden>МОЙ РАЙОН · ТЕСТОВАЯ ПЕСОЧНИЦА · сохраняется только в этом браузере · реальные валюты не списываются</div>
+  <div id="worldTesterLocalNotice" class="world-tester-sandbox-note" hidden>ЛОКАЛЬНАЯ РАЗРАБОТКА · данные сохраняются в этом браузере · игровые балансы не затрагиваются</div>
   <section class="map-zone" aria-label="City builder area" id="mapZone">
    <canvas id="worldCanvas" aria-label="Isometric construction map" tabindex="0"></canvas>
    <div class="map-glow" aria-hidden="true"></div>
@@ -239,7 +234,8 @@
    <div class="category-tabs" id="categoryTabs" aria-label="Категории построек"></div>
    <div class="catalog-list" id="catalogList"></div>
    <div class="warehouse-list" id="warehouseList" hidden></div>
-   <div class="panel-footer"><span class="safe-marker"></span><span data-t="noMoney"></span><button type="button" id="resetButton" data-t="reset"></button></div>
+   <!-- Local-only reset hook remains for existing event handlers, but is not a release catalogue row. -->
+   <button type="button" id="resetButton" data-t="reset" hidden></button>
   </section>
   <div class="modal-backdrop" id="welcomeModal" hidden><div class="welcome-card" role="dialog" aria-modal="true" aria-labelledby="welcomeTitle"><div class="welcome-crest"><svg viewBox="0 0 64 64" width="56" height="56"><circle cx="32" cy="32" r="29" fill="#fff1f6"/><circle cx="32" cy="35" r="15" fill="#edb5c9"/><circle cx="19" cy="20" r="5" fill="#edb5c9"/><circle cx="30" cy="15" r="5" fill="#edb5c9"/><circle cx="42" cy="18" r="5" fill="#edb5c9"/><circle cx="51" cy="28" r="4" fill="#edb5c9"/></svg></div><small data-t="v01"></small><h2 id="welcomeTitle" data-t="welcomeTitle"></h2><p data-t="welcomeText"></p><div class="welcome-features" data-t="welcomePoints"></div><button class="solid-button" id="welcomeStart" data-t="welcomeGo" type="button"></button></div></div>
   <div class="modal-backdrop" id="confirmModal" hidden><div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="modalTitle"><h2 id="modalTitle" data-t="modalResetTitle"></h2><p data-t="modalResetBody"></p><div class="modal-actions"><button id="resetCancel" class="ghost-button" type="button" data-t="modalCancel"></button><button id="resetAccept" class="solid-button" type="button" data-t="resetConfirm"></button></div></div></div>

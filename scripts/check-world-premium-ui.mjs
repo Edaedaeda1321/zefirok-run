@@ -21,7 +21,7 @@ const mandatoryIds = [
 ];
 for(const file of entries){
  const html=read(file);
- assert(html.includes('href="./premium-ui.css"'),`${file}: premium stylesheet not loaded`);
+ assert(html.includes('href="./premium-ui.css'),`${file}: premium stylesheet not loaded`);
  for(const id of mandatoryIds){
   const count=(html.match(new RegExp(`id="${id}"`,'g'))||[]).length;
   assert.equal(count,1,`${file}: ${id} must occur exactly once`);
@@ -29,7 +29,7 @@ for(const file of entries){
  for(const filePath of assets)assert(html.includes(`src="../${filePath}"`),`${file}: World Zeffi currency asset ${filePath} not used`);
 }
 const world=read('world.html'),app=read('world/app.js'),css=read('world/premium-ui.css');
-assert(world.includes('if(testerRequest&&await isAuthorizedTester()){launchCity();return;}'),'Tester authorization accidentally changed');
+assert(world.includes('if(candidateAccess?.server===true){launchCity(candidateAccess);return;}'),'D1 candidate authorization accidentally changed');
 assert(world.includes('window.ZeffiWorldServerRequired=!local'),'Server mode guard lost');
 assert(app.includes("return await")===false || app.includes("serverRequest('mutate'") , 'unexpected mutation call changed');
 assert(app.includes("await serverRequest('mutate'"),'Authoritative city mutations not wired');

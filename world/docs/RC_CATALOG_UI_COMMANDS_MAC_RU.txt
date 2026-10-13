@@ -1,0 +1,28 @@
+# 1) В терминале Mac перейди в корень zefirok-run (можно ввести cd + пробел и перетащить папку из Finder).
+# 2) Убедись, что в git нет нужных тебе незакоммиченных изменений:
+git status --short
+
+# 3) Скачай ZIP в ~/Downloads и распакуй только в корень zefirok-run:
+unzip -o "$HOME/Downloads/Mir_Zeffi_RC_catalog_UI_fix_20261013.zip" -d .
+
+# 4) Выполни проверки:
+node --check world/app.js
+node scripts/check-world-catalog-rc-ui.mjs
+node scripts/check-world-shop-lock-v18.mjs
+node scripts/check-world-premium-ui.mjs
+node scripts/check-world-dual-v1.mjs
+node --test world/tests/*.test.mjs
+node scripts/check-production-gate.mjs --skip-d1
+git diff --check
+
+# 5) Изучи diff и добавь в коммит только файлы патча:
+git diff --stat
+git add world.html story-world.html world/index.html world/app.js world/premium-ui.css world/story/style.css scripts/check-world-shop-lock-v18.mjs scripts/check-world-premium-ui.mjs scripts/check-world-dual-v1.mjs scripts/check-world-catalog-rc-ui.mjs scripts/check-production-gate.mjs world/docs/RC_CATALOG_UI_FIX_20261013_RU.md world/docs/RC_CATALOG_UI_COMMANDS_MAC_RU.txt
+git diff --cached --check
+git commit -m "Fix Zeffi World catalog unlock labels and no-select UI"
+git push origin main
+
+# 6) Продакшн-деплой проекта — через штатный скрипт:
+./update.sh
+
+# Важно: миграций в этом патче нет. WORLD_ENABLED и список разрешённых игроков не менять.

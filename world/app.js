@@ -114,7 +114,18 @@ function showToast(message, isError = false) {
  state.toastTimer = setTimeout(() => el.classList.remove('visible'), 2650);
 }
 function translateStatic() {
- document.querySelectorAll('[data-t]').forEach(el=>{ el.textContent = tr(el.dataset.t); });
+ // Keep local development translations, replace all sandbox copy in hosted RC.
+ const rcCopy={
+  v01:'МИР ЗЕФФИ · РАННИЙ ДОСТУП',
+  welcomePoints:'24 × 24 клетки · личный город с сохранением на сервере',
+  welcomeText:'Создавай личный район, строй дома и дороги, украшай улицы и развивай город. Строительство и награды сохраняются на сервере, а доступные платные действия используют твои игровые валюты только после подтверждения.',
+  helpRoad:'Прокладывай дороги инструментом «Дороги» на карте. Оплачиваются только новые клетки, а стоимость подтверждает сервер.',
+  phaseInfo:'Прогресс района хранится в игре. Валюты и награды начисляются и списываются только после подтверждения сервером.',
+  noMoney:'Покупки и награды подтверждаются сервером',
+  testPrices:'СТОИМОСТЬ ПОСТРОЙКИ',
+  demoWallet:'МОЙ БАЛАНС'
+ };
+ document.querySelectorAll('[data-t]').forEach(el=>{ el.textContent = SERVER_MODE && Object.prototype.hasOwnProperty.call(rcCopy,el.dataset.t)?rcCopy[el.dataset.t]:tr(el.dataset.t); });
  document.querySelectorAll('[data-title]').forEach(el=>{ el.title=tr(el.dataset.title);el.setAttribute('aria-label',tr(el.dataset.title)); });
  document.title = `${tr('app')} — ${tr('myCity')}`;
 }
@@ -656,9 +667,14 @@ function renderCatalog(){
   const price=objectPrice(CATALOG,def.id);
   const button=document.createElement('button');button.type='button';button.className='catalog-card';button.dataset.kind=def.id;
   button.classList.toggle('is-level-locked',locked);
-  button.setAttribute('aria-label',`${nameOf(def.id)}. ${locked?`Откроется на уровне ${shopRequiredLevel(def)}`:'Открыто'}; ${priceLabel(price)}`);
+  button.setAttribute('aria-label',`${nameOf(def.id)}. С уровня города ${shopRequiredLevel(def)}. ${locked?'Пока закрыто.':'Доступно.'} ${priceLabel(price)}`);
   const fig=document.createElement('div');fig.className='catalog-figure';
   const thumb=document.createElement('canvas');thumb.className='building-thumbnail';thumb.setAttribute('aria-hidden','true');fig.append(thumb);drawCatalogThumbnail(thumb,def);
+  // Always show the canonical city level, including unlocked buildings.
+  // Keep this label on the image: long names and prices cannot push it below the fold.
+  const levelBadge=document.createElement('div');levelBadge.className='catalog-level-badge';
+  levelBadge.textContent=`С ур. ${shopRequiredLevel(def)}`;
+  levelBadge.setAttribute('aria-hidden','true');fig.append(levelBadge);
   if(locked){
    // Match the season pass: dim the reward art and layer the existing 3D lock.
    // Use a div (not span): world.css gives every .catalog-figure span a 38px font.
@@ -679,7 +695,7 @@ function renderCatalog(){
   bonus.textContent=hints.join(' · ');bonus.title=benefits.limitedPopulation?'Жители от первых двух таких парков':'Игровая польза объекта после завершения строительства';
   const cost=document.createElement('em');cost.className='catalog-price';addCatalogPrice(cost,price);
   const status=document.createElement('small');status.className='catalog-availability';status.setAttribute('aria-live','off');
-  if(locked)status.textContent=`Доступно с уровня ${shopRequiredLevel(def)}`;
+  if(locked)status.textContent=`Откроется на ур. ${shopRequiredLevel(def)}`;
   copy.append(title,size);
   if(hints.length)copy.append(bonus);
   copy.append(cost,status);button.append(fig,copy);
@@ -702,7 +718,7 @@ function renderCatalogSelection(){
   btn.classList.toggle('is-level-locked',locked);
   btn.classList.toggle('cannot-afford',!locked&&Boolean(short));
   const status=btn.querySelector('.catalog-availability');
-  if(status)status.textContent=locked?`Доступно с уровня ${shopRequiredLevel(def)}`:(short||'Можно построить');
+  if(status)status.textContent=locked?`Откроется на ур. ${shopRequiredLevel(def)}`:(short||'Можно построить');
  });
 }
 function renderWarehouse(){
@@ -1149,7 +1165,7 @@ function initialize(){
  if(SERVER_MODE){
   for(const id of ['topupWallet','undoButton','redoButton','resetButton']){$(id).hidden=true;}
   document.querySelector('.test-wallet__badge').textContent='СЕРВЕР · D1';
-  document.querySelector('.panel-footer [data-t="noMoney"]').textContent='Покупки подтверждаются сервером';
+
   $('saveStatus').textContent='Подключение…';
   void bootWorldServer();
  }else void bootLocalArt();
@@ -1157,5 +1173,6 @@ function initialize(){
  let seen=false;try{seen=localStorage.getItem(WELCOME_KEY)==='1';}catch{}
  if(!seen){$('welcomeModal').hidden=false;$('welcomeStart').focus();}
 }
-window.WorldZeffiSandbox=Object.freeze({ getCity:()=>cloneCity(state.city),getStats:()=>cityStats(state.city,CATALOG),getMode:()=>state.mode, getArtStatus:()=>spriteStatus(), setArtMode:(value)=>setSpriteMode(value) });
+// Internal visual diagnostics are available only in the offline/local editor.
+if(!SERVER_MODE)window.WorldZeffiSandbox=Object.freeze({ getCity:()=>cloneCity(state.city),getStats:()=>cityStats(state.city,CATALOG),getMode:()=>state.mode, getArtStatus:()=>spriteStatus(), setArtMode:(value)=>setSpriteMode(value) });
 initialize();

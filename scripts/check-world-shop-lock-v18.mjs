@@ -18,7 +18,7 @@ const checks=[
  ['legacy figure SPAN selector detected; DIV avoids it',()=>assert.match(base,/\.catalog-figure span\{/)],
  ['standalone builder includes the existing WebP as data URL',()=>{assert.match(builder,/assets\/ui\/icon_closed\.webp/);assert.match(builder,/lock_token/);assert.match(builder,/base64\.b64encode\(lock_path\.read_bytes\(\)\)/);}],
  ['all unlock levels still come from catalog',()=>assert.match(app,/shopRequiredLevel\(def\)>shopCurrentLevel\(\)/)],
- ['level notice still appears beneath cost',()=>assert.match(app,/status\.textContent=`Доступно с уровня \$\{shopRequiredLevel\(def\)\}`/)]
+ ['required level is visible over each building thumbnail',()=>{assert.match(app,/levelBadge\.className='catalog-level-badge'/);assert.match(app,/levelBadge\.textContent=`С ур\. \$\{shopRequiredLevel\(def\)\}`/);assert.match(css,/\.catalog-figure \.catalog-level-badge\{/);}]
 ];
 for(const [name,check] of checks){check();console.log('PASS',name)}
 console.log(`World shop lock v18: ${checks.length} guards PASS`);

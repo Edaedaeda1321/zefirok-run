@@ -91,6 +91,7 @@ const steps = [
   ['player collection source status UX', 'node', ['scripts/check-player-collection-source-status.mjs']],
   ['rating dethrone delivery', 'node', ['scripts/check-rating-dethrone-delivery.mjs']],
   ['rating finale + winner notice', 'node', ['--no-warnings','--experimental-sqlite','scripts/check-rating-finale-delivery.mjs']],
+  ['rating finale popup + winner/dethrone safeguards', 'node', ['scripts/check-rating-finale-popup-v2.mjs']],
   ['player directory integrity', 'node', ['scripts/check-player-directory-integrity.mjs']],
   ['case opening stability', 'node', ['scripts/check-case-stability.mjs']],
   ['Elite+ XP lifetime', 'node', ['scripts/check-elite-plus-xp-lifetime.mjs']],
@@ -115,6 +116,8 @@ const steps = [
   // Operation system includes the server-authoritative purchase/case/booster guards.
   ['operation system', 'node', ['scripts/check-operation-system.mjs']],
   ['Zeffi World wiring', 'node', ['scripts/check-world-api-wiring.mjs']],
+  ['Zeffi World closed release candidate', 'node', ['scripts/check-world-rc-gate.mjs']],
+  ['Zeffi World RC catalogue and no-select UI', 'node', ['scripts/check-world-catalog-rc-ui.mjs']],
   ['Zeffi World shared D1', 'node', ['--no-warnings','--experimental-sqlite','scripts/check-zeffi-world-integration.mjs']],
   ['Zeffi World residents and comfort', 'node', ['--test','world/tests/citizens.test.mjs']],
   ['Zeffi World city life and buses', 'node', ['--test','world/tests/city-life.test.mjs']],

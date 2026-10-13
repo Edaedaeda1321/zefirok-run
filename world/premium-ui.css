@@ -409,3 +409,38 @@ body{background:#d6ead0}
  .catalog-figure .catalog-lock-icon{width:29px;height:29px}
 }
 
+
+
+/* Release Candidate: compact catalogue without the old technical status footer.
+   Keep the level readable on every building, even when names wrap to two lines. */
+html,body,.app-shell,.app-shell *:not(input):not(textarea):not([contenteditable="true"]){
+ -webkit-user-select:none;user-select:none;-webkit-touch-callout:none;
+}
+input,textarea,[contenteditable="true"]{-webkit-user-select:text;user-select:text;-webkit-touch-callout:default}
+.catalog-figure .catalog-level-badge{
+ position:absolute;z-index:4;top:5px;left:5px;display:inline-flex;align-items:center;justify-content:center;
+ max-width:calc(100% - 10px);min-height:21px;padding:3px 7px;
+ border-radius:9px;border:1px solid #b9dabd;
+ background:#f2fff2f2;box-shadow:0 2px 8px #415c4136;
+ color:#36724e;font-size:10px;font-weight:950;line-height:1;white-space:nowrap;
+ pointer-events:none;filter:none;
+}
+.catalog-card.is-level-locked .catalog-figure .catalog-level-badge{
+ background:#fff5fbee;border-color:#e7b8d1;color:#97456d;
+}
+/* The card's information gets priority over decorative illustration height.
+   Without this the last row (required level / cost) overflows on mobile WebKit. */
+.catalog-card{min-height:0;overflow:hidden}
+.catalog-card .catalog-figure{height:37%;min-height:48px;flex:0 1 auto}
+.catalog-card .catalog-copy{min-height:0;flex:1 0 auto;gap:2px}
+.catalog-card .catalog-copy strong{min-height:0}
+.catalog-card .catalog-availability{min-height:0;line-height:1.1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+@media(max-width:700px){
+ .catalog-card .catalog-figure{height:36%;min-height:43px}
+ .catalog-card .catalog-copy{gap:2px}
+ .catalog-card .catalog-availability{font-size:9px}
+ .catalog-figure .catalog-level-badge{font-size:9px;min-height:19px;padding:3px 6px;top:4px;left:4px}
+}
+@media(max-width:700px) and (max-height:670px){
+ .catalog-card .catalog-figure{height:31%;min-height:37px}
+}
