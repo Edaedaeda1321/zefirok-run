@@ -53,9 +53,9 @@ assert(main.includes("fetch('/api/world/state'"), 'runner must authorize server-
 assert(main.includes("data?.serverAuthoritative!==true")&&main.includes('!Number.isSafeInteger(data?.revision)'), 'runner must reject a fake city response');
 assert(main.includes("if(token!==openToken||screen.hidden)return;"), 'stale or dismissed entry must not reopen story World');
 assert(main.includes("credentials:'same-origin',cache:'no-store'"), 'tester entry auth fetch must remain uncached and same-origin');
-assert(storyPage.includes('<base href="./world/"')&&storyPage.includes('./story/boot.js?v=rc-guide2'), 'hosted story page must load the signed access loader');
-assert(storyBoot.includes("fetch('/api/world/story-access'")&&storyBoot.includes("payload?.access!=='tester'")&&storyBoot.includes("payload?.mode!=='local-demo'"), 'story modules must wait for repeat server authorization');
-assert(storyBoot.indexOf("await import('./app.js?v=rc-guide2')")>storyBoot.indexOf("payload?.access!=='tester'"), 'unauthorized players must never import story modules');
+assert(storyPage.includes('<base href="./world/"')&&storyPage.includes('./story/boot.js?v=rc-story1'), 'hosted story page must load the signed access loader');
+assert(storyBoot.includes("fetch('/api/world/story-access'")&&storyBoot.includes("payload?.access!=='tester'")&&storyBoot.includes("payload?.mode!=='server-story'"), 'story modules must wait for repeat server authorization');
+assert(storyBoot.indexOf("await import('./app.js?v=rc-story1')")>storyBoot.indexOf("payload?.access!=='tester'"), 'unauthorized players must never import story modules');
 assert(storyBoot.includes("event.source!==window.parent||event.origin!==location.origin"), 'story auth bridge must trust only the same-origin parent frame');
 assert(server.includes("if(!worldEnabled(env))failure(403,'WORLD_DISABLED'"), 'all World routes must be disabled without WORLD_ENABLED');
 assert(server.indexOf('assertTester(env,telegramId);')<server.indexOf("pathname==='/api/world/story-access'"), 'only signed allowlisted testers may access read-only story');

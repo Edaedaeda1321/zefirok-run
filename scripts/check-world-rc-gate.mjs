@@ -10,6 +10,7 @@ const allRoutes = [
  '/api/world/mutate',
  '/api/world/tutorial',
  '/api/world/story-access',
+ '/api/world/story/progress',
  '/api/world/community/state',
  '/api/world/community/contribute'
 ];
@@ -66,6 +67,6 @@ assert.ok(ignore.includes('Mir_Zeffi_Park_Belkino_4_Views_v1/'),'standalone worl
 assert.ok(story.includes('СТРОИМ ВМЕСТЕ'),'story header must not display demo branding');
 assert.ok(!story.includes('ТЕСТ ·') && !story.includes('МЕНЮ ТЕСТЕРА'),'hosted story header must not display tester badges');
 assert.ok(app.includes('if(SERVER_MODE)return;')&&app.includes('if(!SERVER_MODE)window.WorldZeffiSandbox'),'hosted city must not store sandbox changes');
-assert.ok(storyApp.includes("if(liveMode)return;persistent=saveDemo"),'hosted story must not store simulated state');
+assert.ok(storyApp.includes("if(liveMode)return;state=next;persistent=saveDemo"),'hosted story must not store simulated state');
 assert.ok(storyApp.includes("$('modeBadge').hidden=liveMode"),'test menu must be hidden in hosted story');
 console.log('World Zeffi closed Release Candidate: signed allowlist, emergency switch, hosted UI, no local wallet fallback PASS');

@@ -126,6 +126,8 @@ const steps = [
   ['Zeffi story world v1', 'node', ['--test','world/tests/story-world-v1.test.mjs','world/tests/story-access-v1.test.mjs','world/tests/festival-hall-stages-v1.test.mjs']],
   ['Zeffi shared community fund v1', 'node', ['--no-warnings','--experimental-sqlite','--test','world/tests/community-fund-v1.test.mjs','world/tests/community-fund-client-v1.test.mjs']],
   ['Zeffi shared community fund wiring', 'node', ['scripts/check-world-community-v1.mjs']],
+  ['Zeffi story RC progression wiring', 'node', ['scripts/check-world-story-progression-rc.mjs']],
+  ['Zeffi story RC progression D1 and API', 'node', ['--no-warnings','--experimental-sqlite','--test','world/tests/story-progression-rc.test.mjs']],
   ['Zeffi city transport v2', 'node', ['scripts/check-world-city-fix-v2.mjs']],
   ['Zeffi White Rabbit / Zephirok landmark', 'node', ['scripts/check-world-white-rabbit-v1.mjs']],
   ['Zeffi Belkino 9x9 story park', 'node', ['scripts/check-world-park-belkino-v1.mjs']],

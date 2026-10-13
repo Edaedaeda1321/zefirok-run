@@ -7,6 +7,7 @@ import {
 } from '../world/engine.js';
 import { CATALOG } from '../world/catalog.js';
 import {handleCommunityFund} from './zeffi-community-fund.js';
+import {handleZeffiStory} from './zeffi-story-progress.js';
 import {readWorldTutorial,writeWorldTutorial} from './zeffi-world-tutorial.js';
 
 const ZERO = Object.freeze({points:0,treats:0,coffee:0});
@@ -223,7 +224,7 @@ export async function handleZeffiWorldApi(request,env,dependencies){
     // Story-world v1: read-only access gate. NO city, profile, wallet or project writes.
     if(new URL(request.url).pathname==='/api/world/story-access'){
       if(env?.WORLD_STORY_ENABLED!=null&&String(env.WORLD_STORY_ENABLED).toLowerCase()!=='true')failure(403,'STORY_DISABLED','Общий город временно недоступен.');
-      return reply({ok:true,access:'tester',version:'story-v1',mode:'local-demo',globalSync:false,walletWrites:false});
+      return reply({ok:true,access:'tester',version:'story-rc2',mode:'server-story',globalSync:true,walletWrites:false});
     }
     // Tutorial progress is private to the signed, allowlisted user; no wallet writes.
     if(new URL(request.url).pathname==='/api/world/tutorial'){
@@ -234,6 +235,11 @@ export async function handleZeffiWorldApi(request,env,dependencies){
         return reply({ok:true,tutorial});
       }
       failure(400,'WORLD_TUTORIAL_ACTION','Неизвестная операция обучения.');
+    }
+    // Story chapters, visits, events and district unlocks are D1-authoritative.
+    // The signed Telegram and closed RC allowlist gates run before this branch.
+    if(new URL(request.url).pathname==='/api/world/story/progress'){
+      return handleZeffiStory({db:env.DB,env,telegramId,body});
     }
     // Zeffi shared fund v1: independent signed community endpoints.
     // Authentication + WORLD_TESTER_IDS have already been checked above.

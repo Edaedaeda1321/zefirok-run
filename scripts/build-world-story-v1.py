@@ -41,7 +41,7 @@ def build(output: Path) -> None:
         if name == 'world/sprite-manifest.js':
             source = 'export const SPRITE_MANIFEST = ' + json.dumps(manifest, ensure_ascii=False, separators=(',', ':')) + ';\n'
         def replace_import(match: re.Match) -> str:
-            dep = posixpath.normpath(posixpath.join(posixpath.dirname(name), match.group(2)))
+            dep = posixpath.normpath(posixpath.join(posixpath.dirname(name), match.group(2).split('?',1)[0]))
             compile_module(dep)
             bindings = re.sub(r'\s+as\s+', ': ', match.group(1))
             return 'const {' + bindings + '} = M[' + json.dumps(dep) + '];\n'

@@ -8,6 +8,7 @@ import { createDemoState, loadDemo, saveDemo, resetDemo, contribute, simulateCom
 import { DISTRICTS, PLACES, placeById, isPlaceOpen, lockedDistricts, STORY_FESTIVAL_KINDS, buildStoryMap, validateStoryMap } from './map.js';
 import { icon, escapeText as esc, artUrl, requiredStorySpriteIds, centerCamera, worldAt, zoomCamera, clampCamera } from './view.js';
 import {createSharedFundClient, sharedFundQuote, mapStateWithFund} from './shared-fund.js';
+import {createStoryProgressClient} from './progress-client.js?v=rc-story1';
 import {createWorldTutorial} from '../tutorial.js?v=rc-guide2';
 
 const $=id=>document.getElementById(id);
@@ -22,28 +23,36 @@ export async function startStoryWorld({mode='standalone',initData=''}={}) {
  $('accessMessage').textContent='Загружаем существующие игровые постройки и парки.';
  let loadTimer;
  const timeout=new Promise((_,reject)=>{loadTimer=setTimeout(()=>reject(new Error('Загрузка заняла слишком много времени. Повторите попытку.')),20000);});
- const warm=await Promise.race([preloadSpriteSet(requiredStorySpriteIds(),{pin:true,onProgress:p=>{$('loadProgress').value=Math.round(p.done/p.total*100);}}),timeout]).finally(()=>clearTimeout(loadTimer));
+ // Story read and sprite warmup share the loading screen; no local fallback.
+ const signedStoryClient=mode==='tester'?createStoryProgressClient(initData):null;
+ const [warm,signedStoryProgress]=await Promise.all([
+  Promise.race([preloadSpriteSet(requiredStorySpriteIds(),{pin:true,onProgress:p=>{$('loadProgress').value=Math.round(p.done/p.total*100);}}),timeout]),
+  signedStoryClient?signedStoryClient.read():Promise.resolve(null)
+ ]).finally(()=>clearTimeout(loadTimer));
  if(warm.failed)throw new Error(`Не удалось загрузить ${warm.failed} игровых изображений. Проверьте, что сборка распакована полностью.`);
  await preloadBusArt();
  booted=true;
  const canvas=$('storyCanvas'),overlay=$('storyOverlay'),zone=$('mapZone'),panel=$('storyPanel');
  let storage=null;try{storage=window.localStorage;}catch{}
- // Hosted story is a read-only visual map plus a real, D1-backed shared fund.
- // Never import historical local demo chapters or simulated contributions.
+ // Hosted story uses D1 chapters and a real shared fund, not demo chapters.
+ // Never import historical local saves or simulated contributions.
  const loaded=mode==='standalone'?loadDemo(storage):{state:createDemoState(),persistent:false};
  let state=loaded.state,persistent=loaded.persistent;
+ if(signedStoryProgress)state={...state,chapter:signedStoryProgress.chapter,visited:[...signedStoryProgress.visited]};
  const reduce=window.matchMedia('(prefers-reduced-motion: reduce)');
  let paused=reduce.matches,pauseAt=Date.now(),pauseOffset=0;
  let city,citizens,buses,observedStatus,selectedPanel='',selectedAmount=50,selectedFestivalAmount=1_000_000;
  let cam=centerCamera(25,25,innerWidth<600?.86:.87),size={width:1,height:1};
  const liveMode=mode==='tester',sharedClient=liveMode?createSharedFundClient(initData):null;
+ const storyClient=signedStoryClient;
+ let storySnapshot=signedStoryProgress,storyBusy=false,storyVisits=Promise.resolve();
  let worldTutorial=null;
  let sharedSnapshot=null,sharedError='',sharedRefreshing=false,fundBusy=false,pendingDonation=null,selectedLiveGardenAmount=5_000,selectedLiveFestivalAmount=5_000,liveTimer=0;
  let raf=0,ticker=0,dirty=true,layoutDirty=true,lastFrame=0,toastTimer=0,disposed=false,focusId='square',tween=null;
  const drawTimes=[];const disposers=[];const markerElements=new Map();
  const listen=(target,type,fn,options)=>{target.addEventListener(type,fn,options);disposers.push(()=>target.removeEventListener(type,fn,options));};
  function toast(text){$('storyToast').textContent=text;$('storyToast').classList.add('visible');clearTimeout(toastTimer);toastTimer=setTimeout(()=>$('storyToast').classList.remove('visible'),3200);}
- function store(next){state=next;if(liveMode)return;persistent=saveDemo(storage,state);if(!persistent)toast('Сохранение в локальном предпросмотре недоступно.');}
+ function store(next){if(liveMode)return;state=next;persistent=saveDemo(storage,state);if(!persistent)toast('Сохранение в локальном предпросмотре недоступно.');}
  function haptic(){try{window.Telegram?.WebApp?.HapticFeedback?.impactOccurred?.('light');}catch{}}
  const worldState=()=>liveMode?mapStateWithFund(state,sharedSnapshot):state;
  const festivalKind=()=>STORY_FESTIVAL_KINDS[festivalStage(worldState())];
@@ -148,17 +157,58 @@ export async function startStoryWorld({mode='standalone',initData=''}={}) {
  }
  function pause(){if(paused){pauseOffset+=Date.now()-pauseAt;paused=false;}else{pauseAt=Date.now();paused=true;}refreshHUD();schedule();}
  function statusLabel(place){return isPlaceOpen(place,worldState())?'Доступно для прогулки':place.chapter===99?'Будущий район':`Откроется в главе ${place.chapter+1}`;}
+ function applyStory(next){
+  // Visits are monotonic; merge concurrent read responses without rolling back
+  // a newly unlocked chapter from a second Telegram window.
+  if(!next||!storySnapshot||next.chapter<storySnapshot.chapter||
+    (next.chapter===storySnapshot.chapter&&next.revision<storySnapshot.revision))return;
+  const visited=[...new Set([...storySnapshot.visited,...next.visited])];
+  storySnapshot={...next,visited};state={...state,chapter:next.chapter,visited};
+  if(!disposed){rebuild();if(selectedPanel)renderPanel();}
+ }
+ async function syncStoryProgress({quiet=false}={}){
+  if(!liveMode||storyBusy||disposed)return;
+  storyBusy=true;
+  try{applyStory(await storyClient.read());}
+  catch(error){if(!quiet)toast('Не удалось обновить историю. Попробуйте снова.');console.warn('Story sync failed',error?.code||error?.message);}
+  finally{storyBusy=false;}
+ }
+ function markStoryVisit(id){
+  if(!liveMode||!storySnapshot||storySnapshot.visited.includes(id)||!isPlaceOpen(placeById(id),worldState()))return;
+  // Serialize visited markers; older responses cannot erase other visits.
+  storyVisits=storyVisits.catch(()=>{}).then(async()=>{
+   if(storySnapshot.visited.includes(id))return;
+   try{applyStory(await storyClient.visit(id));}
+   catch(error){console.warn('Story visit not saved',error?.code||error?.message);toast('Не удалось сохранить посещение. Повторите попытку.');}
+  });
+ }
+ async function completeStoryChapter(){
+  if(!liveMode||storyBusy||!storySnapshot)return;
+  const expectedChapter=storySnapshot.chapter,expectedRevision=storySnapshot.revision;
+  if(!storySnapshot.canAdvance)return toast('Сначала заверши цели главы.');
+  storyBusy=true;
+  try{
+   const next=await storyClient.advance(expectedChapter,expectedRevision);
+   applyStory(next);haptic();toast(next.completed?'История завершена! Продолжение появится позже.':'Новая глава и район открыты!');
+  }catch(error){toast(error?.message||'Не удалось открыть следующую главу.');}
+  finally{storyBusy=false;}
+ }
  function cardArt(place,locked=false){return `<div class="panel-art${locked?' locked':''}"><img src="${artUrl(stageKind(place))}" alt="${esc(place.title)}" />${locked?'<span class="art-question">?</span>':''}</div>`;}
  function selectTab(tab){document.querySelectorAll('.bottom-nav [data-nav]').forEach(b=>{
   if(b.dataset.nav===tab)b.setAttribute('aria-current','page');else b.removeAttribute('aria-current');
  });}
- function openPanel(kind){if(liveMode&&['test','reset-confirm'].includes(kind))return;selectedPanel=kind;renderPanel();selectTab(kind==='buildings'||kind==='project'||kind==='festival-project'?'buildings':kind==='history'||kind.startsWith('place:')?'history':'map');if(!panel.open){if(worldTutorial?.active())panel.show();else panel.showModal();}haptic();worldTutorial?.refresh();}
+ function openPanel(kind){if(liveMode&&['test','reset-confirm'].includes(kind))return;
+  if(liveMode&&kind==='festival-project'&&storySnapshot?.chapter<1)kind='place:festival';
+  if(liveMode&&kind==='project')markStoryVisit('community-garden');
+  if(liveMode&&kind==='festival-project')markStoryVisit('festival');
+  selectedPanel=kind;renderPanel();selectTab(kind==='buildings'||kind==='project'||kind==='festival-project'?'buildings':kind==='history'||kind.startsWith('place:')?'history':'map');if(!panel.open){if(worldTutorial?.active())panel.show();else panel.showModal();}haptic();worldTutorial?.refresh();}
  function closePanel(){if(panel.open)panel.close();selectedPanel='';selectTab('map');}
  function openPlace(id){
   const place=placeById(id);if(!place)return;
   if(id==='community-garden'){openPanel('project');return;}
   if(id==='festival'&&isPlaceOpen(place,worldState())){openPanel('festival-project');return;}
-  if(!liveMode&&isPlaceOpen(place,worldState())&&!state.visited.includes(id))store(visitPlace(state,id));
+  if(liveMode&&isPlaceOpen(place,worldState()))markStoryVisit(id);
+  else if(!liveMode&&isPlaceOpen(place,worldState())&&!state.visited.includes(id))store(visitPlace(state,id));
   openPanel(`place:${id}`);
  }
  async function syncSharedFund({quiet=false}={}){
@@ -225,7 +275,7 @@ export async function startStoryWorld({mode='standalone',initData=''}={}) {
    const result=await sharedClient.contribute(pendingDonation);sharedSnapshot=result;sharedError='';
    const amount=result.receipt?.debitedPoints??pendingDonation.expectedDebitPoints;
    pendingDonation=null;haptic();toast(result.repeated?`Вклад ${money(amount)} очков уже учтён. Повторного списания не было.`:`Общий фонд получил ${money(amount)} очков.`);
-   rebuild();openPanel(result.receipt?.projectId==='garden'?'project':'festival-project');
+   rebuild();void syncStoryProgress({quiet:true});openPanel(result.receipt?.projectId==='garden'?'project':'festival-project');
   }catch(error){
    const code=error?.code||'';
    if(code==='COMMUNITY_REVISION_CONFLICT'||code==='COMMUNITY_QUOTE_CHANGED'||code==='COMMUNITY_CONFLICT'||code==='COMMUNITY_INSUFFICIENT_POINTS'||code==='COMMUNITY_PROJECT_COMPLETE'||code==='COMMUNITY_REQUEST_REUSED'){
@@ -250,7 +300,20 @@ export async function startStoryWorld({mode='standalone',initData=''}={}) {
    $('panelContent').innerHTML=sharedPanel(selectedPanel);return;
   }
   if(selectedPanel==='history'||selectedPanel==='districts'){
-   html=`<span class="eyebrow">ИСТОРИЯ ГОРОДА</span><h2 id="panelTitle">Открывайте Мир Зеффи</h2><p>Исследуйте места на карте. Новые районы и события появятся по мере развития сюжета.</p>`;
+   html=`<span class="eyebrow">ИСТОРИЯ ГОРОДА</span><h2 id="panelTitle">История Мира Зеффи</h2>`;
+   if(liveMode&&storySnapshot){
+    const story=storySnapshot,chapter=story.currentChapter;
+    html+=`<div class="story-chapter-card"><span class="eyebrow">${story.completed?'ИСТОРИЯ ПРОЙДЕНА':`ГЛАВА ${story.chapter+1} ИЗ 3`}</span><h3>${esc(chapter?.title||'До новых встреч!')}</h3><p>${esc(chapter?.description||'Спасибо, что помогал общему городу. Следующие приключения появятся позже.')}</p>`;
+    if(chapter)html+=`<div class="story-goals">${chapter.goals.map(goal=>`<div class="story-goal${goal.done?' done':''}"><span>${goal.done?'✓':'○'}</span><span>${esc(goal.title)}</span></div>`).join('')}</div>`;
+    if(chapter?.eventId){const ev=story.events[chapter.eventId];html+=`<p class="story-event-condition">${ev?.finished?'✓':'◌'} ${esc(ev?.title||'Общий проект')}: ${ev?.status==='paused'?'событие приостановлено':ev?.finished?'общая стройка завершена':`${money(ev?.total||0)} / ${money(ev?.goal||0)} очков`}</p>`;}
+    if(chapter)html+=`<button class="primary story-advance" data-action="story-advance" ${(!story.canAdvance||storyBusy)?'disabled':''}>${story.canAdvance?'Завершить главу и открыть район':'Заверши цели главы'}</button>`;
+    html+='</div><h3 class="story-section-title">Главы</h3>';
+    html+=`<div class="story-chapter-list">${story.chapters.map((c,i)=>`<div class="story-chapter-row"><span>${c.done?'✓':c.active?'✦':'🔒'}</span><span>${i+1}. ${esc(c.title)}</span></div>`).join('')}</div><h3 class="story-section-title">События города</h3>`;
+    html+=Object.values(story.events).map(e=>`<div class="story-event-row"><strong>${esc(e.title)}</strong><span>${e.status==='paused'?'Приостановлено':e.finished?'Завершено':'Собираем вместе'}</span><div class="mini-track"><span style="width:${Math.min(100,Math.round(100*e.total/e.goal))}%"></span></div><small>${money(e.total)} / ${money(e.goal)} очков · общий сервер</small></div>`).join('');
+    html+='<button class="secondary" data-action="story-refresh">Обновить историю и события</button>';
+   }else if(liveMode){html+='<div class="demo-box">Сюжет временно недоступен. Новые районы останутся закрыты до ответа сервера.</div>';}
+   else html+='<p>Автономный предпросмотр: открытие районов управляется локальными сценариями.</p>';
+   html+='<h3 class="story-section-title">Районы города</h3>';
    html+=DISTRICTS.map(d=>`<button class="district-row" data-go="${d.id}"><span class="row-icon">${icon(isPlaceOpen(d,worldState())?d.icon:'lock')}</span><span class="row-copy"><strong>${esc(d.title)}</strong><small>${statusLabel(d)}</small></span><span class="row-arrow">›</span></button>`).join('');
   }else if(selectedPanel==='buildings'){
    const gardenTotal=projectTotal(state),gardenPercent=Math.round(100*gardenTotal/PROJECT_GOAL);
@@ -311,6 +374,8 @@ export async function startStoryWorld({mode='standalone',initData=''}={}) {
   if(focused)$('panelContent').querySelector(`[data-action="${focused}"]`)?.focus({preventScroll:true});
  }
  function execute(action){
+  if(action==='story-advance')return void completeStoryChapter();
+  if(action==='story-refresh')return void syncStoryProgress();
   if(['fund-confirm','fund-pay','fund-refresh','fund-cancel','buildings'].includes(action))return fundAction(action);
   if(liveMode&&['contribute','festival-contribute','materials','community','festival-topup','festival-help','open-project','reset','reset-confirm','test'].includes(action))return;
   try{
@@ -350,7 +415,7 @@ export async function startStoryWorld({mode='standalone',initData=''}={}) {
    {title:'Вернись к карте',text:'Закрой карточку места: здесь можно свободно гулять и выбирать районы.',target:'#closePanel',trigger:'click',enter:()=>{if(!panel.open)openPanel('place:square');}},
    {title:'Открой общие стройки',text:'Нажми на «Стройки» внизу — здесь показывается общий прогресс игроков.',target:'[data-nav="buildings"]',trigger:'click',enter:()=>{if(panel.open)closePanel();}},
    {title:'Посмотри на Сад встреч',text:'Нажми на проект, чтобы посмотреть его этапы и сумму, собранную всеми игроками.',target:'[data-action="project"]',trigger:'click',enter:()=>{if(selectedPanel!=='buildings')openPanel('buildings');}},
-   {title:'Помогай по желанию',text:'Здесь можно выбрать вклад и увидеть его стоимость. Очки спишутся только если ты отдельно подтвердил платёж. Это необязательно!',actionLabel:'Завершить'}
+   {title:'Помогай по желанию',text:'Здесь можно выбрать вклад и увидеть его стоимость. Очки спишутся только если ты отдельно подтвердил платёж. Это необязательно! А после обучения открой вкладку «История»: там ждут главы и новые районы.',actionLabel:'Завершить'}
   ]});
   worldTutorial.start(Number(initial)||0);
  }
@@ -397,7 +462,7 @@ export async function startStoryWorld({mode='standalone',initData=''}={}) {
  }
  listen(canvas,'pointerup',endPointer);listen(canvas,'pointercancel',endPointer);
  listen(canvas,'keydown',e=>{if(panel.open)return;let used=true;if(e.key==='+'||e.key==='=')changeZoom(1.2);else if(e.key==='-')changeZoom(1/1.2);else if(e.key==='Home')focusPlace('square');else if(e.key===' ')pause();else if(['ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.key)){tween=null;cam.x+=e.key==='ArrowLeft'?45:e.key==='ArrowRight'?-45:0;cam.y+=e.key==='ArrowUp'?45:e.key==='ArrowDown'?-45:0;cam=clampCamera(cam,size);layoutDirty=true;schedule();}else used=false;if(used)e.preventDefault();});
- listen(document,'visibilitychange',()=>{if(document.hidden){if(raf)cancelAnimationFrame(raf);raf=0;clearInterval(ticker);ticker=0;}else{tick();resize();if(!ticker)ticker=setInterval(tick,1000);if(liveMode)void syncSharedFund({quiet:true});}});
+ listen(document,'visibilitychange',()=>{if(document.hidden){if(raf)cancelAnimationFrame(raf);raf=0;clearInterval(ticker);ticker=0;}else{tick();resize();if(!ticker)ticker=setInterval(tick,1000);if(liveMode){void syncSharedFund({quiet:true});void syncStoryProgress({quiet:true});}}});
  listen(reduce,'change',()=>{if(reduce.matches&&!paused){pauseAt=Date.now();paused=true;}refreshHUD();schedule();});
  const observer=new ResizeObserver(resize);observer.observe(zone);
  onSpriteUpdate(schedule);
@@ -410,7 +475,7 @@ export async function startStoryWorld({mode='standalone',initData=''}={}) {
  }
  if(liveMode)liveTimer=setInterval(()=>{if(!document.hidden&&!fundBusy)void syncSharedFund({quiet:true});},25000);
  if(!persistent&&!liveMode)toast('Локальное сохранение недоступно. Можно тестировать без сохранения.');
- if(!liveMode)window.ZeffiStoryDiagnostics=()=>({version:'1.3.0',transport:busArtStatus(),crosswalks:city.crosswalks.length,mode,mapSize:city.size,objects:city.objects.length,roads:city.roads.length,citizens:citizens.routes.length,buses:buses.routes.length,chapter:state.chapter,project:projectStatus(state),projectTotal:projectTotal(state),personalContribution:state.project.personal,materials:state.materials,festivalStage:festivalStage(state),festivalTotal:festivalTotal(state),whiteRabbitPreview:state.whiteRabbitPreview,paused,hidden:document.hidden,frameScheduled:!!raf,renderSamples:drawTimes.length,averageRenderMs:drawTimes.length?Math.round(drawTimes.reduce((a,b)=>a+b,0)/drawTimes.length*100)/100:0,assets:spriteStatus(),persistent,globalSync:liveMode&&Boolean(sharedSnapshot),walletWrites:liveMode&&Boolean(sharedSnapshot?.writesEnabled)});
+ if(!liveMode)window.ZeffiStoryDiagnostics=()=>({version:'1.4.0',storyChapter:storySnapshot?.chapter,transport:busArtStatus(),crosswalks:city.crosswalks.length,mode,mapSize:city.size,objects:city.objects.length,roads:city.roads.length,citizens:citizens.routes.length,buses:buses.routes.length,chapter:state.chapter,project:projectStatus(state),projectTotal:projectTotal(state),personalContribution:state.project.personal,materials:state.materials,festivalStage:festivalStage(state),festivalTotal:festivalTotal(state),whiteRabbitPreview:state.whiteRabbitPreview,paused,hidden:document.hidden,frameScheduled:!!raf,renderSamples:drawTimes.length,averageRenderMs:drawTimes.length?Math.round(drawTimes.reduce((a,b)=>a+b,0)/drawTimes.length*100)/100:0,assets:spriteStatus(),persistent,globalSync:liveMode&&Boolean(sharedSnapshot),walletWrites:liveMode&&Boolean(sharedSnapshot?.writesEnabled)});
  function dispose(){if(disposed)return;disposed=true;if(raf)cancelAnimationFrame(raf);raf=0;clearInterval(ticker);clearInterval(liveTimer);clearTimeout(toastTimer);observer.disconnect();onSpriteUpdate(()=>{});for(const off of disposers)off();}
  // bfcache keeps the document alive; only final navigation tears listeners down.
  listen(window,'pagehide',e=>{if(e.persisted){if(raf)cancelAnimationFrame(raf);raf=0;clearInterval(ticker);ticker=0;}else dispose();});

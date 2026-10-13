@@ -53,7 +53,7 @@ export function mapStateWithFund(local,shared){
  // Missing D1 state is NOT replaced with old local donation numbers.
  // Keep the garden empty and the festival at stage A until a signed read succeeds.
  const completed=Boolean(garden?.finished);
- return {...local,chapter:Math.max(local.chapter,1),
+ return {...local,chapter:local.chapter,
   project:{community:completed?1000:0,personal:0,startedAt:completed?1:0,readyAt:completed?1:0,opened:completed},
   festival:{community:festival?.total||0,personal:0,credits:0}};
 }

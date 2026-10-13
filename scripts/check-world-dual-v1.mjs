@@ -13,12 +13,12 @@ ck('common story header exposes switch to personal city',story.includes('id="ope
 // Keep the safety contract: a signed Telegram session, read-only server gate,
 // and tester/contract checks MUST precede importing the playable city code.
 const storyBoot=read('world/story/boot.js');
-const bootTags=[...story.matchAll(/<script\b[^>]*\bsrc="\.\/story\/boot\.js\?v=(?:[1-9]\d*|rc-guide2)"[^>]*>\s*<\/script>/g)];
+const bootTags=[...story.matchAll(/<script\b[^>]*\bsrc="\.\/story\/boot\.js\?v=(?:[1-9]\d*|rc-guide2|rc-story1)"[^>]*>\s*<\/script>/g)];
 const signedGate=storyBoot.indexOf("fetch('/api/world/story-access'");
 const testerValidation=storyBoot.indexOf("payload?.access!=='tester'");
-const modeValidation=storyBoot.indexOf("payload?.mode!=='local-demo'");
-const versionValidation=storyBoot.indexOf("payload?.version!=='story-v1'");
-const appImport=storyBoot.search(/await\s+import\(['"]\.\/app\.js\?v=(?:[1-9]\d*|rc-guide2)['"]\)/);
+const modeValidation=storyBoot.indexOf("payload?.mode!=='server-story'");
+const versionValidation=storyBoot.indexOf("payload?.version!=='story-rc2'");
+const appImport=storyBoot.search(/await\s+import\(['"]\.\/app\.js\?v=(?:[1-9]\d*|rc-guide2|rc-story1)['"]\)/);
 ck('auth flow still loads hosted story only after signed server access',
   bootTags.length===1 && bootTags[0][0].includes('type="module"') &&
   storyBoot.includes('if(!initData)') &&
