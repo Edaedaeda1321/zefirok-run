@@ -7,6 +7,7 @@ import {
 } from '../world/engine.js';
 import { CATALOG } from '../world/catalog.js';
 import {handleCommunityFund} from './zeffi-community-fund.js';
+import {readWorldTutorial,writeWorldTutorial} from './zeffi-world-tutorial.js';
 
 const ZERO = Object.freeze({points:0,treats:0,coffee:0});
 const MAX_CITY_JSON = 180_000;
@@ -31,7 +32,7 @@ const paymentsEnabled = env=>String(env?.WORLD_PURCHASES_ENABLED||'').toLowerCas
 function assertTester(env,telegramId){
   // Explicit allowlist, never trust URL flags or a Telegram username.
   const ids=String(env?.WORLD_TESTER_IDS||'').split(',').map(x=>x.trim()).filter(Boolean);
-  if(!ids.includes(String(telegramId)))failure(403,'WORLD_NOT_AVAILABLE','Мир Зеффи пока доступен только тестировщикам.');
+  if(!ids.includes(String(telegramId)))failure(403,'WORLD_NOT_AVAILABLE','Мир Зеффи пока доступен только по приглашению.');
 }
 function cityFromRow(row,wallet){
   let saved;
@@ -205,10 +206,11 @@ async function handleMutation(db,env,telegramId,body,readProfile,operationGate){
 // second Telegram verification or a parallel player-wallet implementation.
 export async function handleZeffiWorldApi(request,env,dependencies){
   try{
-    // The signed, tester-only story-access route is independent of the personal-city switch.
-    // Keep personal state, D1 and all economy mutations fail-closed under WORLD_ENABLED.
+    // Release Candidate: one emergency switch gates *all* World routes,
+    // including the shared story and community fund. The explicit Telegram
+    // allowlist below still gates every operation after signed authentication.
+    if(!worldEnabled(env))failure(403,'WORLD_DISABLED','Мир Зеффи временно недоступен.');
     const isCommunityRequest=new URL(request.url).pathname.startsWith('/api/world/community/');
-    if(!isCommunityRequest&&new URL(request.url).pathname!=='/api/world/story-access'&&!worldEnabled(env))failure(403,'WORLD_DISABLED','Мир Зеффи пока не включён на сервере.');
     if(request.method!=='POST')failure(405,'METHOD_NOT_ALLOWED','Используйте POST.');
     const text=await request.text();
     if(text.length>MAX_REQUEST_LENGTH)failure(413,'WORLD_REQUEST_TOO_LARGE','Слишком большой запрос.');
@@ -220,8 +222,18 @@ export async function handleZeffiWorldApi(request,env,dependencies){
     assertTester(env,telegramId);
     // Story-world v1: read-only access gate. NO city, profile, wallet or project writes.
     if(new URL(request.url).pathname==='/api/world/story-access'){
-      if(env?.WORLD_STORY_ENABLED!=null&&String(env.WORLD_STORY_ENABLED).toLowerCase()!=='true')failure(403,'STORY_DISABLED','Общий сюжетный мир пока закрыт для тестирования.');
+      if(env?.WORLD_STORY_ENABLED!=null&&String(env.WORLD_STORY_ENABLED).toLowerCase()!=='true')failure(403,'STORY_DISABLED','Общий город временно недоступен.');
       return reply({ok:true,access:'tester',version:'story-v1',mode:'local-demo',globalSync:false,walletWrites:false});
+    }
+    // Tutorial progress is private to the signed, allowlisted user; no wallet writes.
+    if(new URL(request.url).pathname==='/api/world/tutorial'){
+      if(!env.DB)failure(503,'WORLD_DB_UNAVAILABLE','База мира временно недоступна.');
+      if(body.op==='read')return reply({ok:true,tutorial:await readWorldTutorial(env.DB,telegramId)});
+      if(body.op==='progress'){
+        const tutorial=await writeWorldTutorial(env.DB,telegramId,body.mode,body.step);
+        return reply({ok:true,tutorial});
+      }
+      failure(400,'WORLD_TUTORIAL_ACTION','Неизвестная операция обучения.');
     }
     // Zeffi shared fund v1: independent signed community endpoints.
     // Authentication + WORLD_TESTER_IDS have already been checked above.
@@ -239,7 +251,10 @@ export async function handleZeffiWorldApi(request,env,dependencies){
     if(pathname==='/api/world/state'){
       await opGate(telegramId,[]);
       const [row,profile]=await Promise.all([ensureCity(env.DB,telegramId,Date.now()),profileReader(telegramId,'world-state')]);
-      return reply(buildView(cityFromRow(row,walletFromProfile(profile)),Number(row.revision),paymentsEnabled(env)));
+      // One read in the existing world/state response; no separate onboarding startup call.
+      // Missing optional tutorial migration must never prevent opening an existing city.
+      const tutorial=await readWorldTutorial(env.DB,telegramId).catch(()=>null);
+      return reply(buildView(cityFromRow(row,walletFromProfile(profile)),Number(row.revision),paymentsEnabled(env),{tutorial}));
     }
     if(pathname==='/api/world/mutate'){
       const result=await handleMutation(env.DB,env,telegramId,body,profileReader,opGate);

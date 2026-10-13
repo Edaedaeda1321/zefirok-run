@@ -118,6 +118,7 @@ const steps = [
   ['Zeffi World wiring', 'node', ['scripts/check-world-api-wiring.mjs']],
   ['Zeffi World closed release candidate', 'node', ['scripts/check-world-rc-gate.mjs']],
   ['Zeffi World RC catalogue and no-select UI', 'node', ['scripts/check-world-catalog-rc-ui.mjs']],
+  ['Zeffi World guided tutorials (D1 + UI)', 'node', ['--no-warnings','--experimental-sqlite','--test','world/tests/world-tutorial-rc.test.mjs']],
   ['Zeffi World shared D1', 'node', ['--no-warnings','--experimental-sqlite','scripts/check-zeffi-world-integration.mjs']],
   ['Zeffi World residents and comfort', 'node', ['--test','world/tests/citizens.test.mjs']],
   ['Zeffi World city life and buses', 'node', ['--test','world/tests/city-life.test.mjs']],

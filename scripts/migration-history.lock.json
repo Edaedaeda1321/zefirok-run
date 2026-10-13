@@ -116,6 +116,7 @@
     "0113_player_collection_showcase.sql": "6f1694a366cb8dccac85dacff5a15954ef9aa06e92a538321e6161f3e7e8e947",
     "0114_zeffi_world.sql": "d21984e621f5b065b151ef69d9de45351522ea346ad2d82f8c14aff54300a9cf",
     "0115_zeffi_community_fund.sql": "a21ed462095f350455b0748573d4e32c5311e9eb21b3aac3e547381d9e7696ab",
-    "0116_rating_winner_notification_dedupe.sql": "496151eb13ec196b7304cdb081a08b40addb90ef145620d3183c770b73ad08d2"
+    "0116_rating_winner_notification_dedupe.sql": "496151eb13ec196b7304cdb081a08b40addb90ef145620d3183c770b73ad08d2",
+    "0117_zeffi_world_tutorial.sql": "59c64a7fbc9ed6f8b39af144ea27339f218573601feb656544bff41326d06219"
   }
 }

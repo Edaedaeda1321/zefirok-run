@@ -67,7 +67,7 @@ def build(output: Path) -> None:
     html = re.sub(r'\s*<base\b[^>]*>', '', html)
     css = (ROOT / 'world/story/style.css').read_text(encoding='utf-8')
     html = re.sub(r'<link rel="stylesheet"[^>]*>', lambda _: '<style>' + css + '</style>', html)
-    html = re.sub(r'<script type="module" src="\./story/boot\.js\?v=1"></script>', '', html)
+    html = re.sub(r'<script type="module" src="\./story/boot\.js\?v=[^"]+"></script>', '', html)
     if 'boot.js' in html:
         raise ValueError('Hosted auth loader must not be included in offline build')
     brand = ROOT / 'assets/mir_zeffi/icon_Mir_zeffi_world_stranitca.webp'

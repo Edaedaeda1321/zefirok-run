@@ -13,6 +13,7 @@ import { drawWorld, drawCatalogThumbnail, screenToTile, isoToScreen, PROJECT_FOC
 import { onSpriteUpdate, setSpriteMode, spriteStatus, preloadBuildFrames, preloadSpriteSet, spriteManifest, catalogSpriteId, parkConstructionAssetId, buildingAssetId } from './sprite-assets.js';
 import { buildCitizenScene, sampleCitizenScene } from './citizens.js';
 import { buildBusScene, sampleBusScene } from './traffic.js';
+import {createWorldTutorial} from './tutorial.js';
 
 const STORAGE_KEY = 'zefirok-world-v01-sandbox-local';
 const SERVER_MODE = window.ZeffiWorldServerRequired === true;
@@ -24,6 +25,7 @@ const CITY_REWARD_IMAGES = Object.freeze({
 const WELCOME_KEY = 'zefirok-world-v01-welcome-read';
 const $ = id => document.getElementById(id);
 const canvas = $('worldCanvas');
+let worldTutorial=null;
 const state = {
  city: makeInitialCity(), mode: 'select', category: 'all', warehouse: false, catalogOpen: true,
  selectedUid: null, draft: null, roadDraft: [], roadValid: true, expansionDraft: null, paidSkipUid: null,
@@ -257,6 +259,7 @@ async function bootWorldServer(){
   const result=await serverRequest('state');
   await prepareInitialArt(result.city);
   acceptServerCity(result);unlockServer();refreshArt();
+  if(result.tutorial)setupPersonalTutorial(result.tutorial.personal);
  }catch(error){serverLock(error.message||'Ошибка загрузки города.',true);}
 }
 function quoteForAction(kind,args){
@@ -627,7 +630,7 @@ function renderCategories(){
     },{once:true});
     symbol.classList.add('category-icon--art');symbol.append(icon);
    }else symbol.textContent=CATEGORY_SYMBOLS[category]||'✦';
-  const label=document.createElement('span');label.textContent=tr(category);button.append(symbol,label);
+  const label=document.createElement('span');label.textContent=tr(category);button.dataset.category=category;button.append(symbol,label);
   button.classList.toggle('is-active',state.category===category);
   button.addEventListener('click',()=>{state.category=category;state.warehouse=false;renderCategories();renderCatalog();updateUI();});
   el.append(button);
@@ -914,6 +917,7 @@ function onPointerUp(event){
  }
  state.pointerStart=null;
  if(state.mode==='road'||state.mode==='erase'){updateActions();scheduleDraw();}
+ if(state.mode==='place'&&state.draft)worldTutorial?.signal('map-picked');
 }
 function onPointerCancel(event){state.pointers.delete(event.pointerId);state.pointerStart=null;state.gesture=null;}
 function closeSkipModal(){state.paidSkipUid=null;$('skipModal').hidden=true;}
@@ -978,6 +982,25 @@ async function finishSelectedConstruction(uid){
   updateUI();scheduleDraw();
  }catch(error){showToast(error?.message||statusError(error),true);}
  finally{state.skipPreparingUid=null;updateUI();scheduleDraw();}
+}
+// Guided, real UI actions. No purchase/claim step is ever automated.
+function tutorialHomeTarget(){
+ const affordable=shopSortedItems().filter(item=>item.category==='homes' && shopRequiredLevel(item)<=shopCurrentLevel() && !shopShortfall(objectPrice(CATALOG,item.id)));
+ const available=affordable[0] || shopSortedItems().find(item=>item.category==='homes');
+ return available?`.catalog-card[data-kind="${available.id}"]`:'.catalog-card';
+}
+function setupPersonalTutorial(step){
+ if(!SERVER_MODE||worldTutorial)return;
+ const save=async(mode,value)=>{await serverRequest('tutorial',{op:'progress',mode,step:value});};
+ worldTutorial=createWorldTutorial({mode:'personal',save,onFinish:()=>showToast('Отлично! Теперь ты знаешь основы своего города ✨'),steps:[
+  {title:'Привет! Это твой городок',text:'Я Зеффи! Покажу, как выбирать постройки, размещать их и развивать город. Никаких обязательных трат.',actionLabel:'Начать'},
+  {title:'Открой строительство',text:'Нажми на «Строить». Здесь собраны дома, парки и украшения.',target:'#openBuildCatalog',trigger:'click',enter:()=>setCatalogOpen(false)},
+  {title:'Найди жилые дома',text:'Выбери категорию «Жильё» — так проще найти первый домик.',target:'[data-category="homes"]',trigger:'click',enter:()=>{state.warehouse=false;setCatalogOpen(true);renderCategories();renderCatalog();}},
+  {title:'Выбери постройку',text:'Нажми на домик и посмотри его цену и уровень открытия. Если он доступен, увидишь макет на карте — без списания очков.',target:tutorialHomeTarget,trigger:'click',optional:true,actionLabel:'Далее',scrollCatalog:true,enter:()=>{state.category='homes';state.warehouse=false;renderCategories();renderCatalog();setCatalogOpen(true);}},
+  {title:'Попробуй разместить',text:'Коснись карты, чтобы передвинуть макет. Подтверждать покупку не обязательно — можно продолжить без расходов.',target:()=>state.draft?'#worldCanvas':null,trigger:'signal:map-picked',optional:true,actionLabel:'Далее без покупки'},
+  {title:'Посмотри развитие города',text:'Нажми «Город в цифрах»: здесь жители, уют, уровни и будущие награды. Вот ты и освоился!',target:'#metricsToggle',trigger:'click',enter:()=>{if(state.draft)cancelEdit();setCatalogOpen(false);}}
+ ]});
+ worldTutorial.start(Number(step)||0);
 }
 function bindEvents(){
  for(const type of ['contextmenu','selectstart','dragstart','copy','cut']){
@@ -1101,6 +1124,7 @@ function bindEvents(){
   applyChange(makeInitialCity(),{resetProgress:true});resetView();showToast(tr('resetDone'));
  });
  $('helpButton').addEventListener('click',()=>{$('helpModal').hidden=false;$('helpClose').focus();});
+ $('tutorialReplay').addEventListener('click',()=>{$('helpModal').hidden=true;worldTutorial?.restart();});
  $('helpClose').addEventListener('click',()=>{$('helpModal').hidden=true;});
  $('commonButton').addEventListener('click',()=>showToast(tr('worldUnavailable')));
  $('toolRoad').title=`Дороги: ${priceLabel(ROAD_TILE_PRICE)} / ${tr('cellsShort')}`;
@@ -1171,7 +1195,7 @@ function initialize(){
  }else void bootLocalArt();
  if(state.loadingFailed)showToast(tr('invalidSave'),true);
  let seen=false;try{seen=localStorage.getItem(WELCOME_KEY)==='1';}catch{}
- if(!seen){$('welcomeModal').hidden=false;$('welcomeStart').focus();}
+ if(!SERVER_MODE&&!seen){$('welcomeModal').hidden=false;$('welcomeStart').focus();}
 }
 // Internal visual diagnostics are available only in the offline/local editor.
 if(!SERVER_MODE)window.WorldZeffiSandbox=Object.freeze({ getCity:()=>cloneCity(state.city),getStats:()=>cityStats(state.city,CATALOG),getMode:()=>state.mode, getArtStatus:()=>spriteStatus(), setArtMode:(value)=>setSpriteMode(value) });

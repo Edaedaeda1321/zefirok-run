@@ -16,6 +16,7 @@
   <title>Мир Зеффи — Мой район</title>
   <link rel="stylesheet" href="./world.css" />
   <link rel="stylesheet" href="./premium-ui.css?v=rc-catalog2" />
+  <link rel="stylesheet" href="./tutorial.css?v=rc-guide1" />
   <style id="zeffi-dual-world-tester-style">
    [hidden]{display:none!important}
    .world-tester-sandbox-note{padding:6px 12px;flex:0 0 auto;font:700 10px/1.35 system-ui,-apple-system,sans-serif;text-align:center;letter-spacing:.01em;color:#8b5a75;background:#fff2df;border-bottom:1px solid #ead4c4}
@@ -106,7 +107,7 @@
         window.ZeffiWorldPreviewAllowed=!window.ZeffiWorldServerRequired;
         document.getElementById('worldTesterLocalNotice').hidden=window.ZeffiWorldServerRequired;
         document.documentElement.classList.add('zeffi-world-ready');
-        const script=document.createElement('script');script.type='module';script.src='./app.js?v=rc-catalog2';
+        const script=document.createElement('script');script.type='module';script.src='./app.js?v=rc-guide1';
         script.addEventListener('load',()=>{
           void import('./story/entry.js?v=3').catch(error=>console.warn('Story world entry unavailable',error));
           if(document.documentElement.classList.contains('zeffi-world-framed')){
@@ -240,7 +241,7 @@
   <div class="modal-backdrop" id="welcomeModal" hidden><div class="welcome-card" role="dialog" aria-modal="true" aria-labelledby="welcomeTitle"><div class="welcome-crest"><svg viewBox="0 0 64 64" width="56" height="56"><circle cx="32" cy="32" r="29" fill="#fff1f6"/><circle cx="32" cy="35" r="15" fill="#edb5c9"/><circle cx="19" cy="20" r="5" fill="#edb5c9"/><circle cx="30" cy="15" r="5" fill="#edb5c9"/><circle cx="42" cy="18" r="5" fill="#edb5c9"/><circle cx="51" cy="28" r="4" fill="#edb5c9"/></svg></div><small data-t="v01"></small><h2 id="welcomeTitle" data-t="welcomeTitle"></h2><p data-t="welcomeText"></p><div class="welcome-features" data-t="welcomePoints"></div><button class="solid-button" id="welcomeStart" data-t="welcomeGo" type="button"></button></div></div>
   <div class="modal-backdrop" id="confirmModal" hidden><div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="modalTitle"><h2 id="modalTitle" data-t="modalResetTitle"></h2><p data-t="modalResetBody"></p><div class="modal-actions"><button id="resetCancel" class="ghost-button" type="button" data-t="modalCancel"></button><button id="resetAccept" class="solid-button" type="button" data-t="resetConfirm"></button></div></div></div>
   <div class="modal-backdrop" id="skipModal" hidden><div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="skipTitle"><h2 id="skipTitle" data-t="skipConfirmTitle"></h2><p id="skipConfirmText"></p><p class="modal-balance" id="skipWalletHint"></p><div class="modal-actions"><button id="skipCancel" class="ghost-button" type="button" data-t="modalCancel"></button><button id="skipAccept" class="solid-button" type="button" data-t="skipConfirmPay"></button></div></div></div>
-  <div class="modal-backdrop" id="helpModal" hidden><div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="helpTitle"><h2 id="helpTitle" data-t="help"></h2><p data-t="helpShort"></p><p data-t="helpBuild"></p><p data-t="helpRoad"></p><p data-t="helpWarehouse"></p><p data-t="helpExpand"></p><p data-t="constructionInfo"></p><div class="tip-card" data-t="phaseInfo"></div><button class="solid-button" id="helpClose" type="button" data-t="confirm"></button></div></div>
+  <div class="modal-backdrop" id="helpModal" hidden><div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="helpTitle"><h2 id="helpTitle" data-t="help"></h2><p data-t="helpShort"></p><p data-t="helpBuild"></p><p data-t="helpRoad"></p><p data-t="helpWarehouse"></p><p data-t="helpExpand"></p><p data-t="constructionInfo"></p><div class="tip-card" data-t="phaseInfo"></div><button class="solid-button" id="helpClose" type="button" data-t="confirm"></button><button class="ghost-button" id="tutorialReplay" type="button" style="display:block;width:100%;margin-top:12px">Пройти обучение заново</button></div></div>
  </div>
  <script id="zeffi-return-to-main">
  document.getElementById('zeffiReturnGame')?.addEventListener('click',()=>{

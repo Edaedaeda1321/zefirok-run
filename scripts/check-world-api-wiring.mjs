@@ -37,28 +37,27 @@ assert(main.includes('const fn=host().back'));
 assert(main.includes('world-locked-back'));
 assert(main.includes('Мир Зеффи ещё строится!'));
 assert(world.includes('const enabled=local;'), 'normal hosted /world.html stays locked');
-assert(world.includes("get('world_tester')==='1'"), 'tester route explicitly requested');
+assert(!world.includes("get('world_tester')==='1'"), 'RC access cannot depend on URL flags');
 assert(world.includes('async function isAuthorizedTester()'), 'hosted city must check server authorization');
 assert(world.includes('personal.payload?.serverAuthoritative===true') && world.includes("request('/api/world/state')"), 'signed server-authoritative personal city remains guarded');
-assert(world.includes("request('/api/world/story-access')") && world.includes("story.payload?.access==='tester'") && world.includes('story.payload?.walletWrites===false'), 'local personal sandbox requires a second signed tester-only read-only gate');
-assert(world.includes('const testerAccess=testerRequest?await isAuthorizedTester():null;') && world.includes('if(testerAccess){launchCity(testerAccess);return;}') && world.includes('window.ZeffiWorldServerRequired=access.server===true'), 'both tester personal modes require authorization before modules');
+assert(!world.includes("request('/api/world/story-access')") && world.includes("request('/api/world/state')"), 'RC must never fall back from D1 to local sandbox');
+assert(world.includes('const candidateAccess=await isAuthorizedTester();') && world.includes('if(candidateAccess?.server===true){launchCity(candidateAccess);return;}') && world.includes('window.ZeffiWorldServerRequired=access.server===true'), 'only server-authoritative RC can load city modules');
 assert(world.includes('event.source!==window.parent||event.origin!==location.origin'), 'World auth messages must be same-origin parent');
 // The personal-city iframe keeps its original guarded entry. An allowlisted
 // tester now enters the guarded personal World first, with a signed,
 // read-only story fallback when WORLD_ENABLED is off.
-assert(main.includes("frame.src=view==='story'?'./story-world.html':(location.protocol==='file:'?'./world-preview.html':'./world.html?world_tester=1')"), 'tester World overlay must choose guarded story page without bypassing personal city');
+assert(main.includes("frame.src=view==='story'?'./story-world.html':(location.protocol==='file:'?'./world-preview.html':'./world.html')"), 'tester World overlay must choose guarded story page without bypassing personal city');
 assert(main.includes("openWorld('personal');"), 'signed runner request must navigate directly to guarded personal city');
 assert(main.includes("e?.data?.type!=='zefirok-world-switch'")&&main.includes("e.source!==target?.contentWindow||e.origin!==location.origin")&&main.includes("view!=='personal'&&view!=='story'"), 'World frame switching must verify source, same origin and exact destinations');
-assert(main.includes("fetch('/api/world/story-access'"), 'runner must request bounded story-access API, not personal world state');
-assert(!main.includes("fetch('/api/world/state'"), 'runner tester entry must never rely on personal-world state');
-assert(main.includes("data?.access!=='tester'")&&main.includes("data?.mode!=='local-demo'")&&main.includes("data?.version!=='story-v1'"), 'tester entry must verify full read-only server response before navigation');
+assert(main.includes("fetch('/api/world/state'"), 'runner must authorize server-authoritative city state');
+assert(main.includes("data?.serverAuthoritative!==true")&&main.includes('!Number.isSafeInteger(data?.revision)'), 'runner must reject a fake city response');
 assert(main.includes("if(token!==openToken||screen.hidden)return;"), 'stale or dismissed entry must not reopen story World');
 assert(main.includes("credentials:'same-origin',cache:'no-store'"), 'tester entry auth fetch must remain uncached and same-origin');
-assert(storyPage.includes('<base href="./world/"')&&storyPage.includes('./story/boot.js?v=7'), 'hosted story page must load the signed access loader');
+assert(storyPage.includes('<base href="./world/"')&&storyPage.includes('./story/boot.js?v=rc-guide1'), 'hosted story page must load the signed access loader');
 assert(storyBoot.includes("fetch('/api/world/story-access'")&&storyBoot.includes("payload?.access!=='tester'")&&storyBoot.includes("payload?.mode!=='local-demo'"), 'story modules must wait for repeat server authorization');
-assert(storyBoot.indexOf("await import('./app.js?v=7')")>storyBoot.indexOf("payload?.access!=='tester'"), 'unauthorized players must never import story modules');
+assert(storyBoot.indexOf("await import('./app.js?v=rc-guide1')")>storyBoot.indexOf("payload?.access!=='tester'"), 'unauthorized players must never import story modules');
 assert(storyBoot.includes("event.source!==window.parent||event.origin!==location.origin"), 'story auth bridge must trust only the same-origin parent frame');
-assert(server.includes("if(!isCommunityRequest&&new URL(request.url).pathname!=='/api/world/story-access'&&!worldEnabled(env)"), 'personal city must remain disabled without WORLD_ENABLED');
+assert(server.includes("if(!worldEnabled(env))failure(403,'WORLD_DISABLED'"), 'all World routes must be disabled without WORLD_ENABLED');
 assert(server.indexOf('assertTester(env,telegramId);')<server.indexOf("pathname==='/api/world/story-access'"), 'only signed allowlisted testers may access read-only story');
 const storyBegin=server.indexOf("pathname==='/api/world/story-access'");
 const storyEnd=server.indexOf("// Zeffi shared fund v1: independent signed community endpoints",storyBegin);
@@ -111,13 +110,13 @@ const context={
   window:windowMock,document:{querySelector:()=>root},location:{origin:'null'},
   AbortController,fetch:async(path,init)=>{
     requests++;
-    assert.equal(path,'/api/world/story-access');
+    assert.equal(path,'/api/world/state');
     assert.equal(init.method,'POST');
     assert.equal(init.credentials,'same-origin');
     assert.equal(init.cache,'no-store');
     assert.equal(JSON.parse(init.body).initData,signed);
     return {ok:allowed,json:async()=>allowed
-      ?{ok:true,access:'tester',mode:'local-demo',version:'story-v1',globalSync:false,walletWrites:false}
+      ?{ok:true,serverAuthoritative:true,revision:0}
       :{ok:false,code:'WORLD_NOT_AVAILABLE'}};
   },
 };
@@ -138,4 +137,4 @@ assert.equal(requests,2,'unsigned player must not send the authorization request
 signed='test-signed-telegram-init-data';allowed=true;
 click();screen.hidden=true;await flush();
 assert.equal(messages.length,1,'a dismissed World screen must not open when its authorization resolves late');
-console.log('Zeffi World tester srcdoc signed story-access and origin bridge PASS');
+console.log('Zeffi World RC signed server-state and origin bridge PASS');

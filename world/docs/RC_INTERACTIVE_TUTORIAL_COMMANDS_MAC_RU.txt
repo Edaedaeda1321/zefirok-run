@@ -1,0 +1,58 @@
+# Команды установки обучения "Мир Зеффи" (Mac)
+# Работать из корня zefirok-run. Первая команда покажет несохранённые изменения.
+
+git status --short
+
+# Если есть важные незакоммиченные изменения, сначала разберите их: unzip -o перезаписывает совпадающие файлы.
+unzip -o "$HOME/Downloads/Mir_Zeffi_RC_Interactive_Tutorial_20261013.zip" -d .
+
+node --check src/zeffi-world-service.js
+node --check src/zeffi-world-tutorial.js
+node --check world/app.js
+node --check world/story/app.js
+node --test world/tests/world-tutorial-rc.test.mjs
+node --test world/tests/*.test.mjs
+node scripts/check-migrations.mjs --local-only
+node scripts/check-production-gate.mjs --skip-d1
+git diff --check
+
+# ПРОВЕРИТЬ ожидающие миграции: не применять вслепую, если кроме 0117 есть неожиданные изменения.
+npx --yes wrangler@4.131.1 d1 migrations list zefirok-rewards --remote
+# Если список ожидаемых миграций подтверждён:
+npx --yes wrangler@4.131.1 d1 migrations apply zefirok-rewards --remote
+
+# Только файлы патча, без старого мусора в корне проекта:
+git add \
+  migrations/0117_zeffi_world_tutorial.sql \
+  scripts/build-world-story-v1.py \
+  scripts/check-production-gate.mjs \
+  scripts/check-world-api-wiring.mjs \
+  scripts/check-world-catalog-rc-ui.mjs \
+  scripts/check-world-dual-v1.mjs \
+  scripts/check-world-rc-gate.mjs \
+  scripts/check-world-story-v1.mjs \
+  scripts/migration-history.lock.json \
+  src/zeffi-world-service.js \
+  src/zeffi-world-tutorial.js \
+  story-world.html \
+  world.html \
+  world/app.js \
+  world/story/app.js \
+  world/story/boot.js \
+  world/tests/festival-hall-stages-v1.test.mjs \
+  world/tests/world-tutorial-rc.test.mjs \
+  world/tutorial.css \
+  world/tutorial.js
+
+git add world/docs/RC_INTERACTIVE_TUTORIAL_20261013_RU.md world/docs/RC_INTERACTIVE_TUTORIAL_COMMANDS_MAC_RU.txt
+
+git diff --cached --check
+git diff --cached --stat
+git commit -m "Add Zeffi World interactive tutorials for closed RC"
+git push origin main
+
+# Штатный production deployment (НЕ прямой wrangler deploy):
+./update.sh
+
+# После релиза проверить на разрешённом Telegram ID, что обучаются два режима независимо,
+# подсветка пропускает реальные нажатия, нет списаний, неавторизованные по-прежнему получают отказ.

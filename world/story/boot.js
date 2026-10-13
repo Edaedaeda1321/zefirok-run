@@ -1,5 +1,5 @@
 // Hosted entry never trusts URL flags, localStorage or initDataUnsafe.
-// Only a signed, allowlisted Telegram session may launch the official tester UI.
+// Only a signed, allowlisted Telegram session may launch the closed Release Candidate.
 const $=id=>document.getElementById(id);
 let pending=false;
 function acquireInitData(){
@@ -25,15 +25,15 @@ async function launch(){
  $('accessTitle').textContent='Проверяем доступ…';
  try{
   const initData=await acquireInitData();
-  if(!initData)throw new Error('Откройте «Мир Зеффи» из «Сладкого Забега» в Telegram. Требуется подписанная сессия тестера.');
+  if(!initData)throw new Error('Откройте «Мир Зеффи» из «Сладкого Забега» в Telegram. Нужен вход в Telegram и доступ к Миру Зеффи.');
   const controller=new AbortController();const timer=setTimeout(()=>controller.abort(),10000);
   let payload;
   try{
    const response=await fetch('/api/world/story-access',{method:'POST',headers:{'Content-Type':'application/json'},credentials:'same-origin',cache:'no-store',signal:controller.signal,body:JSON.stringify({initData})});
    payload=await response.json().catch(()=>null);
-   if(!response.ok||payload?.ok!==true||payload?.access!=='tester'||payload?.mode!=='local-demo'||payload?.version!=='story-v1')throw new Error(payload?.error||'Сервер пока не открыл эту карту для тестеров.');
+   if(!response.ok||payload?.ok!==true||payload?.access!=='tester'||payload?.mode!=='local-demo'||payload?.version!=='story-v1')throw new Error(payload?.error||'Общий город пока недоступен для вашего аккаунта.');
   }finally{clearTimeout(timer);}
-  const {startStoryWorld}=await import('./app.js?v=7');
+  const {startStoryWorld}=await import('./app.js?v=rc-guide1');
   await startStoryWorld({mode:'tester',initData});
   if(window.parent!==window)window.parent.postMessage({type:'zefirok-world-ui-ready'},location.origin);
  }catch(error){

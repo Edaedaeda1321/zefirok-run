@@ -1,0 +1,16 @@
+/* Compact guided actions; no image downloads beyond the existing Zeffi skin. */
+.zeffi-tour[hidden]{display:none!important}
+.zeffi-tour{position:fixed;inset:0;z-index:2147482100;pointer-events:none;font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;-webkit-user-select:none;user-select:none;color:#77405c}
+.zeffi-tour-shade{position:absolute;inset:0;pointer-events:none}
+.zeffi-tour-mask{position:absolute;pointer-events:auto;background:rgba(43,27,43,.57);touch-action:none}
+.zeffi-tour-focus{position:fixed;pointer-events:none;border:3px solid #ffdb8c;border-radius:18px;box-shadow:0 0 0 3px #fff6fa,0 0 18px 7px #ffc58c90;animation:zeffi-tour-pulse 2.1s ease-in-out infinite;z-index:1}
+.zeffi-tour-card{position:fixed;z-index:2;box-sizing:border-box;max-width:340px;width:calc(100vw - 24px);padding:14px 14px 12px;border-radius:23px;background:linear-gradient(145deg,#fffefb,#fff2f7);border:2px solid #f1cadb;box-shadow:0 17px 48px #3e263c55;pointer-events:auto}
+.zeffi-tour-top{display:flex;align-items:center;gap:10px}.zeffi-tour-top img{width:74px;height:74px;object-fit:contain;flex:none;filter:drop-shadow(0 4px 5px #ce90a53d)}
+.zeffi-tour-copy{min-width:0;flex:1}.zeffi-tour-copy small{font-size:9px;letter-spacing:.075em;font-weight:850;color:#bb7b97}.zeffi-tour-copy h3{font-size:16px;line-height:1.2;color:#80415d;margin:4px 0 5px;font-weight:850}.zeffi-tour-copy p{font-size:12px;line-height:1.48;color:#967083;margin:0;font-weight:550}
+.zeffi-tour-footer{display:flex;justify-content:space-between;gap:12px;align-items:center;margin-top:10px}
+.zeffi-tour-skip,.zeffi-tour-next{min-height:37px;border-radius:13px;padding:8px 12px;font-weight:800;font-size:11px;cursor:pointer;font-family:inherit}
+.zeffi-tour-skip{background:#fff;border:1px solid #efd5df;color:#a77790}.zeffi-tour-next{background:linear-gradient(135deg,#e882aa,#d65d91);color:white;border:1px solid #d36b98;box-shadow:0 4px 10px #d18bab45;margin-left:auto}
+.zeffi-tour-next[hidden]{display:none!important}
+@keyframes zeffi-tour-pulse{50%{box-shadow:0 0 0 3px #fff6fa,0 0 22px 10px #ffc58c50}}
+@media(prefers-reduced-motion:reduce){.zeffi-tour-focus{animation:none}}
+@media(max-height:580px){.zeffi-tour-card{padding:9px 12px 8px}.zeffi-tour-top img{width:55px;height:55px}.zeffi-tour-copy h3{font-size:14px}.zeffi-tour-copy p{font-size:11px}.zeffi-tour-footer{margin-top:6px}}
