@@ -636,7 +636,7 @@ function drawBuildReveal(ctx,item,def,now,fx){
   ctx.restore();
  }
 }
-function drawConstructionSite(ctx,item,def,now,fx=null){
+function drawConstructionSite(ctx,item,def,now,fx=null,cameraZoom=1){
  const {w,h}=dims(def,item.rotation),A=P(item.x,item.y),B=P(item.x+w,item.y),C=P(item.x+w,item.y+h),D=P(item.x,item.y+h);
  const total=Math.max(1,Number(item.buildReadyAt||now)-Number(item.buildStartedAt||now));
  const rawProgress=Math.max(0,Math.min(1,(now-Number(item.buildStartedAt||now))/total));
@@ -671,33 +671,46 @@ function drawConstructionSite(ctx,item,def,now,fx=null){
   polygon(ctx,[{x:center.x-22,y:center.y-15},{x:center.x+21,y:center.y-15},{x:center.x+22,y:center.y-30},{x:center.x-21,y:center.y-30}],'#efba86','#f9e6bc',1.5);
   for(let i=0;i<3;i++)roundRect(ctx,center.x-20+i*13,center.y-14,10,5,1,'#e29f78','#fff0d6');
  }
- const badgeY=Math.min(A.y,B.y,C.y,D.y)-Math.max(54,def.height*.88)-40;
- const pillW=102,pillH=34;
- ctx.save();
- ctx.shadowColor='rgba(143,96,104,.24)';ctx.shadowBlur=18;ctx.shadowOffsetY=6;
- roundRect(ctx,center.x-pillW/2,badgeY-pillH/2,pillW,pillH,17,'rgba(255,251,244,.985)','#e0b38c',1.6);
- ctx.restore();
- const gloss=ctx.createLinearGradient(center.x, badgeY-pillH/2, center.x, badgeY+pillH/2);
- gloss.addColorStop(0,'rgba(255,255,255,.65)');gloss.addColorStop(.42,'rgba(255,255,255,.05)');gloss.addColorStop(1,'rgba(255,245,235,.2)');
- roundRect(ctx,center.x-pillW/2+2,badgeY-pillH/2+2,pillW-4,pillH-4,15,gloss,'rgba(255,255,255,.18)',.6);
+ const zoom=Math.max(.5,Math.min(4,Number(cameraZoom)||1));
+ // Construction HUD is anchored to the building, but drawn in SCREEN-sized
+ // pixels. It no longer grows into a huge floating timer when the map zooms.
+ const badgeY=Math.min(A.y,B.y,C.y,D.y)-Math.max(50,def.height*.80)-30/zoom;
  const remain=Math.max(0,Math.ceil(remainingMs/1000));
  const clock=`${String(Math.floor(remain/60)).padStart(2,'0')}:${String(remain%60).padStart(2,'0')}`;
- ctx.textAlign='center';ctx.fillStyle=accelerated?'#b36d7d':'#a56863';
- ctx.font='700 15px system-ui, -apple-system, sans-serif';ctx.fillText(clock,center.x,badgeY+2);
- if(accelerated)drawSparkle(ctx,center.x-pillW/2+14,badgeY,4.8,'#fff4ea','#efb2c0');
- const barW=84,barH=8,barX=center.x-barW/2,barY=badgeY+22;
+ const badgeW=114,badgeH=53;
  ctx.save();
- ctx.shadowColor='rgba(247,186,203,.25)';ctx.shadowBlur=10;ctx.shadowOffsetY=4;
- roundRect(ctx,barX,barY,barW,barH,4,'rgba(242,217,206,.92)','rgba(220,188,175,.95)',1);
+ ctx.translate(center.x,badgeY);
+ ctx.scale(1/zoom,1/zoom);
+ // Soft layered card: cream glass, rose border and a restrained gold highlight.
+ ctx.save();
+ ctx.shadowColor='rgba(107,58,83,.22)';ctx.shadowBlur=14;ctx.shadowOffsetY=5;
+ const bg=ctx.createLinearGradient(0,-badgeH/2,0,badgeH/2);
+ bg.addColorStop(0,'rgba(255,255,254,.99)');bg.addColorStop(1,'rgba(255,243,246,.985)');
+ roundRect(ctx,-badgeW/2,-badgeH/2,badgeW,badgeH,19,bg,'#e9b5c8',1.25);
  ctx.restore();
- const fillW=Math.max(6,barW*Math.max(0,Math.min(1,progress)));
- const fill=ctx.createLinearGradient(barX,barY,barX+barW,barY);
- fill.addColorStop(0,accelerated?'#d7839e':'#e49caa');
- fill.addColorStop(.55,accelerated?'#f0b0bf':'#efb5c1');
- fill.addColorStop(1,accelerated?'#f5d6a2':'#f3cf9e');
- roundRect(ctx,barX,barY,fillW,barH,4,fill,'rgba(255,247,239,.7)',.8);
- const gleamX=barX+Math.min(barW-5,Math.max(5,fillW-4));
- ellipse(ctx,gleamX,barY+barH/2,5,2.8,'rgba(255,252,245,.95)');
+ ctx.save();
+ ctx.beginPath();ctx.moveTo(-badgeW/2+14,-badgeH/2+2);ctx.lineTo(badgeW/2-14,-badgeH/2+2);
+ ctx.strokeStyle='rgba(255,255,255,.9)';ctx.lineWidth=1.4;ctx.stroke();
+ ctx.restore();
+ // Drawn clock icon (no emoji), caption and tabular time.
+ ctx.save();ctx.strokeStyle=accelerated?'#c3874f':'#c17897';ctx.lineWidth=1.5;
+ ctx.beginPath();ctx.arc(-39,-10,5.5,0,2*Math.PI);ctx.moveTo(-39,-13.3);ctx.lineTo(-39,-10);ctx.lineTo(-36.5,-8.5);ctx.stroke();ctx.restore();
+ ctx.font='800 9px system-ui,-apple-system,sans-serif';ctx.textAlign='left';ctx.textBaseline='middle';
+ ctx.fillStyle='#ab6a85';ctx.fillText(accelerated?'УСКОРЕНИЕ':'СТРОИТСЯ',-29,-10);
+ ctx.font='800 19px system-ui,-apple-system,sans-serif';ctx.textAlign='center';
+ ctx.fillStyle='#7e3d59';ctx.fillText(clock,0,7);
+ const barW=92,barH=5.5,barX=-barW/2,barY=17;
+ roundRect(ctx,barX,barY,barW,barH,barH/2,'#eedce4','#e7c7d4',.6);
+ const fillW=barW*Math.max(0,Math.min(1,progress));
+ if(fillW>.5){
+  const fill=ctx.createLinearGradient(barX,barY,barX+barW,barY);
+  fill.addColorStop(0,accelerated?'#db9a78':'#d86295');
+  fill.addColorStop(.72,accelerated?'#e9b28c':'#ee9fc0');
+  fill.addColorStop(1,'#f7d6a1');
+  roundRect(ctx,barX,barY,Math.max(1,fillW),barH,barH/2,fill);
+  ctx.fillStyle='rgba(255,255,255,.65)';ctx.fillRect(barX+3,barY+.7,Math.max(0,fillW-6),.75);
+ }
+ ctx.restore();
 }
 
 function drawExtraFallback(ctx,item,def){
@@ -864,9 +877,9 @@ export function drawWorld(canvas,city,catalog,cam,overlay={}) {
   const skipElapsed=skipFx?Math.max(0,Math.min(1,(now-Number(skipFx.startAt||now))/Math.max(1,Number(skipFx.duration||1)))):0;
   const revealComplete=Boolean(skipFx&&skipElapsed>=.76);
   const building=isConstructing(item,now);
-  if(skipFx && !revealComplete)drawConstructionSite(ctx,skipFx.item,def,now,skipFx);
+  if(skipFx && !revealComplete)drawConstructionSite(ctx,skipFx.item,def,now,skipFx,cam.zoom);
   else if(revealComplete)drawBuildReveal(ctx,item,def,now,skipFx);
-  else if(building)drawConstructionSite(ctx,item,def,now);
+  else if(building)drawConstructionSite(ctx,item,def,now,null,cam.zoom);
   else drawObject(ctx,item,def);
   ctx.globalAlpha=1;
   if(overlay.selectedUid===item.uid)drawOutline(ctx,item,catalog,'#fffad7',3.5);

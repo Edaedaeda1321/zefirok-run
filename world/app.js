@@ -471,10 +471,19 @@ function updateSelection(){
  const skipPreparing=state.skipPreparingUid===item.uid;
  $('selectionStatus').textContent=skipInProgress?'✨ Магическое завершение…':skipPreparing?'Подготавливаем анимацию…':constructing?`${tr('buildReadyIn')} ${formatRemaining(constructionRemaining(item))}`:(CATALOG[item.kind].needsRoad?(connected?tr('roadOk'):tr('roadMissing')):`${dims(CATALOG[item.kind],item.rotation).w}x${dims(CATALOG[item.kind],item.rotation).h}`);
  $('finishBuildTest').hidden=!constructing || skipInProgress;
- $('finishBuildTest').disabled=skipInProgress||skipPreparing;
+ $('finishBuildTest').disabled=skipInProgress||skipPreparing||(SERVER_MODE&&!state.serverPurchasesEnabled);
+ $('selectionBuildProgress').hidden=!constructing;
  if(constructing){
+   const now=Date.now();
+   const duration=Math.max(1,Number(item.buildReadyAt||now)-Number(item.buildStartedAt||now));
+   const progress=Math.max(0,Math.min(100,Math.round((1-constructionRemaining(item,now)/duration)*100)));
+   $('selectionBuildPercent').textContent=`${progress}%`;
+   $('selectionBuildFill').style.width=`${progress}%`;
+   $('selectionBuildTrack').setAttribute('aria-valuenow',String(progress));
    const cost=constructionSkipPrice(item);
-   $('finishBuildTest').textContent=skipPreparing?'Подготовка…':`${tr('skipPaid')} ${cost.coffee} ☕`;
+   $('finishBuildTestLabel').textContent=skipPreparing?'Подготовка…':'Ускорить';
+   $('finishBuildTestCost').textContent=cost.coffee.toLocaleString('ru-RU');
+   $('finishBuildTest').setAttribute('aria-label',`Ускорить строительство за ${cost.coffee} кофе`);
  }
 }
 function syncCitizens(stats){
@@ -929,10 +938,17 @@ function updateSkipQuote(){
  const msToNextReduction=60000-(Math.max(0,Date.now()-Number(item.buildStartedAt||0))%60000);
  const nextPrice=Math.max(5,cost.coffee-25);
  const moreDiscount=cost.coffee>5 && cost.remaining>msToNextReduction;
- $('skipConfirmText').textContent=`Осталось ${formatRemaining(cost.remaining)}. Ускорить за ${cost.coffee} ☕.${moreDiscount?` Через ${formatRemaining(msToNextReduction)} цена снизится до ${nextPrice} ☕.`:''}`;
- $('skipWalletHint').textContent=`Баланс: ${state.city.wallet.coffee.toLocaleString('ru-RU')} ☕ · списывается только кофе`;
+ $('skipModalRemaining').textContent=formatRemaining(cost.remaining);
+ $('skipModalCost').textContent=cost.coffee.toLocaleString('ru-RU');
+ $('skipModalWallet').textContent=state.city.wallet.coffee.toLocaleString('ru-RU');
+ $('skipAcceptCost').textContent=cost.coffee.toLocaleString('ru-RU');
+ $('skipModalDiscount').hidden=!moreDiscount;
+ if(moreDiscount){
+  $('skipModalDiscountWait').textContent=formatRemaining(msToNextReduction);
+  $('skipModalDiscountPrice').textContent=nextPrice.toLocaleString('ru-RU');
+ }
  $('skipAccept').disabled=state.skipPreparingUid!==null || !canAfford(state.city.wallet,cost) || (SERVER_MODE&&!state.serverPurchasesEnabled);
- $('skipAccept').textContent=`Ускорить · ${cost.coffee} ☕`;
+ $('skipAccept').setAttribute('aria-label',`Ускорить строительство за ${cost.coffee} кофе`);
 }
 function clearSkipAnimation(){
  if(state.skipAnimationTimer!==null){clearTimeout(state.skipAnimationTimer);state.skipAnimationTimer=null;}
