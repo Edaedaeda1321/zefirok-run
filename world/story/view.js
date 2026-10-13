@@ -32,6 +32,9 @@ export function requiredStorySpriteIds(){
  }
  for(const place of PLACES)ids.add(catalogSpriteId(place.kind,0,'complete',0));
  for(const stage of ['build_01','build_02','build_03'])ids.add(parkConstructionAssetId('garden',0,stage));
+ // Warm one initial Festival view only; later phases load on demand, avoiding
+ // decoding 16 1536px assets concurrently inside Telegram on iPhone.
+ ids.add(catalogSpriteId('story-festival-stage-a',0));
  return [...ids].filter(id=>id&&spriteMetadata(id));
 }
 export const clamp=(v,min,max)=>Math.min(max,Math.max(min,v));

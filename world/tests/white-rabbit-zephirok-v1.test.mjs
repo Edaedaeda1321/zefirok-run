@@ -69,9 +69,12 @@ test('white rabbit: 4 separately loaded WebP variants, review-only direction met
   assert.deepEqual(disk.assets.find(x=>x.id===spriteId),meta);
  }
  assert.equal(new Set(ids).size,4);
- assert.equal(SPRITE_MANIFEST.assets.filter(a=>a.packId!=='park-belkino-story-v1').length,365);
+ assert.equal(SPRITE_MANIFEST.assets.filter(a=>!['park-belkino-story-v1','white-rabbit-construction-v1','story-festival-hall-v1'].includes(a.packId)).length,365);
  assert.equal(SPRITE_MANIFEST.assets.filter(a=>a.packId==='park-belkino-story-v1').length,4);
- assert.equal(SPRITE_MANIFEST.assets.filter(x=>x.catalogId===id).length,4);
+ assert.equal(SPRITE_MANIFEST.assets.filter(a=>a.packId==='white-rabbit-construction-v1').length,6);
+ assert.equal(SPRITE_MANIFEST.assets.filter(a=>a.packId==='story-festival-hall-v1').length,16);
+ assert.equal(SPRITE_MANIFEST.assets.filter(x=>x.catalogId===id&&x.state==='complete').length,4);
+ assert.deepEqual(SPRITE_MANIFEST.assets.filter(x=>x.catalogId===id&&x.packId==='white-rabbit-construction-v1').map(x=>x.state).sort(),['build_01','build_02','build_03','build_04','build_05','build_06']);
  assert.ok(requiredStorySpriteIds().includes(ids[0]));
 });
 for(const chapter of [0,1,2])test(`white rabbit: ONE shared physical site in chapter ${chapter} and two distinct story markers`,()=>{
@@ -100,6 +103,14 @@ test('white rabbit: normal player shop and story scene load the SAME one catalog
  const catalog=readFileSync(new URL('../catalog.js',import.meta.url),'utf8');
  assert.match(catalog,/SHOP_UNLOCK_LEVELS/);
  const story=readFileSync(new URL('../story/map.js',import.meta.url),'utf8');
- assert.match(story,/place\('white-rabbit-zephirok',9,9,0,'story-cafe'\)/);
+ for(let preview=0;preview<=6;preview++){
+  const snapshot={...createDemoState(),whiteRabbitPreview:preview};
+  const map=buildStoryMap(snapshot);
+  const cafe=map.objects.filter(o=>o.uid==='story-cafe');
+  assert.equal(cafe.length,1,`one shared building in White Rabbit stage ${preview}`);
+  assert.equal(cafe[0].kind,preview===0?id:`story-wr-stage-${preview}`);
+  assert.deepEqual([cafe[0].x,cafe[0].y],[9,9]);
+  assert.deepEqual(validateStoryMap(map),[]);
+ }
  assert.doesNotMatch(story,/place\('villa',35,25,0,'story-rabbit'\)/);
 });

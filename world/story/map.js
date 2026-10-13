@@ -1,11 +1,17 @@
 // Authored 48x48 map. Existing art IDs only; no edits to the 24x24 personal city.
 import { CATALOG } from '../catalog.js';
 import { dims, keyOf, connectedRoads, isObjectConnected } from '../engine.js';
-import { projectStatus } from './model.js';
+import { projectStatus, festivalStage } from './model.js';
 export const STORY_MAP_SIZE=48;
 // Static 9x9 story landmark: never registered in the live shop or server catalog.
 export const STORY_PARK_BELKINO_KIND='story-park-belkino';
-export const STORY_CATALOG=Object.freeze({...CATALOG,[STORY_PARK_BELKINO_KIND]:Object.freeze({id:STORY_PARK_BELKINO_KIND,category:'parks',titleKey:'pondPark',descriptionKey:'pondParkDescription',icon:'leaf',w:9,h:9,needsRoad:false,style:'park',height:0,buildMs:0})});
+export const STORY_FESTIVAL_KINDS=Object.freeze({stage_a:'story-festival-stage-a',stage_b:'story-festival-stage-b',stage_c:'story-festival-stage-c',complete:'story-festival-complete'});
+export const STORY_CATALOG=Object.freeze({
+ ...CATALOG,
+ [STORY_PARK_BELKINO_KIND]:Object.freeze({id:STORY_PARK_BELKINO_KIND,category:'parks',titleKey:'pondPark',descriptionKey:'pondParkDescription',icon:'leaf',w:9,h:9,needsRoad:false,style:'park',height:0,buildMs:0}),
+ ...Object.fromEntries(Object.values(STORY_FESTIVAL_KINDS).map(id=>[id,Object.freeze({id,category:'plazas',titleKey:'citySquare',descriptionKey:'citySquareDescription',icon:'flag',w:6,h:6,needsRoad:false,style:'rose',height:116,buildMs:0})])),
+ ...Object.fromEntries(Array.from({length:6},(_,i)=>{const id=`story-wr-stage-${i+1}`;return [id,Object.freeze({id,category:'shops',titleKey:'whiteRabbitZephirok',descriptionKey:'whiteRabbitZephirokDescription',icon:'coffee',w:4,h:4,needsRoad:true,style:'rose',height:115,buildMs:0})];}))
+});
 export const MAP_VERSION='zeffi-story-map-v1';
 export const DISTRICTS=Object.freeze([
  {id:'square',title:'Центральная площадь',short:'Площадь',icon:'spark',focus:[25,25],bounds:[19,19,13,13],chapter:0,kind:'fountain',description:'Сердце общего города: встречи, прогулки и будущие сюжетные сцены.'},
@@ -13,13 +19,13 @@ export const DISTRICTS=Object.freeze([
  {id:'belkino',title:'Парк Белкино',short:'Белкино',icon:'leaf',focus:[12.5,26.5],bounds:[7,21,11,18],chapter:0,kind:STORY_PARK_BELKINO_KIND,description:'Большой парк с ротондой у пруда, зелёными фигурами, историческими руинами и прогулочными дорожками. Здесь запланирована история «Тайны Белкино».'},
  {id:'friends',title:'Квартал друзей',short:'Друзья',icon:'home',focus:[33,11],bounds:[27,6,15,12],chapter:0,kind:'cottage',description:'Уютный жилой квартал. Будущие участки персонажей пока не закреплены за героями: их откроем вместе с сюжетом.'},
  {id:'station',title:'Городская станция',short:'Станция',icon:'bus',focus:[36,37],bounds:[33,33,11,10],chapter:0,kind:'bus-terminal',description:'Автобусы связывают кафе, центральную часть города и парк. Это декоративный транспорт: без билетов и списаний.'},
- {id:'festival',title:'Площадка событий',short:'События',icon:'flag',focus:[25,36],bounds:[21,33,9,6],chapter:1,kind:'city-square',description:'Место будущих событий. В v1 можно посмотреть открытие площадки в тестовом сценарии, но активных событий и наград здесь ещё нет.'},
+ {id:'festival',title:'Дом фестивалей Зеффи',short:'Фестивали',icon:'flag',focus:[25,35.5],bounds:[21,32,9,7],chapter:1,kind:STORY_FESTIVAL_KINDS.complete,description:'Большая общегородская стройка с четырьмя стадиями. В Telegram общий фонд хранится на сервере; автономная версия остаётся демонстрационной.'},
  {id:'rabbit',title:'«Белый Кролик»',short:'Кролик',icon:'star',focus:[11.3,9.8],bounds:[9,9,4,4],chapter:2,kind:'white-rabbit-zephirok',description:'«Белый Кролик» и кафе «Зефирок» делят одно здание. Сюжетные подробности «Белого Кролика» откроются позже.'},
  {id:'mystery',title:'Неизвестный район',short:'Тайна',icon:'lock',focus:[24,8],bounds:[21,4,6,8],chapter:99,kind:'botanical-garden',description:'Здесь появится новая часть города. Название, герой и условия открытия пока не объявлены.'}
 ]);
 export const PLACES=Object.freeze([
  ...DISTRICTS.map(d=>({...d,uid:({square:'story-fountain',cafe:'story-cafe',belkino:'story-pond',friends:'story-home',station:'story-terminal',festival:'story-festival',rabbit:'story-cafe'})[d.id]||null})),
- {id:'community-garden',title:'Сад встреч',short:'Строим вместе',icon:'heart',focus:[15.5,35.5],bounds:[14,34,3,3],chapter:0,kind:'garden',uid:'story-community-garden',description:'Первый пробный городской проект. Поможем обустроить новый сад у парка Белкино. Вклад и помощь сообщества в этой версии имитируются только на вашем устройстве.'}
+ {id:'community-garden',title:'Сад встреч',short:'Строим вместе',icon:'heart',focus:[15.5,35.5],bounds:[14,34,3,3],chapter:0,kind:'garden',uid:'story-community-garden',description:'Первый пробный городской проект. Поможем обустроить новый сад у парка Белкино. Участники вместе финансируют постройку через общий фонд; автономная версия демонстрационная.'}
 ]);
 export const placeById=id=>PLACES.find(p=>p.id===id)||null;
 export const isPlaceOpen=(place,state)=>state.chapter>=place.chapter;
@@ -75,7 +81,7 @@ export function buildStoryMap(state, now=Date.now()) {
   for(const cell of cells)occupied.add(cell);
   city.objects.push({uid:uid||`story-decor-${++sequence}`,kind,x,y,rotation,level:1,stored:false,buildStartedAt:0,buildReadyAt:0,...extra});return true;
  }
- place('white-rabbit-zephirok',9,9,0,'story-cafe');place('bakery',14,11);place('flower-shop',8,14);
+ place(state.whiteRabbitPreview>0?`story-wr-stage-${state.whiteRabbitPreview}`:'white-rabbit-zephirok',9,9,0,'story-cafe');place('bakery',14,11);place('flower-shop',8,14);
  place('cottage',11,14);place('coffee-kiosk',8,17);place('bus-stop',16,14,0,'story-stop-cafe');
  place('family-home',28,9);place('cottage',32,10,0,'story-home');place('bakery',35,11);
  place('villa',34,14);place('flower-shop',38,14);place('bus-stop',29,16,0,'story-stop-square');
@@ -86,7 +92,7 @@ export function buildStoryMap(state, now=Date.now()) {
  place(STORY_PARK_BELKINO_KIND,8,22,0,'story-pond');place('playground',10,37);place('garden',8,34);
  place('coffee-kiosk',8,20);place('bus-stop',11,32,0,'story-stop-park');
  place('bus-terminal',34,36,0,'story-terminal');place('family-home',38,32);place('cottage',38,40);
- if(state.chapter>=1){place('city-square',25,35,0,'story-festival');place('extra-arch',24,34);place('flowerbed',28,38);}
+ if(state.chapter>=1){place(STORY_FESTIVAL_KINDS[festivalStage(state)],22,33,0,'story-festival');place('flowerbed',28,38);}
  // No second White Rabbit villa: both places point to story-cafe.
  if(state.chapter>=2){place('bench',39,27);place('flowerbed',38,25);}
  const status=projectStatus(state,now);

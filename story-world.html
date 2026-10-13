@@ -7,7 +7,7 @@
  <meta name="theme-color" content="#fff5f8" />
  <meta name="robots" content="noindex,nofollow" />
  <title>Мир Зеффи — общий город · v1</title>
- <link rel="stylesheet" href="./story/style.css?v=4" />
+ <link rel="stylesheet" href="./story/style.css?v=7" />
  <script id="zeffi-story-embedded-safearea">try{if(window.parent!==window||window.Telegram?.WebApp)document.documentElement.classList.add('zeffi-story-embedded');}catch(_){}</script>
 </head>
 <body>
@@ -15,7 +15,7 @@
   <img src="../assets/mir_zeffi/icon_Mir_zeffi_world_stranitca.webp" alt="Мир Зеффи" width="108" height="108" />
   <span class="eyebrow">МИР ЗЕФФИ · ОБЩИЙ ГОРОД</span>
   <h1 id="accessTitle">Открываем ворота города…</h1>
-  <p id="accessMessage">Проверяем доступ тестера. Игровые валюты не используются.</p>
+  <p id="accessMessage">Проверяем доступ тестера. Подключаем общий город и проверяем серверный доступ.</p>
   <progress id="loadProgress" max="100" value="0" aria-label="Загрузка карты"></progress>
   <button id="accessRetry" class="primary" type="button" hidden>Повторить</button>
   <a class="quiet-link" href="../">Вернуться в Сладкий Забег</a>
@@ -42,7 +42,7 @@
    </div>
    <button id="projectBanner" class="project-banner" type="button" aria-label="Открыть городские стройки">
     <span class="project-banner-symbol" aria-hidden="true"><span data-icon="heart"></span></span>
-    <span class="project-banner-copy"><span class="eyebrow">СТРОИМ ВМЕСТЕ · ДЕМО</span><strong><span id="bannerTitle">Сад встреч</span><span id="bannerPercent">34%</span></strong><span class="mini-track"><span id="bannerBar"></span></span><small class="sr-only" id="bannerStatus">Только на этом устройстве, без реальных списаний</small></span>
+    <span class="project-banner-copy"><span class="eyebrow" id="fundModeEyebrow">СТРОИМ ВМЕСТЕ · ДЕМО</span><strong><span id="bannerTitle">Сад встреч</span><span id="bannerPercent">34%</span></strong><span class="mini-track"><span id="bannerBar"></span></span><small class="sr-only" id="bannerStatus">Только на этом устройстве, без реальных списаний</small></span>
     <span class="banner-arrow" aria-hidden="true">›</span>
    </button>
   </section>
@@ -54,6 +54,6 @@
  </main>
  <dialog id="storyPanel" class="story-panel" aria-labelledby="panelTitle"><button id="closePanel" class="round-button panel-close" type="button" aria-label="Закрыть"></button><div id="panelContent"></div></dialog>
  <div id="storyToast" class="toast" role="status" aria-live="polite"></div>
- <script type="module" src="./story/boot.js?v=5"></script>
+ <script type="module" src="./story/boot.js?v=7"></script>
 </body>
 </html>

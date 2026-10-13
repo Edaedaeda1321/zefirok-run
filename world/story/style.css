@@ -116,3 +116,15 @@ html.zeffi-story-embedded .story-header{padding-top:7px;padding-bottom:7px;min-h
 }
 @media(max-width:360px){.story-header .brand-image{width:28px;height:28px}.story-header .brand-copy h1{font-size:16px}.story-header .brand-copy .eyebrow{font-size:7px}.story-header{gap:4px}.city-switch{padding:6px 8px}.tester-menu-button{width:29px;min-width:29px}}
 @media(orientation:landscape) and (max-height:490px){.story-header{min-height:45px;padding-top:3px;padding-bottom:3px}.bottom-nav button{min-height:39px}.project-banner{min-height:50px;bottom:5px}.project-banner-symbol{width:30px;height:30px}}
+
+/* Story-only festival phase rail. Keep the Map-first viewport unobstructed. */
+.festival-stages{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px;margin:12px 0}
+.festival-stage{border:1px solid #e9d6df;background:#fbf6f7;border-radius:13px;padding:7px 5px;min-width:0;text-align:center;color:#998494}
+.festival-stage b{display:flex;align-items:center;justify-content:center;margin:auto auto 5px;width:25px;height:25px;border-radius:9px;background:#eee4e8;color:#aa8fa1}
+.festival-stage span{font-size:10px;font-weight:750;line-height:1.2;display:block}
+.festival-stage small{display:block;font-size:9px;font-weight:500;color:#ae9ba5;margin-top:3px}
+.festival-stage.current{background:#fff0f6;border-color:#cb8ea9;color:#984a70}
+.festival-stage.current b{background:#c07a9b;color:#fff}
+.festival-stage.done{background:#f4f4e9;border-color:#d6dca6;color:#75864c}
+.festival-stage.done b{background:#93a15c;color:#fff}
+@media(max-width:420px){.festival-stages{grid-template-columns:repeat(2,minmax(0,1fr))}.festival-stage{min-height:68px;padding:7px}.festival-stage span{font-size:11px}}

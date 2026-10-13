@@ -651,7 +651,7 @@ function drawConstructionSite(ctx,item,def,now,fx=null){
   stage=fxProgress<.28?'build_01':fxProgress<.55?'build_02':'build_03';
   remainingMs=Math.max(0,(1-fxProgress)*Math.max(900,Number(fx.duration||1000)));
  }
- const spriteId=parkConstructionAssetId(item.kind,item.rotation,stage)||buildingAssetId(item.kind,item.rotation,stage);
+ const spriteId=parkConstructionAssetId(item.kind,item.rotation,stage)||buildingAssetId(item.kind,item.rotation,stage,progress);
  const artReady=spriteId&&drawPlacedSprite(ctx,spriteId,P(item.x,item.y),def,item.rotation||0);
  const center=P(item.x+w*.5,item.y+h*.5);
  if(!artReady){

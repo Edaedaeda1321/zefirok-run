@@ -6,6 +6,7 @@ import {
   applyRoadStroke, buyParcel, skipConstruction, cityStats, reconcileCityProgress, claimCityLevelReward, CITY_LEVELS, BuildError
 } from '../world/engine.js';
 import { CATALOG } from '../world/catalog.js';
+import {handleCommunityFund} from './zeffi-community-fund.js';
 
 const ZERO = Object.freeze({points:0,treats:0,coffee:0});
 const MAX_CITY_JSON = 180_000;
@@ -206,7 +207,8 @@ export async function handleZeffiWorldApi(request,env,dependencies){
   try{
     // The signed, tester-only story-access route is independent of the personal-city switch.
     // Keep personal state, D1 and all economy mutations fail-closed under WORLD_ENABLED.
-    if(new URL(request.url).pathname!=='/api/world/story-access'&&!worldEnabled(env))failure(403,'WORLD_DISABLED','Мир Зеффи пока не включён на сервере.');
+    const isCommunityRequest=new URL(request.url).pathname.startsWith('/api/world/community/');
+    if(!isCommunityRequest&&new URL(request.url).pathname!=='/api/world/story-access'&&!worldEnabled(env))failure(403,'WORLD_DISABLED','Мир Зеффи пока не включён на сервере.');
     if(request.method!=='POST')failure(405,'METHOD_NOT_ALLOWED','Используйте POST.');
     const text=await request.text();
     if(text.length>MAX_REQUEST_LENGTH)failure(413,'WORLD_REQUEST_TOO_LARGE','Слишком большой запрос.');
@@ -220,6 +222,14 @@ export async function handleZeffiWorldApi(request,env,dependencies){
     if(new URL(request.url).pathname==='/api/world/story-access'){
       if(env?.WORLD_STORY_ENABLED!=null&&String(env.WORLD_STORY_ENABLED).toLowerCase()!=='true')failure(403,'STORY_DISABLED','Общий сюжетный мир пока закрыт для тестирования.');
       return reply({ok:true,access:'tester',version:'story-v1',mode:'local-demo',globalSync:false,walletWrites:false});
+    }
+    // Zeffi shared fund v1: independent signed community endpoints.
+    // Authentication + WORLD_TESTER_IDS have already been checked above.
+    // This does NOT turn on personal-city routes or bypass wallet restrictions.
+    if(isCommunityRequest){
+      const profileReader=(id,actor)=>dependencies.ensureAuthoritativeProfileRow(env,id,actor);
+      const opGate=(id,capabilities)=>dependencies.requirePlayerOperationAvailable(env,id,{capabilities,featureFlags:capabilities.includes('purchases')?['shop']:[]});
+      return handleCommunityFund({db:env.DB,env,telegramId,pathname:new URL(request.url).pathname,body,profileReader,operationGate:opGate});
     }
     if(!env.DB)failure(503,'WORLD_DB_UNAVAILABLE','Основная D1 сейчас недоступна.');
     await assertSchema(env.DB);

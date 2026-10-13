@@ -8,6 +8,7 @@ const buildingNames = new Map(SPRITE_MANIFEST.buildingCompatibility.map(item => 
 const extraDirectional = new Map(SPRITE_MANIFEST.assets.filter(a=>a.packId==='extra-v1'&&a.facing).map(a=>[`${a.catalogId}:${a.facing}`,a.id]));
 const storyParkDirectional = new Map(SPRITE_MANIFEST.assets.filter(a=>a.packId==='park-belkino-story-v1'&&a.facing).map(a=>[`${a.catalogId}:${a.facing}`,a.id]));
 const landmarkDirectional = new Map(SPRITE_MANIFEST.assets.filter(a=>a.packId==='white-rabbit-zephirok-review-v1'&&a.facing).map(a=>[`${a.catalogId}:${a.facing}`,a.id]));
+const festivalDirectional = new Map(SPRITE_MANIFEST.assets.filter(a=>a.packId==='story-festival-hall-v1'&&a.facing).map(a=>[`${a.catalogId}:${a.facing}`,a.id]));
 const flowerDirectional = new Map(SPRITE_MANIFEST.assets.filter(a=>a.packId==='flower-style-v1'&&a.facing).map(a=>[`${a.catalogId}:${a.facing}`,a.id]));
 // Extra-v1 catalog variants represent the SAME city items as the four
 // Flower Style replacements, and must never select the retired Extra images.
@@ -50,7 +51,11 @@ export function setSpriteMode(value) {
 }
 export function onSpriteUpdate(callback) { onUpdate = typeof callback === 'function' ? callback : () => {}; }
 
-export function buildingAssetId(catalogId, rotation = 0, state = 'complete') {
+export function buildingAssetId(catalogId, rotation = 0, state = 'complete', buildProgress = null) {
+ if(catalogId==='white-rabbit-zephirok' && /^build_0[1-3]$/.test(state)){
+  const index=Number.isFinite(buildProgress)?Math.min(6,1+Math.floor(Math.max(0,Math.min(.999999,buildProgress))*6)):(state==='build_01'?1:state==='build_02'?3:5);
+  return `wrz_build_${String(index).padStart(2,'0')}`;
+ }
  const building = buildingNames.get(catalogId);
  if(!building)return null;
  const direction = FACINGS[((rotation % 4) + 4) % 4];
@@ -76,6 +81,10 @@ export function fallbackSpriteId(kind, rotation=0, state='complete', variation=0
   const direction=FACINGS[((rotation%4)+4)%4];
   const storyPark=storyParkDirectional.get(`${kind}:${direction}`);
   if(storyPark)return storyPark;
+  const festival=festivalDirectional.get(`${kind}:${direction}`);
+  if(festival)return festival;
+  const wrPreview=/^story-wr-stage-([1-6])$/.exec(kind);
+  if(wrPreview)return `wrz_build_0${wrPreview[1]}`;
   const landmark=landmarkDirectional.get(`${kind}:${direction}`);
   if(landmark)return landmark;
   const extra=extraDirectional.get(`${kind}:${direction}`);
@@ -202,6 +211,7 @@ export async function preloadSpriteSet(ids,{pin=false,onProgress=()=>{}}={}){
 }
 // Warm construction stages before server purchase, including acceleration FX.
 export function preloadBuildFrames(kind,rotation=0){
+ if(kind==='white-rabbit-zephirok')return preloadSpriteSet([...Array(6)].map((_,i)=>`wrz_build_0${i+1}`).concat(catalogSpriteId(kind,rotation,'complete')).filter(Boolean));
  const ids=['build_01','build_02','build_03'].map(stage=>
    parkConstructionAssetId(kind,rotation,stage)||buildingAssetId(kind,rotation,stage)
  );

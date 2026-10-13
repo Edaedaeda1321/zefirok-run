@@ -11,8 +11,10 @@ const root=dirname(fileURLToPath(new URL('../index.html',import.meta.url)));
 const byId=new Map(SPRITE_MANIFEST.assets.map(asset=>[asset.id,asset]));
 
 test('Clean Core + Extra + Flower Style contains exactly 249 unique WebP-only sprites',()=>{
- assert.equal(SPRITE_MANIFEST.assets.filter(a=>a.packId!=='park-belkino-story-v1').length,365);
+ assert.equal(SPRITE_MANIFEST.assets.filter(a=>!['park-belkino-story-v1','white-rabbit-construction-v1','story-festival-hall-v1'].includes(a.packId)).length,365);
  assert.equal(SPRITE_MANIFEST.assets.filter(a=>a.packId==='park-belkino-story-v1').length,4);
+ assert.equal(SPRITE_MANIFEST.assets.filter(a=>a.packId==='white-rabbit-construction-v1').length,6);
+ assert.equal(SPRITE_MANIFEST.assets.filter(a=>a.packId==='story-festival-hall-v1').length,16);
  assert.equal(byId.size,SPRITE_MANIFEST.assets.length);
  for(const a of SPRITE_MANIFEST.assets){
   assert.equal(Object.hasOwn(a,'filePng'),false,a.id);
