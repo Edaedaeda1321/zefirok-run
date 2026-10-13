@@ -14,6 +14,8 @@ import { onSpriteUpdate, setSpriteMode, spriteStatus, preloadBuildFrames, preloa
 import { buildCitizenScene, sampleCitizenScene } from './citizens.js';
 import { buildBusScene, sampleBusScene } from './traffic.js';
 import {createWorldTutorial} from './tutorial.js?v=rc-guide2';
+import {nextCityGoal,cityGoalMilestone} from './city-goal.js';
+import {mountCityGuide} from './city-guide-ui.js';
 
 const STORAGE_KEY = 'zefirok-world-v01-sandbox-local';
 const SERVER_MODE = window.ZeffiWorldServerRequired === true;
@@ -26,6 +28,9 @@ const WELCOME_KEY = 'zefirok-world-v01-welcome-read';
 const $ = id => document.getElementById(id);
 const canvas = $('worldCanvas');
 let worldTutorial=null;
+let cityGuideUI=null;
+let cityGuidePrevious=null;
+const cityGuideAnnounced=new Set();
 const state = {
  city: makeInitialCity(), mode: 'select', category: 'all', warehouse: false, catalogOpen: true,
  selectedUid: null, draft: null, roadDraft: [], roadValid: true, expansionDraft: null, paidSkipUid: null,
@@ -201,6 +206,8 @@ async function serverRequest(path,payload={}){
  return data;
 }
 function acceptServerCity(payload){
+ // Do not congratulate a player for progress loaded from an earlier session.
+ if(!state.serverReady)cityGuidePrevious=null;
  state.city=sanitizeCity(payload.city,CATALOG);
  state.serverRevision=payload.revision;
  state.serverPurchasesEnabled=Boolean(payload.purchasesEnabled);
@@ -495,6 +502,73 @@ function syncCitizens(stats){
  state.citizenScene=buildCitizenScene(state.city,CATALOG,stats.population,Date.now(),stats.comfort);
  state.trafficScene=buildBusScene(state.city,CATALOG,Date.now());
 }
+// All RC-2 actions reuse existing controls and server-authoritative operations.
+// Recommendations never commit a purchase on the player's behalf.
+function closeCityGuideStats(){
+ const panel=$('cityMetrics');panel.classList.remove('is-expanded');
+ $('metricsToggle').setAttribute('aria-expanded','false');
+ $('metricsToggle').setAttribute('aria-label','Показать всю статистику города');
+}
+function cityGuideAction(advice){
+ if(SERVER_MODE&&!state.serverReady){showToast('Подождите загрузки города.',true);return;}
+ if(advice.type==='claim'){$('claimCityReward').click();return;}
+ if(advice.type==='earn'){$('zeffiReturnGame').click();return;}
+ if(advice.type==='wait'){
+  const item=state.city.objects.find(x=>x.uid===advice.uid&&!x.stored);
+  if(!item){updateUI();return;}
+  stopDraft();state.mode='select';state.selectedUid=item.uid;
+  setCatalogOpen(false);closeCityGuideStats();
+  focusOnTile(item.x,item.y);updateUI();scheduleDraw();return;
+ }
+ if(advice.type==='road'){
+  const item=state.city.objects.find(x=>x.uid===advice.uid&&!x.stored);
+  switchMode('road');closeCityGuideStats();
+  if(item)focusOnTile(item.x,item.y);
+  showToast('Проведи дорогу рядом с постройкой, чтобы подключить её.');return;
+ }
+ if(advice.type!=='build')return;
+ if(SERVER_MODE&&!state.serverPurchasesEnabled){
+  showToast('Покупки пока закрыты настройками сервера.',true);return;
+ }
+ const def=CATALOG[advice.itemId];
+ if(!def||shopRequiredLevel(def)>shopCurrentLevel()){
+  showToast('Постройка пока недоступна.',true);updateUI();return;
+ }
+ const spot=findFreeSpot(def.id);
+ if(!checkPlacement(state.city,CATALOG,def.id,spot.x,spot.y,0).ok){
+  closeCityGuideStats();switchMode('expand');
+  showToast('Для постройки пока нет места. Выбери участок земли.');return;
+ }
+ if(activeEdit())stopDraft();
+ state.mode='select';state.selectedUid=null;state.warehouse=false;
+ state.category=def.category;
+ renderCategories();renderCatalog();setCatalogOpen(true);closeCityGuideStats();
+ updateUI();scheduleDraw();
+ // Wait until the bottom sheet finishes opening before scrolling to the card.
+ const panel=$('bottomPanel');
+ const highlight=()=>{
+  const target=[...$('catalogList').querySelectorAll('.catalog-card')]
+   .find(card=>card.dataset.kind===def.id);
+  if(!target)return;
+  $('catalogList').querySelectorAll('.is-guide-target').forEach(node=>node.classList.remove('is-guide-target'));
+  target.classList.add('is-guide-target');
+  target.scrollIntoView({block:'nearest',inline:'center',behavior:'smooth'});
+ };
+ requestAnimationFrame(highlight);
+ panel.addEventListener('transitionend',highlight,{once:true});
+ setTimeout(highlight,320);
+}
+function updateCityGuide(stats){
+ if(!cityGuideUI)return;
+ cityGuideUI.update(nextCityGoal({city:state.city,stats,catalog:CATALOG,
+  catalogItems:CATALOG_ITEMS,purchasesEnabled:!SERVER_MODE||state.serverPurchasesEnabled}));
+ const current={cityLevel:stats.cityLevel,parks:stats.parks,shops:stats.shops};
+ const notice=cityGoalMilestone(cityGuidePrevious,current);
+ cityGuidePrevious=current;
+ if(notice&&!cityGuideAnnounced.has(notice)){
+  cityGuideAnnounced.add(notice);showToast(notice);
+ }
+}
 function updateCityLevelUI(stats){
  const lvl=stats.cityLevel,def=CITY_LEVELS[lvl-1],next=stats.nextCityLevel;
  $('cityLevelBadge').textContent=`Ур. ${lvl}`;
@@ -588,6 +662,7 @@ function updateUI(){
  if(state.shopRenderedLevel!==stats.cityLevel){state.shopRenderedLevel=stats.cityLevel;renderCatalog();}
  syncCitizens(stats);
  updateCityLevelUI(stats);
+ updateCityGuide(stats);
  updateRaisedConflicts();
  $('populationCount').textContent=stats.population.toLocaleString('ru-RU');
  $('comfortCount').textContent=stats.comfort.toLocaleString('ru-RU');
@@ -1201,6 +1276,7 @@ function initialize(){
  window.addEventListener('zeffi-transit-sprites-ready',()=>{if(state.visualsReady)scheduleDraw();});
  // A retired 2D/3D preference must never switch the released city to wireframes.
  setSpriteMode(true);
+  cityGuideUI=mountCityGuide($('cityLevelDetails'),{nameOf,onAction:cityGuideAction});
  translateStatic();readSavedCity();bindEvents();renderCategories();renderCatalog();setCatalogOpen(window.innerWidth>700||window.innerHeight>=570);updateUI();resetView();
  if(SERVER_MODE){
   for(const id of ['topupWallet','undoButton','redoButton','resetButton']){$(id).hidden=true;}
