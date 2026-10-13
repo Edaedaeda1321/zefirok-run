@@ -90,6 +90,7 @@ const steps = [
   ['player collection music previews', 'node', ['scripts/check-player-collection-stage15.mjs']],
   ['player collection source status UX', 'node', ['scripts/check-player-collection-source-status.mjs']],
   ['rating dethrone delivery', 'node', ['scripts/check-rating-dethrone-delivery.mjs']],
+  ['rating finale + winner notice', 'node', ['--no-warnings','--experimental-sqlite','scripts/check-rating-finale-delivery.mjs']],
   ['player directory integrity', 'node', ['scripts/check-player-directory-integrity.mjs']],
   ['case opening stability', 'node', ['scripts/check-case-stability.mjs']],
   ['Elite+ XP lifetime', 'node', ['scripts/check-elite-plus-xp-lifetime.mjs']],

@@ -4811,6 +4811,8 @@ async function processCriticalServerQueues(env) {
   return runServerCronSteps("critical-queues", [
     ["leaderboard", () => recordCronServiceStatus(env, "season-processing", async () => {
       const season = await ensureSeason(env);
+      try { await recoverLeaderboardWinnerNotifications(env); }
+      catch (error) { console.error("Rating winner notification recovery failed", error); }
       await expireLeaderboardRewardsAndNotify(env);
       try { await clearOperationalIssue(env, "leaderboard"); } catch {}
       return { seasonId: String(season?.id || "") };
@@ -11176,6 +11178,10 @@ async function finalizeSeason(env, season, now = Math.floor(Date.now() / 1000)) 
     `leaderboard-season-ended:${season.id}`,
     leaderboardSeasonNotificationText({ season, winner, reward, status: "pending", reason: "" }, env)
   );
+  // The player notification is independent of prize settlement. The minute
+  // scheduler repairs a missed enqueue without creating another prize.
+  try { await queueLeaderboardWinnerNotification(env, String(season.id), now); }
+  catch (error) { console.error("Rating winner notice enqueue failed", error); }
 }
 
 
@@ -11289,6 +11295,75 @@ async function queueLeaderboardStaffNotification(env, eventKey, messageHtml, cat
     console.error("Queue leaderboard staff notification failed", error);
     return { queued: 0, sent: 0 };
   }
+}
+
+// Winner messages are queued after an authoritative season close, never sent
+// inside the prize transaction. The unique category is enforced by migration
+// 0116 so concurrent cron/owner close attempts cannot create duplicate notices.
+const LEADERBOARD_WINNER_NOTICE_PREFIX = "player_mail:rating_winner:";
+const LEADERBOARD_WINNER_NOTICE_RECOVERY_SECONDS = 7 * 86400;
+
+function leaderboardWinnerNoticeCategory(seasonId) {
+  return `${LEADERBOARD_WINNER_NOTICE_PREFIX}${String(seasonId || "").trim()}`.slice(0, 180);
+}
+
+async function queueLeaderboardWinnerNotification(env, seasonId, now = Math.floor(Date.now() / 1000)) {
+  const id = String(seasonId || "").trim();
+  if (!id) return { queued: 0 };
+  const row = await env.DB.prepare(`
+    SELECT r.id AS reward_id,r.telegram_id,r.reward_type,r.reward_amount,r.reward_item_id,r.status AS reward_status,
+           s.title,s.reward_title,s.reward_image_url,s.reward_type AS season_reward_type,
+           s.reward_amount AS season_reward_amount,s.reward_item_id AS season_reward_item_id,b.chat_id
+    FROM leaderboard_rewards r
+    JOIN leaderboard_seasons s ON s.id=r.season_id
+    JOIN bot_subscribers b ON b.telegram_id=r.telegram_id AND b.active=1 AND TRIM(COALESCE(b.chat_id,''))<>''
+    WHERE s.id=? AND s.status='ended' AND s.finalized_at IS NOT NULL AND r.place=1
+      AND r.status IN ('pending','claimed','expired')
+    ORDER BY r.created_at DESC LIMIT 1
+  `).bind(id).first();
+  if (!row) return { queued: 0 };
+  const rewardTitle = leaderboardRewardNotificationTitle({
+    reward_type:row.reward_type,reward_amount:row.reward_amount,reward_item_id:row.reward_item_id
+  },{
+    reward_type:row.season_reward_type,reward_amount:row.season_reward_amount,
+    reward_item_id:row.season_reward_item_id,reward_title:row.reward_title,
+    reward_image_url:row.reward_image_url
+  },env);
+  const message = `🏆 <b>Первое место — твоё!</b>\n\n`+
+    `Поздравляем! Ты занял(а) <b>1 место</b> в рейтинге «${escapeHtml(String(row.title||"Сладкий Забег"))}».\n\n`+
+    `🎁 <b>Награда:</b> ${escapeHtml(rewardTitle)}\n\n`+
+    (String(row.reward_status)==='pending' ? 'Открой итоги рейтинга и забери свою награду!' :
+      'Открой итоги рейтинга, чтобы увидеть свой результат!');
+  const category = leaderboardWinnerNoticeCategory(id);
+  const replyMarkup = {inline_keyboard:[[{text:"🏆 Итоги рейтинга",web_app:{url:configuredGameOpenUrl(env,"rating")}}]]};
+  const result = await env.DB.prepare(`
+    INSERT OR IGNORE INTO player_notification_queue
+      (telegram_id,chat_id,category,message_html,reply_markup_json,status,attempts,last_error,
+       available_at,created_at,updated_at,lease_token,lease_until)
+    VALUES (?, ?, ?, ?, ?, 'pending', 0, '', ?, ?, ?, '', 0)
+  `).bind(String(row.telegram_id),String(row.chat_id),category,message,JSON.stringify(replyMarkup),now,now,now).run();
+  return { queued: Number(result?.meta?.changes||0), category };
+}
+
+async function recoverLeaderboardWinnerNotifications(env, now = Math.floor(Date.now()/1000)) {
+  // Bounded catch-up: a crash after finalization or a recently fixed deployment
+  // may have missed the winner message. Ignore old seasons to prevent old pushes.
+  const rows = (await env.DB.prepare(`
+    SELECT s.id FROM leaderboard_seasons s
+    JOIN leaderboard_rewards r ON r.season_id=s.id AND r.place=1
+    JOIN bot_subscribers b ON b.telegram_id=r.telegram_id AND b.active=1 AND TRIM(COALESCE(b.chat_id,''))<>''
+    WHERE s.status='ended' AND s.finalized_at IS NOT NULL AND s.finalized_at>=?
+      AND r.status IN ('pending','claimed','expired')
+      AND NOT EXISTS (SELECT 1 FROM player_notification_queue q
+                      WHERE q.category=('player_mail:rating_winner:'||s.id))
+    ORDER BY s.finalized_at DESC LIMIT 3
+  `).bind(now-LEADERBOARD_WINNER_NOTICE_RECOVERY_SECONDS).all()).results||[];
+  let queued=0;
+  for (const row of rows) {
+    const result=await queueLeaderboardWinnerNotification(env,row.id,now);
+    queued+=Number(result?.queued||0);
+  }
+  return { queued };
 }
 
 async function expireLeaderboardRewardsAndNotify(env, now = Math.floor(Date.now() / 1000)) {
@@ -16079,6 +16154,59 @@ async function leaderboardHistoryForPlayer(env,telegramId,currentSeasonId){
   return history;
 }
 
+// One authenticated, read-only lookup of the most recent *finalized* season.
+// The active season is not the source of truth for completed-season results.
+async function leaderboardLatestFinaleForPlayer(env, telegramId, now = Math.floor(Date.now()/1000)) {
+  const row = await env.DB.prepare(`
+    SELECT s.id AS season_id,s.title AS season_title,s.ends_at,s.finalized_at,
+           s.reward_type AS season_reward_type,s.reward_amount AS season_reward_amount,
+           s.reward_item_id AS season_reward_item_id,s.reward_title,s.reward_image_url,
+           e.best_score AS player_score,
+           CASE WHEN e.telegram_id IS NULL THEN 0 ELSE (
+             SELECT COUNT(*)+1 FROM leaderboard_entries ranked
+             WHERE ranked.season_id=s.id AND ranked.hidden=0 AND (
+                ranked.best_score>e.best_score OR
+                (ranked.best_score=e.best_score AND ranked.achieved_at<e.achieved_at) OR
+                (ranked.best_score=e.best_score AND ranked.achieved_at=e.achieved_at AND ranked.telegram_id<e.telegram_id)
+             )
+           ) END AS player_place,
+           (SELECT COUNT(*) FROM leaderboard_runs runs
+              WHERE runs.season_id=s.id AND runs.telegram_id=? AND runs.accepted=1) AS completed_runs,
+           (SELECT COUNT(*) FROM leaderboard_entries participants
+              WHERE participants.season_id=s.id AND participants.hidden=0) AS participant_count,
+           (SELECT COALESCE(NULLIF(TRIM(winner.display_name),''),'Гость кафе')
+              FROM leaderboard_entries winner WHERE winner.season_id=s.id AND winner.hidden=0
+              ORDER BY winner.best_score DESC,winner.achieved_at ASC,winner.telegram_id ASC LIMIT 1) AS winner_name,
+           r.id AS reward_id,r.place AS reward_place,r.reward_type AS reward_type,
+           r.reward_amount AS reward_amount,r.reward_item_id AS reward_item_id,
+           r.status AS reward_status,r.created_at AS reward_created_at,
+           r.claimed_at AS reward_claimed_at,r.expires_at AS reward_expires_at
+    FROM leaderboard_seasons s
+    LEFT JOIN leaderboard_entries e ON e.season_id=s.id AND e.telegram_id=? AND e.hidden=0
+    LEFT JOIN leaderboard_rewards r ON r.season_id=s.id AND r.telegram_id=? AND r.place=1
+    WHERE s.status='ended' AND s.finalized_at IS NOT NULL AND s.ends_at<=? AND s.ends_at>=?
+    ORDER BY s.ends_at DESC,s.finalized_at DESC,s.id ASC LIMIT 1
+  `).bind(String(telegramId),String(telegramId),String(telegramId),now,now-30*86400).first();
+  if (!row) return null;
+  const reward=row.reward_id ? rewardToClient({
+    id:row.reward_id,season_id:row.season_id,telegram_id:String(telegramId),
+    place:row.reward_place,reward_type:row.reward_type,reward_amount:row.reward_amount,
+    reward_item_id:row.reward_item_id,status:row.reward_status,
+    created_at:row.reward_created_at,claimed_at:row.reward_claimed_at,expires_at:row.reward_expires_at
+  },{
+    id:row.season_id,rewardType:row.season_reward_type,rewardAmount:row.season_reward_amount,
+    rewardItemId:row.season_reward_item_id,rewardTitle:row.reward_title,rewardImageUrl:row.reward_image_url
+  }):null;
+  return {
+    seasonId:String(row.season_id),seasonTitle:String(row.season_title||"Сезон рейтинга"),
+    endsAt:Number(row.ends_at||0)*1000,finalizedAt:Number(row.finalized_at||0)*1000,
+    place:Math.max(0,Number(row.player_place||0)),score:Math.max(0,Number(row.player_score||0)),
+    completedRuns:Math.max(0,Number(row.completed_runs||0)),
+    participantCount:Math.max(0,Number(row.participant_count||0)),
+    winnerName:String(row.winner_name||""),reward
+  };
+}
+
 async function buildLeaderboardPayload(env, season, telegramId, mode = "season") {
   const topLimit = Math.min(100, positiveInt(env.LEADERBOARD_TOP_LIMIT, DEFAULT_LEADERBOARD_TOP_LIMIT));
   const table = mode === "all_time" ? "leaderboard_all_time" : "leaderboard_entries";
@@ -16102,6 +16230,9 @@ async function buildLeaderboardPayload(env, season, telegramId, mode = "season")
               created_at DESC
      LIMIT 1`
   ).bind(telegramId, season.id).first();
+  const finalePromise = mode === "season"
+    ? leaderboardLatestFinaleForPlayer(env, telegramId, Math.floor(serverTime / 1000))
+    : Promise.resolve(null);
   const nextSeasonPromise = String(season.status) === "active"
     ? env.DB.prepare(
         `SELECT id,title,starts_at,ends_at,status FROM leaderboard_seasons
@@ -16110,7 +16241,7 @@ async function buildLeaderboardPayload(env, season, telegramId, mode = "season")
       ).bind(Math.floor(serverTime / 1000), String(season.id)).first()
     : Promise.resolve(null);
 
-  const [topResult, me, reward, nextSeasonRow] = await Promise.all([topPromise, mePromise, rewardPromise, nextSeasonPromise]);
+  const [topResult, me, reward, nextSeasonRow, finale] = await Promise.all([topPromise, mePromise, rewardPromise, nextSeasonPromise, finalePromise]);
   const top = (topResult.results || []).map((row, index) => leaderboardRowToClient(row, index + 1));
 
   let myEntry = null;
@@ -16195,6 +16326,7 @@ async function buildLeaderboardPayload(env, season, telegramId, mode = "season")
     previousPlace:Number(viewDelta?.previousPlace||0),
     rewardZone:myEntry?{maxPlace:1,placesAway:Math.max(0,Number(myEntry.place||0)-1)}:null,
     history,
+    finale,
     reward: reward ? rewardToClient(reward, {
       ...rewardConfig,
       rewardType: seasonReward.type,

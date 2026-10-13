@@ -9995,6 +9995,13 @@ body { min-height: var(--zefirok-app-height, 100dvh); }
 #zefirok-maltipoo-runner .rating-season-finale-reward p,#zefirok-maltipoo-runner .rating-season-finale-next p{margin:5px 0 0;color:#92703a;font-size:9px;font-weight:800;line-height:1.55}
 #zefirok-maltipoo-runner .rating-season-finale-next span{display:block;margin-top:6px;color:#b08028;font-size:8px;font-weight:900}
 #zefirok-maltipoo-runner .rating-season-finale-reward .leaderboard-reward-line{margin-top:9px;justify-content:flex-start;min-height:72px;background:rgba(255,255,255,.88)}
+#zefirok-maltipoo-runner .rating-season-finale-winner{display:grid;gap:3px;justify-items:center;margin:9px 0 12px;padding:10px;border-radius:14px;border:1px solid rgba(238,194,106,.6);background:rgba(255,255,255,.62)}
+#zefirok-maltipoo-runner .rating-season-finale-winner[hidden]{display:none!important}
+#zefirok-maltipoo-runner .rating-season-finale-winner span{color:#ae873a;font-size:9px;font-weight:950;letter-spacing:.05em}
+#zefirok-maltipoo-runner .rating-season-finale-winner strong{color:#764625;font-size:14px;font-weight:950;overflow-wrap:anywhere}
+#zefirok-maltipoo-runner .rating-season-finale-outcome{margin-top:10px;padding:11px 13px;border-radius:14px;background:rgba(255,255,255,.7);color:#805f40;font-size:10px;font-weight:800;line-height:1.6;text-align:left}
+#zefirok-maltipoo-runner .rating-season-finale-outcome[hidden]{display:none!important}
+#zefirok-maltipoo-runner .rating-season-finale-claim{display:block;margin-top:11px;width:100%;min-height:42px;border:0;border-radius:12px;background:linear-gradient(145deg,#e5ae39,#c7811c);color:#fff9e7;font-size:12px;font-weight:950}
 #zefirok-maltipoo-runner .rating-season-finale-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:13px}
 #zefirok-maltipoo-runner .rating-season-finale-actions button{min-height:42px;border:0;border-radius:13px;font-size:10px;font-weight:1000}
 #zefirok-maltipoo-runner .rating-season-finale-actions .secondary{background:#f0e6df;color:#76584e}
@@ -10526,14 +10533,17 @@ body { min-height: var(--zefirok-app-height, 100dvh); }
     <div class="rating-season-finale-stats">
       <div class="rating-season-finale-stat"><strong data-rating-finale-place>—</strong><span>итоговое место</span></div>
       <div class="rating-season-finale-stat"><strong data-rating-finale-score>0</strong><span>лучший результат</span></div>
-      <div class="rating-season-finale-stat"><strong data-rating-finale-runs>0</strong><span>завершено забегов</span></div>
-      <div class="rating-season-finale-stat"><strong data-rating-finale-achievement-points>0</strong><span>очки достижений</span></div>
+      <div class="rating-season-finale-stat"><strong data-rating-finale-runs>0</strong><span>зачтённых забегов</span></div>
+      <div class="rating-season-finale-stat"><strong data-rating-finale-participants>0</strong><span>участников сезона</span></div>
     </div>
+    <div class="rating-season-finale-winner" data-rating-finale-winner hidden><span>🏆 ПОБЕДИТЕЛЬ СЕЗОНА</span><strong data-rating-finale-winner-name></strong></div>
     <div class="rating-season-finale-reward" data-rating-finale-reward hidden>
       <strong>Награда за сезон</strong>
       <p data-rating-finale-reward-copy>Сезонная награда назначена по итогам рейтинга.</p>
       <div data-rating-finale-reward-visual></div>
+      <div data-rating-finale-claim-area></div>
     </div>
+    <div class="rating-season-finale-outcome" data-rating-finale-outcome hidden></div>
     <div class="rating-season-finale-next" data-rating-finale-next hidden>
       <strong data-rating-finale-next-title>Что дальше?</strong>
       <p data-rating-finale-next-copy>Следующий сезон уже готовится.</p>
@@ -10713,10 +10723,14 @@ body { min-height: var(--zefirok-app-height, 100dvh); }
   const ratingFinalePlace = document.querySelector("[data-rating-finale-place]");
   const ratingFinaleScore = document.querySelector("[data-rating-finale-score]");
   const ratingFinaleRuns = document.querySelector("[data-rating-finale-runs]");
-  const ratingFinaleAchievementPoints = document.querySelector("[data-rating-finale-achievement-points]");
+  const ratingFinaleParticipants = document.querySelector("[data-rating-finale-participants]");
+  const ratingFinaleWinner = document.querySelector("[data-rating-finale-winner]");
+  const ratingFinaleWinnerName = document.querySelector("[data-rating-finale-winner-name]");
+  const ratingFinaleOutcome = document.querySelector("[data-rating-finale-outcome]");
   const ratingFinaleReward = document.querySelector("[data-rating-finale-reward]");
   const ratingFinaleRewardCopy = document.querySelector("[data-rating-finale-reward-copy]");
   const ratingFinaleRewardVisual = document.querySelector("[data-rating-finale-reward-visual]");
+  const ratingFinaleClaimArea = document.querySelector("[data-rating-finale-claim-area]");
   const ratingFinaleNext = document.querySelector("[data-rating-finale-next]");
   const ratingFinaleNextTitle = document.querySelector("[data-rating-finale-next-title]");
   const ratingFinaleNextCopy = document.querySelector("[data-rating-finale-next-copy]");
@@ -11186,8 +11200,6 @@ body { min-height: var(--zefirok-app-height, 100dvh); }
     const rewardChip = mode === "season" && place > 0
       ? (place === 1 ? `<span class="rating-v6-progress-chip is-up">Ты в реальной зоне награды #1</span>` : `<span class="rating-v6-progress-chip">До награды за #1: ${formatter.format(placesAway)} ${placesAway === 1 ? "место" : "мест"}</span>`)
       : "";
-    const finale = ratingFinaleData(data);
-    const finaleInline = finale ? `<div class="rating-v6-season-finale-inline"><div class="rating-v6-season-finale-inline-copy"><small>Сезон завершён</small><strong>Итоги уже готовы</strong><span>Открой окно итогов рейтинга и посмотри свой финальный результат.</span></div><button data-rating-finale-open type="button">Итоги сезона</button></div>` : "";
     return `<section class="rating-v6-me-card">
       <div class="rating-v6-me-grid">
         ${summaryMetric(RATING_TAB_ICON, "Твоя позиция", placeValue, "is-place")}
@@ -11196,7 +11208,6 @@ body { min-height: var(--zefirok-app-height, 100dvh); }
       </div>
       <div class="rating-v6-me-progress">${deltaChip}${rewardChip}</div>
       ${summaryTrophiesMarkup(data.me)}
-      ${finaleInline}
     </section>`;
   }
 
@@ -11207,62 +11218,54 @@ body { min-height: var(--zefirok-app-height, 100dvh); }
   }
 
   function ratingFinaleSeenKey(seasonLike) {
-    return `zefirok-rating-finale-seen:${seasonStorageId(seasonLike)}`;
-  }
-
-  function findHistorySeasonEntry(history, season) {
-    const items = Array.isArray(history) ? history : [];
-    if (!items.length) return null;
-    const seasonId = seasonStorageId(season);
-    return items.find((item) => {
-      const candidates = [item, item?.season, { id: item?.seasonId }, { number: item?.seasonNumber }, { title: item?.seasonTitle }, { name: item?.title }];
-      return candidates.some((candidate) => seasonStorageId(candidate) === seasonId);
-    }) || items[0] || null;
+    return `zefirok-rating-finale-seen:${ratingStaleUserId()}:${seasonStorageId(seasonLike)}`;
   }
 
   function ratingFinaleData(data) {
     if (mode !== "season") return null;
-    const season = data?.season || null;
-    if (!season || String(season.status || "") !== "ended") return null;
-    const historyEntry = findHistorySeasonEntry(data?.history, season);
-    const me = data?.me && typeof data.me === "object" ? data.me : null;
-    const source = historyEntry || me || {};
-    const place = Math.max(0, Number(source?.place || me?.place || 0));
-    const score = Math.max(0, Number(source?.score || me?.score || 0));
-    const completedRuns = Math.max(0, Number(source?.completedRuns || me?.completedRuns || 0));
-    const achievementPoints = Math.max(0, Number(source?.achievementPoints || me?.achievementPoints || 0));
-    const reward = data?.reward || source?.reward || null;
-    const nextSeason = data?.nextSeason || season?.nextSeason || null;
-    const seasonShort = seasonLabel(season, false);
-    const seasonTitle = seasonDisplayName(season, false);
-    const subtitleBits = [];
-    if (score > 0) subtitleBits.push(`${formatter.format(score)} очков`);
-    if (completedRuns > 0) subtitleBits.push(`${formatter.format(completedRuns)} забегов`);
-    if (achievementPoints > 0) subtitleBits.push(`${formatter.format(achievementPoints)} очков достижений`);
-    const intro = place > 0
-      ? (place === 1 ? `${seasonShort} завершён — ты на вершине рейтинга.` : `${seasonShort} завершён · твой итог зафиксирован.`)
-      : `${seasonShort} завершён. Итоги уже в архиве рейтинга.`;
+    // Server-authoritative finalized season, independent of the current rating.
+    // Do not guess final standings from a live or scheduled leaderboard.
+    const result = data?.finale;
+    if (!result?.seasonId || !result?.finalizedAt) return null;
+    const season = {id:String(result.seasonId),title:String(result.seasonTitle||"Сезон рейтинга"),endsAt:Number(result.endsAt||0)};
+    const place = Math.max(0,Number(result.place||0));
+    const score = Math.max(0,Number(result.score||0));
+    const completedRuns = Math.max(0,Number(result.completedRuns||0));
+    const participantCount = Math.max(0,Number(result.participantCount||0));
+    const reward = result.reward || null;
+    const winnerName = String(result.winnerName||"").trim();
+    const currentSeason = data?.season;
+    const nextSeason = currentSeason && String(currentSeason.id) !== String(result.seasonId)
+      && ["active","scheduled"].includes(String(currentSeason.status||""))
+      ? currentSeason : (data?.nextSeason || null);
+    const seasonShort = seasonLabel(season,false);
+    const seasonTitle = seasonDisplayName(season,false);
+    const subtitle = place === 1
+      ? "Поздравляем! Ты занял(а) первое место и заслужил(а) главную награду сезона."
+      : place > 0
+        ? `Сезон завершён. Твоё итоговое место — #${place}. Спасибо за участие!`
+        : "Сезон завершён. Ты можешь посмотреть итоговые результаты игроков.";
     return {
-      season,
-      seasonTitle,
-      seasonShort,
-      place,
-      score,
-      completedRuns,
-      achievementPoints,
-      reward,
-      nextSeason,
-      hasHistory: Array.isArray(data?.history) && data.history.length > 0,
-      title: `${seasonTitle} · итоги`,
-      subtitle: subtitleBits.length ? `${intro} ${subtitleBits.join(" · ")}` : intro
+      season,seasonTitle,seasonShort,place,score,completedRuns,participantCount,
+      reward,winnerName,nextSeason,
+      hasHistory:Array.isArray(data?.history)&&data.history.length>0,
+      title:`${seasonTitle} · итоги`,subtitle
     };
   }
 
-  function openRatingFinale(sourceData = cache.season) {
+  function ratingFinaleInline(data) {
+    const info=ratingFinaleData(data);
+    if (!info) return "";
+    const outcome = info.place === 1 ? "Первое место — твоё!" : info.place > 0
+      ? `Итоговое место: #${info.place}` : "Сезон завершён";
+    return `<div class="rating-v6-season-finale-inline"><div class="rating-v6-season-finale-inline-copy"><small>Итоги прошлого сезона</small><strong>${escapeHtml(outcome)}</strong><span>Узнай итоговое место, победителя и свою награду.</span></div><button data-rating-finale-open type="button">Посмотреть итоги</button></div>`;
+  }
+
+  function openRatingFinale(sourceData = cache.season, options = {}) {
     if (!ratingFinaleLayer) return;
     const info = ratingFinaleData(sourceData);
     if (!info) return;
-    ratingImpactHaptic("medium");
+    if (!options.silent) ratingImpactHaptic("medium");
     if (ratingFinaleArt) {
       ratingFinaleArt.src = RATING_FINALE_ICON;
       ratingFinaleArt.alt = "";
@@ -11271,26 +11274,36 @@ body { min-height: var(--zefirok-app-height, 100dvh); }
     if (ratingFinaleTitle) ratingFinaleTitle.textContent = info.title;
     if (ratingFinaleSubtitle) ratingFinaleSubtitle.textContent = info.subtitle;
     if (ratingFinalePlace) ratingFinalePlace.textContent = info.place > 0 ? `#${info.place}` : "—";
-    if (ratingFinaleScore) ratingFinaleScore.textContent = formatter.format(info.score || 0);
-    if (ratingFinaleRuns) ratingFinaleRuns.textContent = formatter.format(info.completedRuns || 0);
-    if (ratingFinaleAchievementPoints) ratingFinaleAchievementPoints.textContent = formatter.format(info.achievementPoints || 0);
-
+    if (ratingFinaleScore) ratingFinaleScore.textContent = info.place > 0 ? formatter.format(info.score) : "—";
+    if (ratingFinaleRuns) ratingFinaleRuns.textContent = formatter.format(info.completedRuns);
+    if (ratingFinaleParticipants) ratingFinaleParticipants.textContent = formatter.format(info.participantCount);
+    if (ratingFinaleWinner) ratingFinaleWinner.hidden = !info.winnerName;
+    if (ratingFinaleWinnerName) ratingFinaleWinnerName.textContent = info.winnerName;
+    if (ratingFinaleOutcome) {
+      ratingFinaleOutcome.hidden = Boolean(info.reward);
+      if (!info.reward) ratingFinaleOutcome.textContent = info.place > 0
+        ? "В этом сезоне награда предусмотрена за первое место. Твой результат сохранён в истории рейтинга."
+        : "В этом сезоне ты не попал(а) в таблицу рейтинга. Награда за первое место досталась победителю.";
+    }
     if (ratingFinaleReward) {
-      const hasReward = !!info.reward;
+      const hasReward = Boolean(info.reward);
       ratingFinaleReward.hidden = !hasReward;
       if (hasReward) {
-        if (ratingFinaleRewardCopy) {
-          const rewardPlace = Math.max(0, Number(info.reward?.place || info.place || 0));
-          ratingFinaleRewardCopy.textContent = rewardPlace > 0
-            ? `Награда закреплена за итоговое место #${rewardPlace}.`
-            : "Сезонная награда закреплена по итогам рейтинга.";
-        }
+        const status=String(info.reward.status||"");
+        if (ratingFinaleRewardCopy) ratingFinaleRewardCopy.textContent = status === "claimed"
+          ? "Ты уже получил(а) награду за первое место!"
+          : status === "expired" ? "Срок получения награды закончился."
+          : status === "pending" ? "Награда за первое место ждёт тебя!"
+          : "Награда за первое место закреплена за тобой.";
         if (ratingFinaleRewardVisual) ratingFinaleRewardVisual.innerHTML = rewardMarkup(info.reward);
-      } else if (ratingFinaleRewardVisual) {
-        ratingFinaleRewardVisual.innerHTML = "";
+        if (ratingFinaleClaimArea) ratingFinaleClaimArea.innerHTML = status === "pending" && embedded
+          ? `<button class="rating-season-finale-claim" data-leaderboard-claim data-reward-id="${escapeHtml(info.reward.id)}" type="button">Забрать награду</button>`
+          : "";
+      } else {
+        if (ratingFinaleRewardVisual) ratingFinaleRewardVisual.innerHTML = "";
+        if (ratingFinaleClaimArea) ratingFinaleClaimArea.innerHTML = "";
       }
     }
-
     if (ratingFinaleNext) {
       const nextTitle = String(info.nextSeason?.title || info.nextSeason?.name || "").trim();
       const nextCopy = String(info.nextSeason?.previewText || info.nextSeason?.description || "").trim();
@@ -11299,19 +11312,18 @@ body { min-height: var(--zefirok-app-height, 100dvh); }
       ratingFinaleNext.hidden = !hasNext;
       if (hasNext) {
         if (ratingFinaleNextTitle) ratingFinaleNextTitle.textContent = nextTitle ? `Дальше: ${nextTitle}` : "Что дальше?";
-        if (ratingFinaleNextCopy) ratingFinaleNextCopy.textContent = nextCopy || "Следующий сезон уже готовится.";
-        if (ratingFinaleNextDate) {
-          ratingFinaleNextDate.textContent = nextStartsAt
-            ? `Старт: ${new Intl.DateTimeFormat("ru-RU", { day: "numeric", month: "long", year: "numeric", timeZone: "Europe/Moscow" }).format(new Date(nextStartsAt * 1000))}`
-            : "";
-        }
+        if (ratingFinaleNextCopy) ratingFinaleNextCopy.textContent = nextCopy || (String(info.nextSeason?.status)==="active"?"Новый сезон уже идёт — присоединяйся!":"Следующий сезон уже готовится.");
+        if (ratingFinaleNextDate) ratingFinaleNextDate.textContent = nextStartsAt
+          ? `Старт: ${new Intl.DateTimeFormat("ru-RU", { day: "numeric", month: "long", year: "numeric", timeZone: "Europe/Moscow" }).format(new Date(nextStartsAt))}`
+          : "";
       }
     }
-
     if (ratingFinaleArchiveButton) ratingFinaleArchiveButton.hidden = !info.hasHistory;
     ratingFinaleLayer.hidden = false;
     document.body.style.overflow = "hidden";
-    ratingNotifyHaptic("success");
+    try {localStorage.setItem(ratingFinaleSeenKey(info.season),"1");} catch {}
+    ratingFinaleSeenInSession.add(ratingFinaleSeenKey(info.season));
+    if (!options.silent) ratingNotifyHaptic("success");
   }
 
   function closeRatingFinale() {
@@ -11328,20 +11340,28 @@ body { min-height: var(--zefirok-app-height, 100dvh); }
     }
   }
 
+  const ratingFinaleSeenInSession = new Set();
+  let ratingFinaleAutoTimer = 0;
   function maybeAutoShowRatingFinale() {
-    if (!ratingFinaleLayer || !ratingFinaleLayer.hidden) return;
+    if (ratingFinaleAutoTimer || !ratingFinaleLayer || !ratingFinaleLayer.hidden) return;
+    if (cache.season?._uiStale || !cache.season?._loadedAt) return;
     if (playerProfileLayer && !playerProfileLayer.hidden) return;
     if (caseInfo && !caseInfo.hidden) return;
     if (passInfo && !passInfo.hidden) return;
     const info = ratingFinaleData(cache.season);
     if (!info) return;
     const key = ratingFinaleSeenKey(info.season);
-    try {
-      if (localStorage.getItem(key) === "1") return;
-      localStorage.setItem(key, "1");
-    } catch {}
-    setTimeout(() => {
-      if (ratingFinaleLayer.hidden) openRatingFinale(cache.season);
+    if (ratingFinaleSeenInSession.has(key)) return;
+    try {if (localStorage.getItem(key) === "1") return;} catch {}
+    ratingFinaleAutoTimer = setTimeout(() => {
+      ratingFinaleAutoTimer = 0;
+      // Only acknowledge after the actual window is visible, not before the
+      // timer: another popup or a view change may have interrupted the reveal.
+      if (mode === "season" && ratingFinaleLayer.hidden && (!playerProfileLayer || playerProfileLayer.hidden)
+          && (!caseInfo || caseInfo.hidden) && (!passInfo || passInfo.hidden)
+          && ratingFinaleSeenKey(ratingFinaleData(cache.season)?.season) === key) {
+        openRatingFinale(cache.season);
+      }
     }, 260);
   }
 
@@ -11580,7 +11600,7 @@ body { min-height: var(--zefirok-app-height, 100dvh); }
     const bestScore = history.reduce((best, item) => Math.max(best, Number(item?.score || 0)), 0);
     const cards = history.map((item) => {
       const reward = item?.reward;
-      return `<article class="rating-v6-history-card"><div class="rating-v6-history-copy"><small>${escapeHtml(item?.label || item?.seasonLabel || "Прошлый сезон")}</small><strong>${escapeHtml(item?.title || item?.seasonTitle || "Сезон")}</strong><span class="rating-v6-history-stats"><span>Место <b>${Number(item?.place || 0) > 0 ? `#${Number(item.place)}` : "—"}</b></span><span>Результат <b>${formatter.format(item?.score || 0)}</b></span></span></div>${reward ? `<div class="rating-v6-history-reward"><small>Получено</small>${rewardMarkup(reward)}</div>` : ""}</article>`;
+      return `<article class="rating-v6-history-card"><div class="rating-v6-history-copy"><small>${escapeHtml(item?.label || item?.seasonLabel || "Прошлый сезон")}</small><strong>${escapeHtml(item?.title || item?.seasonTitle || "Сезон")}</strong><span class="rating-v6-history-stats"><span>Место <b>${Number(item?.place || 0) > 0 ? `#${Number(item.place)}` : "—"}</b></span><span>Результат <b>${formatter.format(item?.score || 0)}</b></span></span></div>${reward ? `<div class="rating-v6-history-reward"><small>${reward.status === "pending" ? "Можно забрать" : reward.status === "claimed" ? "Получено" : reward.status === "expired" ? "Срок истёк" : "Награда"}</small>${rewardMarkup(reward)}</div>` : ""}</article>`;
     }).join("");
     const summary = bestPlace || bestScore ? `Лучшее: ${bestPlace ? `#${bestPlace}` : "—"} · ${formatter.format(bestScore)} очков` : "Результаты завершённых сезонов";
     return `<section class="rating-v6-history"><div class="rating-v6-section-title"><div><small>Архив</small><strong>История сезонов</strong></div><span>${escapeHtml(summary)}</span></div><div class="rating-v6-history-grid">${cards}</div></section>`;
@@ -11614,6 +11634,7 @@ body { min-height: var(--zefirok-app-height, 100dvh); }
       previousPlace: data.previousPlace,
       rewardZone: data.rewardZone,
       history: data.history,
+      finale: data.finale,
       reward: data.reward,
       nextSeason: data.nextSeason
     });
@@ -11696,7 +11717,8 @@ body { min-height: var(--zefirok-app-height, 100dvh); }
     const season = data.season;
     const status = String(season.status || "scheduled");
     if (status === "scheduled" && mode === "season") {
-      dynamic.innerHTML = `${seasonHeader(season, `До начала нового сезона: ${remaining(season.startsAt, data.serverTime)}`, mode)}${tabs()}<div class="leaderboard-soon-card"><h3>Уже скоро!</h3><p>После старта завершите зачтённый забег. В таблице сохранится ваш лучший результат сезона.</p></div>`;
+      dynamic.innerHTML = `${seasonHeader(season, `До начала нового сезона: ${remaining(season.startsAt, data.serverTime)}`, mode)}${tabs()}${ratingFinaleInline(data)}<div class="leaderboard-soon-card"><h3>Уже скоро!</h3><p>После старта завершите зачтённый забег. В таблице сохранится ваш лучший результат сезона.</p></div>`;
+      maybeAutoShowRatingFinale();
       return;
     }
 
@@ -11704,13 +11726,13 @@ body { min-height: var(--zefirok-app-height, 100dvh); }
     const timing = liveTimingText(data, mode);
     const reward = data.reward;
     const rewardBlock = reward
-      ? `<section class="rating-v6-earned-reward"><div><small>Награда получена в рейтинге</small><strong>${Number(reward.place || 0)} место</strong></div><div class="rating-v6-earned-reward-visual">${rewardMarkup(reward)}</div>${reward.status === "pending" ? `<button class="leaderboard-claim" data-leaderboard-claim data-reward-id="${escapeHtml(reward.id)}" type="button">Забрать награду</button>` : ""}</section>`
+      ? `<section class="rating-v6-earned-reward"><div><small>${reward.status === "pending" ? "Награда ожидает получения" : reward.status === "claimed" ? "Награда получена" : "Награда рейтинга"}</small><strong>${Number(reward.place || 0)} место</strong></div><div class="rating-v6-earned-reward-visual">${rewardMarkup(reward)}</div>${reward.status === "pending" ? `<button class="leaderboard-claim" data-leaderboard-claim data-reward-id="${escapeHtml(reward.id)}" type="button">Забрать награду</button>` : ""}</section>`
       : "";
     const topBlock = top.length
       ? `<section class="rating-v6-leaders"><div class="rating-v6-section-title"><div><small>${mode === "all_time" ? "Зал славы" : "Лидеры сезона"}</small><strong>Top 3</strong></div></div><div class="rating-v6-podium">${podium(top[1], 2)}${podium(top[0], 1)}${podium(top[2], 3)}</div></section><section class="rating-v6-ranking-list"><div class="rating-v6-section-title"><div><small>Рейтинг</small><strong>Игроки</strong></div><span>Нажми на игрока, чтобы открыть профиль</span></div><div class="rating-v6-list">${rows(top)}</div></section>`
       : '<div class="leaderboard-empty">Пока нет результатов. Станьте первым!</div>';
 
-    dynamic.innerHTML = `${seasonHeader(season, timing, mode)}${tabs()}${summaryCard(data)}${topBlock}${historyBlock(data)}${rewardBlock}`;
+    dynamic.innerHTML = `${seasonHeader(season, timing, mode)}${tabs()}${ratingFinaleInline(data)}${summaryCard(data)}${topBlock}${historyBlock(data)}${rewardBlock}`;
     refreshPublicStreakViews(true);
     refreshPlayerLevelMotion();
     maybeAutoShowRatingFinale();
@@ -12665,6 +12687,7 @@ function streakLaurel(){
       const data = await api(STATE_PATH, { initData: auth, mode: nextMode }, controller.signal);
       if (serial !== requestSerial[nextMode]) return data;
       const previousSignature = String(cache[nextMode]?._signature || "");
+      const wasStale = Boolean(cache[nextMode]?._uiStale);
       data._loadedAt = Date.now();
       data._uiStale = false;
       data._signature = renderSignature(data);
@@ -12674,7 +12697,7 @@ function streakLaurel(){
       notifyResetPlan(data);
       lastVisibleRefreshAt = Date.now();
       if (nextMode === mode) {
-        if (data._signature !== previousSignature || !dynamic?.querySelector("[data-leaderboard-season-timing]")) render();
+        if (wasStale || data._signature !== previousSignature || !dynamic?.querySelector("[data-leaderboard-season-timing]")) render();
         else updateLiveTiming();
       }
       refreshPublicStreakViews(true);
@@ -12820,6 +12843,8 @@ function streakLaurel(){
   ratingFinaleLayer?.addEventListener("click", event => {
     if (event.target === ratingFinaleLayer) { closeRatingFinale(); return; }
     const target = event.target instanceof Element ? event.target : null;
+    const claim = target?.closest?.("[data-leaderboard-claim]");
+    if (claim) { event.preventDefault(); requestClaim(claim); return; }
     const rewardTrigger = target?.closest?.("[data-rating-case-info-type]");
     if (rewardTrigger) {
       event.preventDefault();
@@ -13043,7 +13068,9 @@ function streakLaurel(){
         ratingNotifyHaptic("error");
         showToast(result.error || "Не удалось получить награду.", "warning", 4800);
       }
-      void refresh("season", true);
+      void refresh("season", true).then(() => {
+        if (ratingFinaleLayer && !ratingFinaleLayer.hidden) openRatingFinale(cache.season, { silent:true });
+      });
       return;
     }
 
