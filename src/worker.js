@@ -1,4 +1,5 @@
 import { handleZeffiWorldApi } from './zeffi-world-service.js';
+import { handleOwnerWorldControl } from './zeffi-world-control-admin.js';
 import {
   RUNTIME_SCHEMA_REQUIRED_TABLES,
   RUNTIME_SCHEMA_REQUIRED_INDEXES,
@@ -51337,6 +51338,12 @@ async function ownerPanelAlbumDelete(env,ctx){
 
 // CC write targets are server-authoritative. Unknown routes fail closed in Staging.
 const OWNER_CC_ENDPOINT_TARGET = Object.freeze({
+  "/api/owner/world/overview": "read",
+  "/api/owner/world/access": "read",
+  "/api/owner/world/monitor": "read",
+  "/api/owner/world/config/save": "live",
+  "/api/owner/world/tester/add": "live",
+  "/api/owner/world/tester/remove": "live",
   "/api/owner/staging/bootstrap": "staging",
   "/api/owner/staging/create": "staging",
   "/api/owner/staging/select": "staging",
@@ -51574,6 +51581,18 @@ async function handleOwnerPanelApi(request, env, path, executionCtx = null) {
   try {
     const ctx = { ...(await requireOwnerPanelContext(request, env)), executionCtx };
     await ownerPanelAssertWriteTarget(env,ctx,path);
+    // P0 World Operations: existing owner auth and STAGING guard above are mandatory.
+    if(path.startsWith('/api/owner/world/')){
+      try{
+        const result=await handleOwnerWorldControl({env,ctx,path});
+        if(result.audit)await logStaffAction(env,ctx.user,ctx.access,'owner_panel_world_'+result.audit.action,result.audit.target||null,'world_control',null,null,{reason:result.audit.reason,previous:result.audit.old||null,next:result.audit.next||null});
+        return jsonResponse(result);
+      }catch(error){
+        if(Number.isInteger(error?.status)&&error.status>=400&&error.status<=599)
+          throw new ApiError(error.status,String(error.message||'Изменение Мира Зеффи отклонено.'));
+        throw error;
+      }
+    }
     if (path === "/api/owner/staging/bootstrap") return jsonResponse(await ownerPanelStagingBootstrap(env, ctx));
     if (path === "/api/owner/staging/create") return jsonResponse(await ownerPanelStagingCreate(env, ctx));
     if (path === "/api/owner/staging/select") return jsonResponse(await ownerPanelStagingSelect(env, ctx));

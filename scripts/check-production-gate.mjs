@@ -116,6 +116,8 @@ const steps = [
   // Operation system includes the server-authoritative purchase/case/booster guards.
   ['operation system', 'node', ['scripts/check-operation-system.mjs']],
   ['Zeffi World wiring', 'node', ['scripts/check-world-api-wiring.mjs']],
+  ['Zeffi World Control Center P0 (owner auth / D1)', 'node', ['--no-warnings','--experimental-sqlite','--test','world/tests/world-control-p0.test.mjs']],
+  ['Zeffi World Control Center P0 wiring', 'node', ['scripts/check-world-control-p0.mjs']],
   ['Zeffi World closed release candidate', 'node', ['scripts/check-world-rc-gate.mjs']],
   ['Zeffi World RC catalogue and no-select UI', 'node', ['scripts/check-world-catalog-rc-ui.mjs']],
   ['Zeffi World guided tutorials (D1 + UI)', 'node', ['--no-warnings','--experimental-sqlite','--test','world/tests/world-tutorial-rc.test.mjs']],

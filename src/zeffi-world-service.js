@@ -9,6 +9,7 @@ import { CATALOG } from '../world/catalog.js';
 import {handleCommunityFund} from './zeffi-community-fund.js';
 import {handleZeffiStory} from './zeffi-story-progress.js';
 import {readWorldTutorial,writeWorldTutorial} from './zeffi-world-tutorial.js';
+import {worldAccessPolicy,recordWorldControlError,recordWorldControlRetry} from './zeffi-world-control.js';
 import {residentRequestState,residentMutationStatements,claimResidentRequest} from './zeffi-resident-requests.js';
 
 const ZERO = Object.freeze({points:0,treats:0,coffee:0});
@@ -43,10 +44,14 @@ async function residentEnvelope(db,env,telegramId,city){
  }
 }
 
-function assertTester(env,telegramId){
-  // Explicit allowlist, never trust URL flags or a Telegram username.
-  const ids=String(env?.WORLD_TESTER_IDS||'').split(',').map(x=>x.trim()).filter(Boolean);
-  if(!ids.includes(String(telegramId)))failure(403,'WORLD_NOT_AVAILABLE','Мир Зеффи пока доступен только по приглашению.');
+async function assertTester(env,telegramId){
+  // Signed Telegram identity has been checked by the caller. Dynamic cohort
+  // selection is server-only and keeps legacy env allowlisting fail-closed.
+  let access;
+  try {access=await worldAccessPolicy(env,telegramId);}
+  catch(error){failure(503,'WORLD_CONTROL_UNAVAILABLE','Настройки доступа к Миру Зеффи временно недоступны.');}
+  if(!access.allowed)failure(403,'WORLD_NOT_AVAILABLE','Мир Зеффи пока недоступен для этого аккаунта.');
+  return access.effectiveEnv;
 }
 function cityFromRow(row,wallet){
   let saved;
@@ -228,6 +233,20 @@ async function handleMutation(db,env,telegramId,body,readProfile,operationGate){
   });
 }
 
+async function observedWorldResponse(response,env,path){
+  // Story and community modules return Response on errors rather than throwing.
+  // Preserve those responses byte-for-byte; telemetry never changes their result.
+  if(response?.status===200&&path==='/api/world/community/contribute'){
+    try{const data=await response.clone().json();if(data?.repeated===true)await recordWorldControlRetry(env?.DB,{area:'fund'});}catch{}
+  }
+  if(response?.status===409||response?.status>=500){
+    let code='WORLD_RESPONSE_ERROR';
+    try{const body=await response.clone().json();if(typeof body?.code==='string')code=body.code;}catch{}
+    try{await recordWorldControlError(env?.DB,{path,status:response.status,code});}catch{}
+  }
+  return response;
+}
+
 // auth and economy methods are injected by the existing Worker; never create a
 // second Telegram verification or a parallel player-wallet implementation.
 export async function handleZeffiWorldApi(request,env,dependencies){
@@ -245,7 +264,7 @@ export async function handleZeffiWorldApi(request,env,dependencies){
     const auth=await dependencies.resolvePlayerAuth(request,body,env);
     const telegramId=String(auth?.telegramId||auth?.user?.id||'');
     if(!/^\d{4,20}$/.test(telegramId))failure(401,'WORLD_UNAUTHORIZED','Авторизация Telegram не подтверждена.');
-    assertTester(env,telegramId);
+    env=await assertTester(env,telegramId);
     // Story-world v1: read-only access gate. NO city, profile, wallet or project writes.
     if(new URL(request.url).pathname==='/api/world/story-access'){
       if(env?.WORLD_STORY_ENABLED!=null&&String(env.WORLD_STORY_ENABLED).toLowerCase()!=='true')failure(403,'STORY_DISABLED','Общий город временно недоступен.');
@@ -264,7 +283,7 @@ export async function handleZeffiWorldApi(request,env,dependencies){
     // Story chapters, visits, events and district unlocks are D1-authoritative.
     // The signed Telegram and closed RC allowlist gates run before this branch.
     if(new URL(request.url).pathname==='/api/world/story/progress'){
-      return handleZeffiStory({db:env.DB,env,telegramId,body});
+      return observedWorldResponse(await handleZeffiStory({db:env.DB,env,telegramId,body}),env,new URL(request.url).pathname);
     }
     // Zeffi shared fund v1: independent signed community endpoints.
     // Authentication + WORLD_TESTER_IDS have already been checked above.
@@ -272,7 +291,7 @@ export async function handleZeffiWorldApi(request,env,dependencies){
     if(isCommunityRequest){
       const profileReader=(id,actor)=>dependencies.ensureAuthoritativeProfileRow(env,id,actor);
       const opGate=(id,capabilities)=>dependencies.requirePlayerOperationAvailable(env,id,{capabilities,featureFlags:capabilities.includes('purchases')?['shop']:[]});
-      return handleCommunityFund({db:env.DB,env,telegramId,pathname:new URL(request.url).pathname,body,profileReader,operationGate:opGate});
+      return observedWorldResponse(await handleCommunityFund({db:env.DB,env,telegramId,pathname:new URL(request.url).pathname,body,profileReader,operationGate:opGate}),env,new URL(request.url).pathname);
     }
     if(!env.DB)failure(503,'WORLD_DB_UNAVAILABLE','Основная D1 сейчас недоступна.');
     await assertSchema(env.DB);
@@ -298,16 +317,23 @@ export async function handleZeffiWorldApi(request,env,dependencies){
       if(result.status!==200)return reply({ok:false,code:result.code,error:result.error},result.status);
       const [row,profile]=await Promise.all([ensureCity(env.DB,telegramId,Date.now()),profileReader(telegramId,'resident-claim:state')]);
       const city=cityFromRow(row,walletFromProfile(profile));
+      if(result.repeated)await recordWorldControlRetry(env.DB,{area:'residents'});
       return reply({ok:true,claimed:true,repeated:result.repeated,reward:result.reward,
         residentRequests:await residentEnvelope(env.DB,env,telegramId,city),
         wallet:walletFromProfile(profile)});
     }
     if(pathname==='/api/world/mutate'){
       const result=await handleMutation(env.DB,env,telegramId,body,profileReader,opGate);
+      if(result.repeated)await recordWorldControlRetry(env.DB,{area:'personal'});
       return reply(result);
     }
     failure(404,'WORLD_ROUTE_NOT_FOUND','Неизвестный маршрут «Мира Зеффи».');
   }catch(error){
+    const status=error instanceof WorldError?error.status:Number.isInteger(error?.status)&&error.status>=400&&error.status<=599?error.status:500;
+    const code=error instanceof WorldError?error.code:status===500?'WORLD_SERVER_ERROR':'WORLD_ACCESS_DENIED';
+    // Aggregate only 409/5xx diagnostics, never Telegram initData or request bodies.
+    // Failure to write telemetry must NEVER affect the original response.
+    try{await recordWorldControlError(env?.DB,{path:new URL(request.url).pathname,status,code});}catch{}
     if(error instanceof WorldError)return reply({ok:false,code:error.code,error:error.message},error.status);
     if(Number.isInteger(error?.status)&&error.status>=400&&error.status<=599)return reply({ok:false,code:'WORLD_ACCESS_DENIED',error:String(error.message||'Доступ запрещён.')},error.status);
     console.error('Zeffi World operation failed',error);

@@ -10,14 +10,32 @@ const app=read('world/story/app.js'),boot=read('world/story/boot.js'),gate=read(
 const sql=read('migrations/0115_zeffi_community_fund.sql');
 const migration=JSON.parse(read('scripts/migration-history.lock.json'));
 ok('new additive 0115 migration is locked',migration.files['0115_zeffi_community_fund.sql']===createHash('sha256').update(sql).digest('hex'));
-ok('same existing world Worker route is reused',service.includes("import {handleCommunityFund} from './zeffi-community-fund.js'")&&service.includes('return handleCommunityFund('));
-ok('community API cannot bypass signed auth and tester allowlist',service.indexOf('assertTester(env,telegramId);')>0&&service.indexOf('assertTester(env,telegramId);')<service.indexOf('if(isCommunityRequest){'));
+// World P0 fund route guard v2: assert original fund handler and signed access.
+const fundRoute=service.indexOf('if(isCommunityRequest){');
+const fundEnd=service.indexOf('if(!env.DB)',fundRoute);
+const fundBranch=fundRoute>=0&&fundEnd>fundRoute?service.slice(fundRoute,fundEnd):'';
+const directFund=/return\s+handleCommunityFund\(\{/.test(fundBranch);
+const monitoredFund=/return\s+observedWorldResponse\(await handleCommunityFund\(\{/.test(fundBranch)&&
+  /\}\),env,new URL\(request\.url\)\.pathname\);/.test(fundBranch)&&
+  service.includes('async function observedWorldResponse(')&&
+  service.includes('return response;');
+const signedAuth=service.indexOf('resolvePlayerAuth(request,body,env)');
+const telegramValidation=service.indexOf("if(!/^\\d{4,20}$/.test(telegramId))failure(401,'WORLD_UNAUTHORIZED'");
+const oldAccess=service.indexOf('assertTester(env,telegramId);');
+const newAccess=service.indexOf('env=await assertTester(env,telegramId);');
+const accessCheck=newAccess>=0?newAccess:oldAccess;
+const worldOff=service.indexOf("if(!worldEnabled(env))failure(403,'WORLD_DISABLED'");
+ok('same existing world Worker route is reused',
+  service.includes("import {handleCommunityFund} from './zeffi-community-fund.js'")&&
+  fundRoute>=0&&fundEnd>fundRoute&&(directFund||monitoredFund));
+ok('community API cannot bypass signed auth and release access policy',
+  worldOff>=0&&worldOff<signedAuth&&signedAuth>0&&
+  telegramValidation>signedAuth&&accessCheck>telegramValidation&&
+  accessCheck<fundRoute&&fundRoute<fundEnd);
 // WORLD_ENABLED is a global fail-closed guard before personal and community routes.
 // Test its order and exact disabled response; do not depend on the retired conditional.
 ok('personal city and community fund both require WORLD_ENABLED',
-  service.includes("if(!worldEnabled(env))failure(403,'WORLD_DISABLED'") &&
-  service.indexOf("if(!worldEnabled(env))failure(403,'WORLD_DISABLED'") < service.indexOf("assertTester(env,telegramId);") &&
-  service.indexOf("assertTester(env,telegramId);") < service.indexOf("if(isCommunityRequest){"));
+  worldOff>=0&&worldOff<signedAuth&&accessCheck>signedAuth&&accessCheck<fundRoute);
 ok('separate global funding and contributions release flags',fund.includes('WORLD_COMMUNITY_FUND_ENABLED')&&fund.includes('WORLD_COMMUNITY_CONTRIBUTIONS_ENABLED')&&fund.includes('WORLD_PURCHASES_ENABLED'));
 ok('community API checks the original player op gate',fund.includes("operationGate(telegramId,['purchases'])")&&fund.includes('operationGate(telegramId,[])'));
 ok('user identity comes from Worker, not client-supplied telegramId',service.includes('telegramId=String(auth?.telegramId')&&!/body\.telegramId|body\.userId/.test(fund));

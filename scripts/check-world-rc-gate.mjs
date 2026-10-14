@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // Closed Release Candidate contract for the production-hosted World.
-// No D1, Telegram network, currency writes or production data are used here.
+// Only read-only control configuration lookup; no currency, player state writes or production data.
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {handleZeffiWorldApi} from '../src/zeffi-world-service.js';
@@ -29,7 +29,7 @@ const deps = (signedId='12345') => ({
 async function result(path,env,signedId='12345',initData='signed-fixture') {
  const response=await handleZeffiWorldApi(request(path,initData), {
   ...env,
-  get DB(){throw new Error('World RC access gate must not touch D1');}
+  DB:{prepare(sql){if(sql==='SELECT * FROM zeffi_world_control WHERE id=1')return {first:async()=>{throw Error('no such table: zeffi_world_control');}};throw Error('World RC access gate must not write to D1');}}
  }, deps(signedId));
  const json=await response.json();
  assert.match(response.headers.get('cache-control'),/no-store/);

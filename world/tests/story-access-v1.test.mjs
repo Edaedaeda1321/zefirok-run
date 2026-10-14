@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {handleZeffiWorldApi} from '../../src/zeffi-world-service.js';
-const env=()=>({WORLD_ENABLED:'true',WORLD_TESTER_IDS:' 12345, 34567 ',get DB(){throw Error('Story access MUST NOT touch D1');}});
+const env=()=>({WORLD_ENABLED:'true',WORLD_TESTER_IDS:' 12345, 34567 ',DB:{prepare(sql){if(sql==='SELECT * FROM zeffi_world_control WHERE id=1')return {first:async()=>{throw Error('no such table: zeffi_world_control');}};throw Error('Story access MUST NOT write to D1');}}});
 function deps(id='12345') {return {resolvePlayerAuth:async(_request,body)=>{if(body?.initData!=='signed-test-fixture')return null;return {telegramId:id};},ensureAuthoritativeProfileRow(){throw Error('No profile creation');},requirePlayerOperationAvailable(){throw Error('No wallet operation');}};}
 const req=(body={initData:'signed-test-fixture'},method='POST')=>new Request('https://example.test/api/world/story-access',{method,...(method==='POST'?{headers:{'Content-Type':'application/json'},body:typeof body==='string'?body:JSON.stringify(body)}:{})});
 test('story access: signed allowlisted tester gets a server-story gate without wallet access',async()=>{const r=await handleZeffiWorldApi(req(),env(),deps());assert.equal(r.status,200);assert.deepEqual(await r.json(),{ok:true,access:'tester',version:'story-rc2',mode:'server-story',globalSync:true,walletWrites:false});assert.match(r.headers.get('cache-control'),/no-store/);assert.equal(r.headers.get('x-content-type-options'),'nosniff');});
