@@ -12,7 +12,12 @@ const migration=JSON.parse(read('scripts/migration-history.lock.json'));
 ok('new additive 0115 migration is locked',migration.files['0115_zeffi_community_fund.sql']===createHash('sha256').update(sql).digest('hex'));
 ok('same existing world Worker route is reused',service.includes("import {handleCommunityFund} from './zeffi-community-fund.js'")&&service.includes('return handleCommunityFund('));
 ok('community API cannot bypass signed auth and tester allowlist',service.indexOf('assertTester(env,telegramId);')>0&&service.indexOf('assertTester(env,telegramId);')<service.indexOf('if(isCommunityRequest){'));
-ok('personal city remains blocked under its old flag',service.includes("if(!worldEnabled(env))failure(403,'WORLD_DISABLED'"));
+// WORLD_ENABLED is a global fail-closed guard before personal and community routes.
+// Test its order and exact disabled response; do not depend on the retired conditional.
+ok('personal city and community fund both require WORLD_ENABLED',
+  service.includes("if(!worldEnabled(env))failure(403,'WORLD_DISABLED'") &&
+  service.indexOf("if(!worldEnabled(env))failure(403,'WORLD_DISABLED'") < service.indexOf("assertTester(env,telegramId);") &&
+  service.indexOf("assertTester(env,telegramId);") < service.indexOf("if(isCommunityRequest){"));
 ok('separate global funding and contributions release flags',fund.includes('WORLD_COMMUNITY_FUND_ENABLED')&&fund.includes('WORLD_COMMUNITY_CONTRIBUTIONS_ENABLED')&&fund.includes('WORLD_PURCHASES_ENABLED'));
 ok('community API checks the original player op gate',fund.includes("operationGate(telegramId,['purchases'])")&&fund.includes('operationGate(telegramId,[])'));
 ok('user identity comes from Worker, not client-supplied telegramId',service.includes('telegramId=String(auth?.telegramId')&&!/body\.telegramId|body\.userId/.test(fund));
