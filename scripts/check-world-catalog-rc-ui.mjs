@@ -11,7 +11,7 @@ const ui=read('world/premium-ui.css');
 const story=read('world/story/style.css');
 
 assert.equal(CATALOG['white-rabbit-zephirok'].minCityLevel,10,'Белый Кролик должен открываться с 10 уровня');
-assert.equal(CATALOG_ITEMS.length,49);
+assert.equal(CATALOG_ITEMS.length,50);
 assert.ok(CATALOG_ITEMS.every(def=>Number.isSafeInteger(def.minCityLevel)&&def.minCityLevel>=1));
 assert.match(app,/levelBadge\.textContent=`С ур\. \$\{shopRequiredLevel\(def\)\}`/,'каждая карточка показывает серверный уровень');
 assert.match(app,/fig\.append\(levelBadge\)/,'плашка должна находиться на изображении, не под ценой');
@@ -25,9 +25,9 @@ for(const [kind,html] of [['hosted',world],['offline',sandbox]]){
 }
 assert.doesNotMatch(app,/querySelector\('\.panel-footer/, 'старая запись в удалённый footer не должна вызывать ошибку');
 assert.match(world,/premium-ui\.css\?v=rc-construction-premium1/,'production CSS must refresh');
-assert.match(world,/app\.js\?v=rc-levels10/,'production catalog JS must refresh');
+assert.match(world,/app\.js\?v=cc-p1-1/,'production catalog JS must refresh');
 for(const css of [ui,story]){
  assert.match(css,/-webkit-user-select:none;user-select:none;/,'игровой текст нельзя выделять на iOS');
  assert.match(css,/input,textarea,\[contenteditable="true"\]\{-webkit-user-select:text;/,'поля ввода остаются пригодны для редактирования');
 }
-console.log('PASS: 49 строительных карточек, Белый Кролик ур. 10, видимые уровни, убран footer, закрытый RC и iOS no-select');
+console.log('PASS: 50 строительных карточек, Белый Кролик ур. 10, видимые уровни, убран footer, закрытый RC и iOS no-select');

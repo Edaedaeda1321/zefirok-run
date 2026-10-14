@@ -66,6 +66,7 @@ export function worldSpriteGroundFit(meta,def,rotation=0){
 // Never alter the logical grid, stored coordinates or construction timers.
 export function worldSpriteVisualDock(meta,def,rotation=0){
  const fitted=worldSpriteGroundFit(meta,def,rotation);
+ if(def?.id==='zeffi-central-square')return fitted; // Same calibrated 7x7 anchor for every stage.
  if(!fitted)return null;
  // Landscape ground tiles and paving remain flush; never sink the terrain.
  if((def.layer==='surface'&&!def.blockingSurface)||def.category==='landscape'||def.category==='paths')return fitted;
@@ -121,6 +122,7 @@ export function worldGroundContactLayout(item,def,meta=null,placement=null){
  return {x:center.x,y:center.y+Math.min(4,radiusY*.2),radiusX,radiusY};
 }
 function drawWorldGroundContact(ctx,item,def){
+ if(def.id==='zeffi-central-square')return; // Flush-to-ground plaza, no floating 7x7 shadow.
  // Flat paving *is* the ground: never draw a floating shadow below it.
  if(def.layer==='surface'&&!def.blockingSurface)return;
  const spriteId=catalogSpriteId(def.id,item.rotation||0,'complete');

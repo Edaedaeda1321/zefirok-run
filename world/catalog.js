@@ -66,6 +66,8 @@ const VISIBLE_ITEMS = [
   { id: 'botanical-garden', category: 'parks', titleKey: 'botanicalGarden', descriptionKey: 'botanicalGardenDescription', icon: 'flower', w: 4, h: 4, needsRoad: false, style: 'park', height: 0, buildMs: 300000 },
   { id: 'sports-playground', category: 'plazas', titleKey: 'sportsPlayground', descriptionKey: 'sportsPlaygroundDescription', icon: 'sun', w: 3, h: 2, needsRoad: false, style: 'mint', height: 0, buildMs: 180000 },
   { id: 'city-square', category: 'plazas', titleKey: 'newCitySquare', descriptionKey: 'newCitySquareDescription', icon: 'star', w: 3, h: 3, needsRoad: false, style: 'gold', height: 0, buildMs: 180000 },
+  // RC7: new 7x7 single-angle landmark. Legacy 3x3 city-square saves are untouched.
+  { id: 'zeffi-central-square', category: 'plazas', titleKey: 'zeffiCentralSquare', descriptionKey: 'zeffiCentralSquareDescription', icon: 'star', w: 7, h: 7, needsRoad: false, style: 'gold', height: 0, buildMs: 720000, rotatable: false },
   { id: 'cottage', buildMs: 300000, category: 'homes', titleKey: 'cottage', descriptionKey: 'cottageDescription', icon: 'house', w: 2, h: 2, needsRoad: true, style: 'rose', height: 52 },
   { id: 'family-home', buildMs: 300000, category: 'homes', titleKey: 'familyHome', descriptionKey: 'familyHomeDescription', icon: 'house', w: 3, h: 2, needsRoad: true, style: 'butter', height: 61 },
   { id: 'villa', buildMs: 300000, category: 'homes', titleKey: 'villa', descriptionKey: 'villaDescription', icon: 'house', w: 3, h: 3, needsRoad: true, style: 'lilac', height: 72 },
@@ -148,6 +150,7 @@ export const SHOP_UNLOCK_LEVELS = Object.freeze({
   'extra-sweet_object': 5,
   // Level 6
   'city-square': 6,
+  'zeffi-central-square': 8,
   'extra-fountain': 6,
   // Level 7
   'bus-terminal': 7,

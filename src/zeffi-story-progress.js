@@ -1,3 +1,4 @@
+import {publishedWorldContent} from './zeffi-world-content.js';
 // Closed Zeffi World RC: D1-backed story progress. No rewards, profile or wallet writes.
 // The enclosing Worker authenticates Telegram initData and enforces WORLD_TESTER_IDS.
 const HEADERS=Object.freeze({'Content-Type':'application/json; charset=utf-8','Cache-Control':'private, no-store','X-Content-Type-Options':'nosniff'});
@@ -19,11 +20,12 @@ const secs=()=>Math.floor(Date.now()/1000);
 async function load(db,id){
  if(!db)fail(503,'STORY_DB_UNAVAILABLE','Общий город не может подключиться к D1.');
  try{
-  const [player,visits,events,funds]=await Promise.all([
+  const [player,visits,events,funds,publication]=await Promise.all([
    db.prepare('SELECT chapter,revision,unlocked_mask FROM zeffi_story_players WHERE telegram_id=?').bind(id).first(),
    db.prepare('SELECT place_id FROM zeffi_story_visits WHERE telegram_id=? ORDER BY visited_at,place_id').bind(id).all(),
    db.prepare('SELECT event_id,project_id,enabled FROM zeffi_story_events ORDER BY event_id').all(),
-   db.prepare('SELECT project_id,goal_points,total_points,stage FROM zeffi_community_projects ORDER BY project_id').all()
+   db.prepare('SELECT project_id,goal_points,total_points,stage FROM zeffi_community_projects ORDER BY project_id').all(),
+   publishedWorldContent(db)
   ]);
   const chapter=player==null?0:Number(player.chapter),revision=player==null?0:Number(player.revision),mask=player==null?0:Number(player.unlocked_mask);
   if(!Number.isInteger(chapter)||chapter<0||chapter>3||!natural(revision)||mask!==(chapter>=1?1:0)+(chapter>=2?2:0))throw new Error('invalid chapter/district state');
@@ -39,15 +41,16 @@ async function load(db,id){
    if(!natural(total)||!natural(goal)||goal===0||total>goal||![0,1].includes(Number(row.enabled)))throw new Error('bad event totals');
    outputEvents[def.id]={id:def.id,title:def.title,enabled,total,goal,finished:total===goal,status:!enabled?'paused':total===goal?'completed':'active',visited:visited.has(def.id==='garden'?'community-garden':'festival')};
   }
+  const content=publication.content;
   const current=CHAPTERS[chapter]||null;
   const goals=current?.visits.map(place=>({id:place,title:PLACE_TITLES[place],done:visited.has(place)}))||[];
   const event=current?.event?outputEvents[current.event]:null;
   const canAdvance=!!current&&goals.every(g=>g.done)&&(!event||(event.enabled&&event.finished));
   return {ok:true,version:'zeffi-story-rc1',chapter,revision,completed:chapter===3,
-   currentChapter:current?{id:current.id,title:current.title,description:current.description,goals,eventId:current.event,nextUnlock:current.unlock}:null,
-   chapters:CHAPTERS.map((c,index)=>({id:c.id,title:c.title,index,done:chapter>index,active:chapter===index})),
+   currentChapter:current?{id:current.id,title:content.chapters[current.id].title,description:content.chapters[current.id].description,goals,eventId:current.event,nextUnlock:current.unlock}:null,
+   chapters:CHAPTERS.map((c,index)=>({id:c.id,title:content.chapters[c.id].title,index,done:chapter>index,active:chapter===index})),
    unlockedDistricts:Object.entries(AREAS).filter(([,need])=>need===0||(need===1&&(mask&1)!==0)||(need===2&&(mask&2)!==0)).map(([place])=>place),
-   visited:[...visited],events:outputEvents,canAdvance};
+   visited:[...visited],events:outputEvents,canAdvance,contentRevision:publication.revision};
  }catch(error){
   if(error instanceof StoryError)throw error;
   console.error('Zeffi story read failed',error);

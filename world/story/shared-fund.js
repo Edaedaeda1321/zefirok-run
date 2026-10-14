@@ -13,6 +13,7 @@ function normalized(payload){
      !Array.isArray(p.milestones)||p.milestones.some(n=>!safe(n)||n>p.goal))
    throw new Error('Сервер вернул некорректное состояние фонда.');
   projects[id]={id,title:String(p.title||''),total:p.total,goal:p.goal,revision:p.revision,stage:p.stage,
+   contributionsEnabled:payload.content?.projects?.[id]?.enabled!==false,announcement:String(payload.content?.projects?.[id]?.announcement||''),
    next:p.next,finished:p.total===p.goal,milestones:[...p.milestones]};
  }
  const points=payload.viewer?.walletPoints;
@@ -24,7 +25,8 @@ function normalized(payload){
   contributedPoints[id]=n;
  }
  return {projects,walletPoints:points,contributedPoints,writesEnabled:payload.walletWrites===true,readAt:Date.now(),
-  receipt:payload.receipt?{...payload.receipt}:null,repeated:payload.repeated===true};
+  receipt:payload.receipt?{...payload.receipt}:null,repeated:payload.repeated===true,
+  content:payload.content&&typeof payload.content==='object'?payload.content:null};
 }
 export function createSharedFundClient(initData,{fetchFn=fetch}={}){
  if(typeof initData!=='string'||!initData)throw new Error('Подписанная Telegram-сессия не получена.');
@@ -43,7 +45,7 @@ export function createSharedFundClient(initData,{fetchFn=fetch}={}){
  return Object.freeze({load:()=>request('state'),contribute:payload=>request('contribute',payload)});
 }
 export const sharedFundQuote=(project,requested)=>{
- if(!project||project.finished||!safe(project.total)||!safe(project.next)||!safe(project.revision)||
+ if(!project||project.finished||project.contributionsEnabled===false||!safe(project.total)||!safe(project.next)||!safe(project.revision)||
     !safe(requested)||requested<1||requested>2_000_000)return null;
  const accepted=Math.min(requested,project.next-project.total);
  return accepted>0?{projectId:project.id,amountPoints:requested,expectedDebitPoints:accepted,expectedRevision:project.revision}:null;

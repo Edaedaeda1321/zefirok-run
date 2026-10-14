@@ -1,4 +1,5 @@
 // Server-authoritative, all-player shared fundraising in the existing D1.
+import {publishedWorldContent} from './zeffi-world-content.js';
 // This module never trusts a client balance, total, stage, project goal or Telegram ID.
 // The existing Worker resolves signed Telegram auth and injects its canonical
 // profile reader/operation gates. Absolutely no runtime DDL.
@@ -53,7 +54,7 @@ async function readSharedState(db,telegramId,profileReader,writesEnabled){
   projects,viewer:{contributedPoints:own,walletPoints:wallet},readAt:Date.now()};
 }
 
-async function contribute(db,telegramId,body,profileReader,operationGate){
+async function contribute(db,telegramId,body,profileReader,operationGate,publication){
  const projectId=body?.projectId,requested=body?.amountPoints,requestId=body?.requestId;
  if(!Object.hasOwn(COMMUNITY_PROJECTS,String(projectId||'')))fail(400,'COMMUNITY_PROJECT_INVALID','Неизвестный общегородской проект.');
  if(!requestIdOk(requestId))fail(400,'COMMUNITY_REQUEST_ID','Для взноса нужен уникальный requestId.');
@@ -67,6 +68,7 @@ async function contribute(db,telegramId,body,profileReader,operationGate){
    fail(409,'COMMUNITY_REQUEST_REUSED','requestId уже использовался для другого взноса.');
   return {...await readSharedState(db,telegramId,profileReader,true),repeated:true,receipt:{requestId,projectId,debitedPoints:Number(previous.amount_points),projectRevision:Number(previous.project_revision),repeated:true}};
  }
+ if(!publication.content.projects[projectId].enabled)fail(403,'COMMUNITY_PROJECT_PAUSED','Взносы в этот проект временно приостановлены.');
  await operationGate(telegramId,['purchases']);
  const def=COMMUNITY_PROJECTS[projectId];
  const projects=await getProjects(db),project=projects[projectId];
@@ -84,8 +86,11 @@ async function contribute(db,telegramId,body,profileReader,operationGate){
  const statements=[
   db.prepare(`UPDATE zeffi_community_projects
     SET total_points=total_points+?,stage=?,revision=revision+1,last_request_id=?,updated_at=?
-    WHERE project_id=? AND revision=? AND total_points=? AND total_points+?<=goal_points`)
-   .bind(amount,stage,requestId,seconds,projectId,project.revision,project.total,amount),
+    WHERE project_id=? AND revision=? AND total_points=? AND total_points+?<=goal_points
+    ${publication.schemaReady?`AND EXISTS (SELECT 1 FROM zeffi_world_content_config WHERE id=1
+      AND published_revision=? AND (published_json IS NULL OR json_extract(published_json,?)=1))`:''}`)
+   .bind(amount,stage,requestId,seconds,projectId,project.revision,project.total,amount,
+    ...(publication.schemaReady?[publication.revision,`$.projects.${projectId}.enabled`]:[])),
   db.prepare(`UPDATE admin_profile_state
     SET wallet=wallet-?,revision=revision+1,updated_at=?,updated_by=?
     WHERE telegram_id=? AND revision=? AND wallet>=?`)
@@ -114,13 +119,15 @@ export async function handleCommunityFund({db,env,telegramId,pathname,body,profi
   const route=pathname==='/api/world/community/state'?'state':pathname==='/api/world/community/contribute'?'contribute':null;
   if(!route)fail(404,'COMMUNITY_ROUTE_NOT_FOUND','Неизвестная операция фонда.');
   if(!db)fail(503,'COMMUNITY_DB_UNAVAILABLE','Общая D1 временно недоступна.');
+  const publication=await publishedWorldContent(db);
+  const editorial={revision:publication.revision,projects:publication.content.projects,events:publication.content.events};
   const writesEnabled=enabled(env?.WORLD_COMMUNITY_CONTRIBUTIONS_ENABLED)&&enabled(env?.WORLD_PURCHASES_ENABLED);
   if(route==='state'){
    await operationGate(telegramId,[]);
-   return reply(await readSharedState(db,telegramId,profileReader,writesEnabled));
+   return reply({...await readSharedState(db,telegramId,profileReader,writesEnabled),content:editorial});
   }
   if(!writesEnabled)fail(403,'COMMUNITY_CONTRIBUTIONS_DISABLED','Настоящие вклады пока закрыты. Баланс не изменён.');
-  return reply(await contribute(db,telegramId,body,profileReader,operationGate));
+  return reply({...await contribute(db,telegramId,body,profileReader,operationGate,publication),content:editorial});
  }catch(error){
   if(error instanceof FundError)return reply({ok:false,code:error.code,error:error.message},error.status);
   if(Number.isInteger(error?.status)&&error.status>=400&&error.status<=599)

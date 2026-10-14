@@ -484,6 +484,8 @@ button.cc29-routed-save{display:inline-flex;align-items:center;justify-content:c
 }
 </style>
 <link rel="stylesheet" href="./assets/zeffi-world-cc-p0.css?v=world-p0-1" />
+<link rel="stylesheet" href="./assets/zeffi-world-cc-p1.css?v=world-p1-1" />
+<link rel="stylesheet" href="./assets/zeffi-world-cc-p2.css?v=world-p2-1" />
 </head>
 <body>
 <div class="app" id="app">
@@ -886,6 +888,87 @@ button.cc29-routed-save{display:inline-flex;align-items:center;justify-content:c
     <div class="actions"><button class="btn" id="wp0AddTester" type="button">+ Добавить тестера</button></div>
     <div class="wp0-list" id="wp0TesterList" style="margin-top:12px"></div>
   </div>
+</div></section>
+<section class="view" id="view-world-catalog"><div class="stack">
+ <div class="wp0-hero"><div><span class="cc2-eyebrow">WORLD OPERATIONS · P1</span><h2>🛍 Каталог строительства</h2><p>Цены и уровни открытия объектов в общем серверном конфиге. Старые покупки и размеры построек неизменны.</p></div><button type="button" class="btn secondary" data-wp1-reload>Обновить</button></div>
+ <div class="wp1-status" id="wp1CatalogStatus">Загрузка D1-конфигурации…</div>
+ <div class="card"><div class="section-head"><div><h3>Редактор каталога</h3><p>Только существующие объекты. Цены в очках и зефире; покупка за кофе не вводится.</p></div></div>
+  <div class="field"><label for="wp1Search">Поиск объекта</label><input id="wp1Search" placeholder="Дом, парк, кафе, площадь…" autocomplete="off" /></div>
+  <div class="wp1-table-wrap"><table class="wp1-table"><thead><tr><th>Постройка</th><th>Очки</th><th>Зефир</th><th>Открывается</th></tr></thead><tbody id="wp1CatalogRows"></tbody></table></div>
+  <p class="wp1-help">Размеры клеток, ассеты, стадии стройки, категории, стоимость дорог и земельных участков остаются за кодом. При открытом меню игрок увидит только опубликованную версию.</p>
+ </div>
+ <div class="card"><div class="section-head"><div><h3>Черновик и публикация</h3><p>Сначала сохрани и проверь черновик, затем отдельно подтверди выпуск в Production.</p></div></div>
+  <div class="field"><label for="wp1ReasonCatalog">Причина изменения · 10–280 символов</label><textarea id="wp1ReasonCatalog" rows="2" maxlength="280" placeholder="Например: снижаем цену ранних построек после тестов"></textarea></div>
+  <div class="actions wp1-actions"><button type="button" class="btn secondary" data-wp1-save>Сохранить черновик</button><button type="button" class="btn gold" data-wp1-publish>Опубликовать баланс</button><button type="button" class="btn secondary" data-wp1-restore>Отменить черновик</button></div>
+  <p class="wp1-help">Staging Mode не допускает прямую запись в Production. Публикация проверяет достижимость всех 10 уровней и историю полученных наград.</p>
+ </div>
+ <div class="card"><div class="section-head"><div><h3>Последние версии и действия</h3></div></div><div class="wp1-history" id="wp1HistoryCatalog"></div></div>
+</div></section>
+<section class="view" id="view-world-levels"><div class="stack">
+ <div class="wp0-hero"><div><span class="cc2-eyebrow">WORLD OPERATIONS · P1</span><h2>🏙 Уровни города 1–10</h2><p>Требования к жителям, уюту, паркам и заведениям. Разовые награды — исключительно из серверного кошелька.</p></div><button type="button" class="btn secondary" data-wp1-reload>Обновить</button></div>
+ <div class="wp1-status" id="wp1LevelsStatus">Загрузка D1-конфигурации…</div>
+ <div class="card"><div class="section-head"><div><h3>Прогрессия и награды</h3><p>Уровень 1 — начальный. Все последующие уровни должны расти последовательно.</p></div></div>
+  <div class="wp1-table-wrap"><table class="wp1-table wp1-level-table"><thead><tr><th>Ур.</th><th>Жители</th><th>Уют</th><th>Парки</th><th>Заведения</th><th>Очки</th><th>Зефир</th><th>Кофе</th></tr></thead><tbody id="wp1LevelRows"></tbody></table></div>
+  <p class="wp1-help">Уже достигнутый максимальный уровень сохраняется. Полученные подарки повторно не начисляются. Если награду уже получил хотя бы один игрок, редактирование её суммы при публикации блокируется.</p>
+ </div>
+ <div class="card"><div class="section-head"><div><h3>Сохранение и публикация</h3><p>Изменения уровней и каталога входят в один атомарно публикуемый набор.</p></div></div>
+  <div class="field"><label for="wp1ReasonLevels">Причина изменения · 10–280 символов</label><textarea id="wp1ReasonLevels" rows="2" maxlength="280" placeholder="Например: корректируем требования к уюту уровня 7"></textarea></div>
+  <div class="actions wp1-actions"><button type="button" class="btn secondary" data-wp1-save>Сохранить черновик</button><button type="button" class="btn gold" data-wp1-publish>Опубликовать баланс</button><button type="button" class="btn secondary" data-wp1-restore>Отменить черновик</button></div>
+ </div>
+ <div class="card"><div class="section-head"><div><h3>История публикаций</h3></div></div><div class="wp1-history" id="wp1HistoryLevels"></div></div>
+</div></section>
+
+<section class="view" id="view-world-projects"><div class="stack">
+  <div class="wp0-hero"><div><span class="cc2-eyebrow">WORLD OPERATIONS · P2</span><h2>🏗 Общие проекты</h2><p>Контроль взносов по проектам и объявления. Реальные суммы и контрольные этапы неизменяемы.</p></div><button type="button" class="btn secondary" data-wp2-reload>Обновить</button></div>
+  <div id="wp2Status-projects" class="wp2-status">Загрузка опубликованной конфигурации...</div>
+  <div class="card"><div class="section-head"><div><h3>Общие проекты</h3><p>Изменения доступны только владельцу и требуют отдельной публикации.</p></div></div>
+    <div id="wp2Editor-projects" class="wp2-editor"></div>
+  </div>
+  <div class="card"><div class="section-head"><div><h3>Черновик и публикация</h3><p>Публикация проходит серверную валидацию и записывается в аудит.</p></div></div>
+    <div class="field"><label>Причина изменения · обязательно</label><textarea rows="2" maxlength="280" id="wp2Reason-projects" placeholder="Что меняем и почему? (10–280 символов)"></textarea></div>
+    <div class="actions wp2-actions"><button type="button" class="btn secondary" data-wp2-save>Сохранить черновик</button><button type="button" class="btn gold" data-wp2-publish>Опубликовать события</button><button type="button" class="btn secondary" data-wp2-restore>Сбросить черновик</button></div>
+    <p class="wp1-help">Staging не пишет в Production. Суммы общественных сборов, личные балансы, уже полученные награды и сюжетные открытия не изменяются.</p>
+  </div>
+  <div class="card"><div class="section-head"><div><h3>Последние действия P2</h3></div></div><div class="wp1-history" id="wp2History-projects"></div></div>
+</div></section>
+<section class="view" id="view-world-events"><div class="stack">
+  <div class="wp0-hero"><div><span class="cc2-eyebrow">WORLD OPERATIONS · P2</span><h2>🎊 События RC-5</h2><p>Редактирование заголовков, описаний и отображения событий. Порог достижения и награды не меняются.</p></div><button type="button" class="btn secondary" data-wp2-reload>Обновить</button></div>
+  <div id="wp2Status-events" class="wp2-status">Загрузка опубликованной конфигурации...</div>
+  <div class="card"><div class="section-head"><div><h3>События RC-5</h3><p>Изменения доступны только владельцу и требуют отдельной публикации.</p></div></div>
+    <div id="wp2Editor-events" class="wp2-editor"></div>
+  </div>
+  <div class="card"><div class="section-head"><div><h3>Черновик и публикация</h3><p>Публикация проходит серверную валидацию и записывается в аудит.</p></div></div>
+    <div class="field"><label>Причина изменения · обязательно</label><textarea rows="2" maxlength="280" id="wp2Reason-events" placeholder="Что меняем и почему? (10–280 символов)"></textarea></div>
+    <div class="actions wp2-actions"><button type="button" class="btn secondary" data-wp2-save>Сохранить черновик</button><button type="button" class="btn gold" data-wp2-publish>Опубликовать события</button><button type="button" class="btn secondary" data-wp2-restore>Сбросить черновик</button></div>
+    <p class="wp1-help">Staging не пишет в Production. Суммы общественных сборов, личные балансы, уже полученные награды и сюжетные открытия не изменяются.</p>
+  </div>
+  <div class="card"><div class="section-head"><div><h3>Последние действия P2</h3></div></div><div class="wp1-history" id="wp2History-events"></div></div>
+</div></section>
+<section class="view" id="view-world-story"><div class="stack">
+  <div class="wp0-hero"><div><span class="cc2-eyebrow">WORLD OPERATIONS · P2</span><h2>📖 Сюжет и главы</h2><p>Редактирование текстов трёх глав. Сами задания, доступ к районам и история игроков защищены.</p></div><button type="button" class="btn secondary" data-wp2-reload>Обновить</button></div>
+  <div id="wp2Status-story" class="wp2-status">Загрузка опубликованной конфигурации...</div>
+  <div class="card"><div class="section-head"><div><h3>Сюжет и главы</h3><p>Изменения доступны только владельцу и требуют отдельной публикации.</p></div></div>
+    <div id="wp2Editor-story" class="wp2-editor"></div>
+  </div>
+  <div class="card"><div class="section-head"><div><h3>Черновик и публикация</h3><p>Публикация проходит серверную валидацию и записывается в аудит.</p></div></div>
+    <div class="field"><label>Причина изменения · обязательно</label><textarea rows="2" maxlength="280" id="wp2Reason-story" placeholder="Что меняем и почему? (10–280 символов)"></textarea></div>
+    <div class="actions wp2-actions"><button type="button" class="btn secondary" data-wp2-save>Сохранить черновик</button><button type="button" class="btn gold" data-wp2-publish>Опубликовать события</button><button type="button" class="btn secondary" data-wp2-restore>Сбросить черновик</button></div>
+    <p class="wp1-help">Staging не пишет в Production. Суммы общественных сборов, личные балансы, уже полученные награды и сюжетные открытия не изменяются.</p>
+  </div>
+  <div class="card"><div class="section-head"><div><h3>Последние действия P2</h3></div></div><div class="wp1-history" id="wp2History-story"></div></div>
+</div></section>
+<section class="view" id="view-world-residents"><div class="stack">
+  <div class="wp0-hero"><div><span class="cc2-eyebrow">WORLD OPERATIONS · P2</span><h2>💬 Просьбы жителей</h2><p>Редактирование текстов и будущих наград. Уже назначенные просьбы сохраняют прежнюю сумму.</p></div><button type="button" class="btn secondary" data-wp2-reload>Обновить</button></div>
+  <div id="wp2Status-residents" class="wp2-status">Загрузка опубликованной конфигурации...</div>
+  <div class="card"><div class="section-head"><div><h3>Просьбы жителей</h3><p>Изменения доступны только владельцу и требуют отдельной публикации.</p></div></div>
+    <div id="wp2Editor-residents" class="wp2-editor"></div>
+  </div>
+  <div class="card"><div class="section-head"><div><h3>Черновик и публикация</h3><p>Публикация проходит серверную валидацию и записывается в аудит.</p></div></div>
+    <div class="field"><label>Причина изменения · обязательно</label><textarea rows="2" maxlength="280" id="wp2Reason-residents" placeholder="Что меняем и почему? (10–280 символов)"></textarea></div>
+    <div class="actions wp2-actions"><button type="button" class="btn secondary" data-wp2-save>Сохранить черновик</button><button type="button" class="btn gold" data-wp2-publish>Опубликовать события</button><button type="button" class="btn secondary" data-wp2-restore>Сбросить черновик</button></div>
+    <p class="wp1-help">Staging не пишет в Production. Суммы общественных сборов, личные балансы, уже полученные награды и сюжетные открытия не изменяются.</p>
+  </div>
+  <div class="card"><div class="section-head"><div><h3>Последние действия P2</h3></div></div><div class="wp1-history" id="wp2History-residents"></div></div>
 </div></section>
 <section class="view" id="view-world-monitor"><div class="stack">
   <div class="wp0-hero"><div><span class="cc2-eyebrow">WORLD OPERATIONS · P0</span><h2>🛡 Мониторинг</h2><p>Свежие D1-метрики, серверные ошибки и журнал действий владельца.</p></div><button class="btn secondary" type="button" data-wp0-reload>Обновить</button></div>
@@ -1359,7 +1442,7 @@ const NAV_GROUPS={
   messages:[['news','Новости и письма'],['polls','Опросы'],['campaigns','Кампании']],
   publication:[['releases','Release Gate'],['testing','Test / Feature Flags'],['safety','Снимки и журнал']],
   system:[['system','Состояние системы'],['legal','Документы'],['staff','Сотрудники']],
-  world:[['world-overview','Обзор'],['world-access','Доступ и запуск'],['world-monitor','Мониторинг']]
+  world:[['world-overview','Обзор'],['world-access','Доступ и запуск'],['world-catalog','Каталог'],['world-levels','Уровни 1–10'],['world-projects','Общие проекты'],['world-events','События RC-5'],['world-story','Сюжет'],['world-residents','Просьбы жителей'],['world-monitor','Мониторинг']]
 };
 const CC21_GROUP_META={
   today:{title:'Сегодня',kicker:'Операционный центр',icon:'⌂',description:'Проблемы, требующие решения, ближайшие запуски и ключевые показатели.'},
@@ -1371,10 +1454,16 @@ const CC21_GROUP_META={
   system:{title:'Система',kicker:'System Operations',icon:'⚙️',description:'Права, обслуживание и расширенная техническая диагностика.'},
   world:{title:'Мир Зеффи',kicker:'World Operations',icon:'🏙️',description:'Реальные города, серверный доступ и диагностика D1.'}
 };
-const CC21_VIEW_ICONS={'world-overview':'🏙️','world-access':'🔐','world-monitor':'🛡',dashboard:'⌂',analytics:'▥',players:'👤',playerlab:'🧪',referrals:'☕',segments:'◫',compensations:'🎁',control:'◎',resets:'↺',fraud:'🛡',contentmanager:'🧩',runnerbuilder:'🏃',albums:'▧',media:'🖼',pass:'🏆',rating:'★',achievements:'◆',daily:'☀',events:'⚡',automations:'⛓',campaigns:'✦',experiments:'A/B',shop:'🛍',offers:'%',cases:'▣',promos:'#',stock:'▤',simulator:'∑',gameconfig:'⚖',support:'✉',news:'▰',polls:'☷',system:'◉',releases:'⇧',testing:'⚑',monitoring:'⌁',safety:'▣',legal:'§',staff:'♟'};
+const CC21_VIEW_ICONS={'world-overview':'🏙️','world-access':'🔐','world-catalog':'🛍','world-levels':'🏙','world-projects':'🏗','world-events':'🎊','world-story':'📖','world-residents':'💬','world-monitor':'🛡',dashboard:'⌂',analytics:'▥',players:'👤',playerlab:'🧪',referrals:'☕',segments:'◫',compensations:'🎁',control:'◎',resets:'↺',fraud:'🛡',contentmanager:'🧩',runnerbuilder:'🏃',albums:'▧',media:'🖼',pass:'🏆',rating:'★',achievements:'◆',daily:'☀',events:'⚡',automations:'⛓',campaigns:'✦',experiments:'A/B',shop:'🛍',offers:'%',cases:'▣',promos:'#',stock:'▤',simulator:'∑',gameconfig:'⚖',support:'✉',news:'▰',polls:'☷',system:'◉',releases:'⇧',testing:'⚑',monitoring:'⌁',safety:'▣',legal:'§',staff:'♟'};
 const CC21_VIEW_DESCRIPTIONS={
   'world-overview':'Личные и общие города, состояние запуска и реальные D1-показатели.',
   'world-access':'Тестеры, постепенный запуск, серверные переключатели и аудит изменений.',
+  'world-catalog':'Цены и уровни открытия объектов — черновик и серверная публикация.',
+  'world-levels':'Требования к уровням 1–10, награды и защита уже полученных подарков.',
+  'world-projects':'Общие стройки, открытие взносов и новости проектов.',
+  'world-events':'Тексты, публикация и видимость промежуточных событий RC-5.',
+  'world-story':'Редактор текстов трёх сюжетных глав без изменения требований.',
+  'world-residents':'Тексты просьб, будущие награды и суточный лимит.',
   'world-monitor':'Диагностика серверных операций, ошибок и целостности таблиц Мира Зеффи.',
   analytics:'Сводная аналитика поведения игроков и ключевых показателей проекта.',
   players:'Поиск игрока, профиль и штатные действия с аккаунтом.',playerlab:'Изолированная лаборатория для проверки сценариев без изменения Production.',referrals:'Реферальная система и механики друзей кафе.',segments:'Создание и проверка категорий и собственных аудиторий игроков.',compensations:'Безопасная массовая или персональная выдача компенсаций.',control:'Операционный контроль проблем и модерации.',resets:'Управляемые сбросы игровых состояний.',fraud:'Антифрод-сигналы и подозрительная активность.',
@@ -1519,7 +1608,7 @@ async function runReleaseGateCc({fullAssets=false,seasonId='',contentItems=null,
 async function ensureReleaseGateBefore(actionTitle,{seasonId='',fullAssets=false,contentItems=null}={}){const pending=Number(state.staging?.activeChangeSet?.counts?.sandbox||0)+Number(state.staging?.activeChangeSet?.counts?.ready||0);if(stagingActive()&&pending>0){toast(`🟣 Staging: сначала Promote или выключи Staging Mode · ожидает ${pending} изменений`,true);return false;}let gate;try{gate=await runReleaseGateCc({seasonId,fullAssets,contentItems,silent:true});}catch(e){return confirm(`Release Gate не удалось выполнить:\n${e.message}\n\nПродолжить «${actionTitle}» БЕЗ автоматической проверки?`);}if(gate.status==='pass')return true;const issues=releaseGateIssueText(gate);if(gate.blocking||Number(gate.criticalCount||0)>0){alert(`Release Gate 2.0 заблокировал «${actionTitle}».\n\nCRITICAL: ${Number(gate.criticalCount||0)}\n${issues}\n\nИсправь критические проверки и запусти Gate снова. Обход CRITICAL отключён.`);return false;}return confirm(`Release Gate 2.0: есть предупреждения.\n\n${issues}\n\nПродолжить «${actionTitle}» с ручным override владельца?`);}
 $('contextNav').addEventListener('click',e=>{const b=e.target.closest('[data-context-view]');if(b)switchView(b.dataset.contextView);});
 $('view-dashboard').addEventListener('click',e=>{const b=e.target.closest('[data-cc2-view]');if(b)switchView(b.dataset.cc2View);});
-async function loadViewCore(name){if(WP0_ROUTES[name])await wp0Load(name);if(name==='contentmanager'&&!state.contentManager)await loadContentManager();if(name==='runnerbuilder'){if(!state.runnerBuilder)await loadRunnerBuilder(true);else renderRunnerBuilder();}if(name==='players'&&!state.playersLoaded)await loadPlayers('');if(name==='playerlab'&&!state.playerLab)await loadPlayerLab();if((name==='control'||name==='support')&&!state.control)await loadControl();if(name==='rating'&&!state.rating)await loadRating();if(name==='pass'&&!state.pass)await loadPass();if(name==='cases'&&!state.cases)await loadCases();if(name==='albums'&&!state.albums)await loadAlbums();if(name==='promos'&&!state.promos)await loadPromos();if(name==='shop'&&!state.shop)await loadShop();if(name==='offers'&&!state.offers)await loadOffers();if(name==='news'&&!state.news)await loadNews();if(name==='gameconfig'&&!state.gameconfig)await loadGameConfig();if(name==='media'&&!state.media)await loadMedia();if(name==='polls'&&!state.polls)await loadPolls();if(name==='resets'&&!state.resets)await loadResets();if(name==='staff'&&!state.staff)await loadStaff();if(name==='system'&&!state.system)await loadSystem();if(name==='legal'&&!state.legal)await loadLegal();if(name==='analytics'&&!state.analytics)await loadAnalytics();if(name==='referrals'&&!state.referrals)await loadReferrals();if(name==='daily'&&!state.daily)await loadDaily();if(name==='achievements'&&!state.achievements)await loadAchievementsConfig();if(name==='segments'&&!state.segments)await loadSegments();if(name==='compensations'&&!state.compensations)await loadCompensations();if(name==='experiments'&&!state.experiments)await loadExperiments();if(name==='monitoring'&&!state.monitoring)await loadMonitoring();if(name==='automations'&&!state.automations)await loadAutomations();if(name==='campaigns'&&!state.campaigns)await loadCampaigns();if(name==='fraud'&&!state.fraud)await loadFraud();if(name==='events'&&!state.events)await loadEvents();if(name==='releases'&&!state.releases)await loadReleases();if(name==='testing'&&!state.testing)await loadTesting();if(name==='stock'&&!state.stock)await loadStock();if(name==='safety'&&!state.safety)await loadSafety();}async function loadView(name,background=false){const existing=viewInflight.get(name);if(existing&&!existing.controller?.signal?.aborted){if(!background)viewLoading(name,true);try{return await existing.promise;}finally{if(!background)viewLoading(name,false);}}if(existing)viewInflight.delete(name);const controller=new AbortController(),token=Symbol(name),started=performance.now();const promise=(async()=>{if(!background)viewLoading(name,true);ccActiveViewSignal=controller.signal;try{const result=await loadViewCore(name);if(controller.signal.aborted)throw ccAbortError();if(state.view===name)ccOpsRefreshView(name);return result;}finally{ccRecordUiPerf(`view:${name}`,performance.now()-started);if(ccActiveViewSignal===controller.signal)ccActiveViewSignal=null;if(!background)viewLoading(name,false);if(viewInflight.get(name)?.token===token)viewInflight.delete(name);}})();viewInflight.set(name,{promise,controller,token});return promise;}
+async function loadViewCore(name){if(WP0_ROUTES[name])await wp0Load(name);if(WP1_VIEWS.has(name))await wp1Load();if(WP2_VIEWS.has(name))await wp2Load();if(name==='contentmanager'&&!state.contentManager)await loadContentManager();if(name==='runnerbuilder'){if(!state.runnerBuilder)await loadRunnerBuilder(true);else renderRunnerBuilder();}if(name==='players'&&!state.playersLoaded)await loadPlayers('');if(name==='playerlab'&&!state.playerLab)await loadPlayerLab();if((name==='control'||name==='support')&&!state.control)await loadControl();if(name==='rating'&&!state.rating)await loadRating();if(name==='pass'&&!state.pass)await loadPass();if(name==='cases'&&!state.cases)await loadCases();if(name==='albums'&&!state.albums)await loadAlbums();if(name==='promos'&&!state.promos)await loadPromos();if(name==='shop'&&!state.shop)await loadShop();if(name==='offers'&&!state.offers)await loadOffers();if(name==='news'&&!state.news)await loadNews();if(name==='gameconfig'&&!state.gameconfig)await loadGameConfig();if(name==='media'&&!state.media)await loadMedia();if(name==='polls'&&!state.polls)await loadPolls();if(name==='resets'&&!state.resets)await loadResets();if(name==='staff'&&!state.staff)await loadStaff();if(name==='system'&&!state.system)await loadSystem();if(name==='legal'&&!state.legal)await loadLegal();if(name==='analytics'&&!state.analytics)await loadAnalytics();if(name==='referrals'&&!state.referrals)await loadReferrals();if(name==='daily'&&!state.daily)await loadDaily();if(name==='achievements'&&!state.achievements)await loadAchievementsConfig();if(name==='segments'&&!state.segments)await loadSegments();if(name==='compensations'&&!state.compensations)await loadCompensations();if(name==='experiments'&&!state.experiments)await loadExperiments();if(name==='monitoring'&&!state.monitoring)await loadMonitoring();if(name==='automations'&&!state.automations)await loadAutomations();if(name==='campaigns'&&!state.campaigns)await loadCampaigns();if(name==='fraud'&&!state.fraud)await loadFraud();if(name==='events'&&!state.events)await loadEvents();if(name==='releases'&&!state.releases)await loadReleases();if(name==='testing'&&!state.testing)await loadTesting();if(name==='stock'&&!state.stock)await loadStock();if(name==='safety'&&!state.safety)await loadSafety();}async function loadView(name,background=false){const existing=viewInflight.get(name);if(existing&&!existing.controller?.signal?.aborted){if(!background)viewLoading(name,true);try{return await existing.promise;}finally{if(!background)viewLoading(name,false);}}if(existing)viewInflight.delete(name);const controller=new AbortController(),token=Symbol(name),started=performance.now();const promise=(async()=>{if(!background)viewLoading(name,true);ccActiveViewSignal=controller.signal;try{const result=await loadViewCore(name);if(controller.signal.aborted)throw ccAbortError();if(state.view===name)ccOpsRefreshView(name);return result;}finally{ccRecordUiPerf(`view:${name}`,performance.now()-started);if(ccActiveViewSignal===controller.signal)ccActiveViewSignal=null;if(!background)viewLoading(name,false);if(viewInflight.get(name)?.token===token)viewInflight.delete(name);}})();viewInflight.set(name,{promise,controller,token});return promise;}
 
 function playerLabDateInputValue(ms){const d=new Date(Number(ms||Date.now()));const pad=n=>String(n).padStart(2,'0');return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;}
 function renderPlayerLab(){const d=state.playerLab;if(!d)return;const st=d.state||{},pass=d.passLab||{},inv=st.caseInventory||{},src=st.cloneSource||{};$('playerLabMode').className=`pill ${d.timeMode==='virtual'?'gold':'green'}`;$('playerLabMode').textContent=d.timeMode==='virtual'?'Виртуальное время':'Снимок Production';$('playerLabStats').innerHTML=[['Уровень',st.profileLevel||1],['Очки',st.points||0],['Зефир',st.treats||0],['Кофе',st.coffee||0],['Pass',pass.displayLevel||pass.level||1],['Кейсы',Object.values(inv).reduce((a,b)=>a+Number(b||0),0)]].map(([t,v])=>`<div class="mini-stat"><b>${fmt(v)}</b><span>${esc(t)}</span></div>`).join('');const source=src.telegramId?`Клон: ${esc(src.name||src.telegramId)}${src.username?` · @${esc(src.username)}`:''} · ID ${esc(src.telegramId)}`:'Полностью изолированный виртуальный игрок';$('playerLabSummary').innerHTML=`<b>${esc(st.name||'Виртуальный игрок')}</b><br>${source}<br>Revision workspace: <b>${fmt(d.revision||1)}</b> · снимок: ${dateTs(Math.floor(Number(d.snapshotAt||0)/1000))}`;$('playerLabTimeStatus').innerHTML=`Текущее виртуальное время: <b>${dateTs(Math.floor(Number(d.effectiveNow||Date.now())/1000))}</b><br>Режим: ${d.timeMode==='virtual'?'ручной сдвиг':'время снимка Production'}.`;$('playerLabTimeInput').value=playerLabDateInputValue(d.effectiveNow||Date.now());}
@@ -3923,6 +4012,224 @@ function wp0Bind(){
  $('wp0TesterList')?.addEventListener('click',e=>{const b=e.target.closest('[data-wp0-remove]');if(b)wp0TesterChange(false,b.dataset.wp0Remove,b);});
 }
 wp0Bind();
+// Mir Zeffi P1: staged balance editor. The server is authoritative for every field.
+const WP1_VIEWS=new Set(['world-catalog','world-levels']);
+let wp1Data=null,wp1Draft=null,wp1Busy=false;
+const wp1Clone=v=>JSON.parse(JSON.stringify(v));
+const wp1LevelNames=['Маленькое поселение','Уютный уголок','Милый квартал','Цветущий городок','Волшебная долина','Оживлённый городок','Город счастливых лапок','Сладкая столица','Золотая долина','Легендарный Мир Зеффи'];
+function wp1StagedChanges(){
+ if(!wp1Data||!wp1Draft)return 0;
+ const orig=wp1Data.published,items=wp1Draft.items;
+ let n=wp1Draft.levels.filter((l,i)=>JSON.stringify(l)!==JSON.stringify(orig.levels[i])).length;
+ for(const id of Object.keys(items))if(JSON.stringify(items[id])!==JSON.stringify(orig.items[id]))n++;
+ return n;
+}
+function wp1HasLocalEdits(){return wp1Data&&wp1Draft&&JSON.stringify(wp1Draft)!==JSON.stringify(wp1Data.draft);}
+function wp1Status(){
+ const changes=wp1StagedChanges(),dirty=wp1HasLocalEdits();
+ const title=`Опубликовано: версия ${wp1Data.publishedRevision} · Черновик: версия ${wp1Data.draftRevision} · Отличий от публикации: ${changes}`;
+ for(const id of ['wp1CatalogStatus','wp1LevelsStatus']){
+  const n=$(id);if(!n)continue;n.className='wp1-status'+(dirty?'':' is-live');
+  n.textContent=title+(dirty?' · ЕСТЬ НЕСОХРАНЁННЫЕ ИЗМЕНЕНИЯ':' · Локальных несохранённых изменений нет');
+ }
+}
+function wp1RenderCatalogue(){
+ if(!wp1Draft)return;
+ const query=String($('wp1Search')?.value||'').trim().toLowerCase();
+ const rows=Object.entries(wp1Draft.items).map(([id,item])=>({id,item,old:wp1Data.published.items[id]}))
+   .filter(x=>!query||x.id.toLowerCase().includes(query));
+ $('wp1CatalogRows').innerHTML=rows.map(({id,item,old})=>{
+  const changed=JSON.stringify(item)!==JSON.stringify(old);
+  return `<tr class="${changed?'is-changed':''}" data-wp1-row="${esc(id)}"><td><b>${esc(id.replaceAll('-',' · '))}</b><small>${changed?'Изменён':'Без изменений'}</small></td>
+   <td><input type="number" min="1" max="2000000" step="1" inputmode="numeric" data-wp1-id="${esc(id)}" data-wp1-field="points" value="${item.price.points}" aria-label="Очки ${esc(id)}"></td>
+   <td><input type="number" min="0" max="10000" step="1" inputmode="numeric" data-wp1-id="${esc(id)}" data-wp1-field="treats" value="${item.price.treats}" aria-label="Зефир ${esc(id)}"></td>
+   <td><select data-wp1-id="${esc(id)}" data-wp1-field="minCityLevel" aria-label="Уровень ${esc(id)}">${Array.from({length:10},(_,i)=>`<option value="${i+1}" ${item.minCityLevel===i+1?'selected':''}>Ур. ${i+1}</option>`).join('')}</select></td></tr>`;
+ }).join('')||'<tr><td colspan="4">Объекты не найдены.</td></tr>';
+}
+function wp1RenderLevels(){
+ if(!wp1Draft)return;
+ $('wp1LevelRows').innerHTML=wp1Draft.levels.map((row,i)=>{
+  const changed=JSON.stringify(row)!==JSON.stringify(wp1Data.published.levels[i]);
+  const field=(name,val,max,disabled=false)=>`<input type="number" step="1" min="0" max="${max}" inputmode="numeric" ${disabled?'disabled':''} value="${val}" data-wp1-level="${i}" data-wp1-field="${name}" aria-label="${name} уровень ${i+1}">`;
+  return `<tr class="${changed?'is-changed':''}"><td><b>${i+1}</b><small>${esc(wp1LevelNames[i]||'')}</small></td>
+   <td>${field('residents',row.residents,150,i===0)}</td><td>${field('comfort',row.comfort,1100,i===0)}</td>
+   <td>${field('parks',row.parks,15,i===0)}</td><td>${field('shops',row.shops,15,i===0)}</td>
+   <td>${i===0?'—':field('points',row.reward.points,100000)}</td>
+   <td>${i===0?'—':field('treats',row.reward.treats,500)}</td>
+   <td>${i===0?'—':field('coffee',row.reward.coffee,200)}</td></tr>`;
+ }).join('');
+}
+function wp1History(){
+ const names={draft_save:'Черновик сохранён',publish:'Опубликована новая версия',restore_draft:'Черновик сброшен'};
+ const html=(wp1Data?.history||[]).map(h=>`<div class="wp1-history-entry"><div><strong>${esc(names[h.action]||h.action)}</strong><small>${esc(h.reason)} · ${esc(h.actor)}</small></div><small>${esc(wp0Time(h.createdAt))}<br>v${h.draftRevision} / pub ${h.publishedRevision}</small></div>`).join('')||'<p class="wp1-help">Публикаций ещё не было.</p>';
+ $('wp1HistoryCatalog').innerHTML=html;$('wp1HistoryLevels').innerHTML=html;
+}
+function wp1Render(){if(!wp1Data)return;wp1RenderCatalogue();wp1RenderLevels();wp1History();wp1Status();}
+async function wp1Load(force=false){
+ if(wp1Data&&!force){wp1Render();return;}
+ if(force&&wp1HasLocalEdits()&&!confirm('Есть несохранённые правки. Загрузить серверный черновик заново?'))return;
+ try{const data=await api('/api/owner/world/balance');wp1Data=data;wp1Draft=wp1Clone(data.draft);wp1Render();}
+ catch(e){for(const id of ['wp1CatalogStatus','wp1LevelsStatus']){const el=$(id);el.className='wp1-status is-error';el.textContent=e.message;}throw e;}
+}
+function wp1Reason(){return String($(state.view==='world-levels'?'wp1ReasonLevels':'wp1ReasonCatalog')?.value||'').trim();}
+async function wp1Mutate(action){if(wp1Busy||!wp1Data)return;
+ const dirty=wp1HasLocalEdits(),reason=wp1Reason();
+ if(reason.length<10||reason.length>280)return toast('Нужна причина от 10 до 280 символов.',true);
+ let path,body={expectedRevision:wp1Data.draftRevision,requestId:crypto.randomUUID(),reason};
+ if(action==='save'){
+  if(!dirty)return toast('Нечего сохранять: черновик не изменён.',true);
+  if(!confirm('Сохранить черновик Мира Зеффи в D1 без публикации игрокам?'))return;
+  path='/api/owner/world/balance/draft/save';body.balance=wp1Draft;
+ }else if(action==='publish'){
+  if(dirty)return toast('Сначала сохрани текущие изменения в черновик.',true);
+  if(JSON.stringify(wp1Data.draft)===JSON.stringify(wp1Data.published))return toast('Опубликованный баланс уже актуален.',true);
+  if(!confirm(`Опубликовать новую экономику Мира Зеффи?\n${wp1StagedChanges()} изменённых позиций.\nИгроки получат новые цены после обновления состояния.`))return;
+  const phrase=prompt('Для подтверждения введите ОПУБЛИКОВАТЬ БАЛАНС:','')||'';
+  if(phrase!=='ОПУБЛИКОВАТЬ БАЛАНС')return toast('Публикация отменена.',true);
+  path='/api/owner/world/balance/publish';body.confirmPhrase=phrase;
+ }else{
+  if(!confirm('Сбросить черновик к действующей версии? Отменить действие нельзя.'))return;
+  path='/api/owner/world/balance/draft/restore';
+ }
+ wp1Busy=true;
+ try{const response=await api(path,body);if(response.__staged)throw new Error('P1 не поддерживает применение через Change Set. Отключите Staging перед записью.');
+  wp1Data=response;wp1Draft=wp1Clone(response.draft);
+  const area=$(state.view==='world-levels'?'wp1ReasonLevels':'wp1ReasonCatalog');if(area)area.value='';
+  wp1Render();toast(action==='publish'?'Баланс опубликован.':'Черновик изменён и сохранён.');
+ }catch(e){toast(e.message,true);}finally{wp1Busy=false;}
+}
+function wp1Bind(){
+ $('wp1Search')?.addEventListener('input',wp1RenderCatalogue);
+ $('wp1CatalogRows')?.addEventListener('change',e=>{
+  const n=e.target,id=n.dataset.wp1Id,key=n.dataset.wp1Field;if(!wp1Draft?.items[id])return;
+  const value=Number(n.value);if(!Number.isSafeInteger(value)||value<0){toast('Укажите целое неотрицательное значение.',true);return;}
+  if(key==='minCityLevel')wp1Draft.items[id].minCityLevel=value;
+  else wp1Draft.items[id].price[key]=value;
+  n.closest('tr')?.classList.toggle('is-changed',JSON.stringify(wp1Draft.items[id])!==JSON.stringify(wp1Data.published.items[id]));wp1Status();
+ });
+ $('wp1LevelRows')?.addEventListener('change',e=>{
+  const n=e.target,i=Number(n.dataset.wp1Level),key=n.dataset.wp1Field;if(!wp1Draft?.levels[i]||i<1)return;
+  const value=Number(n.value);if(!Number.isSafeInteger(value)||value<0){toast('Только целые неотрицательные числа.',true);return;}
+  if(['points','treats','coffee'].includes(key))wp1Draft.levels[i].reward[key]=value;
+  else wp1Draft.levels[i][key]=value;
+  n.closest('tr')?.classList.toggle('is-changed',JSON.stringify(wp1Draft.levels[i])!==JSON.stringify(wp1Data.published.levels[i]));wp1Status();
+ });
+ document.querySelectorAll('[data-wp1-reload]').forEach(b=>b.addEventListener('click',()=>wp1Load(true).catch(e=>toast(e.message,true))));
+ document.querySelectorAll('[data-wp1-save]').forEach(b=>b.addEventListener('click',()=>wp1Mutate('save')));
+ document.querySelectorAll('[data-wp1-publish]').forEach(b=>b.addEventListener('click',()=>wp1Mutate('publish')));
+ document.querySelectorAll('[data-wp1-restore]').forEach(b=>b.addEventListener('click',()=>wp1Mutate('restore')));
+}
+wp1Bind();
+
+// Mir Zeffi P2: owner-only server-backed editorial configuration.
+const WP2_VIEWS=new Set(['world-projects','world-events','world-story','world-residents']);
+let wp2Data=null,wp2Draft=null,wp2Busy=false;
+const wp2Clone=value=>JSON.parse(JSON.stringify(value));
+const wp2Field=(label,path,value,{kind='text',min=0,max=3000,rows=2}={})=>{
+ const attr=`data-wp2-path="${esc(path)}"`;
+ const element=kind==='checkbox'?`<span class="wp2-check"><input type="checkbox" ${attr} ${value?'checked':''}>${esc(label)}</span>`:
+ kind==='textarea'?`<label class="wp2-label">${esc(label)}<textarea ${attr} rows="${rows}" maxlength="650">${esc(String(value))}</textarea></label>`:
+ `<label class="wp2-label">${esc(label)}<input ${attr} type="${kind==='number'?'number':'text'}" ${kind==='number'?`min="${min}" max="${max}" step="1"`: 'maxlength="250"'} value="${esc(String(value))}"></label>`;
+ return element;
+};
+function wp2RenderEditor(name){if(!wp2Draft)return;
+ let html='';const d=wp2Draft;
+ if(name==='projects'){
+  html=Object.entries(d.projects).map(([id,p])=>{
+   const live=(wp2Data.immutableProjects||[]).find(x=>x.id===id);
+   return `<div class="wp2-box"><div class="wp2-title">${id==='garden'?'🌺 Сад встреч':'🎪 Дом фестивалей'} <span class="wp2-chip">${live?`${Number(live.total).toLocaleString('ru-RU')} / ${Number(live.goal).toLocaleString('ru-RU')}`:'Недоступно'}</span></div>
+    <p class="wp2-muted">Накопленные средства, реальная цель, строительство и история платежей доступны только для чтения.</p>
+    ${wp2Field('Разрешить новые взносы',`projects.${id}.enabled`,p.enabled,{kind:'checkbox'})}
+    ${wp2Field('Объявление для игроков',`projects.${id}.announcement`,p.announcement,{kind:'textarea'})}</div>`;
+  }).join('');
+ }else if(name==='events'){
+  html=Object.entries(d.events).map(([id,v])=>`<div class="wp2-box"><div class="wp2-title">${esc(id)} <span class="wp2-chip">Событие RC-5</span></div>
+    ${wp2Field('Показывать в хронике',`events.${id}.visible`,v.visible,{kind:'checkbox'})}
+    ${wp2Field('Название',`events.${id}.title`,v.title)}
+    ${wp2Field('Описание',`events.${id}.description`,v.description,{kind:'textarea'})}
+    ${wp2Field('Что изменилось',`events.${id}.change`,v.change)}</div>`).join('');
+ }else if(name==='story'){
+  html=Object.entries(d.chapters).map(([id,v],i)=>`<div class="wp2-box"><div class="wp2-title">Глава ${i+1} · ${esc(id)} <span class="wp2-chip">Только тексты</span></div>
+    ${wp2Field('Заголовок',`chapters.${id}.title`,v.title)}
+    ${wp2Field('Описание',`chapters.${id}.description`,v.description,{kind:'textarea'})}</div>`).join('');
+ }else if(name==='residents'){
+  html=`<div class="wp2-box"><div class="wp2-title">Суточный лимит</div>${wp2Field('Наград в день (1–2)', 'residents.dailyLimit',d.residents.dailyLimit,{kind:'number',min:1,max:2})}<p class="wp2-muted">Применяется только к будущим получениям; ранее выданные награды не отзываются.</p></div>`+
+  Object.entries(d.residents.templates).map(([id,v])=>`<div class="wp2-box"><div class="wp2-title">${esc(id)} <span class="wp2-chip">Для новых поручений</span></div>
+    ${wp2Field('Выдавать новые просьбы',`residents.templates.${id}.enabled`,v.enabled,{kind:'checkbox'})}
+    <div class="wp2-grid">${wp2Field('Название',`residents.templates.${id}.name`,v.name)}${wp2Field('Персонаж',`residents.templates.${id}.speaker`,v.speaker)}</div>
+    ${wp2Field('Реплика',`residents.templates.${id}.message`,v.message,{kind:'textarea'})}
+    ${wp2Field('Условие',`residents.templates.${id}.objective`,v.objective)}
+    <div class="wp2-grid">${wp2Field('Очки за новые просьбы',`residents.templates.${id}.reward.points`,v.reward.points,{kind:'number',min:0,max:3000})}
+    ${wp2Field('Зефир за новые просьбы',`residents.templates.${id}.reward.treats`,v.reward.treats,{kind:'number',min:0,max:30})}</div></div>`).join('');
+ }
+ $('wp2Editor-'+name).innerHTML=html;
+}
+function wp2UpdateStatus(){if(!wp2Data)return;
+ const dirty=JSON.stringify(wp2Draft)!==JSON.stringify(wp2Data.draft);
+ const staged=JSON.stringify(wp2Data.draft)!==JSON.stringify(wp2Data.published);
+ for(const id of ['projects','events','story','residents']){
+  const el=$('wp2Status-'+id);if(!el)continue;
+  el.className='wp2-status';el.textContent=`Опубликованная версия ${wp2Data.publishedRevision} · Черновик ${wp2Data.draftRevision} · ${dirty?'Есть несохранённые изменения':staged?'Черновик ожидает публикации':'Соответствует опубликованной версии'}`;
+ }
+}
+function wp2Render(){if(!wp2Data||!wp2Draft)return;
+ for(const name of ['projects','events','story','residents']){
+  wp2RenderEditor(name);
+  $('wp2History-'+name).innerHTML=(wp2Data.history||[]).map(h=>`<div class="wp1-history-entry"><div><strong>${esc(h.action)}</strong><small>${esc(h.reason)} · ${esc(h.actor)}</small></div><small>${esc(wp0Time(h.createdAt))} · v${h.publishedRevision}</small></div>`).join('')||'<div class="wp2-muted">Публикаций пока не было.</div>';
+ }
+ wp2UpdateStatus();
+}
+async function wp2Load(force=false){
+ if(wp2Data&&!force){wp2Render();return;}
+ if(force&&wp2Data&&JSON.stringify(wp2Draft)!==JSON.stringify(wp2Data.draft)&&!confirm('Несохранённые правки пропадут. Перезагрузить черновик?'))return;
+ try{wp2Data=await api('/api/owner/world/content');wp2Draft=wp2Clone(wp2Data.draft);wp2Render();}
+ catch(e){for(const id of ['projects','events','story','residents']){const el=$('wp2Status-'+id);if(el){el.className='wp2-status is-error';el.textContent=e.message;}}throw e;}
+}
+async function wp2Action(action){
+ if(wp2Busy||!wp2Data)return;
+ const name=state.view.replace('world-',''),reason=String($('wp2Reason-'+name)?.value||'').trim();
+ if(reason.length<10||reason.length>280)return toast('Нужна причина от 10 до 280 символов.',true);
+ const dirty=JSON.stringify(wp2Draft)!==JSON.stringify(wp2Data.draft);
+ const body={expectedRevision:wp2Data.draftRevision,requestId:crypto.randomUUID(),reason};
+ let path;
+ if(action==='save'){
+  if(!dirty)return toast('Черновик не изменён.',true);
+  if(!confirm('Сохранить редактор P2 в D1 без публикации игрокам?'))return;
+  path='/api/owner/world/content/draft/save';body.content=wp2Draft;
+ }else if(action==='publish'){
+  if(dirty)return toast('Сначала сохрани изменения в черновик.',true);
+  if(JSON.stringify(wp2Data.draft)===JSON.stringify(wp2Data.published))return toast('Новых изменений для публикации нет.',true);
+  if(!confirm('Публиковать новые тексты, проекты и правила будущих просьб? Зачисленные валюты и прогресс игроков не затронутся.'))return;
+  const confirmText=prompt('Для публикации введите ОПУБЛИКОВАТЬ СОБЫТИЯ:','')||'';
+  if(confirmText!=='ОПУБЛИКОВАТЬ СОБЫТИЯ')return toast('Публикация отменена.',true);
+  body.confirmPhrase=confirmText;path='/api/owner/world/content/publish';
+ }else{
+  if(!confirm('Сбросить черновик к опубликованной версии?'))return;
+  path='/api/owner/world/content/draft/restore';
+ }
+ wp2Busy=true;
+ try{const data=await api(path,body);if(data.__staged)throw Error('Нельзя применять P2 через Change Set. Отключите Staging перед сохранением.');
+  wp2Data=data;wp2Draft=wp2Clone(data.draft);for(const id of ['projects','events','story','residents']){$('wp2Reason-'+id).value='';}
+  wp2Render();toast(action==='publish'?'События Мира Зеффи опубликованы.':'Черновик P2 сохранён.');
+ }catch(e){toast(e.message,true);}finally{wp2Busy=false;}
+}
+function wp2Bind(){
+ for(const name of ['projects','events','story','residents']){
+  $('wp2Editor-'+name)?.addEventListener('change',e=>{
+   const el=e.target,path=el?.dataset?.wp2Path;if(!path||!wp2Draft)return;
+   const keys=path.split('.'),field=keys.pop();let target=wp2Draft;
+   for(const key of keys){target=target?.[key];if(!target)return;}
+   let value=el.type==='checkbox'?el.checked:el.type==='number'?Number(el.value):el.value;
+   if(el.type==='number'&&!Number.isSafeInteger(value)){toast('Нужно целое число.',true);return;}
+   target[field]=value;wp2UpdateStatus();
+  });
+ }
+ document.querySelectorAll('[data-wp2-reload]').forEach(el=>el.addEventListener('click',()=>wp2Load(true).catch(e=>toast(e.message,true))));
+ document.querySelectorAll('[data-wp2-save]').forEach(el=>el.addEventListener('click',()=>wp2Action('save')));
+ document.querySelectorAll('[data-wp2-publish]').forEach(el=>el.addEventListener('click',()=>wp2Action('publish')));
+ document.querySelectorAll('[data-wp2-restore]').forEach(el=>el.addEventListener('click',()=>wp2Action('restore')));
+}
+wp2Bind();
 
 async function boot(){try{cc33InitUi();cc32InitMobileUx();cc28InitUi();cc29InitUi();cc30InitUi();cc31InitUi();cc26DecorateUnifiedViews();requestFullscreen();setTimeout(requestFullscreen,250);setTimeout(syncViewport,700);const initData=String(tg?.initData||'');if(!initData)throw new Error('Откройте панель кнопкой «Панель владельца» внутри Telegram-бота. Прямой вход из браузера закрыт.');state.ownerSession=readOwnerSession();const hasFastSession=Boolean(state.ownerSession);$('gateText').textContent=hasFastSession?'Быстро подтверждаем сохранённую защищённую сессию…':'Подтверждаем подпись Telegram и роль владельца…';if(hasFastSession){const localUser=tg?.initDataUnsafe?.user||{};$('ownerLine').textContent=`${[localUser.first_name,localUser.last_name].filter(Boolean).join(' ')||'Владелец'} · защищённая сессия`;$('versionBadge').textContent='CC 3.3 · v9.43';renderContextNav(state.view);$('gate').classList.add('hidden');}const auth=await api('/api/owner/auth',{},true,{timeoutMs:20000});if(auth.sessionToken)saveOwnerSession(auth.sessionToken);$('ownerLine').textContent=`${auth.owner?.name||'Владелец'} · роль Владелец · игра ${auth.version||'1.0.9'}`;$('versionBadge').textContent='CC 3.3 · v9.43';renderContextNav(state.view);$('gate').classList.add('hidden');const stagingPromise=loadStaging().catch(e=>toast(`Staging: ${e.message}`,true)),bootstrapPromise=api('/api/owner/bootstrap').then(d=>{state.bootstrap=d;renderBootstrap(d);}).catch(e=>toast(`Фоновые данные: ${e.message}`,true));await Promise.allSettled([stagingPromise,bootstrapPromise]);const gateIdle=()=>{if(state.view==='dashboard'||state.view==='releases')runReleaseGateCc({fullAssets:false,silent:true}).catch(()=>{});};if('requestIdleCallback'in window)requestIdleCallback(gateIdle,{timeout:2500});else setTimeout(gateIdle,1500);}catch(e){saveOwnerSession('');$('gate').classList.remove('hidden');$('gateSpinner').classList.add('hidden');$('gateTitle').textContent='Доступ закрыт';$('gateText').textContent=e.message||'Роль владельца не подтверждена.';$('gateClose').classList.remove('hidden');}}
 boot();

@@ -10732,6 +10732,209 @@
       "directionSourceLabel": "ne",
       "directionVerified": false,
       "runtimeNotes": "Source is a 4x4 review-sheet extraction, not four verified 3D camera rotations; only used as story visual landmark."
+    },
+    {
+      "id": "zeffi_square_build_01",
+      "packId": "zeffi-central-square-v1",
+      "category": "construction",
+      "buildingId": "zeffi_central_square",
+      "catalogId": "zeffi-central-square",
+      "state": "build_01",
+      "facing": "n",
+      "footprint": [
+        7,
+        7
+      ],
+      "fileWebp": "assets/zeffi-central-square-v1/central_square_stage_01_preparation.webp",
+      "width": 1024,
+      "height": 1024,
+      "anchorX": 511.5,
+      "anchorY": 422.94,
+      "assetScale": 1.89,
+      "projection": "zeffi-orthographic-2to1-v012-72x36-scale3",
+      "roadMask": null,
+      "groundAlphaBounds": [
+        25,
+        101,
+        998,
+        903
+      ],
+      "directionVerified": false,
+      "runtimeNotes": "Supplied single isometric view, no invented rotations. Fixed 7x7 ground fit, six real build phases, completed sprite shared in network city."
+    },
+    {
+      "id": "zeffi_square_build_02",
+      "packId": "zeffi-central-square-v1",
+      "category": "construction",
+      "buildingId": "zeffi_central_square",
+      "catalogId": "zeffi-central-square",
+      "state": "build_02",
+      "facing": "n",
+      "footprint": [
+        7,
+        7
+      ],
+      "fileWebp": "assets/zeffi-central-square-v1/central_square_stage_02_foundation.webp",
+      "width": 1024,
+      "height": 1024,
+      "anchorX": 511.5,
+      "anchorY": 398.94,
+      "assetScale": 1.89,
+      "projection": "zeffi-orthographic-2to1-v012-72x36-scale3",
+      "roadMask": null,
+      "groundAlphaBounds": [
+        51,
+        169,
+        972,
+        879
+      ],
+      "directionVerified": false,
+      "runtimeNotes": "Supplied single isometric view, no invented rotations. Fixed 7x7 ground fit, six real build phases, completed sprite shared in network city."
+    },
+    {
+      "id": "zeffi_square_build_03",
+      "packId": "zeffi-central-square-v1",
+      "category": "construction",
+      "buildingId": "zeffi_central_square",
+      "catalogId": "zeffi-central-square",
+      "state": "build_03",
+      "facing": "n",
+      "footprint": [
+        7,
+        7
+      ],
+      "fileWebp": "assets/zeffi-central-square-v1/central_square_stage_03_paving.webp",
+      "width": 1024,
+      "height": 1024,
+      "anchorX": 512.5,
+      "anchorY": 400.94,
+      "assetScale": 1.89,
+      "projection": "zeffi-orthographic-2to1-v012-72x36-scale3",
+      "roadMask": null,
+      "groundAlphaBounds": [
+        39,
+        62,
+        986,
+        881
+      ],
+      "directionVerified": false,
+      "runtimeNotes": "Supplied single isometric view, no invented rotations. Fixed 7x7 ground fit, six real build phases, completed sprite shared in network city."
+    },
+    {
+      "id": "zeffi_square_build_04",
+      "packId": "zeffi-central-square-v1",
+      "category": "construction",
+      "buildingId": "zeffi_central_square",
+      "catalogId": "zeffi-central-square",
+      "state": "build_04",
+      "facing": "n",
+      "footprint": [
+        7,
+        7
+      ],
+      "fileWebp": "assets/zeffi-central-square-v1/central_square_stage_04_decorative_finishing.webp",
+      "width": 1024,
+      "height": 1024,
+      "anchorX": 512.5,
+      "anchorY": 403.94,
+      "assetScale": 1.89,
+      "projection": "zeffi-orthographic-2to1-v012-72x36-scale3",
+      "roadMask": null,
+      "groundAlphaBounds": [
+        39,
+        70,
+        986,
+        884
+      ],
+      "directionVerified": false,
+      "runtimeNotes": "Supplied single isometric view, no invented rotations. Fixed 7x7 ground fit, six real build phases, completed sprite shared in network city."
+    },
+    {
+      "id": "zeffi_square_build_05",
+      "packId": "zeffi-central-square-v1",
+      "category": "construction",
+      "buildingId": "zeffi_central_square",
+      "catalogId": "zeffi-central-square",
+      "state": "build_05",
+      "facing": "n",
+      "footprint": [
+        7,
+        7
+      ],
+      "fileWebp": "assets/zeffi-central-square-v1/central_square_stage_05_final_works.webp",
+      "width": 1024,
+      "height": 1024,
+      "anchorX": 509.5,
+      "anchorY": 410.94,
+      "assetScale": 1.89,
+      "projection": "zeffi-orthographic-2to1-v012-72x36-scale3",
+      "roadMask": null,
+      "groundAlphaBounds": [
+        29,
+        64,
+        990,
+        891
+      ],
+      "directionVerified": false,
+      "runtimeNotes": "Supplied single isometric view, no invented rotations. Fixed 7x7 ground fit, six real build phases, completed sprite shared in network city."
+    },
+    {
+      "id": "zeffi_square_build_06",
+      "packId": "zeffi-central-square-v1",
+      "category": "construction",
+      "buildingId": "zeffi_central_square",
+      "catalogId": "zeffi-central-square",
+      "state": "build_06",
+      "facing": "n",
+      "footprint": [
+        7,
+        7
+      ],
+      "fileWebp": "assets/zeffi-central-square-v1/central_square_stage_06_pre_opening.webp",
+      "width": 1024,
+      "height": 1024,
+      "anchorX": 512.5,
+      "anchorY": 404.94,
+      "assetScale": 1.89,
+      "projection": "zeffi-orthographic-2to1-v012-72x36-scale3",
+      "roadMask": null,
+      "groundAlphaBounds": [
+        38,
+        51,
+        987,
+        885
+      ],
+      "directionVerified": false,
+      "runtimeNotes": "Supplied single isometric view, no invented rotations. Fixed 7x7 ground fit, six real build phases, completed sprite shared in network city."
+    },
+    {
+      "id": "zeffi_square_complete",
+      "packId": "zeffi-central-square-v1",
+      "category": "plazas",
+      "buildingId": "zeffi_central_square",
+      "catalogId": "zeffi-central-square",
+      "state": "complete",
+      "facing": "n",
+      "footprint": [
+        7,
+        7
+      ],
+      "fileWebp": "assets/zeffi-central-square-v1/central_square_complete.webp",
+      "width": 1024,
+      "height": 1024,
+      "anchorX": 511.5,
+      "anchorY": 397.94,
+      "assetScale": 1.89,
+      "projection": "zeffi-orthographic-2to1-v012-72x36-scale3",
+      "roadMask": null,
+      "groundAlphaBounds": [
+        42,
+        63,
+        981,
+        878
+      ],
+      "directionVerified": false,
+      "runtimeNotes": "Supplied single isometric view, no invented rotations. Fixed 7x7 ground fit, six real build phases, completed sprite shared in network city."
     }
   ],
   "extraPackId": "Mir_Zeffi_Extra_Asset_Pack_v1",

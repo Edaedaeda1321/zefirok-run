@@ -224,6 +224,7 @@ export function checkPlacement(city, catalog, kind, x, y, rotation = 0, excludeU
   const def = catalog[kind];
   if (!def) return { ok: false, code: 'UNKNOWN_BUILDING' };
   if (![x, y, rotation].every(isInteger)) return { ok: false, code: 'INVALID_POSITION' };
+  if(kind==='zeffi-central-square' && rotation!==0)return {ok:false,code:'INVALID_POSITION'}; // single supplied camera view
   const { w, h } = dims(def, rotation);
   for(let cx=x;cx<x+w;cx++)for(let cy=y;cy<y+h;cy++){
     if(!inBounds(city,cx,cy))return {ok:false,code:'OUTSIDE_CITY'};
@@ -460,7 +461,7 @@ export const COMFORT_BY_KIND = Object.freeze({
   'garden':24, 'playground':15,
   'bus-terminal':15, 'bus-stop':5,
   'pond-park':24, 'rose-garden':20, 'botanical-garden':32,
-  'sports-playground':14, 'city-square':12,
+  'sports-playground':14, 'city-square':12, 'zeffi-central-square':36,
   'tree':2, 'flowerbed':2, 'lamp':3, 'bench':3,
   'fountain':8, 'monument':12,
   'extra-tree':2, 'extra-flowerbed':2, 'extra-bush':1,
@@ -503,9 +504,9 @@ function comfortFromCopy(kind,count,base){
   if(count<=8)return Math.max(1,Math.ceil(base/2));
   return 1;
 }
-function achievedCityLevel(stats){
+function achievedCityLevel(stats,levels=CITY_LEVELS){
   let level=1;
-  for(const def of CITY_LEVELS.slice(1)){
+  for(const def of levels.slice(1)){
     if(def.level!==level+1)break;
     if(stats.population<def.residents||stats.comfort<def.comfort||
       stats.parks<def.parks||stats.shops<def.shops)break;
@@ -552,20 +553,21 @@ export function cityStats(city, catalog, now = Date.now()) {
     }
   }
   if(['homes','shops','parks'].every(kind=>kinds.has(kind)))comfort+=10;
-  const qualifiedLevel=achievedCityLevel({population,comfort,parks,shops});
+  const levels=catalog?.__cityLevels||CITY_LEVELS;
+  const qualifiedLevel=achievedCityLevel({population,comfort,parks,shops},levels);
   const savedLevel=Number(city.progress?.bestLevel)||1;
   const cityLevel=Math.max(qualifiedLevel,savedLevel);
   const claimedLevels=Array.isArray(city.progress?.claimedLevels)?[...city.progress.claimedLevels]:[];
   const claimedSet=new Set(claimedLevels);
-  const claimableLevel=CITY_LEVELS.find(def=>def.level>1&&def.level<=cityLevel&&!claimedSet.has(def.level))?.level||null;
+  const claimableLevel=levels.find(def=>def.level>1&&def.level<=cityLevel&&!claimedSet.has(def.level))?.level||null;
   return {
     buildings:placed.length,structures,completedStructures,
     constructing,ready:placed.length-constructing,
     roads:city.roads.length,stored:city.objects.length-placed.length,
     connected:connectedCount,disconnected,
     population,comfort,comfortTier:comfortTierFor(comfort),parks,shops,
-    cityLevel,qualifiedLevel,levelTitleKey:CITY_LEVELS[cityLevel-1].titleKey,
-    nextCityLevel:CITY_LEVELS[cityLevel]||null,
+    cityLevel,qualifiedLevel,levelTitleKey:levels[cityLevel-1].titleKey,
+    nextCityLevel:levels[cityLevel]||null,
     claimableLevel,claimedLevels,
     visibleCitizens:visibleCitizenCount(population,comfort)
   };
@@ -585,7 +587,7 @@ export function claimCityLevelReward(city,catalog,level,now=Date.now()){
   const next=reconcileCityProgress(city,catalog,now);
   if(next.progress.bestLevel<level)throw new BuildError('CITY_LEVEL_LOCKED');
   if(next.progress.claimedLevels.includes(level))throw new BuildError('CITY_LEVEL_CLAIMED');
-  const reward=CITY_LEVELS[level-1].reward;
+  const reward=(catalog?.__cityLevels||CITY_LEVELS)[level-1].reward;
   if(!reward)throw new BuildError('CITY_REWARD_UNAVAILABLE');
   for(const key of CURRENCIES){
     const amount=reward[key];

@@ -16,6 +16,10 @@ SPRITE_MANIFEST.assets.push(
  {"id":"story_park_belkino_v1_w","packId":"park-belkino-story-v1","category":"parks","buildingId":"park_belkino","catalogId":"story-park-belkino","state":"complete","facing":"w","footprint":[9,9],"fileWebp":"assets/park-belkino-story-v1/park_belkino_ne.webp","width":960,"height":960,"anchorX":480.0,"anchorY":421.603,"assetScale":1.615226,"projection":"zeffi-orthographic-2to1-v012-72x36-scale3","roadMask":null,"groundAlphaBounds":[9,50,951,922],"directionSourceLabel":"ne","directionVerified":false,"runtimeNotes":"Story-only fixed 9x9 preview art. Four close-angle review variations; not verified true 90-degree rotations."}
 );
 
+// RC7: full ready central square + six construction phases, independently versioned.
+import { ZEFFI_CENTRAL_SQUARE_SPRITES } from './zeffi-central-square-art.js';
+SPRITE_MANIFEST.assets.push(...ZEFFI_CENTRAL_SQUARE_SPRITES);
+
 // White Rabbit six construction phases and four stages of the story-only festival.
 SPRITE_MANIFEST.assets.push(
   {"id":"wrz_build_01","packId":"white-rabbit-construction-v1","category":"commercial","buildingId":"white_rabbit_zephirok","catalogId":"white-rabbit-zephirok","state":"build_01","facing":"n","footprint":[4,4],"fileWebp":"assets/white-rabbit-construction-v1/white_rabbit_build_01.webp","width":896,"height":896,"anchorX":448.0,"anchorY":752,"assetScale":3.147894,"projection":"zeffi-orthographic-2to1-v012-72x36-scale3","roadMask":null,"groundAlphaBounds":[41,185,866,752],"directionVerified":false,"runtimeNotes":"Single supplied view per construction phase; all four rotations share this art while building. Existing approved four finished facings are unchanged."},

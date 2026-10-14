@@ -13,9 +13,9 @@ const beforeAfter=(old,price,newer)=>{
  for(const field of ['points','coffee','treats'])assert.equal(newer.wallet[field],old.wallet[field]-price[field],field);
 };
 
-test('the paid catalog includes 49 items with complete costs; paths are retired but saves are readable',()=>{
- assert.equal(CATALOG_ITEMS.length,49);
- assert.equal(Object.keys(OBJECT_PRICES).length,49);
+test('the paid catalog includes 50 items with complete costs; paths are retired but saves are readable',()=>{
+ assert.equal(CATALOG_ITEMS.length,50);
+ assert.equal(Object.keys(OBJECT_PRICES).length,50);
  assert.equal(RETIRED_PATH_ITEMS.length,9);
  assert.equal(CATEGORIES.includes('paths'),false);
  assert.equal(CATALOG_ITEMS.some(i=>i.category==='paths'),false);

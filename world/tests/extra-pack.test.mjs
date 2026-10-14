@@ -42,7 +42,7 @@ test('9 deprecated decorative paths are hidden but remain readable, while plazas
  const paths=CATALOG_ITEMS.filter(x=>x.category==='paths');
  const plazas=CATALOG_ITEMS.filter(x=>x.category==='plazas');
  const decor=CATALOG_ITEMS.filter(x=>x.id.startsWith('extra-'));
- assert.equal(paths.length,0);assert.equal(RETIRED_PATH_ITEMS.length,9);assert.equal(plazas.length,10);assert.equal(decor.length,10);
+ assert.equal(paths.length,0);assert.equal(RETIRED_PATH_ITEMS.length,9);assert.equal(plazas.length,11);assert.equal(decor.length,10);
  assert.deepEqual(RETIRED_PATH_ITEMS.map(x=>x.layer),Array(9).fill('surface'));
  assert.deepEqual(plazas.filter(x=>x.id.startsWith('plaza-')).map(x=>x.layer),Array(8).fill('surface'));
  assert.ok(!CATEGORIES.includes('paths')&&CATEGORIES.includes('plazas'));
@@ -54,6 +54,7 @@ test('9 deprecated decorative paths are hidden but remain readable, while plazas
    assert.ok(id.startsWith('flower_v1_'));
   } else assert.equal(spriteMetadata(id).catalogId,def.id);
   if(def.id==='extra-fountain') assert.ok(def.buildMs>=20000);
+  else if(def.id==='zeffi-central-square')assert.equal(def.buildMs,720000);
   else assert.equal(def.buildMs||0,0);
  }
 });

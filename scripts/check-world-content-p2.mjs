@@ -1,0 +1,33 @@
+#!/usr/bin/env node
+// Structural P2 release gate. Complements real SQLite runtime tests.
+import assert from 'node:assert/strict';
+import {readFileSync} from 'node:fs';
+import {createHash} from 'node:crypto';
+const read=path=>readFileSync(new URL('../'+path,import.meta.url),'utf8');
+const owner=read('owner.html'),service=read('src/zeffi-world-service.js'),admin=read('src/zeffi-world-content-admin.js');
+const content=read('world/world-content.js'),fund=read('src/zeffi-community-fund.js'),story=read('src/zeffi-story-progress.js'),resident=read('src/zeffi-resident-requests.js');
+const page=read('world/story/app.js'),chronicle=read('world/story/community-events-p2.js'),shared=read('world/story/shared-fund.js');
+const sql=read('migrations/0122_zeffi_world_content_p2.sql');
+const lock=JSON.parse(read('scripts/migration-history.lock.json'));
+assert.equal(lock.files['0122_zeffi_world_content_p2.sql'],createHash('sha256').update(sql).digest('hex'));
+for(const v of ['world-projects','world-events','world-story','world-residents'])assert.match(owner,new RegExp('id="view-'+v+'"'));
+assert.match(owner,/WP2_VIEWS\.has\(name\).*wp2Load/);
+assert.match(owner,/wp2Bind\(\)/);
+assert.match(owner,/ОПУБЛИКОВАТЬ СОБЫТИЯ/);
+assert.match(admin,/ctx\?\.access\?\.owner/);
+assert.match(admin,/expectedRevision/);
+assert.match(admin,/audit|_audit/);
+assert.match(fund,/publishedWorldContent\(db\)/);
+assert.match(fund,/COMMUNITY_PROJECT_PAUSED/);
+assert.match(fund,/published_revision=\?/);
+assert.match(story,/publishedWorldContent\(db\)/);
+assert.match(resident,/zeffi_world_resident_terms/);
+assert.match(resident,/published_revision=\?/);
+assert.match(resident,/db\.batch\(\[requestInsert,termInsert\]\)/);
+assert.match(shared,/contributionsEnabled/);
+assert.match(page,/community-events-p2\.js/);
+assert.match(chronicle,/baseReached/);
+assert.doesNotMatch(content,/\bfetch\(|localStorage|db\.prepare/);
+assert.doesNotMatch(sql,/DROP TABLE|DELETE FROM admin_profile_state|UPDATE admin_profile_state|UPDATE zeffi_community_projects/);
+for(const file of ['scripts/check-production-gate.mjs','src/zeffi-world-control-admin.js'])assert.match(read(file),/world-content-p2|handleOwnerWorldContent|community-events-rc5/);
+console.log('World Control Center P2: owner auth, edition, D1 history, live read paths and safety guards PASS');

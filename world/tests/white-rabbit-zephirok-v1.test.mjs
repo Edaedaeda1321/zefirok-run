@@ -69,7 +69,7 @@ test('white rabbit: 4 separately loaded WebP variants, review-only direction met
   assert.deepEqual(disk.assets.find(x=>x.id===spriteId),meta);
  }
  assert.equal(new Set(ids).size,4);
- assert.equal(SPRITE_MANIFEST.assets.filter(a=>!['park-belkino-story-v1','white-rabbit-construction-v1','story-festival-hall-v1'].includes(a.packId)).length,365);
+ assert.equal(SPRITE_MANIFEST.assets.filter(a=>!['park-belkino-story-v1','white-rabbit-construction-v1','story-festival-hall-v1','zeffi-central-square-v1'].includes(a.packId)).length,365);
  assert.equal(SPRITE_MANIFEST.assets.filter(a=>a.packId==='park-belkino-story-v1').length,4);
  assert.equal(SPRITE_MANIFEST.assets.filter(a=>a.packId==='white-rabbit-construction-v1').length,6);
  assert.equal(SPRITE_MANIFEST.assets.filter(a=>a.packId==='story-festival-hall-v1').length,16);
@@ -99,7 +99,8 @@ for(const chapter of [0,1,2])test(`white rabbit: ONE shared physical site in cha
 });
 test('white rabbit: normal player shop and story scene load the SAME one catalog ID',()=>{
  const worker=readFileSync(new URL('../../src/zeffi-world-service.js',import.meta.url),'utf8');
- assert.match(worker,/addObject\(city,CATALOG/);
+ assert.match(worker,/addObject\(city,catalog/);
+ assert.match(worker,/publishedWorldEconomy/);
  const catalog=readFileSync(new URL('../catalog.js',import.meta.url),'utf8');
  assert.match(catalog,/SHOP_UNLOCK_LEVELS/);
  const story=readFileSync(new URL('../story/map.js',import.meta.url),'utf8');

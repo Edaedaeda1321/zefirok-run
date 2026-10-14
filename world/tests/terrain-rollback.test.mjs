@@ -73,7 +73,7 @@ test('previous saves keep their elevation objects, footprint, ownership and wall
 test('level-gated landscape still rejects a new purchase without changing the city',()=>{
  const city=makeInitialCity();city.wallet={points:100_000,coffee:1_000,treats:1_000};
  const before=JSON.stringify(city);
- assert.equal(CATALOG.terrain_podium_plaza_premium.minCityLevel,4);
+ assert.equal(CATALOG.terrain_podium_plaza_premium.minCityLevel,7);
  assert.throws(()=>addObject(city,CATALOG,'terrain_podium_plaza_premium',19,19),
   e=>e instanceof BuildError&&e.code==='BUILDING_LEVEL_LOCKED');
  assert.equal(JSON.stringify(city),before);

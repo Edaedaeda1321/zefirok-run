@@ -27,6 +27,7 @@ export const RU = Object.freeze({
   botanicalGarden:"Ботанический сад", botanicalGardenDescription:"Большой цветущий престижный парк, 4×4.",
   sportsPlayground:"Спортивная площадка", sportsPlaygroundDescription:"Площадка с упражнениями и дорожками, 3×2.",
   newCitySquare:"Городская площадь Зеффи", newCitySquareDescription:"Общественная площадь со светлыми дорожками, 3×3.",
+  zeffiCentralSquare:'Центральная площадь Зеффи',zeffiCentralSquareDescription:'Большая парадная площадь 7×7. Шесть стадий строительства, 12 минут.',
   paths:"Дорожки", plazas:"Площадки", decorativeOnlyDescription:"Декоративное покрытие, не подключает здания к дороге.",
   pathStraight:"Дорожка · прямая",
   pathTurn:"Дорожка · поворот",

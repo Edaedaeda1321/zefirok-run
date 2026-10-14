@@ -35,8 +35,8 @@ test('RC6 keeps the exact original levels 1..5 and adds monotonic, reachable lev
  }
 });
 
-test('RC6 reuses all 49 existing paid objects and spreads real unlocks over each level 1..10',()=>{
- assert.equal(CATALOG_ITEMS.length,49);
+test('RC6 reuses all 50 existing paid objects and spreads real unlocks over each level 1..10',()=>{
+ assert.equal(CATALOG_ITEMS.length,50);
  assert.equal(Object.keys(SHOP_UNLOCK_LEVELS).length,CATALOG_ITEMS.length);
  assert.deepEqual(Object.keys(SHOP_UNLOCK_LEVELS).sort(),CATALOG_ITEMS.map(x=>x.id).sort());
  for(const def of CATALOG_ITEMS){
@@ -99,7 +99,7 @@ test('RC6 server uses the same 10-level bound; currency rewards remain Worker-se
  const server=readFileSync(new URL('../../src/zeffi-world-service.js',import.meta.url),'utf8');
  assert.match(server,/args\.level>CITY_LEVELS\.length/);
  assert.doesNotMatch(server,/args\.level>5/);
- assert.match(server,/const reward=granting\?CITY_LEVELS\[action\.level-1\]\.reward:ZERO/);
+ assert.match(server,/const reward=granting\?\(catalog\.__cityLevels\|\|CITY_LEVELS\)\[action\.level-1\]\.reward:ZERO/);
  assert.match(server,/await db\.batch\(statements\)/);
  assert.match(server,/const credit=granting/);
 });

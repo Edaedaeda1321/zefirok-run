@@ -31,7 +31,7 @@ test('story v1: unavailable storage is fail-soft',()=>{const storage={getItem(){
 test('story v1: reset touches only the story key, never personal-city storage',()=>{const values=new Map([['zefirok-world-v01-sandbox-local','keep'],['wallet','keep-too']]);const storage={getItem:k=>values.get(k)||null,setItem:(k,v)=>values.set(k,v),removeItem:k=>values.delete(k)};saveDemo(storage,createDemoState());assert.ok(values.has(DEMO_STORAGE_KEY));resetDemo(storage);assert.deepEqual([...values.entries()],[['zefirok-world-v01-sandbox-local','keep'],['wallet','keep-too']]);});
 for(let chapter=0;chapter<3;chapter++)for(const phase of ['funding','building','opening','active'])test(`story v1: valid geometry and connectivity for chapter ${chapter}, ${phase}`,()=>{
  let s=phase==='funding'?createDemoState():funded(100000);s=setDemoChapter(s,chapter);const now=phase==='building'?100001:200000;if(phase==='active')s=openProject(s,now);
- const city=buildStoryMap(s,now);assert.deepEqual(validateStoryMap(city),[]);assert.ok(city.objects.length>=130);
+ const city=buildStoryMap(s,now);assert.deepEqual(validateStoryMap(city),[]);assert.ok(city.objects.length>=125);
  for(const d of lockedDistricts(s)){const[x,y,w,h]=d.bounds;assert.ok(city.roads.every(key=>{const[a,b]=key.split(',').map(Number);return !(a>=x&&a<x+w&&b>=y&&b<y+h);}),`road crosses ${d.id}`);}
  assert.equal(city.objects.filter(o=>o.uid==='story-cafe'&&o.kind==='white-rabbit-zephirok').length,1);
  assert.equal(city.objects.some(o=>o.uid==='story-rabbit'),false); // one physical building

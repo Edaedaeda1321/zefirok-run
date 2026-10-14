@@ -8,7 +8,7 @@ import { createDemoState, loadDemo, saveDemo, resetDemo, contribute, simulateCom
 import { DISTRICTS, PLACES, placeById, isPlaceOpen, lockedDistricts, STORY_FESTIVAL_KINDS, buildStoryMap, validateStoryMap } from './map.js';
 import { icon, escapeText as esc, artUrl, requiredStorySpriteIds, centerCamera, worldAt, zoomCamera, clampCamera } from './view.js';
 import {createSharedFundClient, sharedFundQuote, mapStateWithFund} from './shared-fund.js';
-import {communityChronicle,communityEvent,newlyReachedCommunityEvents,paintCommunityScene} from './community-events.js';
+import {communityChronicle,communityEvent,newlyReachedCommunityEvents,paintCommunityScene} from './community-events-p2.js';
 import {createStoryProgressClient} from './progress-client.js?v=rc-story1';
 import {createWorldTutorial} from '../tutorial.js?v=rc-guide2';
 
@@ -276,7 +276,7 @@ export async function startStoryWorld({mode='standalone',initData=''}={}) {
   if(!selection)return '';
   const p=sharedSnapshot.projects[selection],percent=Math.round(p.total/p.goal*100),own=sharedSnapshot.contributedPoints[selection],amount=selection==='garden'?selectedLiveGardenAmount:selectedLiveFestivalAmount;
   const quote=sharedFundQuote(p,amount),choices=selection==='garden'?[1_000,5_000,10_000,25_000,50_000,100_000]:[5_000,25_000,50_000,100_000,500_000,2_000_000];
-  let html=`<span class="eyebrow">ГОРОДСКОЙ ПРОЕКТ</span><h2 id="panelTitle">${esc(p.title)}</h2>${cardArt(placeById(selection==='garden'?'community-garden':'festival'))}<p>Вклады игроков суммируются на сервере. Стадия здания одинакова на всех устройствах.</p>`+
+  let html=`<span class="eyebrow">ГОРОДСКОЙ ПРОЕКТ</span><h2 id="panelTitle">${esc(p.title)}</h2>${cardArt(placeById(selection==='garden'?'community-garden':'festival'))}<p>Вклады игроков суммируются на сервере. Стадия здания одинакова на всех устройствах.</p>${p.announcement?`<div class="demo-box">${esc(p.announcement)}</div>`:''}${p.contributionsEnabled===false?'<div class="demo-box">Новые взносы в этот проект временно приостановлены.</div>':''}`+
     `<div class="panel-progress"><div><span>${money(p.total)} / ${money(p.goal)} очков</span><strong>${percent}%</strong></div><span class="mini-track"><span style="width:${percent}%"></span></span></div>`+
     `<div class="project-stats"><div class="stat-box"><small>Ваш вклад</small><strong>${money(own)} очков</strong></div><div class="stat-box"><small>Ваш баланс</small><strong>${money(sharedSnapshot.walletPoints)} очков</strong></div></div>`;
   if(selection==='festival')html+=`<div class="festival-stages">${['Разметка площадки','Фундамент','Стены и купол','Дом фестивалей открыт'].map((title,n)=>`<div class="festival-stage${n===p.stage?' current':''}${n<p.stage?' done':''}"><b>${n+1}</b><span>${title}<small>${n===0?'Старт':money(p.milestones[n-1])+' очков'}</small></span></div>`).join('')}</div>`;

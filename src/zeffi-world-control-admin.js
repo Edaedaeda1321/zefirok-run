@@ -1,6 +1,8 @@
 // Mir Zeffi Control Center P0. All entry points are called ONLY after the existing
 // owner-only Telegram/session auth + staging write-target guard in src/worker.js.
 import {readWorldControl,effectiveWorldControlFlags,WORLD_CONTROL_MODES,WORLD_CONTROL_FLAGS} from './zeffi-world-control.js';
+import {handleOwnerWorldBalance} from './zeffi-world-balance-admin.js';
+import {handleOwnerWorldContent} from './zeffi-world-content-admin.js';
 
 class ControlError extends Error { constructor(status,message){super(message);this.status=status;} }
 const fail=(status,message)=>{throw new ControlError(status,message);};
@@ -161,6 +163,8 @@ async function testerUpdate(db,ctx,add){
 export async function handleOwnerWorldControl({env,ctx,path}){
   const db=env?.DB;if(!db)fail(503,'Основная база D1 недоступна.');
   if(!ctx?.access?.owner)fail(403,'Только владелец проекта может управлять Миром Зеффи.');
+  if(path==='/api/owner/world/balance'||path.startsWith('/api/owner/world/balance/'))return handleOwnerWorldBalance({env,ctx,path});
+  if(path==='/api/owner/world/content'||path.startsWith('/api/owner/world/content/'))return handleOwnerWorldContent({env,ctx,path});
   if(path==='/api/owner/world/overview'){
     const [access,overview]=await Promise.all([accessView(env,db),metrics(db)]);
     return {...access,overview};

@@ -14,7 +14,7 @@ export const STORY_CATALOG=Object.freeze({
 });
 export const MAP_VERSION='zeffi-story-map-v1';
 export const DISTRICTS=Object.freeze([
- {id:'square',title:'Центральная площадь',short:'Площадь',icon:'spark',focus:[25,25],bounds:[19,19,13,13],chapter:0,kind:'fountain',description:'Сердце общего города: встречи, прогулки и будущие сюжетные сцены.'},
+ {id:'square',title:'Центральная площадь',short:'Площадь',icon:'spark',focus:[23.5,23.5],bounds:[19,19,13,13],chapter:0,kind:'zeffi-central-square',description:'Сердце общего города: встречи, прогулки и будущие сюжетные сцены.'},
  {id:'cafe',title:'Кафе «Зефирок»',short:'Зефирок',icon:'coffee',focus:[10.1,11.4],bounds:[7,7,11,12],chapter:0,kind:'white-rabbit-zephirok',description:'Кафе-кондитерская «Зефирок» находится в одном здании с «Белым Кроликом».'},
  {id:'belkino',title:'Парк Белкино',short:'Белкино',icon:'leaf',focus:[12.5,26.5],bounds:[7,21,11,18],chapter:0,kind:STORY_PARK_BELKINO_KIND,description:'Большой парк с ротондой у пруда, зелёными фигурами, историческими руинами и прогулочными дорожками. Здесь запланирована история «Тайны Белкино».'},
  {id:'friends',title:'Квартал друзей',short:'Друзья',icon:'home',focus:[33,11],bounds:[27,6,15,12],chapter:0,kind:'cottage',description:'Уютный жилой квартал. Будущие участки персонажей пока не закреплены за героями: их откроем вместе с сюжетом.'},
@@ -24,7 +24,7 @@ export const DISTRICTS=Object.freeze([
  {id:'mystery',title:'Неизвестный район',short:'Тайна',icon:'lock',focus:[24,8],bounds:[21,4,6,8],chapter:99,kind:'botanical-garden',description:'Здесь появится новая часть города. Название, герой и условия открытия пока не объявлены.'}
 ]);
 export const PLACES=Object.freeze([
- ...DISTRICTS.map(d=>({...d,uid:({square:'story-fountain',cafe:'story-cafe',belkino:'story-pond',friends:'story-home',station:'story-terminal',festival:'story-festival',rabbit:'story-cafe'})[d.id]||null})),
+ ...DISTRICTS.map(d=>({...d,uid:({square:'story-central-square',cafe:'story-cafe',belkino:'story-pond',friends:'story-home',station:'story-terminal',festival:'story-festival',rabbit:'story-cafe'})[d.id]||null})),
  {id:'community-garden',title:'Сад встреч',short:'Строим вместе',icon:'heart',focus:[15.5,35.5],bounds:[14,34,3,3],chapter:0,kind:'garden',uid:'story-community-garden',description:'Уютный сад рядом с парком Белкино. Жители вместе собирают средства на строительство через общий городской фонд.'}
 ]);
 export const placeById=id=>PLACES.find(p=>p.id===id)||null;
@@ -44,6 +44,11 @@ export function buildStoryMap(state, now=Date.now()) {
  for(const y of [13,19,31,39])line(roads,7,y,41,y);
  line(roads,7,13,7,39);line(roads,19,7,19,41);line(roads,31,8,31,39);
  line(roads,13,25,13,39);line(roads,19,23,31,23);line(roads,19,26,31,26);line(roads,23,23,23,29);
+  // Central 7x7 landmark occupies x20..26,y20..26. Bypass, not pave THROUGH it.
+  for(let x=20;x<=26;x++){roads.delete(keyOf(x,23));roads.delete(keyOf(x,26));}
+  for(let y=23;y<=26;y++)roads.delete(keyOf(23,y));
+  line(roads,23,27,23,31); // Reconnect southern walking spur to the y31 arterial.
+
  // The 9x9 park fills x=8..16,y=22..30. Remove only the interior
  // dead-end spur; the southern pedestrian corridor at y=31 is retained.
  for(let y=25;y<=30;y++)roads.delete(keyOf(13,y));
@@ -85,7 +90,8 @@ export function buildStoryMap(state, now=Date.now()) {
  place('cottage',11,14);place('coffee-kiosk',8,17);place('bus-stop',16,14,0,'story-stop-cafe');
  place('family-home',28,9);place('cottage',32,10,0,'story-home');place('bakery',35,11);
  place('villa',34,14);place('flower-shop',38,14);place('bus-stop',29,16,0,'story-stop-square');
- place('city-square',20,20);place('coffee-kiosk',27,21);place('fountain',24,24,0,'story-fountain');
+ // Shared network city always displays the finished plaza; no D1 construction or payments.
+ place('zeffi-central-square',20,20,0,'story-central-square');place('coffee-kiosk',27,21);place('fountain',28,24,0,'story-fountain');
  place('monument',27,28);place('flower-shop',20,27);
  // One large authored park replaces the old tiny pond and the internal
  // playground; keep a public playground south of the walking path instead.
@@ -99,7 +105,7 @@ export function buildStoryMap(state, now=Date.now()) {
  if(status!=='funding')place('garden',14,34,0,'story-community-garden',status==='building'?{buildStartedAt:state.project.startedAt,buildReadyAt:state.project.readyAt}:{});
  // Keep the future project's footprint reserved even during funding.
  if(status==='funding')for(let x=14;x<17;x++)for(let y=34;y<37;y++)occupied.add(keyOf(x,y));
- const furnishings=[['bench',22,24],['bench',26,25],['bench',25,27],['lamp',21,24],['lamp',29,24],['flowerbed',26,24],['flowerbed',24,27],['bench',12,35],['bench',17,32],['lamp',17,12],['lamp',10,14],['bench',14,14],['flowerbed',17,15],['lamp',30,18],['bench',33,38],['lamp',40,38],['flowerbed',32,18]];
+ const furnishings=[['bench',25,27],['flowerbed',24,27],['bench',12,35],['bench',17,32],['lamp',17,12],['lamp',10,14],['bench',14,14],['flowerbed',17,15],['lamp',30,18],['bench',33,38],['lamp',40,38],['flowerbed',32,18]];
  for(const [kind,x,y]of furnishings)place(kind,x,y,0,'',{},true);
  const closed=lockedDistricts(state);
  for(let x=4;x<44;x+=2)for(let y=4;y<44;y+=2){

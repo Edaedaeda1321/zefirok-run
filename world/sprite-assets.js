@@ -52,6 +52,12 @@ export function setSpriteMode(value) {
 export function onSpriteUpdate(callback) { onUpdate = typeof callback === 'function' ? callback : () => {}; }
 
 export function buildingAssetId(catalogId, rotation = 0, state = 'complete', buildProgress = null) {
+ // One approved view: rotate is disabled for this new 7x7 plaza, not for legacy art.
+ if(catalogId==='zeffi-central-square'){
+  if(state==='complete')return 'zeffi_square_complete';
+  const index=Number.isFinite(buildProgress)?Math.min(6,1+Math.floor(Math.max(0,Math.min(.999999,buildProgress))*6)):(state==='build_01'?1:state==='build_02'?3:5);
+  return `zeffi_square_build_0${index}`;
+ }
  if(catalogId==='white-rabbit-zephirok' && /^build_0[1-3]$/.test(state)){
   const index=Number.isFinite(buildProgress)?Math.min(6,1+Math.floor(Math.max(0,Math.min(.999999,buildProgress))*6)):(state==='build_01'?1:state==='build_02'?3:5);
   return `wrz_build_${String(index).padStart(2,'0')}`;
@@ -211,6 +217,7 @@ export async function preloadSpriteSet(ids,{pin=false,onProgress=()=>{}}={}){
 }
 // Warm construction stages before server purchase, including acceleration FX.
 export function preloadBuildFrames(kind,rotation=0){
+ if(kind==='zeffi-central-square')return preloadSpriteSet([...Array(6)].map((_,i)=>`zeffi_square_build_0${i+1}`).concat('zeffi_square_complete'));
  if(kind==='white-rabbit-zephirok')return preloadSpriteSet([...Array(6)].map((_,i)=>`wrz_build_0${i+1}`).concat(catalogSpriteId(kind,rotation,'complete')).filter(Boolean));
  const ids=['build_01','build_02','build_03'].map(stage=>
    parkConstructionAssetId(kind,rotation,stage)||buildingAssetId(kind,rotation,stage)

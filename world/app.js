@@ -1,8 +1,10 @@
-import { CATALOG, CATALOG_ITEMS, CATEGORIES } from './catalog.js?v=rc-levels10';
+import { CATALOG as BASE_CATALOG, CATALOG_ITEMS as BASE_CATALOG_ITEMS, CATEGORIES } from './catalog.js?v=rc-levels10';
+import {validateWorldBalance,createWorldBalanceRuntime} from './world-balance.js?v=cc-p1';
+let CATALOG=BASE_CATALOG,CATALOG_ITEMS=BASE_CATALOG_ITEMS,CITY_LEVELS;
 import { RU, tr } from './ru.js?v=rc-levels10';
 import { ROAD_TILE_PRICE } from './economy.js';
 import {
- makeInitialCity, sanitizeCity, cloneCity, reconcileCityProgress, claimCityLevelReward, CITY_LEVELS, addObject, moveObject, storeObject,
+ makeInitialCity, sanitizeCity, cloneCity, reconcileCityProgress, claimCityLevelReward, CITY_LEVELS as BASE_CITY_LEVELS, addObject, moveObject, storeObject,
   restoreObject, checkPlacement, checkRoadStroke, applyRoadStroke, cityStats, raisedSurfaceConflicts,
  findOccupant, nextRotation, orthogonalPath, keyOf, dims, BuildError, inBounds,
  isObjectConnected, connectedRoads, buildingEffectPreview, isConstructing, constructionRemaining,
@@ -19,6 +21,7 @@ import {mountCityGuide} from './city-guide-ui.js';
 import {mountResidentRequests} from './resident-requests-ui.js?v=rc-thoughts1';
 import {mountResidentThoughts} from './resident-thoughts.js';
 
+CITY_LEVELS=BASE_CITY_LEVELS;
 const STORAGE_KEY = 'zefirok-world-v01-sandbox-local';
 const SERVER_MODE = window.ZeffiWorldServerRequired === true;
 const CITY_REWARD_IMAGES = Object.freeze({
@@ -268,6 +271,16 @@ async function residentRequestAction(item){
  if(item.itemId)cityGuideAction({type:'build',itemId:item.itemId});
 }
 function acceptServerCity(payload){
+ // Only the signed server state can supply the published World economy.
+ if(SERVER_MODE){
+  if(!payload?.economy)throw new Error('Сервер не передал опубликованную конфигурацию города.');
+  const {revision,...raw}=payload.economy;
+  if(!Number.isSafeInteger(revision)||revision<0)throw new Error('Неверная версия баланса города.');
+  const spec=validateWorldBalance(raw,{reachability:false});
+  const runtime=createWorldBalanceRuntime(spec);
+  CATALOG=runtime.catalog;CATALOG_ITEMS=runtime.catalogItems;CITY_LEVELS=runtime.levels;
+ }
+
  // Do not congratulate a player for progress loaded from an earlier session.
  if(!state.serverReady)cityGuidePrevious=null;
  state.city=sanitizeCity(payload.city,CATALOG);
