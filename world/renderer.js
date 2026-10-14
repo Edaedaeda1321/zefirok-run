@@ -2,6 +2,7 @@ import { dims, keyOf, connectedRoads, isObjectConnected, checkPlacement, isConst
 import { drawSprite, drawCatalogSprite, catalogSpriteId, fallbackSpriteId, buildingAssetId, parkConstructionAssetId, roadMaskId, spriteMetadata } from './sprite-assets.js';
 import { drawCitizen } from './citizens.js';
 import { drawBus } from './traffic.js';
+import { createCityLifeFx } from './city-life-fx.js?v=rc-life1';
 
 export const TILE_W = 72;
 export const TILE_H = 36;
@@ -157,6 +158,8 @@ function ellipse(ctx, x, y, rx, ry, fill, stroke='', width=1) {
 function diamond(ctx,x,y,w=1,h=1,fill='',stroke='',width=1){polygon(ctx,[P(x,y),P(x+w,y),P(x+w,y+h),P(x,y+h)],fill,stroke,width);}
 function branch(ctx,a,b,stroke,width=1){ctx.beginPath();ctx.moveTo(a.x,a.y);ctx.lineTo(b.x,b.y);ctx.strokeStyle=stroke;ctx.lineWidth=width;ctx.stroke();}
 function roundRect(ctx,x,y,w,h,r,fill,stroke=''){ctx.beginPath();ctx.roundRect(x,y,w,h,r);if(fill){ctx.fillStyle=fill;ctx.fill();}if(stroke){ctx.strokeStyle=stroke;ctx.lineWidth=1;ctx.stroke();}}
+
+const cityLifeFx=createCityLifeFx({P,dims,hash,rgba,ellipse,branch,roundRect,polygon});
 
 export function isoToScreen(x, y, canvasSize, camera) {
   const focus = P(PROJECT_FOCUS.x, PROJECT_FOCUS.y);
@@ -797,11 +800,14 @@ export function drawWorld(canvas,city,catalog,cam,overlay={}) {
  const ctx=canvas.getContext('2d',{alpha:false});if(!ctx)return;
  const rect=canvas.getBoundingClientRect(),width=Math.max(1,rect.width),height=Math.max(1,rect.height);
  const dpr=Math.min(window.devicePixelRatio||1,2);
+ const now=Number.isFinite(overlay.now)?overlay.now:Date.now();
+ const duskLevel=cityLifeFx.eveningLevel(now);
  const pxW=Math.round(width*dpr),pxH=Math.round(height*dpr);
  if(canvas.width!==pxW||canvas.height!==pxH){canvas.width=pxW;canvas.height=pxH;}
  ctx.setTransform(dpr,0,0,dpr,0,0);
  ctx.clearRect(0,0,width,height);
  const gradient=ctx.createLinearGradient(0,0,0,height);gradient.addColorStop(0,'#d9efe1');gradient.addColorStop(.55,'#e4f0da');gradient.addColorStop(1,'#f5efdc');ctx.fillStyle=gradient;ctx.fillRect(0,0,width,height);
+ cityLifeFx.drawTwilightOverlay(ctx,width,height,duskLevel,now);
  for(let i=0;i<25;i++){const x=hash(i,3)*width,y=hash(7,i)*height;ellipse(ctx,x,y,3+hash(i,14)*8,2.5,'rgba(255,255,255,.15)');}
  const focus=P(PROJECT_FOCUS.x,PROJECT_FOCUS.y);
  ctx.setTransform(dpr*cam.zoom,0,0,dpr*cam.zoom,dpr*(width/2+cam.x-focus.x*cam.zoom),dpr*(height/2+cam.y-focus.y*cam.zoom));
@@ -821,6 +827,9 @@ export function drawWorld(canvas,city,catalog,cam,overlay={}) {
  }
  drawRoads(ctx,city,viewport);
  drawBusRoads(ctx,city,viewport);
+ // Tint the terrain after it is drawn. All structures, residents,
+ // and lit windows remain legible, and no asset/saved data changes.
+ if(duskLevel>.01){ctx.save();ctx.setTransform(dpr,0,0,dpr,0,0);ctx.fillStyle=`rgba(72,59,111,${(.13*duskLevel).toFixed(4)})`;ctx.fillRect(0,0,width,height);ctx.restore();}
  const connected=connectedRoads(city);
  // Isometric objects are sorted by their *ground footprint center*, not
  // their farthest south corner. The old south-corner value made a person
@@ -871,8 +880,8 @@ export function drawWorld(canvas,city,catalog,cam,overlay={}) {
    const size=dims(def,item.rotation);
    for(let i=0;i<size.w;i++)for(let j=0;j<size.h;j++)drawSprite(ctx,'terrain_overlay_selected_blue_premium',P(item.x+i,item.y+j));
   }
-  const now=Number.isFinite(overlay.now)?overlay.now:Date.now();
   drawWorldGroundContact(ctx,item,def);
+  if(!isConstructing(item,now))cityLifeFx.drawObjectAmbientUnderlay(ctx,item,def,now);
   const skipFx=overlay.skipAnimation?.uid===item.uid?overlay.skipAnimation:null;
   const skipElapsed=skipFx?Math.max(0,Math.min(1,(now-Number(skipFx.startAt||now))/Math.max(1,Number(skipFx.duration||1)))):0;
   const revealComplete=Boolean(skipFx&&skipElapsed>=.76);
@@ -881,6 +890,7 @@ export function drawWorld(canvas,city,catalog,cam,overlay={}) {
   else if(revealComplete)drawBuildReveal(ctx,item,def,now,skipFx);
   else if(building)drawConstructionSite(ctx,item,def,now,null,cam.zoom);
   else drawObject(ctx,item,def);
+  if(!building&&(!skipFx||revealComplete))cityLifeFx.drawObjectAmbientOverlay(ctx,item,def,now,duskLevel);
   ctx.globalAlpha=1;
   if(overlay.selectedUid===item.uid)drawOutline(ctx,item,catalog,'#fffad7',3.5);
   if(!building&&def.needsRoad&&!isObjectConnected(item,city,catalog,connected)){
@@ -888,6 +898,7 @@ export function drawWorld(canvas,city,catalog,cam,overlay={}) {
    ctx.fillStyle='#b97769';ctx.textAlign='center';ctx.font='bold 17px sans-serif';ctx.fillText('!',p.x,p.y-58);
   }
  }
+ for(const moment of cityLifeFx.deriveSocialMoments(overlay.citizens||[]))cityLifeFx.drawSocialMoment(ctx,moment,now);
  if(overlay.mode==='expand'){
   for(const parcel of expansionCandidates(city)){
    const x=parcel.cx*PARCEL_SIZE,y=parcel.cy*PARCEL_SIZE;

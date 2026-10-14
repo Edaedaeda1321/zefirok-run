@@ -215,10 +215,10 @@ export function sampleCitizenScene(scene,now=Date.now()){
    let elapsed=(((now+citizen.offset)%citizen.duration)+citizen.duration)%citizen.duration;
    let segment=citizen.timed[citizen.timed.length-1];
    for(const entry of citizen.timed){if(elapsed<entry.duration){segment=entry;break;}elapsed-=entry.duration;}
-   if(segment.stage==='dwell'&&segment.activity==='cafe')return null;
+   // Keep cafe visitors visible at their existing route anchor, not hidden.
    const t=Math.min(1,elapsed/segment.duration),a=segment.from,b=segment.to;
    const walking=segment.stage!=='dwell'&&(a.x!==b.x||a.y!==b.y);
-   const action=segment.stage==='dwell'?segment.activity:
+   const action=segment.stage==='dwell'?(segment.activity==='cafe'?'coffee':segment.activity):
     (segment.stage==='return'&&segment.activity==='cafe'?'coffee':null);
    return {id:citizen.id,index:citizen.variant,role:citizen.role,action,
     x:a.x+(b.x-a.x)*t,y:a.y+(b.y-a.y)*t,

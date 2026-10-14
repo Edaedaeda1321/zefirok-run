@@ -9,9 +9,9 @@ import {
  constructionSkipPrice, skipConstruction, topUpTestWallet, buyParcel,
   expansionCandidates, expansionPrice, PARCEL_SIZE, canAfford, objectPrice, roadStrokePrice
 } from './engine.js';
-import { drawWorld, drawCatalogThumbnail, screenToTile, isoToScreen, PROJECT_FOCUS } from './renderer.js';
+import { drawWorld, drawCatalogThumbnail, screenToTile, isoToScreen, PROJECT_FOCUS } from './renderer.js?v=rc-life1';
 import { onSpriteUpdate, setSpriteMode, spriteStatus, preloadBuildFrames, preloadSpriteSet, spriteManifest, catalogSpriteId, parkConstructionAssetId, buildingAssetId } from './sprite-assets.js';
-import { buildCitizenScene, sampleCitizenScene } from './citizens.js';
+import { buildCitizenScene, sampleCitizenScene } from './citizens.js?v=rc-life1';
 import { buildBusScene, sampleBusScene } from './traffic.js';
 import {createWorldTutorial} from './tutorial.js?v=rc-guide2';
 import {nextCityGoal,cityGoalMilestone} from './city-goal.js';
@@ -1325,7 +1325,8 @@ function bindEvents(){
  const motionReduced=window.matchMedia?.('(prefers-reduced-motion: reduce)');
  setInterval(()=>{
   if(document.hidden||motionReduced?.matches||!state.visualsReady)return;
-  if(!state.citizenScene?.routes?.length&&!state.trafficScene?.routes?.length)return;
+  if(!state.citizenScene?.routes?.length&&!state.trafficScene?.routes?.length
+     &&!state.city.objects?.some(item=>!item.stored&&['fountain','extra-fountain','tree','extra-tree','garden','rose-garden','botanical-garden','pond-park','coffee-kiosk','coffee-house','bakery','lamp','extra-lamp','flowerbed','extra-flowerbed','playground'].includes(item.kind)))return;
   scheduleDraw();
  },125);
  // Wall-clock countdown: construction continues while the page is closed.
