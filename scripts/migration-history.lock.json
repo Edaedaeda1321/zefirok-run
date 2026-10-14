@@ -118,6 +118,7 @@
     "0115_zeffi_community_fund.sql": "a21ed462095f350455b0748573d4e32c5311e9eb21b3aac3e547381d9e7696ab",
     "0116_rating_winner_notification_dedupe.sql": "496151eb13ec196b7304cdb081a08b40addb90ef145620d3183c770b73ad08d2",
     "0117_zeffi_world_tutorial.sql": "59c64a7fbc9ed6f8b39af144ea27339f218573601feb656544bff41326d06219",
-    "0118_zeffi_story_progression.sql": "8db2017970f199ca53826ab788e2d5cc9aefabe4a4589c03dc1ec5462d758a25"
+    "0118_zeffi_story_progression.sql": "8db2017970f199ca53826ab788e2d5cc9aefabe4a4589c03dc1ec5462d758a25",
+    "0119_zeffi_world_resident_requests.sql": "a4d65b2388287cb15fa3c29edfbd02aba62ddc865c6b5133d4613788f96fa812"
   }
 }

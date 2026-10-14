@@ -16,6 +16,8 @@ import { buildBusScene, sampleBusScene } from './traffic.js';
 import {createWorldTutorial} from './tutorial.js?v=rc-guide2';
 import {nextCityGoal,cityGoalMilestone} from './city-goal.js';
 import {mountCityGuide} from './city-guide-ui.js';
+import {mountResidentRequests} from './resident-requests-ui.js?v=rc-thoughts1';
+import {mountResidentThoughts} from './resident-thoughts.js';
 
 const STORAGE_KEY = 'zefirok-world-v01-sandbox-local';
 const SERVER_MODE = window.ZeffiWorldServerRequired === true;
@@ -29,6 +31,10 @@ const $ = id => document.getElementById(id);
 const canvas = $('worldCanvas');
 let worldTutorial=null;
 let cityGuideUI=null;
+let residentUI=null;
+let residentThoughts=null;
+let residentSnapshot=null;
+let residentPreviouslyReady=null;
 let cityGuidePrevious=null;
 const cityGuideAnnounced=new Set();
 const state = {
@@ -75,6 +81,7 @@ function setCatalogOpen(isOpen,{animate=true}={}){
  $('openBuildCatalog').classList.toggle('is-active',state.catalogOpen);
  $('app').classList.toggle('catalog-expanded',state.catalogOpen);
  if(!animate){requestAnimationFrame(()=>panel.classList.remove('no-anim'));}
+ if(residentThoughts)scheduleDraw();
 }
 function panelSnapThreshold(){
  return Math.max(44,Math.min(110,Math.round(window.innerHeight*0.08)));
@@ -205,6 +212,61 @@ async function serverRequest(path,payload={}){
  }
  return data;
 }
+function acceptResidentRequests(data){
+ // The initial login contains no notification; only live server-confirmed
+ // completion can congratulate a player, never a client-side timer or guess.
+ const ready=new Set((data?.requests||[]).filter(item=>item.status==='ready').map(item=>item.id));
+ if(residentPreviouslyReady){
+  const achieved=[...ready].filter(id=>!residentPreviouslyReady.has(id));
+  if(achieved.length)showToast('Житель благодарит тебя! Награда за просьбу уже ждёт.');
+ }
+ residentPreviouslyReady=ready;
+ $('cityMetrics').classList.toggle('has-resident-ready',ready.size>0);
+ residentSnapshot=data;
+ residentUI?.update(data);
+ residentThoughts?.update(data);
+ scheduleDraw();
+}
+function openResidentThought(item){
+ // The resident cards and their server-verified actions are the single source
+ // of truth. A tap on a thought only reveals the matching existing card.
+ if(!residentSnapshot?.enabled||!residentSnapshot.requests?.some(request=>request.id===item.id))return;
+ if(activeEdit())return;
+ if(state.catalogOpen)setCatalogOpen(false,{animate:false});
+ const metrics=$('cityMetrics'),toggle=$('metricsToggle');
+ metrics.classList.add('is-expanded');
+ toggle.setAttribute('aria-expanded','true');
+ toggle.setAttribute('aria-label','Скрыть подробную статистику города');
+ residentUI?.focusRequest(item.id);
+ scheduleDraw();
+}
+async function residentRequestAction(item){
+ if(!SERVER_MODE||!state.serverReady){showToast('Дождись подключения к серверу.',true);return;}
+ if(item.status==='ready'){
+  if(state.serverBusy)return;
+  state.serverBusy=true;residentUI?.setBusy(true);
+  try{
+   const result=await serverRequest('resident/claim',{
+    residentRequestId:item.id,requestId:`resident-${crypto.randomUUID()}`
+   });
+   if(result.wallet)state.city.wallet={...result.wallet};
+   if(result.residentRequests)acceptResidentRequests(result.residentRequests);
+   const points=result.reward?.points||0,treats=result.reward?.treats||0;
+   showToast(result.repeated?'Награда уже была получена.':
+    `Спасибо за помощь! Получено ${points} очков${treats?' и '+treats+' зефир':''}.`);
+   try{window.Telegram?.WebApp?.HapticFeedback?.notificationOccurred?.('success');}catch{}
+  }catch(error){showToast(error.message||'Не удалось получить награду.',true);}
+  finally{state.serverBusy=false;residentUI?.setBusy(false);updateUI();}
+  return;
+ }
+ if(item.templateId==='road'){
+  const connected=connectedRoads(state.city);
+  const building=state.city.objects.find(obj=>!obj.stored&&!isConstructing(obj)&&
+   CATALOG[obj.kind]?.needsRoad&&!isObjectConnected(obj,state.city,CATALOG,connected));
+  cityGuideAction({type:'road',uid:building?.uid});return;
+ }
+ if(item.itemId)cityGuideAction({type:'build',itemId:item.itemId});
+}
 function acceptServerCity(payload){
  // Do not congratulate a player for progress loaded from an earlier session.
  if(!state.serverReady)cityGuidePrevious=null;
@@ -213,6 +275,7 @@ function acceptServerCity(payload){
  state.serverPurchasesEnabled=Boolean(payload.purchasesEnabled);
  state.serverReady=true;
  state.undo=[];state.redo=[];
+ if(payload.residentRequests)acceptResidentRequests(payload.residentRequests);
  updateUI();scheduleDraw();
 }
 // All 4 angles of every available catalogue object, plus terrain, roads,
@@ -333,12 +396,17 @@ function scheduleDraw(){
  requestAnimationFrame(()=>{
   state.drawScheduled=false;
   const now=Date.now();
+  const citizens=sampleCitizenScene(state.citizenScene,now);
   drawWorld(canvas,state.city,CATALOG,state.camera,{
     selectedUid:state.selectedUid,draft:state.draft,mode:state.mode,
     roadDraft:state.roadDraft,roadValid:state.roadValid, expansionDraft:state.expansionDraft,
-    now, citizens:sampleCitizenScene(state.citizenScene,now),
+    now,citizens,
     buses:sampleBusScene(state.trafficScene,now),
     skipAnimation: state.skipAnimation ? {...state.skipAnimation} : null
+  });
+  residentThoughts?.paint(citizens,state.citizenScene?.routes,state.camera,SIZE(),{
+   visible:(!SERVER_MODE||state.serverReady)&&!state.serverBusy&&state.mode==='select'&&
+    !activeEdit()&&!$('cityMetrics').classList.contains('is-expanded')
   });
  });
 }
@@ -1166,6 +1234,7 @@ function bindEvents(){
   panel.classList.toggle('is-expanded',expanded);
   $('metricsToggle').setAttribute('aria-expanded',String(expanded));
   $('metricsToggle').setAttribute('aria-label',expanded?'Скрыть подробную статистику':'Показать всю статистику города');
+  scheduleDraw();
  });
  if(location.pathname.endsWith('/world/index.html')){
   $('zeffiReturnGame').addEventListener('click',()=>{location.href=new URL('../index.html',location.href).href;});
@@ -1268,6 +1337,13 @@ function bindEvents(){
    updateUI();scheduleDraw();
   }
   updateSkipQuote();
+  // A finished timer is a server event, not a client claim. Refresh once when
+  // the number of active builds decreases; never poll D1 every second.
+  if(SERVER_MODE&&state.serverReady&&!state.serverBusy&&active<previousConstructionCount){
+   void serverRequest('state').then(result=>{
+    if(!state.serverBusy && result.revision>=state.serverRevision)acceptServerCity(result);
+   }).catch(error=>console.warn('World timer state refresh failed',error?.message||error));
+  }
   previousConstructionCount=active;
  },1000);
 }
@@ -1277,6 +1353,8 @@ function initialize(){
  // A retired 2D/3D preference must never switch the released city to wireframes.
  setSpriteMode(true);
   cityGuideUI=mountCityGuide($('cityLevelDetails'),{nameOf,onAction:cityGuideAction});
+  residentUI=mountResidentRequests($('cityLevelDetails'),{onAction:residentRequestAction});
+  residentThoughts=mountResidentThoughts($('mapZone'),{onSelect:openResidentThought});
  translateStatic();readSavedCity();bindEvents();renderCategories();renderCatalog();setCatalogOpen(window.innerWidth>700||window.innerHeight>=570);updateUI();resetView();
  if(SERVER_MODE){
   for(const id of ['topupWallet','undoButton','redoButton','resetButton']){$(id).hidden=true;}

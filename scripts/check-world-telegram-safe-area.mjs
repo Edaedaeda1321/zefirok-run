@@ -20,9 +20,9 @@ for(const [filename,html] of [['world.html',world],['world/index.html',sandbox]]
  assert(html.includes("document.documentElement.classList.add('zeffi-world-framed')"), `${filename}: safe-area double count must be prevented`);
  for(const id of ['walletPoints','walletCoffee','walletTreats','bottomPanel','catalogToggle','zeffiReturnGame'])assert(html.includes(`id="${id}"`),`${filename}: missing ${id}`);
 }
-assert(world.includes("if(testerRequest&&await isAuthorizedTester()){launchCity();return;}"),'tester must remain server-authenticated');
+assert(world.includes("if(candidateAccess?.server===true){launchCity(candidateAccess);return;}"),'candidate must remain server-authenticated');
 assert(world.includes("window.parent.postMessage({type:'zefirok-world-ui-ready'},location.origin)"), 'auth success must notify host');
-assert(world.indexOf('window.parent.postMessage({type:\'zefirok-world-ui-ready\'}')>world.indexOf('function launchCity(){'), 'ready signal must occur only within launchCity');
+assert(world.indexOf('window.parent.postMessage({type:\'zefirok-world-ui-ready\'}')>world.indexOf('function launchCity(access={server:false}){'), 'ready signal must occur only within launchCity');
 assert(css.includes(':root.zeffi-world-framed{--zeffi-safe-top:0px;--zeffi-safe-bottom:0px}'), 'nested world must consume no additional inset');
 assert(css.includes('var(--zeffi-safe-bottom)'), 'mobile bottom sheet must use safe inset');
 assert(css.includes('.app-shell.catalog-expanded .world-tools'), 'expanded catalog needs a non-overlapping tool rail');

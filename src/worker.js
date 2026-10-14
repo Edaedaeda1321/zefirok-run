@@ -2205,7 +2205,7 @@ export default {
         // Preserve existing legal acceptance requirements for spend operations.
         // The server module additionally enforces explicit tester access and
         // fail-closed feature flags before using the shared D1 wallet.
-        if(url.pathname==="/api/world/mutate"){
+        if(url.pathname==="/api/world/mutate"||url.pathname==="/api/world/resident/claim"){
           const legalGate=await enforceLegalAcceptanceForRequest(request,env);
           if(legalGate)return legalGate;
         }
@@ -4309,7 +4309,7 @@ async function ownerPanelDailyLoyaltySave(env, ctx) {
 async function ownerPanelPrepareDailyReturnTest(env,ctx){
   await ensureDailyLoyaltySchema(env);
   const telegramId=String(ctx.body?.telegramId||'').trim();
-  if(!/^\d{4,20}$/.test(telegramId))throw new ApiError(400,'Некорректный Telegram ID игрока.');
+  if(!/^\d{1,20}$/.test(telegramId))throw new ApiError(400,'Некорректный Telegram ID игрока.');
   const missedDays=Math.floor(Number(ctx.body?.missedDays||7));
   if(![3,7,14].includes(missedDays))throw new ApiError(400,'Для теста выберите 3, 7 или 14 дней отсутствия.');
   const grantReward=ctx.body?.grantReward===true||Number(ctx.body?.grantReward)===1;
@@ -4339,7 +4339,7 @@ async function ownerPanelPrepareDailyReturnTest(env,ctx){
 async function ownerPanelCancelDailyReturnTest(env,ctx){
   await ensureDailyLoyaltySchema(env);
   const telegramId=String(ctx.body?.telegramId||'').trim();
-  if(!/^\d{4,20}$/.test(telegramId))throw new ApiError(400,'Некорректный Telegram ID игрока.');
+  if(!/^\d{1,20}$/.test(telegramId))throw new ApiError(400,'Некорректный Telegram ID игрока.');
   const config=await loadDailyLoyaltyConfig(env,{allowDisabled:true});
   const now=Math.floor(Date.now()/1000);
   await env.DB.prepare(`UPDATE daily_loyalty_return_tests SET status='cancelled',updated_at=? WHERE telegram_id=? AND season_id=? AND status='pending'`).bind(now,telegramId,String(config.season.id)).run();
@@ -4350,7 +4350,7 @@ async function ownerPanelCancelDailyReturnTest(env,ctx){
 async function ownerPanelRestoreDailyStreak(env, ctx) {
   await ensureDailyLoyaltySchema(env);
   const telegramId = String(ctx.body?.telegramId || '').trim();
-  if (!/^\d{4,20}$/.test(telegramId)) throw new ApiError(400, 'Некорректный Telegram ID игрока.');
+  if (!/^\d{1,20}$/.test(telegramId)) throw new ApiError(400, 'Некорректный Telegram ID игрока.');
   const desired = Math.floor(Number(ctx.body?.streakDays));
   if (!Number.isInteger(desired) || desired < 1 || desired > 3650) throw new ApiError(400, 'Серия должна быть от 1 до 3650 дней.');
   const reason = String(ctx.body?.reason || '').trim().slice(0,300);
@@ -11313,15 +11313,17 @@ async function queueLeaderboardWinnerNotification(env, seasonId, now = Math.floo
   const row = await env.DB.prepare(`
     SELECT r.id AS reward_id,r.telegram_id,r.reward_type,r.reward_amount,r.reward_item_id,r.status AS reward_status,
            s.title,s.reward_title,s.reward_image_url,s.reward_type AS season_reward_type,
-           s.reward_amount AS season_reward_amount,s.reward_item_id AS season_reward_item_id,b.chat_id
+           s.reward_amount AS season_reward_amount,s.reward_item_id AS season_reward_item_id,
+           COALESCE(NULLIF(TRIM(b.chat_id),''),r.telegram_id) AS chat_id
     FROM leaderboard_rewards r
     JOIN leaderboard_seasons s ON s.id=r.season_id
-    JOIN bot_subscribers b ON b.telegram_id=r.telegram_id AND b.active=1 AND TRIM(COALESCE(b.chat_id,''))<>''
+    LEFT JOIN bot_subscribers b ON b.telegram_id=r.telegram_id
     WHERE s.id=? AND s.status='ended' AND s.finalized_at IS NOT NULL AND r.place=1
+      AND (b.active IS NULL OR b.active=1)
       AND r.status IN ('pending','claimed','expired')
     ORDER BY r.created_at DESC LIMIT 1
   `).bind(id).first();
-  if (!row) return { queued: 0 };
+  if (!row || !/^\d{1,20}$/.test(String(row.telegram_id || ''))) return { queued: 0 };
   const rewardTitle = leaderboardRewardNotificationTitle({
     reward_type:row.reward_type,reward_amount:row.reward_amount,reward_item_id:row.reward_item_id
   },{
@@ -11351,8 +11353,10 @@ async function recoverLeaderboardWinnerNotifications(env, now = Math.floor(Date.
   const rows = (await env.DB.prepare(`
     SELECT s.id FROM leaderboard_seasons s
     JOIN leaderboard_rewards r ON r.season_id=s.id AND r.place=1
-    JOIN bot_subscribers b ON b.telegram_id=r.telegram_id AND b.active=1 AND TRIM(COALESCE(b.chat_id,''))<>''
+    LEFT JOIN bot_subscribers b ON b.telegram_id=r.telegram_id
     WHERE s.status='ended' AND s.finalized_at IS NOT NULL AND s.finalized_at>=?
+      AND (b.active IS NULL OR b.active=1) AND length(r.telegram_id) BETWEEN 1 AND 20
+      AND r.telegram_id NOT GLOB '*[^0-9]*'
       AND r.status IN ('pending','claimed','expired')
       AND NOT EXISTS (SELECT 1 FROM player_notification_queue q
                       WHERE q.category=('player_mail:rating_winner:'||s.id))
@@ -22112,7 +22116,7 @@ async function playerApiRequestHint(requestCopy) {
       const parsedUsername = String(user?.username || "").trim();
       if (/^[A-Za-z0-9_]{1,32}$/.test(parsedUsername)) username = parsedUsername;
     }
-    if (!/^\d{4,20}$/.test(telegramId)) telegramId = "";
+    if (!/^\d{1,20}$/.test(telegramId)) telegramId = "";
     return { telegramId, username };
   } catch {
     return fallback;
@@ -26711,7 +26715,7 @@ async function blockPlayerAndWipeProgress(env, options) {
   await ensureSeasonPassSchema(env);
 
   const telegramId = String(options.telegramId || "");
-  if (!/^\d{4,20}$/.test(telegramId)) throw new Error("Некорректный Telegram ID игрока.");
+  if (!/^\d{1,20}$/.test(telegramId)) throw new Error("Некорректный Telegram ID игрока.");
   const now = Math.floor(Date.now() / 1000);
   const actorId = String(options.actor?.id || options.updatedBy || "system");
   const actorName = String(options.actorName || telegramDisplayName(options.actor || {})).trim().slice(0, 100);
@@ -32594,7 +32598,7 @@ async function issuePlayerSession(auth, env, provider = "telegram-miniapp") {
   const normalizedProvider = PLAYER_SESSION_PROVIDERS.has(String(provider || "")) ? String(provider) : "telegram-miniapp";
   const user = sanitizePlayerSessionUser(auth?.user);
   const telegramId = String(user.id);
-  if (!/^\d{4,20}$/.test(telegramId)) throw new ApiError(401, "Некорректный идентификатор игрока.");
+  if (!/^\d{1,20}$/.test(telegramId)) throw new ApiError(401, "Некорректный идентификатор игрока.");
   const now = Math.floor(Date.now() / 1000);
   const ttl = playerSessionTtlSeconds(env);
   const payload = {
@@ -32642,7 +32646,7 @@ async function validatePlayerSessionToken(token, env, options = {}) {
   const telegramId = String(payload?.telegramId || "");
   if (Number(payload?.v) !== PLAYER_SESSION_VERSION || payload?.iss !== PLAYER_SESSION_ISSUER || payload?.aud !== PLAYER_SESSION_AUDIENCE) throw new ApiError(401, "Сессия приложения несовместима.");
   if (!PLAYER_SESSION_PROVIDERS.has(String(payload?.provider || ""))) throw new ApiError(401, "Источник сессии приложения неизвестен.");
-  if (!/^\d{4,20}$/.test(telegramId) || String(payload?.sub || "") !== `tg:${telegramId}`) throw new ApiError(401, "Сессия приложения содержит некорректный профиль.");
+  if (!/^\d{1,20}$/.test(telegramId) || String(payload?.sub || "") !== `tg:${telegramId}`) throw new ApiError(401, "Сессия приложения содержит некорректный профиль.");
   if (!issuedAt || !expiresAt || issuedAt > now + 60 || expiresAt <= now || expiresAt - issuedAt > MAX_PLAYER_SESSION_TTL_SECONDS) throw new ApiError(401, "Сессия приложения устарела. Войдите снова.");
   const rawUser = sanitizePlayerSessionUser({ ...(payload?.user || {}), id: telegramId });
   const user = options.applyAdminControl === false ? rawUser : await applyPlayerAdminControl(rawUser, env);
@@ -32752,7 +32756,7 @@ async function validateTelegramIosIdToken(idToken, env) {
   if (claims?.iss !== TELEGRAM_OIDC_ISSUER || !audience.includes(clientId)) throw new ApiError(401, "Telegram ID token выпущен не для этого приложения.");
   if (!issuedAt || !expiresAt || issuedAt > now + 60 || expiresAt <= now || now - issuedAt > maxAge) throw new ApiError(401, "Telegram Login устарел. Войдите снова.");
   const telegramId = String(claims?.id || "");
-  if (!/^\d{4,20}$/.test(telegramId) || !String(claims?.sub || "").trim()) throw new ApiError(401, "Telegram не передал корректный профиль.");
+  if (!/^\d{1,20}$/.test(telegramId) || !String(claims?.sub || "").trim()) throw new ApiError(401, "Telegram не передал корректный профиль.");
   const user = {
     id: telegramId,
     first_name: String(claims?.given_name || claims?.name || "").slice(0, 128),
@@ -42004,28 +42008,35 @@ function isLeaderboardDethroneNotificationCategory(category){return Boolean(lead
 function leaderboardDethronePointsWord(value){const amount=Math.abs(Math.floor(Number(value)||0)),lastTwo=amount%100,last=amount%10;if(lastTwo>=11&&lastTwo<=14)return "очков";if(last===1)return "очко";if(last>=2&&last<=4)return "очка";return "очков";}
 async function leaderboardCurrentVisibleLeader(env,seasonId){return env.DB.prepare(`SELECT telegram_id,display_name,username,best_score,achieved_at FROM leaderboard_entries WHERE season_id=? AND hidden=0 ORDER BY best_score DESC,achieved_at ASC,telegram_id ASC LIMIT 1`).bind(String(seasonId||"")).first();}
 
+function leaderboardSeasonAcceptsDethroneNotice(season,now){
+  if(!season||!["active","scheduled"].includes(String(season.status||""))||season.finalized_at!=null)return false;
+  const start=Number(season.starts_at||0),end=Number(season.ends_at||0);
+  return start>0&&end>start&&now>=start&&now<end;
+}
 async function queueLeaderboardDethroneNotificationIfNeeded(env,{seasonId,previousLeaderId,expectedLeaderId}={}){
   const sid=String(seasonId||"").trim(),previousId=String(previousLeaderId||"").trim(),expectedId=String(expectedLeaderId||"").trim();
   if(!sid||!previousId||!expectedId||previousId===expectedId)return {queued:false,reason:"invalid"};
   await ensureV77Schema(env);
   const [season,leader,subscriber]=await Promise.all([
-    env.DB.prepare(`SELECT id,status,ends_at FROM leaderboard_seasons WHERE id=? LIMIT 1`).bind(sid).first(),
+    env.DB.prepare(`SELECT id,status,starts_at,ends_at,finalized_at FROM leaderboard_seasons WHERE id=? LIMIT 1`).bind(sid).first(),
     leaderboardCurrentVisibleLeader(env,sid),
     env.DB.prepare(`SELECT chat_id,active FROM bot_subscribers WHERE telegram_id=? LIMIT 1`).bind(previousId).first()
   ]);
   const now=Math.floor(Date.now()/1000);
-  if(!season||String(season.status||"")!=="active"||(Number(season.ends_at||0)>0&&Number(season.ends_at)<=now))return {queued:false,reason:"season_inactive"};
+  if(!leaderboardSeasonAcceptsDethroneNotice(season,now))return {queued:false,reason:"season_inactive"};
   if(String(leader?.telegram_id||"")!==expectedId)return {queued:false,reason:"leader_changed"};
-  if(!subscriber||Number(subscriber.active||0)!==1||!String(subscriber.chat_id||"").trim())return {queued:false,reason:"no_bot_chat"};
+  if(subscriber&&Number(subscriber.active||0)!==1)return {queued:false,reason:"bot_disabled"};
+  const chatId=String(subscriber?.chat_id||previousId).trim();
+  if(!chatId||!/^\d{1,20}$/.test(previousId))return {queued:false,reason:"no_bot_chat"};
   const category=leaderboardDethroneCategory(sid),availableAt=now+LEADERBOARD_DETHRONE_DELAY_SECONDS;
   const placeholder="Проверяем актуального лидера рейтинга перед отправкой уведомления.";
   const replyMarkup={inline_keyboard:[[{text:"🏃 Вернуть первое место",web_app:{url:configuredGameOpenUrl(env,"rating")}}]]};
   const existing=await env.DB.prepare(`SELECT id FROM player_notification_queue WHERE telegram_id=? AND category=? AND status IN ('pending','failed') AND attempts<5 ORDER BY id DESC LIMIT 1`).bind(previousId,category).first();
   if(existing?.id){
-    await env.DB.prepare(`UPDATE player_notification_queue SET chat_id=?,message_html=?,reply_markup_json=?,status='pending',last_error='',available_at=?,updated_at=?,lease_token='',lease_until=0 WHERE id=? AND attempts<5`).bind(String(subscriber.chat_id),placeholder,JSON.stringify(replyMarkup),availableAt,now,existing.id).run();
+    await env.DB.prepare(`UPDATE player_notification_queue SET chat_id=?,message_html=?,reply_markup_json=?,status='pending',last_error='',available_at=?,updated_at=?,lease_token='',lease_until=0 WHERE id=? AND attempts<5`).bind(chatId,placeholder,JSON.stringify(replyMarkup),availableAt,now,existing.id).run();
     return {queued:true,queueId:Number(existing.id||0),updated:true};
   }
-  const result=await env.DB.prepare(`INSERT INTO player_notification_queue(telegram_id,chat_id,category,message_html,reply_markup_json,status,attempts,last_error,available_at,created_at,updated_at,lease_token,lease_until) VALUES(?,?,?,?,?,'pending',0,'',?,?,?,'',0)`).bind(previousId,String(subscriber.chat_id),category,placeholder,JSON.stringify(replyMarkup),availableAt,now,now).run();
+  const result=await env.DB.prepare(`INSERT INTO player_notification_queue(telegram_id,chat_id,category,message_html,reply_markup_json,status,attempts,last_error,available_at,created_at,updated_at,lease_token,lease_until) VALUES(?,?,?,?,?,'pending',0,'',?,?,?,'',0)`).bind(previousId,chatId,category,placeholder,JSON.stringify(replyMarkup),availableAt,now,now).run();
   return {queued:true,queueId:Number(result.meta?.last_row_id||0),updated:false};
 }
 
@@ -42084,14 +42095,16 @@ async function materializeLeaderboardDethroneNotification(env,row,now=Math.floor
   const seasonId=leaderboardDethroneSeasonId(row?.category),telegramId=String(row?.telegram_id||"").trim();
   if(!seasonId||!telegramId)return {action:"cancel",reason:"rating-dethrone-invalid"};
   const [season,leader,player,subscriber,lastNotice]=await Promise.all([
-    env.DB.prepare(`SELECT id,status,ends_at FROM leaderboard_seasons WHERE id=? LIMIT 1`).bind(seasonId).first(),
+    env.DB.prepare(`SELECT id,status,starts_at,ends_at,finalized_at FROM leaderboard_seasons WHERE id=? LIMIT 1`).bind(seasonId).first(),
     leaderboardCurrentVisibleLeader(env,seasonId),
     env.DB.prepare(`SELECT telegram_id,best_score,achieved_at FROM leaderboard_entries WHERE season_id=? AND telegram_id=? AND hidden=0 LIMIT 1`).bind(seasonId,telegramId).first(),
     env.DB.prepare(`SELECT chat_id,active FROM bot_subscribers WHERE telegram_id=? LIMIT 1`).bind(telegramId).first(),
     env.DB.prepare(`SELECT MAX(sent_at) AS last_at FROM player_notification_log WHERE telegram_id=? AND substr(category,1,?)=? AND sent_at>?`).bind(telegramId,LEADERBOARD_DETHRONE_NOTIFICATION_PREFIX.length,LEADERBOARD_DETHRONE_NOTIFICATION_PREFIX,now-LEADERBOARD_DETHRONE_COOLDOWN_SECONDS).first()
   ]);
-  if(!season||String(season.status||"")!=="active"||(Number(season.ends_at||0)>0&&Number(season.ends_at)<=now))return {action:"cancel",reason:"rating-season-inactive"};
-  if(!subscriber||Number(subscriber.active||0)!==1||!String(subscriber.chat_id||"").trim())return {action:"cancel",reason:"rating-bot-unavailable"};
+  if(!leaderboardSeasonAcceptsDethroneNotice(season,now))return {action:"cancel",reason:"rating-season-inactive"};
+  if(subscriber&&Number(subscriber.active||0)!==1)return {action:"cancel",reason:"rating-bot-unavailable"};
+  const chatId=String(subscriber?.chat_id||telegramId).trim();
+  if(!chatId||!/^\d{1,20}$/.test(telegramId))return {action:"cancel",reason:"rating-bot-unavailable"};
   if(!leader||!player)return {action:"cancel",reason:"rating-entry-missing"};
   if(String(leader.telegram_id||"")===telegramId)return {action:"cancel",reason:"rating-lead-restored"};
   const lastAt=Math.max(0,Number(lastNotice?.last_at||0));
@@ -42112,7 +42125,7 @@ ${leadLine}
 
 Возвращайтесь в «Сладкий Забег» и верните лидерство!`;
   const replyMarkup={inline_keyboard:[[{text:"🏃 Вернуть первое место",web_app:{url:configuredGameOpenUrl(env,"rating")}}]]};
-  return {action:"send",chatId:String(subscriber.chat_id),messageHtml,replyMarkup,place,gap,leaderId:String(leader.telegram_id||"")};
+  return {action:"send",chatId,messageHtml,replyMarkup,place,gap,leaderId:String(leader.telegram_id||"")};
 }
 
 function v77MoscowHour(now){return new Date((Number(now)+3*3600)*1000).getUTCHours();}
@@ -42187,7 +42200,7 @@ async function processV77NotificationQueue(env,limit=24){
         const attempted=await sendPlayerTransactionalNotificationNow(env,row.telegram_id,deliveryChatId,deliveryMessageHtml,deliveryReplyMarkup,{category:row.category});
         if(!attempted.ok){const error=new Error(attempted.errorText||"Telegram недоступен");error.status=Number(attempted.error?.status||0);error.retryAfter=Number(attempted.error?.retryAfter||0);error.transactionalRetryable=attempted.retryable;throw error;}
       }else{
-        await sendTelegramMessage(env,deliveryChatId,deliveryMessageHtml,deliveryReplyMarkup);
+        await sendTelegramMessage(env,deliveryChatId,deliveryMessageHtml,deliveryReplyMarkup,{cleanChat:false});
       }
       const finishedAt=Math.floor(Date.now()/1000);
       const successStatements=[env.DB.prepare(`UPDATE player_notification_queue SET status='sent',attempts=attempts+1,last_error='',updated_at=?,lease_token='',lease_until=0 WHERE id=? AND lease_token=?`).bind(finishedAt,row.id,token)];
@@ -44389,7 +44402,7 @@ async function ownerPanelV8UpdateFraud(env, ctx) {
 }
 
 async function ownerPanelV8FraudTester(env, ctx) {
-  await ensureOperationsSecuritySchema(env);const telegramId=String(ctx.body?.telegramId||"").trim();if(!/^\d{4,20}$/.test(telegramId))throw new ApiError(400,"Некорректный Telegram ID.");const now=Math.floor(Date.now()/1000);
+  await ensureOperationsSecuritySchema(env);const telegramId=String(ctx.body?.telegramId||"").trim();if(!/^\d{1,20}$/.test(telegramId))throw new ApiError(400,"Некорректный Telegram ID.");const now=Math.floor(Date.now()/1000);
   await env.DB.prepare(`INSERT INTO tester_accounts(telegram_id,test_balance_enabled,unlock_all_skins,unlock_all_cases,accelerated_guarantee,exclude_from_rating,note,created_at,updated_at,updated_by) VALUES(?,0,0,0,0,1,?,?,?,?) ON CONFLICT(telegram_id) DO UPDATE SET note=excluded.note,updated_at=excluded.updated_at,updated_by=excluded.updated_by`).bind(telegramId,"Добавлен из Control Center v8 / Антифрод",now,now,String(ctx.user.id)).run();
   await logStaffAction(env,ctx.user,ctx.access,"owner_panel_tester_add",telegramId,"tester",null,1,{source:"fraud"});return {ok:true};
 }
@@ -44483,7 +44496,7 @@ async function ownerPanelV8SaveFeatureFlag(env, ctx) {
 }
 
 async function ownerPanelV8SaveTester(env, ctx) {
-  await ensureOperationsSecuritySchema(env);const telegramId=String(ctx.body?.telegramId||"").trim();if(!/^\d{4,20}$/.test(telegramId))throw new ApiError(400,"Некорректный Telegram ID.");const now=Math.floor(Date.now()/1000);const note=String(ctx.body?.note||"").trim().slice(0,300);await env.DB.prepare(`INSERT INTO tester_accounts(telegram_id,test_balance_enabled,unlock_all_skins,unlock_all_cases,accelerated_guarantee,exclude_from_rating,note,created_at,updated_at,updated_by) VALUES(?,?,?,?,?,?,?,?,?,?) ON CONFLICT(telegram_id) DO UPDATE SET test_balance_enabled=excluded.test_balance_enabled,unlock_all_skins=excluded.unlock_all_skins,unlock_all_cases=excluded.unlock_all_cases,accelerated_guarantee=excluded.accelerated_guarantee,exclude_from_rating=excluded.exclude_from_rating,note=excluded.note,updated_at=excluded.updated_at,updated_by=excluded.updated_by`).bind(telegramId,ctx.body?.testBalance?1:0,ctx.body?.unlockSkins?1:0,ctx.body?.unlockCases?1:0,ctx.body?.acceleratedGuarantee?1:0,ctx.body?.excludeRating===false?0:1,note,now,now,String(ctx.user.id)).run();await logStaffAction(env,ctx.user,ctx.access,"owner_panel_tester_save",telegramId,"tester",null,1,{note});return {ok:true};
+  await ensureOperationsSecuritySchema(env);const telegramId=String(ctx.body?.telegramId||"").trim();if(!/^\d{1,20}$/.test(telegramId))throw new ApiError(400,"Некорректный Telegram ID.");const now=Math.floor(Date.now()/1000);const note=String(ctx.body?.note||"").trim().slice(0,300);await env.DB.prepare(`INSERT INTO tester_accounts(telegram_id,test_balance_enabled,unlock_all_skins,unlock_all_cases,accelerated_guarantee,exclude_from_rating,note,created_at,updated_at,updated_by) VALUES(?,?,?,?,?,?,?,?,?,?) ON CONFLICT(telegram_id) DO UPDATE SET test_balance_enabled=excluded.test_balance_enabled,unlock_all_skins=excluded.unlock_all_skins,unlock_all_cases=excluded.unlock_all_cases,accelerated_guarantee=excluded.accelerated_guarantee,exclude_from_rating=excluded.exclude_from_rating,note=excluded.note,updated_at=excluded.updated_at,updated_by=excluded.updated_by`).bind(telegramId,ctx.body?.testBalance?1:0,ctx.body?.unlockSkins?1:0,ctx.body?.unlockCases?1:0,ctx.body?.acceleratedGuarantee?1:0,ctx.body?.excludeRating===false?0:1,note,now,now,String(ctx.user.id)).run();await logStaffAction(env,ctx.user,ctx.access,"owner_panel_tester_save",telegramId,"tester",null,1,{note});return {ok:true};
 }
 
 async function ownerPanelV8DeleteTester(env, ctx) {await ensureOperationsSecuritySchema(env);const id=String(ctx.body?.telegramId||"").trim();await env.DB.prepare(`DELETE FROM tester_accounts WHERE telegram_id=?`).bind(id).run();await logStaffAction(env,ctx.user,ctx.access,"owner_panel_tester_delete",id,"tester",1,0,{});return {ok:true};}
@@ -45227,7 +45240,7 @@ async function ownerPanelLegalVersion(env, ctx) {
 async function ownerPanelLegalRevokeConsent(env, ctx) {
   await ensureLegalSchema(env);
   const telegramId = String(ctx.body?.telegramId || '').trim();
-  if (!/^\d{4,20}$/.test(telegramId)) throw new ApiError(400, 'Некорректный Telegram ID.');
+  if (!/^\d{1,20}$/.test(telegramId)) throw new ApiError(400, 'Некорректный Telegram ID.');
   const reason = String(ctx.body?.reason || '').trim().slice(0, 800);
   if (reason.length < 3) throw new ApiError(400, 'Укажите причину отзыва согласия.');
   const source = String(ctx.body?.source || 'support').trim().toLowerCase();
@@ -45274,7 +45287,7 @@ async function ownerLegalPlayerSnapshot(env, telegramId) {
 }
 
 async function ownerPanelV85Player360(env,ctx){
-  const telegramId=String(ctx.body?.telegramId||"").trim();if(!/^\d{4,20}$/.test(telegramId))throw new ApiError(400,"Некорректный Telegram ID.");
+  const telegramId=String(ctx.body?.telegramId||"").trim();if(!/^\d{1,20}$/.test(telegramId))throw new ApiError(400,"Некорректный Telegram ID.");
   const exists=await env.DB.prepare(`SELECT telegram_id FROM admin_profile_state WHERE telegram_id=? LIMIT 1`).bind(telegramId).first();if(!exists)throw new ApiError(404,"Игрок не найден.");
   const now=Math.floor(Date.now()/1000),week=now-7*86400;
   const [runStats,cases,purchases,promos,physical,rewardQueue,campaigns,notifications,tickets,fraud,notes,timeline,moderation,moderationHistory,legal,gifts,grantedCases,seasonalCases] = await Promise.all([
@@ -51983,7 +51996,7 @@ async function ownerPanelPlayerSummary(env, telegramId) {
 
 async function ownerPanelPlayer(env, ctx) {
   const telegramId = String(ctx.body?.telegramId || "").trim();
-  if (!/^\d{4,20}$/.test(telegramId)) throw new ApiError(400, "Некорректный Telegram ID игрока.");
+  if (!/^\d{1,20}$/.test(telegramId)) throw new ApiError(400, "Некорректный Telegram ID игрока.");
   const mode = String(ctx.body?.mode || "full").trim().toLowerCase();
   if (mode === "summary") return ownerPanelPlayerSummary(env, telegramId);
   const coreOnly = mode === "core";
@@ -52454,7 +52467,7 @@ function ownerGrantRequestId(body){
 function ownerGrantOperation(ctx){
   const body=ctx.body||{},requestId=ownerGrantRequestId(body),actor=String(ctx.user.id),telegramId=String(body.telegramId||'').trim();
   const payload={telegramId,kind:String(body.kind||''),itemId:String(body.itemId||''),amount:Number(body.amount||0),reason:String(body.reason||'\u0412\u044b\u0434\u0430\u0447\u0430 \u0438\u0437 \u043f\u0430\u043d\u0435\u043b\u0438 \u0432\u043b\u0430\u0434\u0435\u043b\u044c\u0446\u0430').trim().slice(0,300),seasonId:String(body.seasonId||'')};
-  if(!/^\d{4,20}$/.test(telegramId)||!Number.isFinite(payload.amount))throw new ApiError(400,'\u041d\u0435\u043a\u043e\u0440\u0440\u0435\u043a\u0442\u043d\u044b\u0435 \u043f\u0430\u0440\u0430\u043c\u0435\u0442\u0440\u044b \u0432\u044b\u0434\u0430\u0447\u0438.');
+  if(!/^\d{1,20}$/.test(telegramId)||!Number.isFinite(payload.amount))throw new ApiError(400,'\u041d\u0435\u043a\u043e\u0440\u0440\u0435\u043a\u0442\u043d\u044b\u0435 \u043f\u0430\u0440\u0430\u043c\u0435\u0442\u0440\u044b \u0432\u044b\u0434\u0430\u0447\u0438.');
   return {actor,telegramId,requestId,id:`owner_grant_${actor}_${requestId}`,payloadJson:JSON.stringify(payload)};
 }
 async function ownerGrantReadReceipt(env,op,compare=true){
@@ -52589,7 +52602,7 @@ async function ownerPanelGrantDirectReward(env, ctx, telegramId, kind, itemId, a
 
 async function ownerPanelGrantPlayerOnce(env, ctx) {
   const telegramId = String(ctx.body?.telegramId || "").trim();
-  if (!/^\d{4,20}$/.test(telegramId)) throw new ApiError(400, "Некорректный Telegram ID игрока.");
+  if (!/^\d{1,20}$/.test(telegramId)) throw new ApiError(400, "Некорректный Telegram ID игрока.");
   const profile = await env.DB.prepare(`SELECT telegram_id FROM admin_profile_state WHERE telegram_id=? LIMIT 1`).bind(telegramId).first();
   if (!profile) throw new ApiError(404, "Профиль игрока не найден.");
   const rawKind = String(ctx.body?.kind || "");
@@ -54075,7 +54088,7 @@ async function ownerPanelCreateStaff(env, ctx) {
 }
 
 async function ownerPanelUpdateStaff(env, ctx) {
-  const telegramId=String(ctx.body?.telegramId||"").trim();if(!/^\d{4,20}$/.test(telegramId))throw new ApiError(400,"Некорректный Telegram ID сотрудника.");if(isBotOwnerTelegramId(telegramId,env))throw new ApiError(409,"Роль владельца нельзя изменить из панели.");
+  const telegramId=String(ctx.body?.telegramId||"").trim();if(!/^\d{1,20}$/.test(telegramId))throw new ApiError(400,"Некорректный Telegram ID сотрудника.");if(isBotOwnerTelegramId(telegramId,env))throw new ApiError(409,"Роль владельца нельзя изменить из панели.");
   const role=String(ctx.body?.role||"");if(!["cashier","cook","administrator"].includes(role))throw new ApiError(400,"Некорректная роль сотрудника.");const active=Boolean(ctx.body?.active);const preset=TEAM_ROLE_PRESETS[role];const before=await env.DB.prepare(`SELECT telegram_id,display_name,active,role FROM staff_users WHERE telegram_id=? LIMIT 1`).bind(telegramId).first();if(!before)throw new ApiError(404,"Сотрудник не найден.");const now=Math.floor(Date.now()/1000);
   await env.DB.prepare(`UPDATE staff_users SET role=?,active=?,can_redeem_rewards=?,can_adjust_points=?,can_manage_products=?,can_publish_news=?,can_manage_staff=?,session_expires_at=0,updated_at=? WHERE telegram_id=?`).bind(role,active?1:0,preset.redeem,preset.points,preset.products,preset.news,preset.staff,now,telegramId).run();
   try { await refreshBotCommandMenuSilently(env, telegramId); } catch (error) { console.error("owner panel command menu refresh failed", error); }
@@ -54085,7 +54098,7 @@ async function ownerPanelUpdateStaff(env, ctx) {
 
 async function ownerPanelDeleteStaff(env, ctx) {
   const telegramId=String(ctx.body?.telegramId||"").trim();
-  if(!/^\d{4,20}$/.test(telegramId))throw new ApiError(400,"Некорректный Telegram ID сотрудника.");
+  if(!/^\d{1,20}$/.test(telegramId))throw new ApiError(400,"Некорректный Telegram ID сотрудника.");
   if(isBotOwnerTelegramId(telegramId,env)||telegramId===String(ctx.user.id))throw new ApiError(409,"Профиль владельца удалить нельзя.");
   const target=await env.DB.prepare(`SELECT telegram_id,display_name,active,role FROM staff_users WHERE telegram_id=? LIMIT 1`).bind(telegramId).first();
   if(!target)throw new ApiError(404,"Сотрудник не найден или уже удалён.");

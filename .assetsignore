@@ -33,7 +33,6 @@ profile.html
 candidate-console.html
 candidates/
 ios/
-
 # World Zeffi local-only artifacts
 world/index.html
 world/asset-gallery.html
@@ -50,29 +49,31 @@ START_WORLD_TEST.command
 START_WORLD_TEST.bat
 .world-integration-backup/
 world/docs/
-
 # Story world standalone and installer backups are never public assets
 .world-story-v1-backup/
 .story-standalone-output/
 story-world-preview.html
 START_STORY_WORLD.html
 START_STORY_WORLD_v1.html
-
 # City Fix v2 local-only files
 .world-city-fix-v2-backup/
 .world-transport-3d-asphalt-backup/
 .world-transport-style-backup/
 START_STORY_WORLD_v1_3.html
-
 # City Fix v2 local-only files
 .world-checks-v2-1-backup/
-
+.world-transport-3d-asphalt-backup/
+.world-transport-style-backup/
+START_STORY_WORLD_v1_3.html
+# City Fix v2 local-only files
+.world-checks-v2-1-backup/
 # Local-only Bus Rose v3 backups
 .world-bus-rose-v3-backup/
-
 # Local-only White Rabbit / Zephirok v1 backups
 .world-white-rabbit-v1-backup/
-
 # Local-only Story World tester entry assets and backups
 .world-story-tester-entry-v1-backup/
 /scripts/.world-story-tester-entry-v1/
+
+# Closed World Release Candidate: original art packs are source backups, not live game assets
+Mir_Zeffi_Park_Belkino_4_Views_v1/

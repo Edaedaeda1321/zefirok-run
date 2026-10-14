@@ -19,13 +19,13 @@ export const DISTRICTS=Object.freeze([
  {id:'belkino',title:'Парк Белкино',short:'Белкино',icon:'leaf',focus:[12.5,26.5],bounds:[7,21,11,18],chapter:0,kind:STORY_PARK_BELKINO_KIND,description:'Большой парк с ротондой у пруда, зелёными фигурами, историческими руинами и прогулочными дорожками. Здесь запланирована история «Тайны Белкино».'},
  {id:'friends',title:'Квартал друзей',short:'Друзья',icon:'home',focus:[33,11],bounds:[27,6,15,12],chapter:0,kind:'cottage',description:'Уютный жилой квартал. Будущие участки персонажей пока не закреплены за героями: их откроем вместе с сюжетом.'},
  {id:'station',title:'Городская станция',short:'Станция',icon:'bus',focus:[36,37],bounds:[33,33,11,10],chapter:0,kind:'bus-terminal',description:'Автобусы связывают кафе, центральную часть города и парк. Это декоративный транспорт: без билетов и списаний.'},
- {id:'festival',title:'Дом фестивалей Зеффи',short:'Фестивали',icon:'flag',focus:[25,35.5],bounds:[21,32,9,7],chapter:1,kind:STORY_FESTIVAL_KINDS.complete,description:'Большая общегородская стройка с четырьмя стадиями. В Telegram общий фонд хранится на сервере; автономная версия остаётся демонстрационной.'},
+ {id:'festival',title:'Дом фестивалей Зеффи',short:'Фестивали',icon:'flag',focus:[25,35.5],bounds:[21,32,9,7],chapter:1,kind:STORY_FESTIVAL_KINDS.complete,description:'Большая общегородская стройка с четырьмя стадиями. Прогресс строительства и взносы участников хранятся на сервере.'},
  {id:'rabbit',title:'«Белый Кролик»',short:'Кролик',icon:'star',focus:[11.3,9.8],bounds:[9,9,4,4],chapter:2,kind:'white-rabbit-zephirok',description:'«Белый Кролик» и кафе «Зефирок» делят одно здание. Сюжетные подробности «Белого Кролика» откроются позже.'},
  {id:'mystery',title:'Неизвестный район',short:'Тайна',icon:'lock',focus:[24,8],bounds:[21,4,6,8],chapter:99,kind:'botanical-garden',description:'Здесь появится новая часть города. Название, герой и условия открытия пока не объявлены.'}
 ]);
 export const PLACES=Object.freeze([
  ...DISTRICTS.map(d=>({...d,uid:({square:'story-fountain',cafe:'story-cafe',belkino:'story-pond',friends:'story-home',station:'story-terminal',festival:'story-festival',rabbit:'story-cafe'})[d.id]||null})),
- {id:'community-garden',title:'Сад встреч',short:'Строим вместе',icon:'heart',focus:[15.5,35.5],bounds:[14,34,3,3],chapter:0,kind:'garden',uid:'story-community-garden',description:'Первый пробный городской проект. Поможем обустроить новый сад у парка Белкино. Участники вместе финансируют постройку через общий фонд; автономная версия демонстрационная.'}
+ {id:'community-garden',title:'Сад встреч',short:'Строим вместе',icon:'heart',focus:[15.5,35.5],bounds:[14,34,3,3],chapter:0,kind:'garden',uid:'story-community-garden',description:'Уютный сад рядом с парком Белкино. Жители вместе собирают средства на строительство через общий городской фонд.'}
 ]);
 export const placeById=id=>PLACES.find(p=>p.id===id)||null;
 export const isPlaceOpen=(place,state)=>state.chapter>=place.chapter;

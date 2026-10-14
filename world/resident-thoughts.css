@@ -1,0 +1,21 @@
+/* RC-4: light DOM thoughts anchored to the existing 2.5D walkers.
+   No additional asset requests or game-economy operations. */
+.resident-thoughts{position:absolute;inset:0;z-index:5;pointer-events:none;overflow:hidden;contain:layout style}
+.resident-thought{position:absolute;top:0;left:0;width:86px;height:79px;padding:0;border:0;background:none;pointer-events:auto;cursor:pointer;touch-action:manipulation;outline:none;color:#96506c;font:inherit;-webkit-tap-highlight-color:transparent;will-change:transform}
+.resident-thought[hidden]{display:none!important}
+.resident-thought__body{position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;width:86px;height:65px;gap:0;border:2px solid #f3d2dd;border-bottom-color:#e7b5c6;border-radius:29px 29px 26px 26px;background:radial-gradient(circle at 25% 15%,#fffefd 5%,#fff9f3 42%,#ffeaf0 100%);box-shadow:0 5px 0 rgba(199,133,149,.12),0 8px 18px rgba(108,72,83,.27),inset 0 2px 0 #fff;transition:border-color .16s,filter .16s}
+.resident-thought__body::before{content:'';position:absolute;top:4px;left:14px;width:9px;height:4px;border-radius:50%;background:#fff;opacity:.92;transform:rotate(-33deg)}
+.resident-thought__symbol{height:41px;display:grid;place-items:center;filter:drop-shadow(0 2px 1px #a7727730)}
+.resident-thought-icon{display:inline-grid;place-items:center;width:37px;height:37px;flex:none}
+.resident-thought-icon svg{display:block;width:100%;height:100%}
+.resident-thought__caption{font:900 10px/1.05 system-ui,-apple-system,sans-serif;color:#92576d;letter-spacing:.01em;max-width:74px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-shadow:0 1px white}
+.resident-thought__status{position:absolute;right:-4px;top:-6px;width:21px;height:21px;display:grid;place-items:center;border-radius:50%;font:900 12px system-ui,sans-serif;color:white;background:linear-gradient(160deg,#eaabc5,#d96c9a);border:2px solid #fff8ee;box-shadow:0 2px 7px #a4567b50}
+.resident-thought__tail{position:absolute;top:63px;left:calc(50% + 9px);width:11px;height:11px;border:2px solid #efcbd8;border-radius:50%;background:#fff8f4;box-shadow:0 2px 4px #79566628}
+.resident-thought__tail::after{content:'';position:absolute;top:10px;left:-7px;width:5px;height:5px;border:1px solid #eccbd5;border-radius:50%;background:#fffdf9}
+.resident-thought[data-status='ready'] .resident-thought__body{border-color:#e5c28c;background:radial-gradient(circle at 25% 16%,#fffefa 10%,#fff7df 65%,#ffe2c5 100%);box-shadow:0 5px 0 #d5a36e24,0 8px 18px #a3795838,inset 0 2px 0 #fff}
+.resident-thought[data-status='ready'] .resident-thought__status{background:linear-gradient(135deg,#edd38a,#c39b50);color:#fff}
+.resident-thought[data-status='ready'] .resident-thought__tail{background:#fffae9;border-color:#e8c99d}
+.resident-thought:focus-visible .resident-thought__body{outline:3px solid #ba497d;outline-offset:2px}
+.resident-thought:active .resident-thought__body{filter:brightness(.97)}
+@media(prefers-reduced-motion:no-preference){.resident-thought__body{animation:resident-thought-float 3.4s ease-in-out infinite}.resident-thought:nth-child(2) .resident-thought__body{animation-delay:-1.4s}@keyframes resident-thought-float{0%,100%{translate:0 0}50%{translate:0 -3px}}}
+@media(prefers-reduced-motion:reduce){.resident-thought__body{animation:none;transition:none}}

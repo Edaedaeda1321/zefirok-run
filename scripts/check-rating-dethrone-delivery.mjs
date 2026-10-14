@@ -58,7 +58,9 @@ assert(worker.includes("SET available_at=?,last_error=?,updated_at=?,lease_token
 // The rating event must still be revalidated immediately before delivery and keep
 // its own anti-spam cooldown. The generic daily cap/min-gap are the only limits bypassed.
 assert(worker.includes('if(lastAt&&now-lastAt<LEADERBOARD_DETHRONE_COOLDOWN_SECONDS)return {action:"defer",reason:"rating-dethrone-cooldown"'), 'dethrone-specific cooldown is missing');
-assert(worker.includes('if(!subscriber||Number(subscriber.active||0)!==1||!String(subscriber.chat_id||"").trim())return {action:"cancel",reason:"rating-bot-unavailable"};'), 'bot subscription revalidation is missing');
+assert(worker.includes('if(subscriber&&Number(subscriber.active||0)!==1)return {action:"cancel",reason:"rating-bot-unavailable"};'), 'disabled bot subscribers are not respected');
+assert(worker.includes('const chatId=String(subscriber?.chat_id||telegramId).trim();'), 'fallback to numeric Telegram chat is missing');
+assert(worker.includes('if(!leaderboardSeasonAcceptsDethroneNotice(season,now))'), 'live season must be checked by actual dates and finalization');
 assert(worker.includes('if(!leader||!player)return {action:"cancel",reason:"rating-entry-missing"};'), 'rating entry revalidation is missing');
 
 // A Control Center "restore rating record" is an authoritative leaderboard mutation too.

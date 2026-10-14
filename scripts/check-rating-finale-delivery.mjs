@@ -125,6 +125,20 @@ assert.equal(JSON.parse(delivered[0].reply_markup_json).inline_keyboard[0][0].we
 assert.equal(delivered[0].status,'pending');
 assert.throws(()=>sqlite.prepare(`INSERT INTO player_notification_queue(category) VALUES('player_mail:rating_winner:closed')`).run(),/UNIQUE/i);
 
+// Missing subscriber metadata must not silently drop an already-authorized
+// winner who can still be addressed by their Telegram user ID.
+sqlite.prepare('DELETE FROM player_notification_queue').run();
+sqlite.prepare('DELETE FROM bot_subscribers WHERE telegram_id=?').run('100');
+const direct=await noticeCtx.enqueue(env,'closed',now);
+assert.equal(direct.queued,1,'missing subscriber row should use Telegram user ID');
+assert.equal(sqlite.prepare('SELECT chat_id FROM player_notification_queue LIMIT 1').get().chat_id,'100');
+sqlite.prepare('DELETE FROM player_notification_queue').run();
+sqlite.prepare('INSERT INTO bot_subscribers VALUES(?,?,?)').run('100','100',0);
+const blocked=await noticeCtx.enqueue(env,'closed',now);
+assert.equal(blocked.queued,0,'explicitly inactive bot chats must not be notified');
+sqlite.prepare('DELETE FROM bot_subscribers WHERE telegram_id=?').run('100');
+
+
 const uiCode=between(rating,'  function ratingFinaleData(data) {','  function ratingFinaleInline(data) {');
 const uiCtx={
   mode:'season',
@@ -142,4 +156,4 @@ assert.equal(uiCtx.finaleData({season:{id:'current',status:'active'},finale:null
 uiCtx.mode='all_time';
 assert.equal(uiCtx.finaleData({season:{id:'current',status:'active'},finale:first}),null,'all-time mode does not open seasonal finale');
 
-console.log('Rating finale and winner delivery: PASS (finalized/current split, rank/ties, winner prize, no fake rewards, 30-day UX, Telegram dedupe/recovery, UI binding).');
+console.log('Rating finale and winner delivery: PASS (finalized/current split, rank/ties, winner prize, no fake rewards, 30-day UX, Telegram dedupe/recovery/missing-chat/blocked-chat, UI binding).');

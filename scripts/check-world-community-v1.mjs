@@ -12,7 +12,7 @@ const migration=JSON.parse(read('scripts/migration-history.lock.json'));
 ok('new additive 0115 migration is locked',migration.files['0115_zeffi_community_fund.sql']===createHash('sha256').update(sql).digest('hex'));
 ok('same existing world Worker route is reused',service.includes("import {handleCommunityFund} from './zeffi-community-fund.js'")&&service.includes('return handleCommunityFund('));
 ok('community API cannot bypass signed auth and tester allowlist',service.indexOf('assertTester(env,telegramId);')>0&&service.indexOf('assertTester(env,telegramId);')<service.indexOf('if(isCommunityRequest){'));
-ok('personal city remains blocked under its old flag',service.includes("if(!isCommunityRequest&&new URL(request.url).pathname!=='/api/world/story-access'&&!worldEnabled(env)"));
+ok('personal city remains blocked under its old flag',service.includes("if(!worldEnabled(env))failure(403,'WORLD_DISABLED'"));
 ok('separate global funding and contributions release flags',fund.includes('WORLD_COMMUNITY_FUND_ENABLED')&&fund.includes('WORLD_COMMUNITY_CONTRIBUTIONS_ENABLED')&&fund.includes('WORLD_PURCHASES_ENABLED'));
 ok('community API checks the original player op gate',fund.includes("operationGate(telegramId,['purchases'])")&&fund.includes('operationGate(telegramId,[])'));
 ok('user identity comes from Worker, not client-supplied telegramId',service.includes('telegramId=String(auth?.telegramId')&&!/body\.telegramId|body\.userId/.test(fund));
