@@ -11,20 +11,20 @@ import { requiredStorySpriteIds, centerCamera } from '../story/view.js';
 import { createDemoState, setDemoChapter } from '../story/model.js';
 const id='white-rabbit-zephirok';
 const error=(code)=>(e)=>e instanceof BuildError&&e.code===code;
-const rich=(level=5)=>{const city=makeInitialCity();city.progress.bestLevel=level;city.wallet={points:200000,coffee:300,treats:500};return city;};
+const rich=(level=10)=>{const city=makeInitialCity();city.progress.bestLevel=level;city.wallet={points:200000,coffee:300,treats:500};return city;};
 const now=1800000000000;
 
-test('white rabbit: one premium 4x4 shop at the actual max city level',()=>{
- assert.equal(CITY_LEVELS.at(-1).level,5);
+test('white rabbit: one premium 4x4 shop at the new prestige level 10',()=>{
+ assert.equal(CITY_LEVELS.at(-1).level,10);
  assert.equal(CATALOG[id].category,'shops');
  assert.equal(CATALOG[id].w,4);assert.equal(CATALOG[id].h,4);
  assert.equal(CATALOG[id].needsRoad,true);
- assert.equal(CATALOG[id].minCityLevel,5);
+ assert.equal(CATALOG[id].minCityLevel,10);
  assert.equal(CATALOG_ITEMS.filter(x=>x.id===id).length,1);
  assert.deepEqual(OBJECT_PRICES[id],{points:120000,coffee:0,treats:300});
  assert.deepEqual(buildingEffectPreview(CATALOG[id]),{population:5,comfort:48,needsRoad:true,limitedPopulation:false});
 });
-for(const level of [1,2,3,4])test(`white rabbit: city level ${level} cannot purchase and wallet stays unchanged`,()=>{
+for(const level of [1,2,3,4,5,6,7,8,9])test(`white rabbit: city level ${level} cannot purchase and wallet stays unchanged`,()=>{
  const city=rich(level),before=JSON.stringify(city);
  assert.throws(()=>addObject(city,CATALOG,id,16,18,0,now),error('BUILDING_LEVEL_LOCKED'));
  assert.equal(JSON.stringify(city),before);

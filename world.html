@@ -110,7 +110,7 @@
         window.ZeffiWorldPreviewAllowed=!window.ZeffiWorldServerRequired;
         document.getElementById('worldTesterLocalNotice').hidden=window.ZeffiWorldServerRequired;
         document.documentElement.classList.add('zeffi-world-ready');
-        const script=document.createElement('script');script.type='module';script.src='./app.js?v=rc-life1';
+        const script=document.createElement('script');script.type='module';script.src='./app.js?v=rc-levels10';
         script.addEventListener('load',()=>{
           void import('./story/entry.js?v=3').catch(error=>console.warn('Story world entry unavailable',error));
           if(document.documentElement.classList.contains('zeffi-world-framed')){

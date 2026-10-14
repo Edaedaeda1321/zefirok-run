@@ -99,32 +99,68 @@ export const RETIRED_PATH_ITEMS = Object.freeze(EXTRA_CATALOG_ITEMS
   .map(item => Object.freeze({ ...item, retired: true })));
 // The one canonical unlock table used by the Worker and both city UIs.
 // Previously owned buildings can still be moved/restored.
+// RC-6: 49 existing purchasable objects spread across all 10 city tiers.
+// Already owned objects are never restricted when moved or restored.
 export const SHOP_UNLOCK_LEVELS = Object.freeze({
-  'bus-terminal': 4,
+  // Level 1
+  'cottage': 1,
+  'coffee-kiosk': 1,
+  'flower-shop': 1,
+  'playground': 1,
+  'tree': 1,
+  'flowerbed': 1,
+  'lamp': 1,
+  'bench': 1,
+  'terrain_platform_plain_premium': 1,
+  'terrain_border_floral_premium': 1,
+  'terrain_edge_straight_a_premium': 1,
+  'terrain_edge_straight_b_premium': 1,
+  'terrain_corner_outer_premium': 1,
+  'terrain_corner_inner_premium': 1,
+  'terrain_stair_entry_premium': 1,
+  'plaza-cozy-tiled': 1,
+  'extra-bush': 1,
+  'extra-planter': 1,
+  'extra-sign': 1,
+  // Level 2
+  'family-home': 2,
   'bus-stop': 2,
+  'bakery': 2,
+  'sports-playground': 2,
+  'fountain': 2,
+  'plaza-flower-edge': 2,
+  'plaza-rest-zone': 2,
+  'extra-flowerbed': 2,
+  'extra-lamp': 2,
+  // Level 3
   'pond-park': 3,
   'rose-garden': 3,
-  'botanical-garden': 5,
-  'white-rabbit-zephirok': 5,
-  'sports-playground': 2,
-  'city-square': 2,
-  'family-home': 2,
   'villa': 3,
-  'coffee-house': 3,
-  'bakery': 2,
-  'garden': 3,
-  'fountain': 2,
-  'monument': 4,
-  'plaza-city-square': 3,
-  'plaza-flower-edge': 2,
-  'plaza-monument-base': 4,
-  'plaza-rest-zone': 2,
-  'plaza-playground-base': 2,
-  'plaza-bordered-shrubs': 2,
-  'plaza-prestige-podium': 4,
-  'extra-fountain': 3,
-  'extra-sweet_object': 2,
-  'terrain_podium_plaza_premium': 4,
+  'extra-bench': 3,
+  // Level 4
+  'coffee-house': 4,
+  'plaza-bordered-shrubs': 4,
+  'extra-tree': 4,
+  // Level 5
+  'garden': 5,
+  'plaza-city-square': 5,
+  'extra-arch': 5,
+  'extra-sweet_object': 5,
+  // Level 6
+  'city-square': 6,
+  'extra-fountain': 6,
+  // Level 7
+  'bus-terminal': 7,
+  'terrain_podium_plaza_premium': 7,
+  // Level 8
+  'botanical-garden': 8,
+  'plaza-playground-base': 8,
+  // Level 9
+  'monument': 9,
+  'plaza-monument-base': 9,
+  // Level 10
+  'white-rabbit-zephirok': 10,
+  'plaza-prestige-podium': 10,
 });
 export const CATALOG_ITEMS = Object.freeze(VISIBLE_ITEMS.map(item => {
   if (!OBJECT_PRICES[item.id]) throw new Error(`PRICE_MISSING: ${item.id}`);

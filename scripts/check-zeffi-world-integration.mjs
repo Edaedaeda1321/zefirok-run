@@ -167,7 +167,10 @@ await check('prestige purchase denied at city level 1 without a debit or receipt
 });
 const savedWorldRow=db.prepare('SELECT state_json FROM zeffi_world_cities WHERE telegram_id=?').get('123456789');
 const unlockedTestCity=JSON.parse(savedWorldRow.state_json);
-unlockedTestCity.progress.bestLevel=5;
+// This fixture's positive purchases must satisfy the CURRENT catalog unlocks.
+// It seeds only the in-memory test city; production levels remain server-validated.
+unlockedTestCity.progress.bestLevel=Math.max(...['bus-terminal','botanical-garden','pond-park']
+  .map(kind=>CATALOG[kind].minCityLevel));
 db.prepare('UPDATE zeffi_world_cities SET state_json=? WHERE telegram_id=?').run(JSON.stringify(unlockedTestCity),'123456789');
 // New City v10 — authoritative purchases must use new catalog quotes (no client trust).
 await check('new bus terminal is paid atomically with all three currencies and survives state reload',async()=>{

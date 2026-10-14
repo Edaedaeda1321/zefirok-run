@@ -12,7 +12,13 @@ export const CITY_LEVELS = Object.freeze([
   Object.freeze({level:2,titleKey:'cityLevel2',residents:4,comfort:30,parks:1,shops:0,reward:Object.freeze({points:500,treats:5,coffee:0})}),
   Object.freeze({level:3,titleKey:'cityLevel3',residents:8,comfort:60,parks:1,shops:1,reward:Object.freeze({points:1000,treats:10,coffee:3})}),
   Object.freeze({level:4,titleKey:'cityLevel4',residents:15,comfort:120,parks:2,shops:1,reward:Object.freeze({points:2000,treats:20,coffee:6})}),
-  Object.freeze({level:5,titleKey:'cityLevel5',residents:25,comfort:220,parks:2,shops:2,reward:Object.freeze({points:4000,treats:35,coffee:12})})
+  Object.freeze({level:5,titleKey:'cityLevel5',residents:25,comfort:220,parks:2,shops:2,reward:Object.freeze({points:4000,treats:35,coffee:12})}),
+  // RC-6: same one-time Worker/D1 reward lane; no client-side extra currency writes.
+  Object.freeze({level:6,titleKey:'cityLevel6',residents:32,comfort:270,parks:3,shops:2,reward:Object.freeze({points:5500,treats:45,coffee:15})}),
+  Object.freeze({level:7,titleKey:'cityLevel7',residents:40,comfort:330,parks:3,shops:3,reward:Object.freeze({points:7500,treats:60,coffee:20})}),
+  Object.freeze({level:8,titleKey:'cityLevel8',residents:50,comfort:400,parks:4,shops:3,reward:Object.freeze({points:11000,treats:80,coffee:28})}),
+  Object.freeze({level:9,titleKey:'cityLevel9',residents:60,comfort:480,parks:4,shops:4,reward:Object.freeze({points:15000,treats:110,coffee:36})}),
+  Object.freeze({level:10,titleKey:'cityLevel10',residents:70,comfort:560,parks:5,shops:4,reward:Object.freeze({points:25000,treats:160,coffee:50})})
 ]);
 const INITIAL_CITY_PROGRESS = () => ({bestLevel:1,claimedLevels:[]});
 
@@ -606,7 +612,7 @@ export function sanitizeCity(input, catalog) {
     const p=input.progress;
     if(!p||typeof p!=='object'||Array.isArray(p)||
       !Number.isInteger(p.bestLevel)||p.bestLevel<1||p.bestLevel>CITY_LEVELS.length||
-      !Array.isArray(p.claimedLevels)||p.claimedLevels.length>4||
+      !Array.isArray(p.claimedLevels)||p.claimedLevels.length>CITY_LEVELS.length-1||
       p.claimedLevels.some(l=>!Number.isInteger(l)||l<2||l>p.bestLevel)||
       new Set(p.claimedLevels).size!==p.claimedLevels.length)throw new BuildError('INVALID_SAVE');
     city.progress={bestLevel:p.bestLevel,claimedLevels:[...p.claimedLevels].sort((a,b)=>a-b)};

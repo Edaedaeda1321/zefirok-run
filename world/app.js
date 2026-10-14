@@ -1,5 +1,5 @@
-import { CATALOG, CATALOG_ITEMS, CATEGORIES } from './catalog.js';
-import { RU, tr } from './ru.js';
+import { CATALOG, CATALOG_ITEMS, CATEGORIES } from './catalog.js?v=rc-levels10';
+import { RU, tr } from './ru.js?v=rc-levels10';
 import { ROAD_TILE_PRICE } from './economy.js';
 import {
  makeInitialCity, sanitizeCity, cloneCity, reconcileCityProgress, claimCityLevelReward, CITY_LEVELS, addObject, moveObject, storeObject,
@@ -8,7 +8,7 @@ import {
  isObjectConnected, connectedRoads, buildingEffectPreview, isConstructing, constructionRemaining,
  constructionSkipPrice, skipConstruction, topUpTestWallet, buyParcel,
   expansionCandidates, expansionPrice, PARCEL_SIZE, canAfford, objectPrice, roadStrokePrice
-} from './engine.js';
+} from './engine.js?v=rc-levels10';
 import { drawWorld, drawCatalogThumbnail, screenToTile, isoToScreen, PROJECT_FOCUS } from './renderer.js?v=rc-life1';
 import { onSpriteUpdate, setSpriteMode, spriteStatus, preloadBuildFrames, preloadSpriteSet, spriteManifest, catalogSpriteId, parkConstructionAssetId, buildingAssetId } from './sprite-assets.js';
 import { buildCitizenScene, sampleCitizenScene } from './citizens.js?v=rc-life1';
@@ -641,7 +641,11 @@ function updateCityLevelUI(stats){
  const lvl=stats.cityLevel,def=CITY_LEVELS[lvl-1],next=stats.nextCityLevel;
  $('cityLevelBadge').textContent=`Ур. ${lvl}`;
  $('cityLevelName').textContent=tr(def.titleKey);
- $('cityLevelNext').textContent=next?`До уровня ${next.level} · ${tr(next.titleKey)}`:'Максимальный уровень города!';
+ // Show the *actual* catalogue pool unlocked by the next level, not an imaginary prize.
+ const unlockedNext=next?CATALOG_ITEMS.filter(item=>item.minCityLevel===next.level):[];
+ const unlockNames=unlockedNext.slice(0,2).map(item=>nameOf(item.id)).join(', ');
+ const unlockMore=unlockedNext.length>2?` и ещё ${unlockedNext.length-2}`:'';
+ $('cityLevelNext').textContent=next?`До уровня ${next.level} · ${tr(next.titleKey)} · Новые постройки: ${unlockNames}${unlockMore}`:'Максимальный уровень города!';
  const limits=next||def;
  for(const [value,bar,current,target] of [
   ['cityLevelResidents','cityLevelResidentsBar',stats.population,limits.residents],

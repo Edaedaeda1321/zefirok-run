@@ -19,9 +19,9 @@ function finishNewCityObject(city, kind, x, y, rotation=0) {
  return addObject(city, CATALOG, kind, x, y, rotation, NOW-ms-1);
 }
 
-test('v12 keeps 5 server-authoritative city level definitions and one-time currency rewards',()=>{
- assert.deepEqual(CITY_LEVELS.map(l=>l.level),[1,2,3,4,5]);
- assert.deepEqual(CITY_LEVELS.map(l=>l.reward?.points||0),[0,500,1000,2000,4000]);
+test('v12 buildings retain their bonuses with RC6 10-tier server-authoritative city rewards',()=>{
+ assert.deepEqual(CITY_LEVELS.map(l=>l.level),[1,2,3,4,5,6,7,8,9,10]);
+ assert.deepEqual(CITY_LEVELS.map(l=>l.reward?.points||0),[0,500,1000,2000,4000,5500,7500,11000,15000,25000]);
  assert.ok(CITY_LEVELS.slice(1).every(l=>['points','coffee','treats'].every(k=>Number.isSafeInteger(l.reward[k])&&l.reward[k]>=0)));
 });
 

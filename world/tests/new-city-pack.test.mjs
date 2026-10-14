@@ -75,7 +75,7 @@ test('server-authoritative purchases, rotation, store, restore and existing save
  const restored=sanitizeCity(JSON.parse(JSON.stringify(before)),CATALOG);
  assert.deepEqual(restored,before);
  for(const id of names){
-  let city=makeInitialCity();city.progress.bestLevel=5;city.wallet={points:999999,coffee:99999,treats:99999};
+  let city=makeInitialCity();city.progress.bestLevel=10;city.wallet={points:999999,coffee:99999,treats:99999};
   const money={...city.wallet};
   const position=id==='botanical-garden'?[16,17]:[17,17];
   assert.equal(checkPlacement(city,CATALOG,id,...position,0).ok,true,id);

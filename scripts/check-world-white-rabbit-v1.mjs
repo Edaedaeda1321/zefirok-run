@@ -10,7 +10,7 @@ import { buildStoryMap, validateStoryMap, placeById } from '../world/story/map.j
 import { createDemoState, setDemoChapter } from '../world/story/model.js';
 const id='white-rabbit-zephirok';
 assert.equal(CATALOG_ITEMS.length,49);
-assert.equal(CATALOG[id].minCityLevel,5);
+assert.equal(CATALOG[id].minCityLevel,10,'RC-6: White Rabbit is the city-level-10 prestige unlock');
 assert.deepEqual(OBJECT_PRICES[id],{points:120000,coffee:0,treats:300});
 const rabbitAssets=SPRITE_MANIFEST.assets.filter(a=>a.catalogId===id);
 const completed=rabbitAssets.filter(a=>a.state==='complete');

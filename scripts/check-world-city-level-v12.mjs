@@ -13,14 +13,14 @@ import {RU} from '../world/ru.js';
 
 const root=join(dirname(fileURLToPath(import.meta.url)),'..');
 const text=path=>readFileSync(join(root,path),'utf8');
-assert.equal(CITY_LEVELS.length,5);
-assert.deepEqual(CITY_LEVELS.map(level=>level.reward?.points||0),[0,500,1000,2000,4000]);
+assert.equal(CITY_LEVELS.length,10);
+assert.deepEqual(CITY_LEVELS.map(level=>level.reward?.points||0),[0,500,1000,2000,4000,5500,7500,11000,15000,25000]);
 for(const kind of ['bus-terminal','bus-stop','pond-park','rose-garden','botanical-garden','sports-playground','city-square']){
  assert.ok(CATALOG[kind],`${kind} missing from the current catalog`);
  assert.ok(CATALOG[kind].price.points>0,`${kind} has no price`);
  assert.ok(CATALOG[kind].buildMs>0,`${kind} has no construction stages`);
 }
-for(let level=1;level<=5;level++) assert.equal(typeof RU[`cityLevel${level}`],'string',`City level ${level} is untranslated`);
+for(let level=1;level<=10;level++) assert.equal(typeof RU[`cityLevel${level}`],'string',`City level ${level} is untranslated`);
 const city=makeInitialCity();
 assert.deepEqual(city.progress,{bestLevel:1,claimedLevels:[]});
 assert.equal(cityStats(city,CATALOG).cityLevel,1);
@@ -40,4 +40,7 @@ for(const token of ["'claim-level'",'reconcileCityProgress','claimCityLevelRewar
  assert.ok(server.includes(token),`Worker world service is missing currency reward integration: ${token}`);
 // ESM linking here catches incompatible named imports before the D1 release gate.
 await import('../src/zeffi-world-service.js');
-console.log('Zeffi World v12 compatibility: city levels + currency grants + New City buildings + UI + service ESM PASS');
+// The release gate runs RC6 regression tests on every deploy, not just the static smoke.
+import {execFileSync} from 'node:child_process';
+execFileSync(process.execPath,['--test','world/tests/city-levels-rc6.test.mjs'],{cwd:root,stdio:'inherit'});
+console.log('Zeffi World RC6: 10 levels + currency grants + pool unlocks + New City + UI + Worker ESM PASS');

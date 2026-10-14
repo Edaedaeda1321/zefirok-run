@@ -73,8 +73,8 @@ test('RC2: higher comfort goal prefers useful parks over spamming cheap 1x1 deco
  assert.ok(buildingEffectPreview(CATALOG[g.itemId]).comfort>=8);
 });
 
-test('RC2: level 5 complete state never suggests a sixth level',()=>{
- const g=fixture({stats:{cityLevel:5,claimableLevel:null,nextCityLevel:null,population:40,comfort:400,parks:3,shops:2}});
+test('RC2: level 10 complete state never suggests an eleventh level',()=>{
+ const g=fixture({stats:{cityLevel:10,claimableLevel:null,nextCityLevel:null,population:40,comfort:400,parks:3,shops:2}});
  assert.equal(g.type,'done');assert.equal(g.button,'');
 });
 

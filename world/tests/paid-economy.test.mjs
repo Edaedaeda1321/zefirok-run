@@ -45,7 +45,7 @@ test('new points/zeffir price model only charges on a fresh purchase',()=>{
 
 test('insufficient points or premium zeffir stops a purchase without changing the city',()=>{
  for(const [kind,short] of [['cottage','points'],['villa','treats'],['botanical-garden','treats']]){
-  const city=makeInitialCity();city.progress.bestLevel=5;
+  const city=makeInitialCity();city.progress.bestLevel=10;
   city.wallet[short]=objectPrice(CATALOG,kind)[short]-1;
   const snap=JSON.stringify(city);
   err(()=>addObject(city,CATALOG,kind,16,18),'INSUFFICIENT_BALANCE');

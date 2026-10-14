@@ -74,7 +74,7 @@ function canonicalAction(body){
     result.uid=String(args.uid);
   }
   if(kind==='claim-level'){
-    if(!Number.isInteger(args.level)||args.level<2||args.level>5)failure(400,'BAD_ACTION','Некорректный уровень города.');
+    if(!Number.isInteger(args.level)||args.level<2||args.level>CITY_LEVELS.length)failure(400,'BAD_ACTION','Некорректный уровень города.');
     result.level=args.level;
   }
   if(kind==='parcel'){

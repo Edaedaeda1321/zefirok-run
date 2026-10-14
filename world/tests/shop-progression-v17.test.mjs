@@ -17,7 +17,7 @@ test('v17: all 49 shop objects have distinct costs, no compulsory coffee, cohere
   assert.ok(def.price.points>0,def.id);
   assert.equal(def.price.coffee,0,def.id);
   assert.equal(Number.isSafeInteger(def.minCityLevel),true,def.id);
-  assert.ok(def.minCityLevel>=1&&def.minCityLevel<=5,def.id);
+  assert.ok(def.minCityLevel>=1&&def.minCityLevel<=10,def.id);
  }
  assert.equal(new Set(CATALOG_ITEMS.map(x=>x.id)).size,49);
  assert.deepEqual(ROAD_TILE_PRICE,{points:50,coffee:0,treats:0});
@@ -29,10 +29,10 @@ test('v17: level-1 has housing, an establishment and a park, so progression is r
  for(const kind of ['cottage','coffee-kiosk','flower-shop','playground'])assert.equal(CATALOG[kind].minCityLevel,1);
  assert.equal(CATALOG['family-home'].minCityLevel,2);
  assert.equal(CATALOG['villa'].minCityLevel,3);
- assert.equal(CATALOG['bus-terminal'].minCityLevel,4);
- assert.equal(CATALOG['botanical-garden'].minCityLevel,5);
- for(const level of [1,2,3,4,5])assert.ok(CATALOG_ITEMS.some(x=>x.minCityLevel===level));
- assert.equal(CITY_LEVELS.length,5);
+ assert.equal(CATALOG['bus-terminal'].minCityLevel,7);
+ assert.equal(CATALOG['botanical-garden'].minCityLevel,8);
+ for(const level of [1,2,3,4,5,6,7,8,9,10])assert.ok(CATALOG_ITEMS.some(x=>x.minCityLevel===level));
+ assert.equal(CITY_LEVELS.length,10);
 });
 
 test('v17: shared engine refuses a locked purchase without changing the wallet or revision state',()=>{
@@ -52,11 +52,11 @@ test('v17: level 1 house can be bought with points only and stores with the paid
 });
 
 test('v17: previously earned level remains unlocked after loss of buildings',()=>{
- const city=unlocked(makeInitialCity(),4);
+ const city=unlocked(makeInitialCity(),7);
  // Level persistence, not the starter-wallet budget, is under test.
  city.wallet={...objectPrice(CATALOG,'bus-terminal')};
  const before=cityStats(city,CATALOG,now);
- assert.equal(before.cityLevel,4);
+ assert.equal(before.cityLevel,7);
  const bought=addObject(city,CATALOG,'bus-terminal',17,17,0,now);
  assert.equal(bought.wallet.points,city.wallet.points-27000);
  assert.equal(bought.wallet.treats,city.wallet.treats-50);
@@ -64,7 +64,7 @@ test('v17: previously earned level remains unlocked after loss of buildings',()=
 });
 
 test('v17: existing expensive purchases can be moved and stored even if current unlock level is insufficient',()=>{
- let city=unlocked(makeInitialCity(),5);
+ let city=unlocked(makeInitialCity(),8);
  city.wallet={...objectPrice(CATALOG,'botanical-garden')};
  city=addObject(city,CATALOG,'botanical-garden',17,17,0,now);
  const paidWallet={...city.wallet};

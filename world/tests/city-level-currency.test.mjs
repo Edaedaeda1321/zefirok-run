@@ -15,7 +15,7 @@ function level2(){
 }
 
 test('four city level milestones have fixed, modest and safe three-currency rewards',()=>{
- assert.equal(CITY_LEVELS.length,5);
+ assert.equal(CITY_LEVELS.length,10);
  assert.equal(CITY_LEVELS[0].reward,null);
  for(const data of CITY_LEVELS.slice(1)){
   assert.ok(data.reward.points>0);
@@ -23,7 +23,7 @@ test('four city level milestones have fixed, modest and safe three-currency rewa
    assert.ok(Number.isSafeInteger(data.reward[currency])&&data.reward[currency]>=0);
   }
  }
- assert.deepEqual(CITY_LEVELS.map(x=>x.reward?.points||0),[0,500,1000,2000,4000]);
+ assert.deepEqual(CITY_LEVELS.map(x=>x.reward?.points||0),[0,500,1000,2000,4000,5500,7500,11000,15000,25000]);
 });
 
 test('garden attracts residents only when built; level 2 needs a garden and sufficient comfort',()=>{
