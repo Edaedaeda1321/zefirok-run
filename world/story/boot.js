@@ -33,7 +33,7 @@ async function launch(){
    payload=await response.json().catch(()=>null);
    if(!response.ok||payload?.ok!==true||payload?.access!=='tester'||payload?.mode!=='server-story'||payload?.version!=='story-rc2'||payload?.globalSync!==true)throw new Error(payload?.error||'Общий город пока недоступен для вашего аккаунта.');
   }finally{clearTimeout(timer);}
-  const {startStoryWorld}=await import('./app.js?v=rc-story1');
+  const {startStoryWorld}=await import('./app.js?v=rc-community5');
   await startStoryWorld({mode:'tester',initData});
   if(window.parent!==window)window.parent.postMessage({type:'zefirok-world-ui-ready'},location.origin);
  }catch(error){

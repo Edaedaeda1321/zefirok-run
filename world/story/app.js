@@ -8,6 +8,7 @@ import { createDemoState, loadDemo, saveDemo, resetDemo, contribute, simulateCom
 import { DISTRICTS, PLACES, placeById, isPlaceOpen, lockedDistricts, STORY_FESTIVAL_KINDS, buildStoryMap, validateStoryMap } from './map.js';
 import { icon, escapeText as esc, artUrl, requiredStorySpriteIds, centerCamera, worldAt, zoomCamera, clampCamera } from './view.js';
 import {createSharedFundClient, sharedFundQuote, mapStateWithFund} from './shared-fund.js';
+import {communityChronicle,communityEvent,newlyReachedCommunityEvents,paintCommunityScene} from './community-events.js';
 import {createStoryProgressClient} from './progress-client.js?v=rc-story1';
 import {createWorldTutorial} from '../tutorial.js?v=rc-guide2';
 
@@ -48,6 +49,7 @@ export async function startStoryWorld({mode='standalone',initData=''}={}) {
  let storySnapshot=signedStoryProgress,storyBusy=false,storyVisits=Promise.resolve();
  let worldTutorial=null;
  let sharedSnapshot=null,sharedError='',sharedRefreshing=false,fundBusy=false,pendingDonation=null,selectedLiveGardenAmount=5_000,selectedLiveFestivalAmount=5_000,liveTimer=0;
+ let selectedCommunityEvent='',communityCelebration=null;
  let raf=0,ticker=0,dirty=true,layoutDirty=true,lastFrame=0,toastTimer=0,disposed=false,focusId='square',tween=null;
  const drawTimes=[];const disposers=[];const markerElements=new Map();
  const listen=(target,type,fn,options)=>{target.addEventListener(type,fn,options);disposers.push(()=>target.removeEventListener(type,fn,options));};
@@ -140,6 +142,8 @@ export async function startStoryWorld({mode='standalone',initData=''}={}) {
   if(dirty||t-lastFrame>=1000/30){
    const start=performance.now(),now=Date.now(),ambient=(paused?pauseAt:now)-pauseOffset;
    drawWorld(canvas,city,CATALOG,cam,{now,groundZones:[...lockedDistricts(worldState()).map(d=>({bounds:d.bounds,future:d.chapter===99})),...(projectStatus(worldState())==='funding'?[{bounds:[14,34,3,3],project:true}]:[])],citizens:sampleCitizenScene(citizens,ambient),buses:sampleBusScene(buses,ambient)});
+   // RC-5: visual-only, screen-culled events from signed D1 fund snapshots.
+   if(liveMode&&sharedSnapshot)paintCommunityScene(canvas,cam,size,sharedSnapshot,ambient,{chapter:state.chapter,animate:live,celebrate:communityCelebration&&now<=communityCelebration.until?communityCelebration:null});
    if(layoutDirty){paintOverlay();layoutDirty=false;}
    drawTimes.push(performance.now()-start);if(drawTimes.length>120)drawTimes.shift();lastFrame=t;dirty=false;
   }
@@ -201,7 +205,7 @@ export async function startStoryWorld({mode='standalone',initData=''}={}) {
   if(liveMode&&kind==='festival-project'&&storySnapshot?.chapter<1)kind='place:festival';
   if(liveMode&&kind==='project')markStoryVisit('community-garden');
   if(liveMode&&kind==='festival-project')markStoryVisit('festival');
-  selectedPanel=kind;renderPanel();selectTab(kind==='buildings'||kind==='project'||kind==='festival-project'?'buildings':kind==='history'||kind.startsWith('place:')?'history':'map');if(!panel.open){if(worldTutorial?.active())panel.show();else panel.showModal();}haptic();worldTutorial?.refresh();}
+  selectedPanel=kind;renderPanel();if(kind==='community-event')panel.scrollTop=0;selectTab(kind==='buildings'||kind==='project'||kind==='festival-project'?'buildings':kind==='history'||kind.startsWith('place:')?'history':'map');if(!panel.open){if(worldTutorial?.active())panel.show();else panel.showModal();}haptic();worldTutorial?.refresh();}
  function closePanel(){if(panel.open)panel.close();selectedPanel='';selectTab('map');}
  function openPlace(id){
   const place=placeById(id);if(!place)return;
@@ -211,28 +215,59 @@ export async function startStoryWorld({mode='standalone',initData=''}={}) {
   else if(!liveMode&&isPlaceOpen(place,worldState())&&!state.visited.includes(id))store(visitPlace(state,id));
   openPanel(`place:${id}`);
  }
+ // Never allow an older read response to hide a milestone already confirmed
+ // by a newer fund revision. There is no extra API or D1 write in RC-5.
+ function acceptSharedSnapshot(next){
+  if(!communityChronicle(next,'garden')||!communityChronicle(next,'festival'))throw new Error('Состояние городских событий не прошло проверку.');
+  if(sharedSnapshot&&['garden','festival'].some(id=>next.projects[id].revision<sharedSnapshot.projects[id].revision))return [];
+  const events=newlyReachedCommunityEvents(sharedSnapshot,next);
+  sharedSnapshot=next;sharedError='';
+  if(events.length){communityCelebration={projectId:events.at(-1).projectId,until:Date.now()+4500};schedule();}
+  return events;
+ }
  async function syncSharedFund({quiet=false}={}){
   if(!liveMode||sharedRefreshing||disposed)return;
   sharedRefreshing=true;
   try{
-   sharedSnapshot=await sharedClient.load();sharedError='';
+   const arrived=await sharedClient.load();
+   const events=acceptSharedSnapshot(arrived);
    rebuild();if(selectedPanel)renderPanel();
+   if(events.length&&!fundBusy){
+    toast(`Город изменился: ${events.at(-1).title}. Посмотри в хронике строительства!`);
+   }
   }catch(error){
    sharedError=String(error?.message||'Общий фонд временно недоступен.');
    if(!quiet)toast('Серверный фонд недоступен. Вклады заблокированы.');
    refreshHUD();if(selectedPanel)renderPanel();
   }finally{sharedRefreshing=false;}
  }
+ function chronicleMarkup(projectId){
+  const timeline=communityChronicle(sharedSnapshot,projectId);
+  if(!timeline)return '<p class="community-chronicle__unavailable">Хроника появится после подтверждения состояния общего фонда.</p>';
+  const upcoming=timeline.next;
+  const progress=timeline.achieved+'/'+timeline.events.length;
+  const rows=timeline.events.map(event=>{
+   const info=`<span class="community-chronicle__number">${event.complete?'✓':event.index+1}</span><span class="community-chronicle__details"><strong>${esc(event.title)}</strong><small>${esc(event.complete?event.change:`Откроется на ${money(event.threshold)} очков`)}</small></span><span class="community-chronicle__state">${event.complete?'Смотреть':'Ожидается'}</span>`;
+   return event.complete?`<button type="button" class="community-chronicle__item is-done" data-community-event="${event.id}" aria-label="Посмотреть событие: ${esc(event.title)}">${info}</button>`:`<div class="community-chronicle__item is-upcoming" aria-label="Ожидается: ${esc(event.title)}">${info}</div>`;
+  }).join('');
+  return `<section class="community-chronicle" aria-label="Хроника ${esc(timeline.title)}"><div class="community-chronicle__heading"><span>Хроника строительства</span><b>${progress}</b></div><p class="community-chronicle__subtitle">${upcoming?`Следующее событие через ${money(Math.max(0,upcoming.threshold-timeline.total))} очков`:'Все события пройдены! Можно пересмотреть любое.'}</p><div class="community-chronicle__list">${rows}</div></section>`;
+ }
  function sharedPanel(kind){
   const selection=kind==='festival-project'?'festival':kind==='project'?'garden':null;
   const notice=sharedError?`<div class="demo-box">${esc(sharedError)}<br/>Настоящие вклады недоступны до успешной синхронизации.</div>`:'';
   if(!sharedSnapshot)return `<span class="eyebrow">СТРОИМ ВМЕСТЕ</span><h2 id="panelTitle">Городские стройки</h2>${notice||'<div class="demo-box">Загружаем общий прогресс с сервера…</div>'}<button class="secondary" data-action="fund-refresh">Обновить фонд</button>`;
+  if(kind==='community-event'){
+   const event=communityEvent(sharedSnapshot,selectedCommunityEvent);
+   if(!event)return '<h2 id="panelTitle">Событие ещё не открылось</h2><button class="secondary" data-action="buildings">К стройкам</button>';
+   const timeline=communityChronicle(sharedSnapshot,event.projectId);
+   return `<span class="eyebrow">ХРОНИКА ОБЩЕГО ГОРОДА · ${event.percent}%</span><h2 id="panelTitle">${esc(event.title)}</h2><div class="community-event-hero" aria-hidden="true"><div class="community-event-hero__scene">${event.projectId==='garden'?'✿':'✦'}</div><span>${esc(timeline?.title||'Общий проект')}</span></div><p class="community-event-story">${esc(event.description)}</p><div class="community-event-change"><b>Что изменилось</b><span>${esc(event.change)}</span></div><p class="panel-footnote">Событие открыто по подтверждённому прогрессу общего фонда. Награды за просмотр не выдаются.</p><button class="primary" data-action="community-event-view" ${event.projectId==='festival'&&state.chapter<1?'disabled title="Район фестивалей пока закрыт по сюжету"':''}>${icon('target')}Посмотреть событие на карте</button><button class="secondary" data-action="community-event-back">Вернуться к проекту</button>`;
+  }
   const row=(id)=>{
    const p=sharedSnapshot.projects[id],percent=Math.round(p.total/p.goal*100);
    const stage=id==='festival'?`Этап ${p.stage+1} из 4`:p.finished?'Готов':'Сбор очков';
    return `<button type="button" class="buildings-row" data-action="${id==='festival'?'festival-project':'project'}"><img src="${artUrl(id==='festival'?STORY_FESTIVAL_KINDS[festivalStage(worldState())]:'garden')}" alt=""/><span class="buildings-details"><strong>${esc(p.title)}</strong><small>${stage} · ${money(p.total)} / ${money(p.goal)} очков</small><span class="mini-track"><span style="width:${percent}%"></span></span></span><span class="buildings-percent">${percent}% ›</span></button>`;
   };
-  if(kind==='buildings')return `<span class="eyebrow">СТРОИМ ВМЕСТЕ</span><h2 id="panelTitle">Городские стройки</h2><p>Участники видят общий прогресс. Очки списываются только после подтверждения.</p>${row('garden')}${row('festival')}${notice}<button class="secondary" data-action="fund-refresh">Обновить прогресс</button>`;
+  if(kind==='buildings')return `<span class="eyebrow">СТРОИМ ВМЕСТЕ</span><h2 id="panelTitle">Городские стройки</h2><p>Участники видят общий прогресс. Очки списываются только после подтверждения.</p>${row('garden')}${row('festival')}${chronicleMarkup('garden')}${chronicleMarkup('festival')}${notice}<button class="secondary" data-action="fund-refresh">Обновить прогресс</button>`;
   if(kind==='fund-confirm'){
    const p=pendingDonation,project=p&&sharedSnapshot.projects[p.projectId];
    if(!p||!project)return `<h2 id="panelTitle">Вклад не выбран</h2><button data-action="buildings">К стройкам</button>`;
@@ -252,6 +287,7 @@ export async function startStoryWorld({mode='standalone',initData=''}={}) {
    if(!sharedSnapshot.writesEnabled)html+='<div class="demo-box">Просмотр общего прогресса включён. Реальные пожертвования пока закрыты сервером.</div>';
    else html+=`<button class="primary" data-action="fund-confirm" ${(fundBusy||!!sharedError||!quote||sharedSnapshot.walletPoints<quote.expectedDebitPoints)?'disabled':''}>${icon('heart')}Перейти к подтверждению вклада ${money(quote?.expectedDebitPoints||0)} очков</button>`;
   }
+  html+=chronicleMarkup(selection);
   html+=notice+`<div class="demo-box">Вклады списываются из игрового баланса только после подтверждения.</div><button class="secondary" data-action="fund-refresh">Обновить прогресс</button><button class="secondary" data-go="${selection==='garden'?'community-garden':'festival'}">${icon('target')}Показать на карте</button>`;
   return html;
  }
@@ -272,9 +308,11 @@ export async function startStoryWorld({mode='standalone',initData=''}={}) {
   if(!pendingDonation||fundBusy)return;
   fundBusy=true;renderPanel();
   try{
-   const result=await sharedClient.contribute(pendingDonation);sharedSnapshot=result;sharedError='';
+   const result=await sharedClient.contribute(pendingDonation);
+   const events=acceptSharedSnapshot(result);
    const amount=result.receipt?.debitedPoints??pendingDonation.expectedDebitPoints;
-   pendingDonation=null;haptic();toast(result.repeated?`Вклад ${money(amount)} очков уже учтён. Повторного списания не было.`:`Общий фонд получил ${money(amount)} очков.`);
+   pendingDonation=null;haptic();
+   toast(events.length&&!result.repeated?`Общий город отмечает событие: ${events.at(-1).title}!`:(result.repeated?`Вклад ${money(amount)} очков уже учтён. Повторного списания не было.`:`Общий фонд получил ${money(amount)} очков.`));
    rebuild();void syncStoryProgress({quiet:true});openPanel(result.receipt?.projectId==='garden'?'project':'festival-project');
   }catch(error){
    const code=error?.code||'';
@@ -293,10 +331,12 @@ export async function startStoryWorld({mode='standalone',initData=''}={}) {
   else if(action==='fund-refresh')void syncSharedFund();
   else if(action==='fund-cancel'){if(!fundBusy){pendingDonation=null;openPanel('buildings');}}
   else if(action==='buildings')openPanel('buildings');
+  else if(action==='community-event-back'){const event=communityEvent(sharedSnapshot,selectedCommunityEvent);openPanel(event?.projectId==='festival'&&state.chapter>=1?'festival-project':event?.projectId==='garden'?'project':'buildings');}
+  else if(action==='community-event-view'){const event=communityEvent(sharedSnapshot,selectedCommunityEvent);if(!event)return;if(event.projectId==='festival'&&state.chapter<1)return toast('Район фестивалей откроется по сюжету. Событие сохранено в хронике.');closePanel();communityCelebration={projectId:event.projectId,until:Date.now()+4500};focusPlace(event.projectId==='garden'?'community-garden':'festival');}
  }
  function renderPanel(){
   const focused=document.activeElement?.getAttribute?.('data-action');let html='';
-  if(liveMode&&['buildings','project','festival-project','fund-confirm'].includes(selectedPanel)){
+  if(liveMode&&['buildings','project','festival-project','fund-confirm','community-event'].includes(selectedPanel)){
    $('panelContent').innerHTML=sharedPanel(selectedPanel);return;
   }
   if(selectedPanel==='history'||selectedPanel==='districts'){
@@ -310,6 +350,7 @@ export async function startStoryWorld({mode='standalone',initData=''}={}) {
     html+='</div><h3 class="story-section-title">Главы</h3>';
     html+=`<div class="story-chapter-list">${story.chapters.map((c,i)=>`<div class="story-chapter-row"><span>${c.done?'✓':c.active?'✦':'🔒'}</span><span>${i+1}. ${esc(c.title)}</span></div>`).join('')}</div><h3 class="story-section-title">События города</h3>`;
     html+=Object.values(story.events).map(e=>`<div class="story-event-row"><strong>${esc(e.title)}</strong><span>${e.status==='paused'?'Приостановлено':e.finished?'Завершено':'Собираем вместе'}</span><div class="mini-track"><span style="width:${Math.min(100,Math.round(100*e.total/e.goal))}%"></span></div><small>${money(e.total)} / ${money(e.goal)} очков · общий сервер</small></div>`).join('');
+    if(sharedSnapshot){html+=chronicleMarkup('garden')+chronicleMarkup('festival');}
     html+='<button class="secondary" data-action="story-refresh">Обновить историю и события</button>';
    }else if(liveMode){html+='<div class="demo-box">Сюжет временно недоступен. Новые районы останутся закрыты до ответа сервера.</div>';}
    else html+='<p>Автономный предпросмотр: открытие районов управляется локальными сценариями.</p>';
@@ -425,6 +466,7 @@ export async function startStoryWorld({mode='standalone',initData=''}={}) {
  listen($('panelContent'),'click',e=>{
   const b=e.target.closest('button');if(!b||b.disabled)return;
   if(b.dataset.action)execute(b.dataset.action);
+  if(b.dataset.communityEvent&&communityEvent(sharedSnapshot,b.dataset.communityEvent)){selectedCommunityEvent=b.dataset.communityEvent;openPanel('community-event');}
   if(b.dataset.amount){selectedAmount=Number(b.dataset.amount);renderPanel();}
   if(b.dataset.festivalAmount){selectedFestivalAmount=Number(b.dataset.festivalAmount);renderPanel();}
   if(b.dataset.liveAmount){if(selectedPanel==='project')selectedLiveGardenAmount=Number(b.dataset.liveAmount);else selectedLiveFestivalAmount=Number(b.dataset.liveAmount);renderPanel();}
