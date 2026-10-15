@@ -1,4 +1,6 @@
 export const RU = Object.freeze({
+  meetingGarden:'Сад встреч',
+  meetingGardenDescription:'Эксклюзивный парк из Элитного пропуска. После получения остаётся в коллекции навсегда.',
   cityLevel1:'Маленькое поселение',
   cityLevel2:'Уютный уголок',
   cityLevel3:'Милый квартал',

@@ -2,7 +2,7 @@
 // No runtime DDL, no trusted client balances/snapshots and no extra D1 database.
 // Tables are provisioned only by migrations/0114_zeffi_world.sql.
 import {
-  makeInitialCity, sanitizeCity, addObject, addGiftDecor, moveObject, storeObject, restoreObject,
+  makeInitialCity, sanitizeCity, addObject, addGiftDecor, addPassGarden, moveObject, storeObject, restoreObject,
   applyRoadStroke, buyParcel, skipConstruction, cityStats, reconcileCityProgress, claimCityLevelReward, CITY_LEVELS, BuildError
 } from '../world/engine.js';
 import { CATALOG } from '../world/catalog.js';
@@ -17,7 +17,7 @@ import {readWorldExtras,claimCityChapter,assertDecorSchema,worldRewardDecor,worl
 const ZERO = Object.freeze({points:0,treats:0,coffee:0});
 const MAX_CITY_JSON = 180_000;
 const MAX_REQUEST_LENGTH = 20_000;
-const WORLD_ACTIONS = new Set(['place','place-gift','move','store','restore','road','erase-road','parcel','skip','claim-level']);
+const WORLD_ACTIONS = new Set(['place','place-gift','place-pass-garden','move','store','restore','road','erase-road','parcel','skip','claim-level']);
 const RESULT_HEADERS = Object.freeze({ 'Content-Type':'application/json; charset=utf-8', 'Cache-Control':'no-store, private', 'X-Content-Type-Options':'nosniff' });
 
 class WorldError extends Error {
@@ -68,11 +68,11 @@ function canonicalAction(body){
   const args=body.args;
   if(!args||typeof args!=='object'||Array.isArray(args))failure(400,'BAD_ACTION','Аргументы операции не переданы.');
   const result={kind};
-  if(kind==='place'||kind==='place-gift'){
+  if(kind==='place'||kind==='place-gift'||kind==='place-pass-garden'){
     if(!/^[a-z0-9_-]{1,64}$/.test(String(args.objectKind||'')))failure(400,'BAD_ACTION','Некорректный объект.');
     result.objectKind=String(args.objectKind);
   }
-  if(['place','place-gift','move','restore'].includes(kind)){
+  if(['place','place-gift','place-pass-garden','move','restore'].includes(kind)){
     if(!coordinate(args.x)||!coordinate(args.y)||!Number.isInteger(args.rotation)||args.rotation<0||args.rotation>3)failure(400,'BAD_ACTION','Некорректные координаты или поворот.');
     Object.assign(result,{x:args.x,y:args.y,rotation:args.rotation});
   }
@@ -99,6 +99,7 @@ function operate(city,action,now,catalog=CATALOG){
   switch(action.kind){
     case 'place':return addObject(city,catalog,action.objectKind,action.x,action.y,action.rotation,now);
     case 'place-gift':return addGiftDecor(city,catalog,action.objectKind,action.x,action.y,action.rotation,now);
+    case 'place-pass-garden':return addPassGarden(city,catalog,action.objectKind,action.x,action.y,action.rotation,now);
     case 'move':return moveObject(city,catalog,action.uid,action.x,action.y,action.rotation);
     case 'store':return storeObject(city,action.uid);
     case 'restore':return restoreObject(city,catalog,action.uid,action.x,action.y,action.rotation);
@@ -158,6 +159,10 @@ async function handleMutation(db,env,telegramId,body,readProfile,operationGate,e
     return buildView(city,Number(row.revision),paymentsEnabled(env),{repeated:true,operation:{id:requestId,kind:prior.action_kind,state:'completed',repeated:true},cost:{points:Number(prior.cost_points),treats:Number(prior.cost_treats),coffee:Number(prior.cost_coffee)},residentRequests:await residentEnvelope(db,env,telegramId,city,catalog)},economy);
   }
   const action=canonicalAction(body.action);
+  if(action.kind==='place-pass-garden'){
+    if(action.objectKind!=='meeting-garden-pass')failure(400,'PASS_GARDEN_ONLY','Доступен только Сад встреч.');
+    try{await db.prepare('SELECT telegram_id FROM zeffi_world_pass_garden_ownership LIMIT 1').all();}catch{failure(503,'PASS_GARDEN_SCHEMA_NOT_READY','Сначала примените миграцию 0125.');}
+  }
   if(action.kind==='place-gift'){if(!worldRewardDecor(action.objectKind))failure(400,'WORLD_DECOR_ONLY','Наградой можно поставить только декор.');try{await assertDecorSchema(db);}catch{failure(503,'WORLD_DECOR_SCHEMA_NOT_READY','Учёт наградного декора ещё не включён.');}}
   await operationGate(telegramId,[]);
   const now=Date.now(), nowSeconds=Math.floor(now/1000);
@@ -173,6 +178,7 @@ async function handleMutation(db,env,telegramId,body,readProfile,operationGate,e
   try {next=operate(before,action,now,catalog);}catch(e){if(e instanceof BuildError)failure(e.code==='INSUFFICIENT_BALANCE'?409:400,e.code,e.code);throw e;}
   next=reconcileCityProgress(next,catalog,now);
   const gift=action.kind==='place-gift';
+  const passGarden=action.kind==='place-pass-garden';
   const granting=action.kind==='claim-level';
   const reward=granting?(catalog.__cityLevels||CITY_LEVELS)[action.level-1].reward:ZERO;
   // The signed client quotes ZERO for grants. The Worker alone chooses the
@@ -219,14 +225,15 @@ async function handleMutation(db,env,telegramId,body,readProfile,operationGate,e
   }
   const balanceGuard=economy.schemaReady?' AND EXISTS (SELECT 1 FROM zeffi_world_balance_config WHERE id=1 AND published_revision=?)':'';
   const giftGuard=gift?' AND COALESCE((SELECT total FROM zeffi_world_decor_owned WHERE telegram_id=? AND decor_id=?),0)>=?':'';
+  const gardenGuard=passGarden?" AND EXISTS(SELECT 1 FROM zeffi_world_pass_garden_ownership WHERE telegram_id=? AND garden_id='meeting-garden-pass' AND source_lane='premium')":'';
   statements.push(db.prepare(`INSERT INTO zeffi_world_operations
    (telegram_id,request_id,action_kind,city_revision,cost_points,cost_treats,cost_coffee,created_at,city_guard,profile_guard)
    VALUES (?,?,?,?,?,?,?,?,
      CASE WHEN EXISTS (SELECT 1 FROM zeffi_world_cities WHERE telegram_id=? AND revision=? AND last_request_id=?) THEN 1 ELSE 0 END,
-     CASE WHEN (?=0 OR EXISTS (SELECT 1 FROM admin_profile_state WHERE telegram_id=? AND revision=? AND updated_by=?))${balanceGuard}${giftGuard} THEN 1 ELSE 0 END)`)
+     CASE WHEN (?=0 OR EXISTS (SELECT 1 FROM admin_profile_state WHERE telegram_id=? AND revision=? AND updated_by=?))${balanceGuard}${giftGuard}${gardenGuard} THEN 1 ELSE 0 END)`)
     .bind(telegramId,requestId,action.kind,nextRevision,cost.points,cost.treats,cost.coffee,nowSeconds,
       telegramId,nextRevision,requestId,profileTouched?1:0,telegramId,profileRevision+1,marker,
-      ...(economy.schemaReady?[economy.config.revision]:[]),...(gift?[telegramId,action.objectKind,giftUsed]:[])));
+      ...(economy.schemaReady?[economy.config.revision]:[]),...(gift?[telegramId,action.objectKind,giftUsed]:[]),...(passGarden?[telegramId]:[])));
   try{await db.batch(statements);}catch(error){
     const existing=await findReceipt(db,telegramId,requestId).catch(()=>null);
     if(existing){

@@ -134,6 +134,7 @@ const steps = [
   ['Zeffi World city life and buses', 'node', ['--test','world/tests/city-life.test.mjs']],
   ['Zeffi story world v1 wiring', 'node', ['scripts/check-world-story-v1.mjs']],
   ['Zeffi story world v1', 'node', ['--test','world/tests/story-world-v1.test.mjs','world/tests/story-access-v1.test.mjs','world/tests/festival-hall-stages-v1.test.mjs']],
+  ['Zeffi Meeting Garden exclusive pass + art', 'node', ['--no-warnings','--experimental-sqlite','--test','world/tests/meeting-garden-v1.test.mjs']],
   ['Zeffi shared community fund v1', 'node', ['--no-warnings','--experimental-sqlite','--test','world/tests/community-fund-v1.test.mjs','world/tests/community-fund-client-v1.test.mjs']],
   ['Zeffi shared community fund wiring', 'node', ['scripts/check-world-community-v1.mjs']],
   ['Zeffi community events RC-5', 'node', ['--test','world/tests/community-events-rc5.test.mjs']],

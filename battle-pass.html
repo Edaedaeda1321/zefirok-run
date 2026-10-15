@@ -7302,7 +7302,7 @@ img[src$="/xp.webp"]{
   function seasonalCaseRewardView(item){
     const kind=seasonalCaseRewardKind(item),amount=Math.max(0,Math.floor(Number(item?.amount)||0));
     const resource=kind==="zefir"||kind==="treats"||kind==="coffee"||kind==="points";
-    const cosmetic=["skin","avatar","frame","trail","music","showcase_style","world_decor"].includes(kind);
+    const cosmetic=["skin","avatar","frame","trail","music","showcase_style","world_decor","world_park"].includes(kind);
     const isCase=kind==="case"||/кейс/i.test(String(item?.name||""));
     let title=String(item?.name||"Награда"),image=String(item?.image||item?.imageUrl||rewardAssetFor(title)||IMAGE_ERROR_FALLBACK),detail=String(item?.description||"");
     if((kind==="zefir"||kind==="treats")&&amount>0){title=`${amount.toLocaleString("ru-RU")} зефира`;image=REWARD_ASSETS.marshmallow;detail="начислено";}
@@ -7310,6 +7310,7 @@ img[src$="/xp.webp"]{
     else if(kind==="points"&&amount>0){title=`${amount.toLocaleString("ru-RU")} очков`;image=REWARD_ASSETS.points;detail="начислено";}
     else if(isCase){detail=detail||"добавлен в «Мои покупки»";}
     else if(kind==="world_decor"){detail=detail||`Добавлено в коллекцию «Мира Зеффи» · ${amount} шт.`;}
+    else if(kind==="world_park"){detail=detail||"Эксклюзивный парк «Сад встреч» навсегда доступен в коллекции Мира Зеффи.";}
     else if(cosmetic){detail=detail||"добавлено в коллекцию";}
     else detail=detail||"уже на аккаунте";
     const rarity=String(item?.rarity||"").toLowerCase();

@@ -1459,6 +1459,21 @@ function seasonPassStreakProtectionRewardDefinition(value){
   return {publicType:'streak_protection',storedType:'points',itemId:'streak_protection',title:'Защита серии',imageUrl:'/assets/ui/icon_series_protection.webp'};
 }
 
+const SEASON_PASS_GARDEN_ID='meeting-garden-pass';
+const SEASON_PASS_GARDEN_PREFIX='world_park:';
+const SEASON_PASS_GARDEN_ART='/world/assets/meeting-garden-v1/meeting_garden_stage_10_complete.webp';
+function seasonPassMeetingGardenDefinition(row){
+ const raw=String(row?.item_id??row?.itemId??'');
+ const type=String(row?.reward_type??row?.rewardType??'');
+ const id=raw.startsWith(SEASON_PASS_GARDEN_PREFIX)?raw.slice(SEASON_PASS_GARDEN_PREFIX.length):type==='world_park'?raw:'';
+ if(id!==SEASON_PASS_GARDEN_ID)return null;
+ return {publicType:'world_park',storedType:'points',itemId:id,storedItemId:`${SEASON_PASS_GARDEN_PREFIX}${id}`,title:'Сад встреч · личный парк',imageUrl:SEASON_PASS_GARDEN_ART};
+}
+async function assertMeetingGardenSchema(db){
+ try{await db.prepare('SELECT telegram_id FROM zeffi_world_pass_garden_ownership LIMIT 1').all();}
+ catch(error){if(/no such table|no such column/i.test(String(error?.message||error)))throw new ApiError(503,'Система Сада встреч ещё не готова: сначала примените миграцию 0125.');throw error;}
+}
+
 function seasonPassWorldDecorRewardDefinition(value){
   if(!value)return null;
   const raw=String(value?.item_id??value?.itemId??'');
@@ -1469,10 +1484,11 @@ function seasonPassWorldDecorRewardDefinition(value){
 }
 
 function seasonPassPublicRewardType(row) {
-  return seasonPassWorldDecorRewardDefinition(row)?.publicType || seasonPassSeasonalCaseRewardDefinition(row)?.publicType || seasonPassStreakProtectionRewardDefinition(row)?.publicType || seasonPassShowcaseStyleRewardDefinition(row)?.publicType || seasonPassCosmeticRewardDefinition(row)?.publicType || seasonPassBoostRewardDefinition(row)?.publicType || String(row?.reward_type ?? row?.rewardType ?? "");
+  return seasonPassMeetingGardenDefinition(row)?.publicType || seasonPassWorldDecorRewardDefinition(row)?.publicType || seasonPassSeasonalCaseRewardDefinition(row)?.publicType || seasonPassStreakProtectionRewardDefinition(row)?.publicType || seasonPassShowcaseStyleRewardDefinition(row)?.publicType || seasonPassCosmeticRewardDefinition(row)?.publicType || seasonPassBoostRewardDefinition(row)?.publicType || String(row?.reward_type ?? row?.rewardType ?? "");
 }
 
 function seasonPassPublicRewardItemId(row) {
+  const park=seasonPassMeetingGardenDefinition(row);if(park)return park.itemId;
   const decor=seasonPassWorldDecorRewardDefinition(row);if(decor)return decor.itemId;
   const seasonalCase=seasonPassSeasonalCaseRewardDefinition(row);
   if(seasonalCase) return seasonalCase.caseId;
@@ -35923,6 +35939,7 @@ function seasonPassRewardImage(rowOrType, imageUrlValue = '', itemIdValue = '') 
   const row = rowOrType && typeof rowOrType === 'object' ? rowOrType : null;
   const rewardType = String(row ? (seasonPassPublicRewardType(row) || row.reward_type || '') : (rowOrType || '')).toLowerCase();
   const itemId = String(row ? (seasonPassPublicRewardItemId(row) || row.item_id || '') : (itemIdValue || ''));
+  if(rewardType==='world_park')return itemId===SEASON_PASS_GARDEN_ID?SEASON_PASS_GARDEN_ART:SYSTEM_IMAGE_FALLBACK;
   if(rewardType==='world_decor')return worldRewardDecor(itemId)?.imageUrl||SYSTEM_IMAGE_FALLBACK;
   if(rewardType==='streak_protection')return '/assets/ui/icon_series_protection.webp';
   const resourceAsset = seasonPassResourceRewardAsset(rewardType);
@@ -38142,6 +38159,11 @@ function seasonPassRewardMutationEnvelope(ctx,extra={}){
 
 async function grantSeasonPassReward(env,ctx,reward,executionCtx=null){
   await assertSeasonPassNotForceClosed(env);
+  const parkReward=seasonPassMeetingGardenDefinition(reward);
+  if(parkReward){
+    if(String(reward.lane)!=='premium'||Number(reward.amount)!==1)throw new ApiError(400,'Сад встреч можно выдавать только по одной штуке в Элитной линии.');
+    await assertMeetingGardenSchema(env.DB);
+  }
   const decorReward=seasonPassWorldDecorRewardDefinition(reward);
   if(decorReward)await assertDecorSchema(env.DB);
   const showcaseStyleReward=seasonPassShowcaseStyleRewardDefinition(reward);
@@ -38168,7 +38190,14 @@ async function grantSeasonPassReward(env,ctx,reward,executionCtx=null){
     env.DB.prepare(`UPDATE season_pass_claims SET status='pending',reward_json=?,claimed_at=?,error_text='' WHERE season_id=? AND telegram_id=? AND level=? AND lane=? AND status='failed'`).bind(JSON.stringify(reward),now,...key)
   ];
   const entitlementsAdded=[];
-  if(decorReward){
+  if(parkReward){
+    // The same pending-claim guard makes the permanent one-time entitlement
+    // and Season Pass claim atomic. No currency, no shop, no client authority.
+    statements.push(env.DB.prepare(`INSERT OR IGNORE INTO zeffi_world_pass_garden_ownership
+      (telegram_id,garden_id,source_season_id,source_level,source_lane,granted_at)
+      SELECT ?,?,?,?,?,? WHERE EXISTS(SELECT 1 FROM season_pass_claims WHERE season_id=? AND telegram_id=? AND level=? AND lane=? AND status='pending')`)
+      .bind(ctx.telegramId,SEASON_PASS_GARDEN_ID,ctx.season.id,level,'premium',now,...key));
+  }else if(decorReward){
     statements.push(...decorGrantStatements(env.DB,{
       telegramId:ctx.telegramId,decorId:decorReward.itemId,amount:Number(reward.amount)||1,
       sourceKey:`season-pass:${ctx.season.id}:${level}:${lane}`,now,
@@ -46410,6 +46439,16 @@ async function normalizeValidateSeasonPassRewardPayload(env,payload={}){
     const amount=ownerPanelInteger(payload?.amount,1,20);if(amount==null)throw new ApiError(400,'Количество сезонных кейсов должно быть от 1 до 20.');
     reward={rewardType:'case',publicRewardType:'seasonal_case',amount,itemId:`${SEASON_PASS_SEASONAL_CASE_PREFIX}${caseId}`,publicItemId:caseId,title:amount===1?String(definition.title||'Сезонный кейс'):`${String(definition.title||'Сезонный кейс')} ×${amount}`,imageUrl:String(definition.closed_image_url||SYSTEM_IMAGE_FALLBACK)};
   }else reward=ownerPanelSeasonPassRewardPresentation(payload?.rewardType,payload?.amount,payload?.itemId);
+  if(reward?.publicRewardType==='world_park'&&lane!=='premium')throw new ApiError(400,'Парк «Сад встреч» доступен только в Элитной линии Сезонного пропуска.');
+  if(reward?.publicRewardType==='world_park'){
+    // Replacing an already claimed reward would strand existing premium players:
+    // their claim slot is immutable and cannot mint another prize on retry.
+    const current=await env.DB.prepare('SELECT item_id FROM season_pass_rewards WHERE season_id=? AND level=? AND lane=? LIMIT 1').bind(seasonId,level,lane).first();
+    if(String(current?.item_id||'')!==reward.itemId){
+      const redeemed=await env.DB.prepare("SELECT 1 AS used FROM season_pass_claims WHERE season_id=? AND level=? AND lane=? AND status='delivered' LIMIT 1").bind(seasonId,level,lane).first();
+      if(redeemed)throw new ApiError(409,'Этот слот уже получали игроки. Для эксклюзивного парка выберите новый, ещё не выданный уровень Элитного пропуска или следующий сезон.');
+    }
+  }
   return {seasonId,level,lane,season,reward,publicReward:{seasonId,level,lane,rewardType:reward.publicRewardType||reward.rewardType,amount:reward.amount,itemId:reward.publicItemId||reward.itemId,title:reward.title,imageUrl:reward.imageUrl,enabled:true}};
 }
 
@@ -53433,11 +53472,16 @@ async function ownerPanelSeasonPass(env, ctx) {
   const seasonRows=seasonsResult.results||[],seasonMap=new Map(seasonRows.map(row=>[String(row.season_id),seasonPassSeasonFromRow(row,configuredSeasonPassState(env,nowMs),nowMs)])),caseItemsById=new Map();for(const row of [...(caseItemsResult.results||[]),...(caseSpecialItemsResult.results||[]),...(caseResourceItemsResult.results||[]),...(caseDecorResult.results||[])]){const id=String(row.case_id),kind=String(row.reward_kind),itemId=String(row.item_id),list=caseItemsById.get(id)||[];list.push({key:String(row.item_key),kind,itemId,amount:Math.max(1,Number(row.amount||1)),weight:Number(row.weight||1),rarity:String(row.rarity||''),title:String(row.title||''),imageUrl:SEASON_PASS_COSMETIC_KINDS.includes(kind)?liveOpsCanonicalContentImage(kind,itemId,row.image_url):String(row.image_url||''),enabled:Number(row.enabled||0)===1,resource:SEASON_PASS_SEASONAL_CASE_RESOURCE_KINDS.includes(kind)});caseItemsById.set(id,list);}
   const seasonalCases=(caseDefinitionsResult.results||[]).map(row=>{const view=ownerPanelSeasonalCaseView(row,seasonMap),isSelected=String(view.seasonId||'')===String(selected.id);view.itemsLoaded=isSelected;if(!isSelected){view.items=[];return view;}const items=(caseItemsById.get(view.caseId)||[]).slice(),known=new Set(items.map(item=>`${item.kind}:${item.itemId}`));for(const [kind,catalog] of Object.entries(liveops?.content||{})){for(const [itemId,item] of Object.entries(catalog||{})){const seasonalRoute=liveContentRoute(item,'seasonal_case',view.caseId);if(item?.enabled!==true||!seasonalRoute||!view.seasonId||String(item.seasonId||'')!==String(view.seasonId))continue;const key=`${kind}:${itemId}`;if(known.has(key))continue;items.push({key:`live:${key}`,kind,itemId,weight:Math.max(.01,Number(seasonalRoute.weight)||1),rarity:String(item.rarity||''),title:String(item.title||itemId),imageUrl:String(item.imageUrl||''),enabled:true,liveContent:true});known.add(key);}}view.items=items;return view;});
   const selectedSeasonalCase=seasonalCases.find(item=>item.seasonId===selected.id)||null,futureReleaseRules=await readLiveContentReleaseRules(env).catch(()=>new Map()),storyStatsMap=new Map((storyStatsResult.results||[]).map(row=>[String(row.event_id),{seen:Number(row.seen||0),completed:Number(row.completed||0),notified:Number(row.notified||0)}])),storyEvents=(storyEventsResult.results||[]).map(row=>({...seasonPassStoryEventView(row),reward:seasonPassStoryRewardConfig(row),stats:storyStatsMap.get(String(row.event_id))||{seen:0,completed:0,notified:0}})),lastReserved=Math.max(Math.floor(nowMs/1000)+3600,...seasonRows.map(row=>Math.max(Number(row.ends_at||0),Number(row.claim_grace_ends_at||0)))),suggestedStart=lastReserved+60,suggestedEnd=suggestedStart+30*24*3600;
-  return {ok:true,selected,seasons:seasonRows.map(row=>seasonPassSeasonFromRow(row,configuredSeasonPassState(env,nowMs),nowMs)),rewards:(rewardsResult.results||[]).map(ownerPanelSeasonPassRewardView),tasks:(tasksResult.results||[]).map(row=>({id:String(row.task_id),period:String(row.period),premium:Number(row.premium||0)===1,metric:String(row.metric),target:Number(row.target||0),xp:Number(row.xp_reward||0),title:String(row.title||''),description:String(row.description||''),enabled:Number(row.enabled||0)===1})),catalogs:{...ownerPanelSeasonPassCosmeticCatalogs(liveops,futureReleaseRules,seasonMap),world_decor:WORLD_REWARD_DECORS.map(item=>({...item,rarity:"decor"}))},teaser:{seasonId:selected.id,targetSeasonId:String(teaserRow?.target_season_id||''),enabled:Number(teaserRow?.enabled||0)===1,unlockLevel:Number(teaserRow?.unlock_level||50),envelopeTitle:String(teaserRow?.envelope_title||'Вам письмо'),title:String(teaserRow?.title||''),previewText:String(teaserRow?.preview_text||''),bodyText:String(teaserRow?.body_text||''),imageUrl:String(teaserRow?.image_url||''),pushText:String(teaserRow?.push_text||''),stats:{unlocked:Number(teaserStats?.unlocked||0),notified:Number(teaserStats?.notified||0),opened:Number(teaserStats?.opened||0)}},storyEvents,seasonalCase:selectedSeasonalCase,seasonalCases,createSuggestion:{startsAt:suggestedStart,endsAt:suggestedEnd},progression:seasonPassProgressionView(selectedRow),tariffPurchases:Number(tariffPurchases?.count||0),stats:{players:Number(stats?.players||0),elite:Number(stats?.elite||0),elitePlus:Number(stats?.elite_plus||0),maxXp:Number(stats?.max_xp||0)}};
+  return {ok:true,selected,seasons:seasonRows.map(row=>seasonPassSeasonFromRow(row,configuredSeasonPassState(env,nowMs),nowMs)),rewards:(rewardsResult.results||[]).map(ownerPanelSeasonPassRewardView),tasks:(tasksResult.results||[]).map(row=>({id:String(row.task_id),period:String(row.period),premium:Number(row.premium||0)===1,metric:String(row.metric),target:Number(row.target||0),xp:Number(row.xp_reward||0),title:String(row.title||''),description:String(row.description||''),enabled:Number(row.enabled||0)===1})),catalogs:{...ownerPanelSeasonPassCosmeticCatalogs(liveops,futureReleaseRules,seasonMap),world_decor:WORLD_REWARD_DECORS.map(item=>({...item,rarity:"decor"})),world_park:[{id:SEASON_PASS_GARDEN_ID,title:'Сад встреч · личный парк',imageUrl:SEASON_PASS_GARDEN_ART,rarity:'legendary',description:'Один постоянный парк 6×6, только для Элитной линии.'}]},teaser:{seasonId:selected.id,targetSeasonId:String(teaserRow?.target_season_id||''),enabled:Number(teaserRow?.enabled||0)===1,unlockLevel:Number(teaserRow?.unlock_level||50),envelopeTitle:String(teaserRow?.envelope_title||'Вам письмо'),title:String(teaserRow?.title||''),previewText:String(teaserRow?.preview_text||''),bodyText:String(teaserRow?.body_text||''),imageUrl:String(teaserRow?.image_url||''),pushText:String(teaserRow?.push_text||''),stats:{unlocked:Number(teaserStats?.unlocked||0),notified:Number(teaserStats?.notified||0),opened:Number(teaserStats?.opened||0)}},storyEvents,seasonalCase:selectedSeasonalCase,seasonalCases,createSuggestion:{startsAt:suggestedStart,endsAt:suggestedEnd},progression:seasonPassProgressionView(selectedRow),tariffPurchases:Number(tariffPurchases?.count||0),stats:{players:Number(stats?.players||0),elite:Number(stats?.elite||0),elitePlus:Number(stats?.elite_plus||0),maxXp:Number(stats?.max_xp||0)}};
 }
 
 function ownerPanelSeasonPassRewardPresentation(typeValue, amountValue, itemValue) {
   const type = String(typeValue || "");
+  if(type==='world_park'){
+    if(String(itemValue||'')!==SEASON_PASS_GARDEN_ID)throw new ApiError(400,'Выберите готовый парк «Сад встреч».');
+    if(Number(amountValue)!==1)throw new ApiError(400,'Парк можно выдать только один раз.');
+    return {rewardType:'points',publicRewardType:'world_park',amount:1,itemId:`${SEASON_PASS_GARDEN_PREFIX}${SEASON_PASS_GARDEN_ID}`,publicItemId:SEASON_PASS_GARDEN_ID,title:'Сад встреч · личный парк',imageUrl:SEASON_PASS_GARDEN_ART};
+  }
   if(type==='world_decor'){
     const item=worldRewardDecor(itemValue);if(!item)throw new ApiError(400,'Выберите только существующий декор Мира Зеффи.');
     const amount=ownerPanelInteger(amountValue,1,20);if(amount==null)throw new ApiError(400,'Можно выдать от 1 до 20 экземпляров декора.');

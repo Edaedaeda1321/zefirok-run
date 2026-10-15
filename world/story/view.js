@@ -27,7 +27,7 @@ export function artUrl(kind,rotation=0,state='complete') {
 export function requiredStorySpriteIds(){
  const ids=new Set(['terrain_grass_clean_premium','terrain_grass_floral_sparse_premium','terrain_grass_stone_accent_premium','terrain_grass_meadow_premium','terrain_shrub_edge_premium','terrain_flower_edge_premium','terrain_path_sand_premium','terrain_garden_soil_premium','terrain_plaza_round_inlay_premium']);
  for(let chapter=0;chapter<3;chapter++){
-  const state={...createDemoState(),chapter};const city=buildStoryMap(state);
+  const state={...createDemoState(),chapter,meetingGardenStage:1};const city=buildStoryMap(state);
   for(const object of city.objects)for(const variation of [0,1,2,3])ids.add(catalogSpriteId(object.kind,object.rotation,'complete',variation));
  }
  for(const place of PLACES)ids.add(catalogSpriteId(place.kind,0,'complete',0));

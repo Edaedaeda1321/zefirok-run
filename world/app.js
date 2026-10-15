@@ -4,7 +4,7 @@ let CATALOG=BASE_CATALOG,CATALOG_ITEMS=BASE_CATALOG_ITEMS,CITY_LEVELS;
 import { RU, tr } from './ru.js?v=rc-levels10';
 import { ROAD_TILE_PRICE } from './economy.js';
 import {
- makeInitialCity, sanitizeCity, cloneCity, reconcileCityProgress, claimCityLevelReward, CITY_LEVELS as BASE_CITY_LEVELS, addObject, addGiftDecor, moveObject, storeObject,
+ makeInitialCity, sanitizeCity, cloneCity, reconcileCityProgress, claimCityLevelReward, CITY_LEVELS as BASE_CITY_LEVELS, addObject, addGiftDecor, addPassGarden, moveObject, storeObject,
   restoreObject, checkPlacement, checkRoadStroke, applyRoadStroke, cityStats, raisedSurfaceConflicts,
  findOccupant, nextRotation, orthogonalPath, keyOf, dims, BuildError, inBounds,
  isObjectConnected, connectedRoads, buildingEffectPreview, isConstructing, constructionRemaining,
@@ -48,7 +48,7 @@ const state = {
  camera: { x: 0, y: 0, zoom: 1 },
  undo: [], redo: [], pointers: new Map(), pointerStart: null,
  gesture: null, toastTimer: null, drawScheduled: false, pointerDrag: false,
- loadingFailed: false, visualsReady: false, preparingPlacementArt: false, citizenScene: null, trafficScene: null, citizenSnapshot: null, citizenPopulation: -1, citizenComfort: -1, serverRevision: null, serverReady: false, serverBusy: false, serverPurchasesEnabled: false, serverInitData: '', decorInventory:{enabled:false,items:[]}, cityChapters:{enabled:false,items:[]}, skipAnimation: null, skipAnimationTimer: null, skipAnimationRaf: null,
+ loadingFailed: false, visualsReady: false, preparingPlacementArt: false, citizenScene: null, trafficScene: null, citizenSnapshot: null, citizenPopulation: -1, citizenComfort: -1, serverRevision: null, serverReady: false, serverBusy: false, serverPurchasesEnabled: false, serverInitData: '', decorInventory:{enabled:false,items:[]}, passGarden:{enabled:false,owned:false,available:false,id:'meeting-garden-pass'}, cityChapters:{enabled:false,items:[]}, skipAnimation: null, skipAnimationTimer: null, skipAnimationRaf: null,
  skipPreparingUid: null, skipToken: 0
 };
 const iconCodes = { house: 0x1F3E1, coffee: 0x2615, cake: 0x1F370, flower: 0x1F338,
@@ -290,6 +290,7 @@ function acceptServerCity(payload){
  state.serverPurchasesEnabled=Boolean(payload.purchasesEnabled);
  state.serverReady=true;
  if(payload.decorInventory)state.decorInventory=payload.decorInventory;
+ if(payload.passGarden)state.passGarden=payload.passGarden;
  if(payload.cityChapters)state.cityChapters=payload.cityChapters;
  state.undo=[];state.redo=[];
  if(payload.residentRequests)acceptResidentRequests(payload.residentRequests);
@@ -354,6 +355,7 @@ function quoteForAction(kind,args){
  let next;
  if(kind==='place')next=addObject(state.city,CATALOG,args.objectKind,args.x,args.y,args.rotation);
  else if(kind==='place-gift')next=addGiftDecor(state.city,CATALOG,args.objectKind,args.x,args.y,args.rotation);
+ else if(kind==='place-pass-garden')next=addPassGarden(state.city,CATALOG,args.objectKind,args.x,args.y,args.rotation);
  else if(kind==='move')next=moveObject(state.city,CATALOG,args.uid,args.x,args.y,args.rotation);
  else if(kind==='store')next=storeObject(state.city,args.uid);
  else if(kind==='restore')next=restoreObject(state.city,CATALOG,args.uid,args.x,args.y,args.rotation);
@@ -393,13 +395,13 @@ async function confirmServerEdit(){
   }
   if(state.draft){
    const d=state.draft;
-   const kind=d.type==='place'?(d.gift?'place-gift':'place'):d.type==='restore'?'restore':'move';
-   const args=(kind==='place'||kind==='place-gift')?{objectKind:d.kind,x:d.x,y:d.y,rotation:d.rotation}:{uid:d.uid,x:d.x,y:d.y,rotation:d.rotation};
+   const kind=d.type==='place'?(d.passGarden?'place-pass-garden':d.gift?'place-gift':'place'):d.type==='restore'?'restore':'move';
+   const args=(kind==='place'||kind==='place-gift'||kind==='place-pass-garden')?{objectKind:d.kind,x:d.x,y:d.y,rotation:d.rotation}:{uid:d.uid,x:d.x,y:d.y,rotation:d.rotation};
    await performServerAction(kind,args);
    stopDraft();state.mode='select';
-   if(kind==='place'||kind==='place-gift')state.selectedUid=state.city.objects[state.city.objects.length-1]?.uid||null;
+   if(kind==='place'||kind==='place-gift'||kind==='place-pass-garden')state.selectedUid=state.city.objects[state.city.objects.length-1]?.uid||null;
    else state.selectedUid=d.uid;
-   showToast(kind==='place'||kind==='place-gift'?tr('placed'):tr('moved'));updateUI();scheduleDraw();return;
+   showToast(kind==='place'||kind==='place-gift'||kind==='place-pass-garden'?tr('placed'):tr('moved'));updateUI();scheduleDraw();return;
   }
   if(state.roadDraft.length){
    await performServerAction(state.mode==='erase'?'erase-road':'road',{positions:state.roadDraft});
@@ -500,6 +502,14 @@ function startPlacement(kind){
  if(Number(CATALOG[kind]?.buildMs)>0)void preloadBuildFrames(kind,0);
  updateUI();scheduleDraw();
 }
+function startPassGardenPlacement(){
+ const kind='meeting-garden-pass';
+ if(!SERVER_MODE||!state.serverReady||state.serverBusy||!state.passGarden?.available)return;
+ state.mode='place';state.selectedUid=null;state.warehouse=false;state.roadDraft=[];
+ const pos=findFreeSpot(kind);
+ state.draft={type:'place',kind,passGarden:true,rotation:0,...pos};
+ setCatalogOpen(false);void preloadBuildFrames(kind,0);updateUI();scheduleDraw();
+}
 function startGiftPlacement(kind){
  if(!SERVER_MODE||!state.serverReady||state.serverBusy||CATALOG[kind]?.category!=='decor')return;
  const owned=state.decorInventory?.items?.find(item=>item.id===kind);
@@ -584,7 +594,7 @@ function updateSelection(){
  const skipInProgress=state.skipAnimation?.uid===item.uid;
  const skipPreparing=state.skipPreparingUid===item.uid;
  $('selectionStatus').textContent=skipInProgress?'✨ Магическое завершение…':skipPreparing?'Подготавливаем анимацию…':constructing?`${tr('buildReadyIn')} ${formatRemaining(constructionRemaining(item))}`:(CATALOG[item.kind].needsRoad?(connected?tr('roadOk'):tr('roadMissing')):`${dims(CATALOG[item.kind],item.rotation).w}x${dims(CATALOG[item.kind],item.rotation).h}`);
- $('finishBuildTest').hidden=!constructing || skipInProgress || item.kind==='palace-of-memories';
+ $('finishBuildTest').hidden=!constructing || skipInProgress || ['palace-of-memories','meeting-garden-pass'].includes(item.kind);
  $('finishBuildTest').disabled=skipInProgress||skipPreparing||(SERVER_MODE&&!state.serverPurchasesEnabled);
  $('selectionBuildProgress').hidden=!constructing;
  if(constructing){
@@ -782,7 +792,7 @@ function updateUI(){
  $('comfortCard').title=`${tr('comfort')}: ${stats.comfort}. ${tr(`comfort_${stats.comfortTier}`)}`;
  $('buildingsCount').textContent=stats.completedStructures;
  $('constructingCount').textContent=stats.constructing;
- $('warehouseBadge').textContent=stats.stored+(state.decorInventory?.items||[]).reduce((total,item)=>total+Math.max(0,Number(item.available)||0),0);
+ $('warehouseBadge').textContent=stats.stored+(state.decorInventory?.items||[]).reduce((total,item)=>total+Math.max(0,Number(item.available)||0),0)+(state.passGarden?.available?1:0);
  for(const [currency,id] of [['points','walletPoints'],['coffee','walletCoffee'],['treats','walletTreats']])$(id).textContent=state.city.wallet[currency].toLocaleString('ru-RU');
  updateCityBadge();
  $('undoButton').disabled=SERVER_MODE||state.undo.length===0;
@@ -925,6 +935,17 @@ function renderWarehouse(){
  const stored=state.city.objects.filter(item=>item.stored);
  el.replaceChildren();
  const gifts=SERVER_MODE&&state.decorInventory?.enabled?(state.decorInventory.items||[]).filter(item=>CATALOG[item.id]?.category==='decor'):[];
+ const pass=state.passGarden;
+ if(SERVER_MODE&&pass?.owned&&!pass.placed){
+  const def=CATALOG['meeting-garden-pass'];
+  if(def){
+   const card=document.createElement('button');card.className='catalog-card world-gift-item';card.type='button';card.disabled=!pass.available;
+   const fig=document.createElement('div');fig.className='catalog-figure';const thumb=document.createElement('canvas');thumb.className='building-thumbnail';fig.append(thumb);drawCatalogThumbnail(thumb,def);
+   const copy=document.createElement('div');copy.className='catalog-copy';const title=document.createElement('strong');title.textContent='🌳 Сад встреч · Элитный пропуск';
+   const size=document.createElement('small');size.textContent='6×6 · Строительство 6 часов';const status=document.createElement('em');status.textContent=pass.available?'Построить бесплатно · награда получена':'Уже размещён';
+   copy.append(title,size,status);card.append(fig,copy);card.addEventListener('click',startPassGardenPlacement);el.append(card);
+  }
+ }
  if(gifts.length){
   for(const gift of gifts){
    const def=CATALOG[gift.id],button=document.createElement('button');button.className='catalog-card world-gift-item';button.type='button';button.disabled=Number(gift.available)<1;
@@ -933,7 +954,7 @@ function renderWarehouse(){
    button.append(fig,copy);button.addEventListener('click',()=>startGiftPlacement(gift.id));el.append(button);
   }
  }
- if(!stored.length){if(!gifts.length){const empty=document.createElement('div');empty.className='warehouse-empty';empty.textContent=tr('warehouseEmpty');el.append(empty);}return;}
+ if(!stored.length){if(!gifts.length&&!(SERVER_MODE&&pass?.owned&&!pass.placed)){const empty=document.createElement('div');empty.className='warehouse-empty';empty.textContent=tr('warehouseEmpty');el.append(empty);}return;}
  for(const item of stored){
   const def=CATALOG[item.kind];const button=document.createElement('button');button.className='catalog-card';button.type='button';button.dataset.kind=item.kind;
   const fig=document.createElement('div');fig.className='catalog-figure';const thumb=document.createElement('canvas');thumb.className='building-thumbnail';thumb.setAttribute('aria-hidden','true');fig.append(thumb);drawCatalogThumbnail(thumb,def);

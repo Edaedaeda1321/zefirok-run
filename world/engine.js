@@ -87,7 +87,7 @@ export function skipConstruction(city, uid, now = Date.now()) {
   if (!item || item.stored) throw new BuildError('NOT_OWNED');
   if (!Number.isSafeInteger(now) || now < 0) throw new BuildError('INVALID_TIME');
   if (!isConstructing(item, now)) throw new BuildError('NOT_CONSTRUCTING');
-  if(item.kind==='palace-of-memories')throw new BuildError('SKIP_UNAVAILABLE'); // prestige landmark: no paid acceleration
+  if(item.kind==='palace-of-memories'||item.kind===MEETING_GARDEN_PASS_ID)throw new BuildError('SKIP_UNAVAILABLE'); // prestige landmark: no paid acceleration
   const cost = constructionSkipPrice(item, now);
   const next = cloneCity(city);
   chargeWallet(next, {points:cost.points,coffee:cost.coffee,treats:cost.treats});
@@ -225,7 +225,7 @@ export function checkPlacement(city, catalog, kind, x, y, rotation = 0, excludeU
   const def = catalog[kind];
   if (!def) return { ok: false, code: 'UNKNOWN_BUILDING' };
   if (![x, y, rotation].every(isInteger)) return { ok: false, code: 'INVALID_POSITION' };
-  if((kind==='zeffi-central-square'||kind==='palace-of-memories') && rotation!==0)return {ok:false,code:'INVALID_POSITION'}; // single supplied camera view
+  if((kind==='zeffi-central-square'||kind==='palace-of-memories'||kind==='meeting-garden-pass') && rotation!==0)return {ok:false,code:'INVALID_POSITION'}; // single supplied camera view
   const { w, h } = dims(def, rotation);
   for(let cx=x;cx<x+w;cx++)for(let cy=y;cy<y+h;cy++){
     if(!inBounds(city,cx,cy))return {ok:false,code:'OUTSIDE_CITY'};
@@ -320,6 +320,19 @@ export function cloneCity(city) {
 
 // A gift is a finite entitlement, not a free shop purchase. The Worker
 // verifies the owner's ledger in the SAME batch as the saved city revision.
+export const MEETING_GARDEN_PASS_ID='meeting-garden-pass';
+export function addPassGarden(city,catalog,kind,x,y,rotation=0,now=Date.now()){
+ if(kind!==MEETING_GARDEN_PASS_ID||catalog[kind]?.passOnly!==true)throw new BuildError('PASS_GARDEN_ONLY');
+ if(rotation!==0)throw new BuildError('ROTATION_UNAVAILABLE');
+ if(city.objects.some(o=>o.kind===kind))throw new BuildError('ALREADY_OWNED');
+ checkedPlacement(city,catalog,kind,x,y,rotation);
+ const delay=Math.floor(Number(catalog[kind].buildMs||0));
+ if(!Number.isSafeInteger(now)||now<0||delay<0||delay>MAX_BUILD_MS||now+delay>Number.MAX_SAFE_INTEGER)throw new BuildError('INVALID_TIME');
+ const next=cloneCity(city);
+ next.objects.push({uid:`obj-${next.nextId++}`,kind,x,y,rotation,level:1,stored:false,buildStartedAt:delay?now:0,buildReadyAt:delay?now+delay:0,passGarden:true});
+ return next;
+}
+
 export function addGiftDecor(city,catalog,kind,x,y,rotation=0,now=Date.now()){
   if(!catalog[kind]||catalog[kind].category!=='decor'||catalog[kind].retired)throw new BuildError('GIFT_DECOR_ONLY');
   checkedPlacement(city,catalog,kind,x,y,rotation);
@@ -330,6 +343,7 @@ export function addGiftDecor(city,catalog,kind,x,y,rotation=0,now=Date.now()){
 }
 
 export function addObject(city, catalog, kind, x, y, rotation = 0, now = Date.now()) {
+  if(kind===MEETING_GARDEN_PASS_ID)throw new BuildError('PASS_GARDEN_ONLY');
   const price = objectPrice(catalog, kind);
   if(kind==='palace-of-memories' && city.objects.some(object=>object.kind===kind))throw new BuildError('ALREADY_OWNED');
   const requiredLevel = Math.max(Number(catalog[kind]?.minCityLevel || 1),kind==='palace-of-memories'?10:1);
@@ -683,7 +697,9 @@ export function sanitizeCity(input, catalog) {
     if (!Number.isSafeInteger(started) || !Number.isSafeInteger(ready) || started < 0 || ready < 0 ||
         (ready === 0 && started !== 0) || (ready !== 0 && (started <= 0 || ready <= started || ready - started > MAX_BUILD_MS))) throw new BuildError('INVALID_SAVE');
     if(raw.giftDecor!==undefined&&(raw.giftDecor!==true&&raw.giftDecor!==false||raw.giftDecor===true&&catalog[raw.kind].category!=='decor'))throw new BuildError('INVALID_SAVE');
-    const item = { uid: raw.uid, kind: raw.kind, x: raw.stored ? null : Number(raw.x), y: raw.stored ? null : Number(raw.y), rotation: raw.rotation, level: raw.level, stored: raw.stored, buildStartedAt: started, buildReadyAt: ready, ...(raw.giftDecor===true?{giftDecor:true}:{}) };
+    if(raw.passGarden!==undefined&&raw.passGarden!==true&&raw.passGarden!==false)throw new BuildError('INVALID_SAVE');
+    if((raw.kind===MEETING_GARDEN_PASS_ID)!==(raw.passGarden===true)||raw.passGarden===true&&raw.rotation!==0)throw new BuildError('INVALID_SAVE');
+    const item = { uid: raw.uid, kind: raw.kind, x: raw.stored ? null : Number(raw.x), y: raw.stored ? null : Number(raw.y), rotation: raw.rotation, level: raw.level, stored: raw.stored, buildStartedAt: started, buildReadyAt: ready, ...(raw.giftDecor===true?{giftDecor:true}:{}), ...(raw.passGarden===true?{passGarden:true}:{}) };
     if (!item.stored) {
       // Legacy saves were allowed to put buildings/roads over 3x3 raised plazas.
       // Do not lock out those players; future moves and purchases use strict rules.

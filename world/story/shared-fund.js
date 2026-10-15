@@ -53,9 +53,10 @@ export const sharedFundQuote=(project,requested)=>{
 export function mapStateWithFund(local,shared){
  const garden=shared?.projects?.garden,festival=shared?.projects?.festival;
  // Missing D1 state is NOT replaced with old local donation numbers.
- // Keep the garden empty and the festival at stage A until a signed read succeeds.
+ // Keep the garden at the earliest non-claimable construction stage and Festival at A until a signed D1 read succeeds.
  const completed=Boolean(garden?.finished);
  return {...local,chapter:local.chapter,
+  meetingGardenStage:completed?10:garden&&garden.goal>0?Math.max(1,Math.min(9,1+Math.floor(garden.total/garden.goal*9))):1,
   project:{community:completed?1000:0,personal:0,startedAt:completed?1:0,readyAt:completed?1:0,opened:completed},
   festival:{community:festival?.total||0,personal:0,credits:0}};
 }

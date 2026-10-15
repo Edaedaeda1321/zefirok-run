@@ -8,9 +8,12 @@ export const STORY_PARK_BELKINO_KIND='story-park-belkino';
 export const STORY_GLOBAL_PARK_KIND='story-global-park-zeffi';
 export const STORY_FESTIVAL_KINDS=Object.freeze({stage_a:'story-festival-stage-a',stage_b:'story-festival-stage-b',stage_c:'story-festival-stage-c',complete:'story-festival-complete'});
 export const STORY_PALACE_KINDS=Object.freeze(Array.from({length:10},(_,i)=>`story-palace-memories-${String(i+1).padStart(2,'0')}`));
+export const STORY_MEETING_GARDEN_KINDS=Object.freeze(Array.from({length:10},(_,i)=>`story-meeting-garden-${String(i+1).padStart(2,'0')}`));
+export const MEETING_GARDEN_PLOT=Object.freeze([11,40,6,6]);
 export const STORY_CATALOG=Object.freeze({
  ...CATALOG,
  [STORY_PARK_BELKINO_KIND]:Object.freeze({id:STORY_PARK_BELKINO_KIND,category:'parks',titleKey:'pondPark',descriptionKey:'pondParkDescription',icon:'leaf',w:9,h:9,needsRoad:false,style:'park',height:0,buildMs:0}),
+ ...Object.fromEntries(STORY_MEETING_GARDEN_KINDS.map(id=>[id,Object.freeze({id,category:'parks',titleKey:'meetingGarden',descriptionKey:'meetingGardenDescription',icon:'flower',w:6,h:6,needsRoad:false,style:'rose',height:70,buildMs:0,rotatable:false,blockingSurface:true})])),
  ...Object.fromEntries(STORY_PALACE_KINDS.map(id=>[id,Object.freeze({id,category:'plazas',titleKey:'palaceMemories',descriptionKey:'palaceMemoriesDescription',icon:'star',w:6,h:6,needsRoad:false,style:'gold',height:155,buildMs:0,rotatable:false,blockingSurface:true})])),
  [STORY_GLOBAL_PARK_KIND]:Object.freeze({id:STORY_GLOBAL_PARK_KIND,category:'parks',titleKey:'centralParkZeffi',descriptionKey:'centralParkZeffiDescription',icon:'leaf',w:6,h:6,needsRoad:false,style:'park',height:0,buildMs:0}),
  ...Object.fromEntries(Object.values(STORY_FESTIVAL_KINDS).map(id=>[id,Object.freeze({id,category:'plazas',titleKey:'citySquare',descriptionKey:'citySquareDescription',icon:'flag',w:6,h:6,needsRoad:false,style:'rose',height:116,buildMs:0})])),
@@ -30,7 +33,7 @@ export const DISTRICTS=Object.freeze([
 ]);
 export const PLACES=Object.freeze([
  ...DISTRICTS.map(d=>({...d,uid:({square:'story-central-square',cafe:'story-cafe',belkino:'story-pond',friends:'story-home',station:'story-terminal',festival:'story-festival',rabbit:'story-cafe',palace:'story-palace-memories'})[d.id]||null})),
- {id:'community-garden',title:'Сад встреч',short:'Строим вместе',icon:'heart',focus:[15.5,35.5],bounds:[14,34,3,3],chapter:0,kind:'garden',uid:'story-community-garden',description:'Уютный сад рядом с парком Белкино. Жители вместе собирают средства на строительство через общий городской фонд.'}
+ {id:'community-garden',title:'Сад встреч',short:'Строим вместе',icon:'heart',focus:[14,43],bounds:MEETING_GARDEN_PLOT,chapter:0,kind:STORY_MEETING_GARDEN_KINDS[0],uid:'story-community-garden',description:'Большой сад с ротондой, цветниками и прогулочной аллеей. Девять этапов строительства и открытие по общему городскому фонду.'}
 ]);
 export const placeById=id=>PLACES.find(p=>p.id===id)||null;
 export const isPlaceOpen=(place,state)=>state.chapter>=place.chapter;
@@ -70,6 +73,9 @@ export function buildStoryMap(state, now=Date.now()) {
  line(roads,33,21,33,28);
  line(roads,33,28,40,28);
  if(state.chapter>=2)line(roads,31,28,40,28);
+ // Walkable ring around new 6x6 Meeting Garden (11..16,40..45). Connected
+ // at north to existing y=39 pedestrian axis; no tile enters the art base.
+ line(roads,10,39,10,46);line(roads,17,39,17,46);line(roads,10,46,17,46);
  // Dedicated asphalt lane for public transport in the shared story city.
  // It is visual + routing-only and stays separate from the pedestrian paths.
  // The line deliberately avoids decorative objects so routing stays connected.
@@ -121,10 +127,10 @@ export function buildStoryMap(state, now=Date.now()) {
  if(state.chapter>=1){place(STORY_FESTIVAL_KINDS[festivalStage(state)],22,33,0,'story-festival');place('flowerbed',28,38);}
  // No second White Rabbit villa: both places point to story-cafe.
  if(state.chapter>=2){place('bench',42,27);place('flowerbed',42,25);}
- const status=projectStatus(state,now);
- if(status!=='funding')place('garden',14,34,0,'story-community-garden',status==='building'?{buildStartedAt:state.project.startedAt,buildReadyAt:state.project.readyAt}:{});
- // Keep the future project's footprint reserved even during funding.
- if(status==='funding')for(let x=14;x<17;x++)for(let y=34;y<37;y++)occupied.add(keyOf(x,y));
+ const gardenStage=Number.isInteger(state.meetingGardenStage)&&state.meetingGardenStage>=1&&state.meetingGardenStage<=10?state.meetingGardenStage:(projectStatus(state,now)==='active'?10:Math.max(1,Math.min(9,1+Math.floor(Math.min(0.999999,(state.project.community+state.project.personal)/1000)*9))));
+ place(STORY_MEETING_GARDEN_KINDS[gardenStage-1],...MEETING_GARDEN_PLOT.slice(0,2),0,'story-community-garden');
+ // Flowering accents outside the pedestrian path. All optional, never displace a landmark.
+ for(const [kind,x,y] of [['extra-bench',9,40],['extra-bench',18,44],['lamp',9,45],['lamp',18,40],['extra-flowerbed',13,47],['extra-flowerbed',15,47],['extra-tree',8,43],['extra-tree',19,43]])place(kind,x,y,0,'',{},true);
  const furnishings=[['bench',34,29],['flowerbed',35,20],['bench',25,27],['flowerbed',24,27],['bench',12,35],['bench',17,32],['lamp',17,12],['lamp',10,14],['bench',14,14],['flowerbed',17,15],['lamp',30,18],['bench',33,38],['lamp',40,38],['flowerbed',32,18]];
  for(const [kind,x,y]of furnishings)place(kind,x,y,0,'',{},true);
  const closed=lockedDistricts(state);
@@ -132,6 +138,7 @@ export function buildStoryMap(state, now=Date.now()) {
   if(closed.some(d=>contains(d.bounds,x,y)))continue;
   const hash=(Math.imul(x+17,73856093)^Math.imul(y+41,19349663))>>>0;
   if(hash%100>28)continue;
+  if(x>=8&&x<=19&&y>=39&&y<=47)continue; // Preserve garden paths and landscaping.
   const kind=['tree','tree','flowerbed','extra-bush'][hash%4];
   place(kind,x,y,(hash>>>8)%4,'',{},true);
  }

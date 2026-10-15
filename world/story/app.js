@@ -1,11 +1,11 @@
 // The story-only 9x9 landmark is not part of the live shop/server catalog.
 import { STORY_CATALOG as CATALOG } from './map.js';
 import { drawWorld, isoToScreen } from '../renderer.js';
-import { preloadSpriteSet, onSpriteUpdate, spriteStatus } from '../sprite-assets.js';
+import { preloadSpriteSet, onSpriteUpdate, spriteStatus, meetingGardenSprite } from '../sprite-assets.js';
 import { buildCitizenScene, sampleCitizenScene } from '../citizens.js';
 import { buildBusScene, sampleBusScene, preloadBusArt, busArtStatus } from '../traffic.js';
 import { createDemoState, loadDemo, saveDemo, resetDemo, contribute, simulateCommunityHelp, addDemoMaterials, openProject, setDemoChapter, visitPlace, projectStatus, projectTotal, PROJECT_GOAL, FESTIVAL_GOAL, FESTIVAL_MILESTONES, FESTIVAL_AMOUNTS, festivalStage, festivalTotal, festivalNextGoal, contributeFestival, simulateFestivalHelp, addFestivalDemoPoints, setWhiteRabbitPreview } from './model.js';
-import { DISTRICTS, PLACES, placeById, isPlaceOpen, lockedDistricts, STORY_FESTIVAL_KINDS, STORY_PALACE_KINDS, buildStoryMap, validateStoryMap } from './map.js';
+import { DISTRICTS, PLACES, placeById, isPlaceOpen, lockedDistricts, STORY_FESTIVAL_KINDS, STORY_PALACE_KINDS, STORY_MEETING_GARDEN_KINDS, buildStoryMap, validateStoryMap } from './map.js';
 import { icon, escapeText as esc, artUrl, requiredStorySpriteIds, centerCamera, worldAt, zoomCamera, clampCamera } from './view.js';
 import {createSharedFundClient, sharedFundQuote, mapStateWithFund} from './shared-fund.js';
 import {communityChronicle,communityEvent,newlyReachedCommunityEvents,paintCommunityScene} from './community-events-p2.js';
@@ -64,7 +64,7 @@ export async function startStoryWorld({mode='standalone',initData=''}={}) {
  function haptic(){try{window.Telegram?.WebApp?.HapticFeedback?.impactOccurred?.('light');}catch{}}
  const worldState=()=>liveMode?mapStateWithFund(state,sharedSnapshot):state;
  const festivalKind=()=>STORY_FESTIVAL_KINDS[festivalStage(worldState())];
- function stageKind(place){if(place.id==='palace')return STORY_PALACE_KINDS[(state.palaceStage||1)-1];if(place.id==='festival')return festivalKind();if((place.id==='cafe'||place.id==='rabbit')&&state.whiteRabbitPreview>0)return `story-wr-stage-${state.whiteRabbitPreview}`;return place.kind;}
+ function stageKind(place){if(place.id==='community-garden'){const current=worldState(),stage=Number.isInteger(current.meetingGardenStage)?current.meetingGardenStage:projectStatus(current)==='active'?10:Math.max(1,Math.min(9,1+Math.floor(Math.min(.999999,projectTotal(current)/PROJECT_GOAL)*9)));return STORY_MEETING_GARDEN_KINDS[Math.max(1,Math.min(10,stage))-1];}if(place.id==='palace')return STORY_PALACE_KINDS[(state.palaceStage||1)-1];if(place.id==='festival')return festivalKind();if((place.id==='cafe'||place.id==='rabbit')&&state.whiteRabbitPreview>0)return `story-wr-stage-${state.whiteRabbitPreview}`;return place.kind;}
  function schedule(){dirty=true;if(!raf&&!document.hidden&&!disposed)raf=requestAnimationFrame(frame);}
  function rebuild(){
   const next=buildStoryMap(worldState());const errors=validateStoryMap(next);
@@ -147,7 +147,7 @@ export async function startStoryWorld({mode='standalone',initData=''}={}) {
   const live=!paused&&!reduce.matches;
   if(dirty||t-lastFrame>=1000/30){
    const start=performance.now(),now=Date.now(),ambient=(paused?pauseAt:now)-pauseOffset;
-   drawWorld(canvas,city,CATALOG,cam,{now,groundZones:[...lockedDistricts(worldState()).map(d=>({bounds:d.bounds,future:d.chapter===99})),...(projectStatus(worldState())==='funding'?[{bounds:[14,34,3,3],project:true}]:[])],citizens:sampleCitizenScene(citizens,ambient),buses:sampleBusScene(buses,ambient)});
+   drawWorld(canvas,city,CATALOG,cam,{now,groundZones:lockedDistricts(worldState()).map(d=>({bounds:d.bounds,future:d.chapter===99})),citizens:sampleCitizenScene(citizens,ambient),buses:sampleBusScene(buses,ambient)});
    // RC-5: visual-only, screen-culled events from signed D1 fund snapshots.
    if(liveMode&&sharedSnapshot)paintCommunityScene(canvas,cam,size,sharedSnapshot,ambient,{chapter:state.chapter,animate:live,celebrate:communityCelebration&&now<=communityCelebration.until?communityCelebration:null});
    if(layoutDirty){paintOverlay();layoutDirty=false;}
@@ -230,8 +230,14 @@ export async function startStoryWorld({mode='standalone',initData=''}={}) {
  function acceptSharedSnapshot(next){
   if(!communityChronicle(next,'garden')||!communityChronicle(next,'festival'))throw new Error('Состояние городских событий не прошло проверку.');
   if(sharedSnapshot&&['garden','festival'].some(id=>next.projects[id].revision<sharedSnapshot.projects[id].revision))return [];
+  const oldStage=sharedSnapshot?mapStateWithFund(state,sharedSnapshot).meetingGardenStage:1;
+  const newStage=mapStateWithFund(state,next).meetingGardenStage;
   const events=newlyReachedCommunityEvents(sharedSnapshot,next);
   sharedSnapshot=next;sharedError='';
+  if(oldStage!==newStage){
+   // Load only the newly authorized stage. Never decode all ten large WebPs on mobile.
+   void preloadSpriteSet([meetingGardenSprite(newStage)],{pin:true}).then(result=>{if(result.failed)console.warn('Стадия Сада встреч не загрузилась.');}).catch(()=>{});
+  }
   if(events.length){communityCelebration={projectId:events.at(-1).projectId,until:Date.now()+4500};schedule();}
   return events;
  }
@@ -280,7 +286,7 @@ export async function startStoryWorld({mode='standalone',initData=''}={}) {
   const row=(id)=>{
    const p=sharedSnapshot.projects[id],percent=Math.round(p.total/p.goal*100);
    const stage=id==='festival'?`Этап ${p.stage+1} из 4`:p.finished?'Готов':'Сбор очков';
-   return `<button type="button" class="buildings-row" data-action="${id==='festival'?'festival-project':'project'}"><img src="${artUrl(id==='festival'?STORY_FESTIVAL_KINDS[festivalStage(worldState())]:'garden')}" alt=""/><span class="buildings-details"><strong>${esc(p.title)}</strong><small>${stage} · ${money(p.total)} / ${money(p.goal)} очков</small><span class="mini-track"><span style="width:${percent}%"></span></span></span><span class="buildings-percent">${percent}% ›</span></button>`;
+   return `<button type="button" class="buildings-row" data-action="${id==='festival'?'festival-project':'project'}"><img src="${artUrl(id==='festival'?STORY_FESTIVAL_KINDS[festivalStage(worldState())]:stageKind(placeById('community-garden')))}" alt=""/><span class="buildings-details"><strong>${esc(p.title)}</strong><small>${stage} · ${money(p.total)} / ${money(p.goal)} очков</small><span class="mini-track"><span style="width:${percent}%"></span></span></span><span class="buildings-percent">${percent}% ›</span></button>`;
   };
   if(kind==='buildings')return `<span class="eyebrow">СТРОИМ ВМЕСТЕ</span><h2 id="panelTitle">Городские стройки</h2><p>Участники видят общий прогресс. Очки списываются только после подтверждения.</p>${row('garden')}${row('festival')}${palaceRow}${chronicleMarkup('garden')}${chronicleMarkup('festival')}${notice}<button class="secondary" data-action="fund-refresh">Обновить прогресс</button>`;
   if(kind==='fund-confirm'){
@@ -374,7 +380,7 @@ export async function startStoryWorld({mode='standalone',initData=''}={}) {
   }else if(selectedPanel==='buildings'){
    const gardenTotal=projectTotal(state),gardenPercent=Math.round(100*gardenTotal/PROJECT_GOAL);
    html=`<span class="eyebrow">СТРОИМ ВМЕСТЕ · ДЕМО</span><h2 id="panelTitle">Городские стройки</h2><p>Помогайте городу расти. Постройки постепенно меняются прямо на карте.</p>`;
-   html+=`<button type="button" class="buildings-row" data-action="project"><img src="${artUrl('garden')}" alt="" /><span class="buildings-details"><strong>Сад встреч</strong><small>${STATUS[projectStatus(state)]} · ${money(gardenTotal)} / ${money(PROJECT_GOAL)} материалов</small><span class="mini-track"><span style="width:${gardenPercent}%"></span></span></span><span class="buildings-percent">${gardenPercent}% ›</span></button>`;
+   html+=`<button type="button" class="buildings-row" data-action="project"><img src="${artUrl(stageKind(placeById('community-garden')))}" alt="" /><span class="buildings-details"><strong>Сад встреч</strong><small>${STATUS[projectStatus(state)]} · ${money(gardenTotal)} / ${money(PROJECT_GOAL)} материалов</small><span class="mini-track"><span style="width:${gardenPercent}%"></span></span></span><span class="buildings-percent">${gardenPercent}% ›</span></button>`;
    const fStage=festivalStage(state),fTotal=festivalTotal(state),fPct=Math.round(fTotal/FESTIVAL_GOAL*100);
    html+=`<button type="button" class="buildings-row" data-action="festival-project"><img src="${artUrl(festivalKind())}" alt="" /><span class="buildings-details"><strong>Дом фестивалей Зеффи</strong><small>${state.chapter<1?'Откройте район событий в тестере':fStage==='complete'?'Здание открыто':`Этап ${['stage_a','stage_b','stage_c'].indexOf(fStage)+1} из 4`} · ${money(fTotal)} / ${money(FESTIVAL_GOAL)} тестовых очков</small><span class="mini-track"><span style="width:${fPct}%"></span></span></span><span class="buildings-percent">${fPct}% ›</span></button>`;
    html+='<div class="demo-box">Сбор тестовый и сохраняется только на этом устройстве. Реальные валюты не списываются.</div>';

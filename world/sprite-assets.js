@@ -51,12 +51,21 @@ export function setSpriteMode(value) {
 }
 export function onSpriteUpdate(callback) { onUpdate = typeof callback === 'function' ? callback : () => {}; }
 
+export const MEETING_GARDEN_PASS_ID='meeting-garden-pass';
+export const meetingGardenSprite=stage=>`meeting_garden_${String(Math.max(1,Math.min(10,Math.floor(Number(stage)||1)))).padStart(2,'0')}`;
 export const PALACE_BUILDING_ID='palace-of-memories';
 export function palaceStageSprite(stage){
  const n=Math.max(1,Math.min(10,Number(stage)||1));
  return `palace_memories_${String(n).padStart(2,'0')}`;
 }
 export function buildingAssetId(catalogId, rotation = 0, state = 'complete', buildProgress = null) {
+  if(catalogId===MEETING_GARDEN_PASS_ID){
+   if(state==='complete')return meetingGardenSprite(10);
+   const n=Number.isFinite(buildProgress)?1+Math.floor(Math.max(0,Math.min(.999999,buildProgress))*9):Number(/^build_0([1-9])$/.exec(state)?.[1]||1);
+   return meetingGardenSprite(n);
+  }
+  const storyGarden=/^story-meeting-garden-(0[1-9]|10)$/.exec(catalogId);
+  if(storyGarden)return meetingGardenSprite(Number(storyGarden[1]));
   if(catalogId===PALACE_BUILDING_ID){
     if(state==='complete')return palaceStageSprite(10);
     const step=Number.isFinite(buildProgress)?1+Math.floor(Math.max(0,Math.min(.999999,buildProgress))*9):Number(/^build_0([1-9])$/.exec(state)?.[1]||1);
@@ -101,6 +110,7 @@ export function decorAssetId(catalogId, rotation = 0, variation = 0) {
 // and the original 3-stage Core construction set. The procedural renderer
 // handles missing/undecoded WebP art; removed legacy sprites are not fetched.
 export function fallbackSpriteId(kind, rotation=0, state='complete', variation=0) {
+ if(kind===MEETING_GARDEN_PASS_ID||/^story-meeting-garden-(0[1-9]|10)$/.test(kind))return buildingAssetId(kind,0,state);
  if(state==='complete'){
   if(kind==='story-global-park-zeffi')return 'zeffi_global_park_n';
   const direction=FACINGS[((rotation%4)+4)%4];
@@ -236,6 +246,7 @@ export async function preloadSpriteSet(ids,{pin=false,onProgress=()=>{}}={}){
 }
 // Warm construction stages before server purchase, including acceleration FX.
 export function preloadBuildFrames(kind,rotation=0){
+ if(kind===MEETING_GARDEN_PASS_ID)return preloadSpriteSet([meetingGardenSprite(1),meetingGardenSprite(10)]);
  if(kind===PALACE_BUILDING_ID)return preloadSpriteSet([palaceStageSprite(1),palaceStageSprite(10)]);
  if(kind==='central-park-zeffi')return preloadSpriteSet([...Array(6)].map((_,i)=>`zeffi_park_build_0${i+1}`).concat(catalogSpriteId(kind,rotation,'complete')));
  if(kind==='zeffi-central-square')return preloadSpriteSet([...Array(6)].map((_,i)=>`zeffi_square_build_0${i+1}`).concat('zeffi_square_complete'));

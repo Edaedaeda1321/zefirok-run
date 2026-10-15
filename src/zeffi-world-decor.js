@@ -22,15 +22,23 @@ export function decorGrantStatements(db,{telegramId,decorId,amount,sourceKey,now
       .bind(telegramId,decorId,telegramId,decorId,now,...gateBinds)
   ];
 }
+async function passGardenState(db,telegramId,city){
+ const inCity=(city.objects||[]).some(item=>item.kind==='meeting-garden-pass');
+ try{
+  const row=await db.prepare("SELECT garden_id FROM zeffi_world_pass_garden_ownership WHERE telegram_id=? AND source_lane='premium' LIMIT 1").bind(telegramId).first();
+  return {enabled:true,owned:row?.garden_id==='meeting-garden-pass',available:row?.garden_id==='meeting-garden-pass'&&!inCity,placed:inCity,id:'meeting-garden-pass'};
+ }catch(error){if(!schemaError(error))throw error;return {enabled:false,owned:false,available:false,placed:inCity,id:'meeting-garden-pass'};}
+}
 export async function readWorldExtras(db,telegramId,city,catalog){
   try{
-    const [owned,claimed]=await Promise.all([
+    const [owned,claimed,passGarden]=await Promise.all([
       db.prepare('SELECT decor_id,total FROM zeffi_world_decor_owned WHERE telegram_id=? AND total>0 ORDER BY decor_id').bind(telegramId).all(),
-      db.prepare("SELECT chapter_id FROM zeffi_world_chapter_claims WHERE telegram_id=? AND status='claimed'").bind(telegramId).all()
+      db.prepare("SELECT chapter_id FROM zeffi_world_chapter_claims WHERE telegram_id=? AND status='claimed'").bind(telegramId).all(),
+      passGardenState(db,telegramId,city)
     ]);
     const items=(owned.results||[]).filter(r=>worldRewardDecor(r.decor_id)).map(r=>({id:r.decor_id,title:WORLD_REWARD_DECOR_BY_ID[r.decor_id].title,imageUrl:WORLD_REWARD_DECOR_BY_ID[r.decor_id].imageUrl,total:Number(r.total),used:worldDecorGiftUsage(city,r.decor_id),available:Math.max(0,Number(r.total)-worldDecorGiftUsage(city,r.decor_id))}));
-    return {decorInventory:{enabled:true,items},cityChapters:{enabled:true,items:cityChapterViews(city,catalog,(claimed.results||[]).map(x=>x.chapter_id))}};
-  }catch(error){if(!schemaError(error))throw error;return {decorInventory:{enabled:false,items:[]},cityChapters:{enabled:false,items:[]}};}
+    return {passGarden,decorInventory:{enabled:true,items},cityChapters:{enabled:true,items:cityChapterViews(city,catalog,(claimed.results||[]).map(x=>x.chapter_id))}};
+  }catch(error){if(!schemaError(error))throw error;return {passGarden:await passGardenState(db,telegramId,city),decorInventory:{enabled:false,items:[]},cityChapters:{enabled:false,items:[]}};}
 }
 export async function claimCityChapter(db,telegramId,city,catalog,revision,chapterId){
   await assertDecorSchema(db);

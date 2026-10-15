@@ -173,7 +173,15 @@ export const CATALOG_ITEMS = Object.freeze(VISIBLE_ITEMS.map(item => {
   if (!OBJECT_PRICES[item.id]) throw new Error(`PRICE_MISSING: ${item.id}`);
   return Object.freeze({ ...item, minCityLevel: SHOP_UNLOCK_LEVELS[item.id] || 1, price: OBJECT_PRICES[item.id] });
 }));
+// Entitlement-only: NOT a shop item, NOT world_decor, NOT part of editable P1 prices.
+export const MEETING_GARDEN_PASS_ID='meeting-garden-pass';
+export const MEETING_GARDEN_PASS=Object.freeze({
+ id:MEETING_GARDEN_PASS_ID,category:'parks',titleKey:'meetingGarden',descriptionKey:'meetingGardenDescription',
+ icon:'flower',w:6,h:6,needsRoad:false,style:'rose',height:70,buildMs:6*60*60*1000,
+ rotatable:false,blockingSurface:true,passOnly:true,minCityLevel:1,
+ price:Object.freeze({points:0,treats:0,coffee:0})
+});
 export const CATALOG = Object.freeze(Object.fromEntries(
-  [...CATALOG_ITEMS, ...RETIRED_PATH_ITEMS, ...RETIRED_LANDSCAPE_ITEMS].map(item => [item.id, item])
+  [...CATALOG_ITEMS, MEETING_GARDEN_PASS, ...RETIRED_PATH_ITEMS, ...RETIRED_LANDSCAPE_ITEMS].map(item => [item.id, item])
 ));
 export const CATEGORIES = Object.freeze(['all', 'homes', 'shops', 'transport', 'parks', 'plazas', 'landscape', 'decor']);

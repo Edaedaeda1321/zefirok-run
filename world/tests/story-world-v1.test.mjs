@@ -37,7 +37,7 @@ for(let chapter=0;chapter<3;chapter++)for(const phase of ['funding','building','
  assert.equal(city.objects.some(o=>o.uid==='story-rabbit'),false); // one physical building
 
  assert.equal(!!city.objects.find(o=>o.uid==='story-festival'),chapter>=1);
- assert.equal(!!city.objects.find(o=>o.uid==='story-community-garden'),phase!=='funding');
+ assert.ok(city.objects.find(o=>o.uid==='story-community-garden')); // Stage-one park is always placed; completion is fund-driven
 });
 test('story v1: original citizen cap and dedicated transit lanes still work',()=>{const c=buildStoryMap(createDemoState()),people=buildCitizenScene(c,CATALOG,100,Date.now(),400),buses=buildBusScene(c,CATALOG);assert.equal(people.routes.length,12);assert.equal(buses.routes.length,2);const transit=new Set(c.busRoads?.length?c.busRoads:c.roads);for(const bus of buses.routes){assert.ok(bus.stops.length>=2);for(const cell of bus.track)assert.ok(transit.has(`${cell.x},${cell.y}`));}});
 test('story v1: all selected existing WebP assets are available',()=>{const ids=requiredStorySpriteIds();assert.ok(ids.length>25&&ids.length<80);for(const id of ids){const m=spriteMetadata(id);assert.ok(m.fileWebp.endsWith('.webp'));assert.ok(fs.existsSync(new URL('../'+m.fileWebp,import.meta.url)),id);}});

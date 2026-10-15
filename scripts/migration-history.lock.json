@@ -124,6 +124,7 @@
     "0121_zeffi_world_balance_p1.sql": "785a1d663ba17412ee0c537ea24007488909848fbc45306d4a0a8995a6423b4c",
     "0122_zeffi_world_content_p2.sql": "04a232df9be7b1491f0e5260ecbfd8516dc230aec937951c872c3d3fdebdd9c1",
     "0123_zeffi_world_decor_and_chapters.sql": "9d33aa6baf6cdc796b967d85b8865a7384072387d669e18684c0d56b9c7ddb6a",
-    "0124_zeffi_palace_memories.sql": "2469113569b2c0b8851c7872168242b1f11c789ff9a3b08a9e217fd69e846f4d"
+    "0124_zeffi_palace_memories.sql": "2469113569b2c0b8851c7872168242b1f11c789ff9a3b08a9e217fd69e846f4d",
+    "0125_zeffi_meeting_garden_pass.sql": "b09c852c4a91ec5a0c48926a62ea93ca5791aec1b5a7a82ec0bf2b1a908881a8"
   }
 }

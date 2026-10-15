@@ -26,10 +26,10 @@ test('quotes do not pass the next festival milestone, and stage progresses only 
  assert.equal(buildStoryMap(x).objects.find(o=>o.uid==='story-festival').kind,STORY_FESTIVAL_KINDS.stage_b);
  assert.equal(local.festival.community,30000000,'no local save mutation');
 });
-test('garden builds only at global goal; story chapter is NOT overriden by shared fund',()=>{
- const s=createDemoState();s.project.personal=800;const notReady=mapStateWithFund(s,payload());assert.equal(notReady.chapter,0);assert.ok(!buildStoryMap(notReady).objects.some(o=>o.uid==='story-community-garden'));
+test('garden stays visible while stage advances with authoritative common fund; story chapter is independent',()=>{
+ const s=createDemoState();s.project.personal=800;const notReady=mapStateWithFund(s,payload());assert.equal(notReady.chapter,0);assert.equal(buildStoryMap(notReady).objects.find(o=>o.uid==='story-community-garden')?.kind,'story-meeting-garden-01');
  const remote=payload();remote.projects.garden.finished=true;remote.projects.garden.total=1000000;remote.projects.garden.stage=1;
- const city=buildStoryMap(mapStateWithFund(s,remote));assert.ok(city.objects.some(o=>o.uid==='story-community-garden'));assert.ok(!city.objects.some(o=>o.uid==='story-festival'));assert.deepEqual(validateStoryMap(city),[]);
+ const city=buildStoryMap(mapStateWithFund(s,remote));assert.equal(city.objects.find(o=>o.uid==='story-community-garden')?.kind,'story-meeting-garden-10');assert.ok(!city.objects.some(o=>o.uid==='story-festival'));assert.deepEqual(validateStoryMap(city),[]);
 });
 test('real contribution must use server quote; client does not invent or deduct local wallets',async()=>{
  const p=payload(),calls=[];const fetchFn=async(path,opts)=>{calls.push({path,opts:JSON.parse(opts.body)});return {ok:true,json:async()=>({...p,receipt:{requestId:'fund-donation-001',projectId:'garden',debitedPoints:100000},repeated:false})};};
