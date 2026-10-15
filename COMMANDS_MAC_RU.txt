@@ -1,0 +1,58 @@
+# Выполнять из корня локального git-репозитория zefirok-run.
+# ВАЖНО: заранее убедитесь, что на этом компьютере уже сохранены ваши локальные изменения.
+
+git status --short
+
+# Архив должен лежать в Загрузках.
+unzip -o "$HOME/Downloads/SweetRun_rating_finale_popup_notifications_v2_20261013.zip" -d .
+
+# Локальные тесты
+node --check src/worker.js
+node scripts/check-index-srcdoc.mjs
+node scripts/check-rating-finale-popup-v2.mjs
+node scripts/check-rating-dethrone-delivery.mjs
+node --no-warnings --experimental-sqlite scripts/check-rating-finale-delivery.mjs
+node scripts/check-migrations.mjs --local-only
+node scripts/check-world-rc-gate.mjs
+node scripts/check-production-gate.mjs --skip-d1
+
+git diff --check
+git status --short
+
+# Предрелизная проверка remote D1 (не вносит изменения)
+npx --yes wrangler@4.131.1 d1 migrations list zefirok-rewards --remote
+
+# Только после сверки ожидающих миграций:
+# npx --yes wrangler@4.131.1 d1 migrations apply zefirok-rewards --remote
+
+# Коммитить только перечисленные файлы; не использовать git add -A в захламлённом проекте.
+git add index.html rating.html src/worker.js .assetsignore \
+  migrations/0116_rating_winner_notification_dedupe.sql \
+  scripts/migration-history.lock.json \
+  scripts/check-rating-dethrone-delivery.mjs \
+  scripts/check-rating-finale-delivery.mjs \
+  scripts/check-rating-finale-popup-v2.mjs \
+  scripts/check-production-gate.mjs \
+  world.html story-world.html src/zeffi-world-service.js \
+  world/app.js world/story/app.js world/story/boot.js world/story/entry.js \
+  world/story/style.css world/story/map.js \
+  scripts/check-world-premium-ui.mjs \
+  scripts/check-world-telegram-safe-area.mjs \
+  scripts/check-world-dual-v1.mjs scripts/check-world-api-wiring.mjs \
+  scripts/check-world-story-v1.mjs scripts/check-world-community-v1.mjs \
+  scripts/check-world-rc-gate.mjs world/tests/festival-hall-stages-v1.test.mjs \
+  world/tests/story-access-v1.test.mjs \
+  world/docs/RELEASE_CANDIDATE_RU.md world/docs/QA_CHECKLIST_RU.md \
+  world/docs/CHANGED_FILES.txt
+
+git diff --cached --check
+git diff --cached --stat
+git commit -m "Fix rating finale popups and Telegram winner/lead notifications"
+git push origin main
+
+# ШТАТНЫЙ деплой Cloudflare
+./update.sh
+
+# Диагностика удалённой очереди ПОСЛЕ публикации (команды только читают)
+npx --yes wrangler@4.131.1 d1 execute zefirok-rewards --remote --command "SELECT id,title,status,datetime(finalized_at,'unixepoch') AS closed_at FROM leaderboard_seasons ORDER BY starts_at DESC LIMIT 5"
+npx --yes wrangler@4.131.1 d1 execute zefirok-rewards --remote --command "SELECT category,status,attempts,substr(last_error,1,100) AS error,datetime(updated_at,'unixepoch') AS updated FROM player_notification_queue WHERE category LIKE 'rating_dethroned:%' OR category LIKE 'player_mail:rating_winner:%' ORDER BY id DESC LIMIT 20"

@@ -1,0 +1,16 @@
+/* World add-on: compact story goals inside the existing collapsed metrics area. */
+.world-chapters{margin-top:12px;padding-top:11px;border-top:1px solid rgba(190,132,150,.25);font-size:12px}
+.world-chapters__heading{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:9px;color:#834a63}
+.world-chapters__heading strong{font-size:13px}.world-chapters__heading small{font-size:10px;opacity:.7}
+.world-chapter{background:linear-gradient(155deg,#fffdf9,#fff2f6);border:1px solid rgba(222,169,187,.55);border-radius:14px;padding:11px;margin-bottom:10px;box-shadow:0 3px 12px #b8789420}
+.world-chapter--claimed{opacity:.77}.world-chapter__name{display:flex;justify-content:space-between;align-items:start;gap:8px;color:#73405a}
+.world-chapter__name span{font-size:10px;color:#a3667d;text-align:right}.world-chapter p{font-size:11px;margin:5px 0 9px;color:#825568}
+.world-chapter__steps{display:grid;gap:5px}.world-chapter__step{display:flex;justify-content:space-between;gap:8px;font-size:11px}
+.world-chapter__step span{max-width:80%}.world-chapter__step b{white-space:nowrap;font-variant-numeric:tabular-nums}
+.world-chapter__reward{display:flex;justify-content:space-between;align-items:center;gap:9px;margin-top:11px;padding-top:8px;border-top:1px solid #eecdd9;font-weight:700;color:#a06178}
+.world-chapter__reward button{background:linear-gradient(130deg,#eac36e,#d8a952);border:0;border-radius:10px;padding:8px 11px;color:#573e2f;font-weight:800;cursor:pointer}
+.world-chapter__reward button:disabled{opacity:.5}.world-gift-item:disabled{opacity:.7;cursor:default}
+
+/* Reward cards keep the existing horizontal warehouse scroller usable on phones. */
+.world-gift-item{background:linear-gradient(155deg,#fffbfe,#fff0f7);border-color:#e5bed1}
+.world-gift-item .catalog-copy em{background:#fff0c9;color:#8d6641}

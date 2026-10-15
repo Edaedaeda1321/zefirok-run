@@ -1,4 +1,5 @@
 import { handleZeffiWorldApi } from './zeffi-world-service.js';
+import {WORLD_REWARD_DECORS,worldRewardDecor,decorGrantStatements,assertDecorSchema} from './zeffi-world-decor.js';
 import { handleOwnerWorldControl } from './zeffi-world-control-admin.js';
 import {
   RUNTIME_SCHEMA_REQUIRED_TABLES,
@@ -1458,11 +1459,21 @@ function seasonPassStreakProtectionRewardDefinition(value){
   return {publicType:'streak_protection',storedType:'points',itemId:'streak_protection',title:'Защита серии',imageUrl:'/assets/ui/icon_series_protection.webp'};
 }
 
+function seasonPassWorldDecorRewardDefinition(value){
+  if(!value)return null;
+  const raw=String(value?.item_id??value?.itemId??'');
+  const type=String(value?.reward_type??value?.rewardType??'');
+  const id=raw.startsWith('world_decor:')?raw.slice(12):type==='world_decor'?raw:'';
+  const item=worldRewardDecor(id);
+  return item?{publicType:'world_decor',storedType:'points',itemId:id,storedItemId:`world_decor:${id}`,title:item.title,imageUrl:item.imageUrl}:null;
+}
+
 function seasonPassPublicRewardType(row) {
-  return seasonPassSeasonalCaseRewardDefinition(row)?.publicType || seasonPassStreakProtectionRewardDefinition(row)?.publicType || seasonPassShowcaseStyleRewardDefinition(row)?.publicType || seasonPassCosmeticRewardDefinition(row)?.publicType || seasonPassBoostRewardDefinition(row)?.publicType || String(row?.reward_type ?? row?.rewardType ?? "");
+  return seasonPassWorldDecorRewardDefinition(row)?.publicType || seasonPassSeasonalCaseRewardDefinition(row)?.publicType || seasonPassStreakProtectionRewardDefinition(row)?.publicType || seasonPassShowcaseStyleRewardDefinition(row)?.publicType || seasonPassCosmeticRewardDefinition(row)?.publicType || seasonPassBoostRewardDefinition(row)?.publicType || String(row?.reward_type ?? row?.rewardType ?? "");
 }
 
 function seasonPassPublicRewardItemId(row) {
+  const decor=seasonPassWorldDecorRewardDefinition(row);if(decor)return decor.itemId;
   const seasonalCase=seasonPassSeasonalCaseRewardDefinition(row);
   if(seasonalCase) return seasonalCase.caseId;
   if(seasonPassStreakProtectionRewardDefinition(row))return '';
@@ -27716,12 +27727,13 @@ async function seasonPassEffectiveCaseItems(env,caseIdValue,baseRows=null){
   if(Array.isArray(baseRows))rows=baseRows.slice();
   else{
     await ensureSeasonPassCaseSpecialItemsSchema(env);
-    const [cosmetics,resources,specials]=await Promise.all([
+    const [cosmetics,resources,specials,decors]=await Promise.all([
       env.DB.prepare(`SELECT item_key,reward_kind,item_id,1 AS amount,weight,rarity,title,image_url,enabled FROM season_pass_case_items WHERE case_id=? AND enabled=1 AND weight>0 ORDER BY item_key`).bind(caseId).all(),
       env.DB.prepare(`SELECT item_key,reward_kind,item_id,amount,weight,rarity,title,image_url,enabled FROM season_pass_case_resource_items WHERE case_id=? AND enabled=1 AND weight>0 ORDER BY item_key`).bind(caseId).all(),
-      env.DB.prepare(`SELECT item_key,reward_kind,item_id,1 AS amount,weight,rarity,title,image_url,enabled FROM season_pass_case_special_items WHERE case_id=? AND enabled=1 AND weight>0 ORDER BY item_key`).bind(caseId).all()
+      env.DB.prepare(`SELECT item_key,reward_kind,item_id,1 AS amount,weight,rarity,title,image_url,enabled FROM season_pass_case_special_items WHERE case_id=? AND enabled=1 AND weight>0 ORDER BY item_key`).bind(caseId).all(),
+      env.DB.prepare(`SELECT item_key,'world_decor' AS reward_kind,decor_id AS item_id,amount,weight,rarity,title,image_url,enabled FROM zeffi_world_seasonal_case_decor WHERE case_id=? AND enabled=1 AND weight>0 ORDER BY item_key`).bind(caseId).all().catch(error=>{if(/no such table/i.test(String(error?.message||error)))return {results:[]};throw error;})
     ]);
-    rows=[...(cosmetics.results||[]),...(resources.results||[]),...(specials.results||[])];
+    rows=[...(cosmetics.results||[]),...(resources.results||[]),...(specials.results||[]),...(decors.results||[])];
   }
   const known=new Set(rows.map(row=>`${String(row.reward_kind)}:${String(row.item_id)}:${String(row.item_key||"")}`));const rules=await readLiveContentReleaseRules(env);
   for(const rule of rules.values()){
@@ -27732,7 +27744,8 @@ async function seasonPassEffectiveCaseItems(env,caseIdValue,baseRows=null){
   }
   for(const row of rows){
     const kind=String(row?.reward_kind||row?.kind||""),itemId=String(row?.item_id||row?.itemId||"");
-    if(SEASON_PASS_COSMETIC_KINDS.includes(kind))row.image_url=liveOpsCanonicalContentImage(kind,itemId,row?.image_url||row?.imageUrl||"");
+    if(kind==='world_decor')row.image_url=worldRewardDecor(itemId)?.imageUrl||SYSTEM_IMAGE_FALLBACK;
+    if(SEASON_PASS_COSMETIC_KINDS.includes(kind))row.image_url=liveOpsCanonicalContentImage(kind,itemId,row?.image_url||row?.imageUrl||'');
   }
   return rows;
 }
@@ -35910,6 +35923,7 @@ function seasonPassRewardImage(rowOrType, imageUrlValue = '', itemIdValue = '') 
   const row = rowOrType && typeof rowOrType === 'object' ? rowOrType : null;
   const rewardType = String(row ? (seasonPassPublicRewardType(row) || row.reward_type || '') : (rowOrType || '')).toLowerCase();
   const itemId = String(row ? (seasonPassPublicRewardItemId(row) || row.item_id || '') : (itemIdValue || ''));
+  if(rewardType==='world_decor')return worldRewardDecor(itemId)?.imageUrl||SYSTEM_IMAGE_FALLBACK;
   if(rewardType==='streak_protection')return '/assets/ui/icon_series_protection.webp';
   const resourceAsset = seasonPassResourceRewardAsset(rewardType);
   if (resourceAsset) return resourceAsset;
@@ -37657,7 +37671,7 @@ function seasonPassWeightedPick(items,rng=Math.random){
 }
 function seasonPassSeasonalCaseRewardGroup(item){
   const kind=String(item?.reward_kind||item?.kind||'');
-  if(kind==='showcase_style'||SEASON_PASS_COSMETIC_KINDS.includes(kind))return 'cosmetic';
+  if(kind==='world_decor'||kind==='showcase_style'||SEASON_PASS_COSMETIC_KINDS.includes(kind))return 'cosmetic';
   if(kind==='case')return 'case';
   if(kind==='points'||kind==='treats'||kind==='coffee')return 'currency';
   return '';
@@ -37702,6 +37716,7 @@ async function openSeasonPassSeasonalCase(request,env,executionCtx=null){
     const liveContentRules=await readLiveContentReleaseRules(env,true);
     let candidates=sourceItems.filter((row)=>{
       const kind=String(row.reward_kind||row.kind||''),itemId=String(row.item_id||row.itemId||'');
+      if(kind==='world_decor')return Boolean(worldRewardDecor(itemId))&&Number.isInteger(Number(row.amount||1))&&Number(row.amount||1)>=1&&Number(row.amount||1)<=20;
       if(kind==='showcase_style')return Boolean(achievementShowcaseRewardStyleDefinition(itemId));
       if(SEASON_PASS_COSMETIC_KINDS.includes(kind)){
         if(!seasonPassAnyCosmeticCatalog(kind)?.[itemId])return false;
@@ -37711,16 +37726,21 @@ async function openSeasonPassSeasonalCase(request,env,executionCtx=null){
       if(!SEASON_PASS_SEASONAL_CASE_RESOURCE_KINDS.includes(kind))return false;
       if(kind==='case')return Boolean(normalizeCaseType(itemId));
       return Math.max(1,Number(row.amount||1))>0;
-    }).map(row=>{const kind=String(row.reward_kind||row.kind),itemId=String(row.item_id||row.itemId||'');return {item_key:String(row.item_key||row.key||`${kind}:${itemId}`),reward_kind:kind,item_id:itemId,amount:Math.max(1,Math.floor(Number(row.amount)||1)),weight:Number(row.weight||1),rarity:String(row.rarity||'seasonal'),title:String(row.title||''),image_url:SEASON_PASS_COSMETIC_KINDS.includes(kind)?liveOpsCanonicalContentImage(kind,itemId,row.image_url||row.imageUrl||''):String(row.image_url||row.imageUrl||'')}});
+    }).map(row=>{const kind=String(row.reward_kind||row.kind),itemId=String(row.item_id||row.itemId||'');return {item_key:String(row.item_key||row.key||`${kind}:${itemId}`),reward_kind:kind,item_id:itemId,amount:Math.max(1,Math.floor(Number(row.amount)||1)),weight:Number(row.weight||1),rarity:String(row.rarity||'seasonal'),title:String(row.title||''),image_url:kind==='world_decor'?(worldRewardDecor(itemId)?.imageUrl||SYSTEM_IMAGE_FALLBACK):SEASON_PASS_COSMETIC_KINDS.includes(kind)?liveOpsCanonicalContentImage(kind,itemId,row.image_url||row.imageUrl||''):String(row.image_url||row.imageUrl||'')}});
     if(!candidates.length)throw new ApiError(409,'В сезонном кейсе пока нет доступных наград.');
     const ownedShowcaseStyles=new Set((ownedShowcaseResult.results||[]).map((row)=>String(row.style_id||'')).filter(Boolean));
     const owned=(row)=>{const id=String(row.item_id),kind=String(row.reward_kind);if(kind==='showcase_style')return ownedShowcaseStyles.has(achievementShowcaseStyleId(id));if(kind==='avatar')return ensured.state.ownedAvatars?.includes(id);if(kind==='frame')return ensured.state.ownedFrames?.includes(id);if(kind==='trail')return ensured.state.ownedTrails?.includes(id);if(kind==='skin')return ensured.state.ownedSkins?.includes(id);if(kind==='music')return ensured.state.ownedMusicTracks?.includes(id);return false;};
     const slots=Math.max(1,Math.min(5,Number(snapshot?.slots??definition.slots)||1));const duplicateValue=Math.max(0,Number(snapshot?.duplicatePoints??definition.duplicate_points)||0);const groupChances=seasonPassSeasonalCaseGroupChances(snapshot?.groupChances)||seasonPassSeasonalCaseGroupChances(definition.reward_groups_json);const rewards=[];let duplicatePoints=0;
-    const walletTotals={points:0,treats:0,coffee:0};const normalCaseRewards=[],showcaseStyleRewards=[];
+    const walletTotals={points:0,treats:0,coffee:0};const normalCaseRewards=[],showcaseStyleRewards=[],decorRewards=[];
     for(let slot=0;slot<slots;slot+=1){
       const pick=seasonPassSeasonalCaseWeightedPick(candidates,groupChances);if(!pick){duplicatePoints+=duplicateValue;walletTotals.points+=duplicateValue;if(duplicateValue>0)rewards.push({kind:'points',amount:duplicateValue,title:'Компенсация за дубликат'});continue;}
       const kind=String(pick.reward_kind);
-      if(kind==='showcase_style'){
+      if(kind==='world_decor'){
+        const decor=worldRewardDecor(pick.item_id);if(!decor)throw new ApiError(409,'Неверный декор в кейсе.');
+        const amount=Math.max(1,Math.min(20,Number(pick.amount)||1));
+        decorRewards.push({id:decor.id,amount,slot});
+        rewards.push({kind:'world_decor',itemId:decor.id,amount,title:decor.title,imageUrl:decor.imageUrl,rarity:String(pick.rarity||'seasonal')});
+      }else if(kind==='showcase_style'){
         if(owned(pick)){duplicatePoints+=duplicateValue;walletTotals.points+=duplicateValue;if(duplicateValue>0)rewards.push({kind:'points',amount:duplicateValue,title:'Компенсация за дубликат'});candidates=candidates.filter(row=>String(row.item_key)!==String(pick.item_key));continue;}
         const style=achievementShowcaseRewardStyleDefinition(pick.item_id);if(!style){candidates=candidates.filter(row=>String(row.item_key)!==String(pick.item_key));continue;}
         ownedShowcaseStyles.add(String(style.id));showcaseStyleRewards.push({styleId:String(style.id),slot});rewards.push({kind:'showcase_style',itemId:String(style.id),amount:1,title:String(pick.title||`Витрина · ${style.title}`),imageUrl:String(pick.image_url||style.imageUrl||''),rarity:String(pick.rarity||style.rarity||'seasonal')});
@@ -37736,10 +37756,12 @@ async function openSeasonPassSeasonalCase(request,env,executionCtx=null){
       }
       candidates=candidates.filter(row=>String(row.item_key)!==String(pick.item_key));if(!candidates.length&&slot+1<slots)break;
     }
+    if(decorRewards.length)await assertDecorSchema(env.DB);
     const openingGuardId=`spcase:${grantId}:${token}`.slice(0,180);
     const statements=[env.DB.prepare(`INSERT INTO season_pass_case_opening_guards(guard_id,ok) VALUES(?,COALESCE((SELECT CASE WHEN status='opening' AND opening_started_at=? AND opening_token=? AND open_request_id=? THEN 1 ELSE 0 END FROM season_pass_case_grants WHERE grant_id=? AND telegram_id=? LIMIT 1),0))`).bind(openingGuardId,openingStartedAt,token,requestId,grantId,ctx.telegramId)];
     if(walletTotals.points||walletTotals.treats||walletTotals.coffee)statements.push(env.DB.prepare(`UPDATE admin_profile_state SET pending_wallet=pending_wallet+?,pending_treats=pending_treats+?,pending_coffee=pending_coffee+?,revision=revision+1,updated_at=?,updated_by=? WHERE telegram_id=?`).bind(walletTotals.points,walletTotals.treats,walletTotals.coffee,now,`seasonal-case:${caseId}`,ctx.telegramId));
     let caseGrantIndex=0;for(const reward of normalCaseRewards){for(let i=0;i<reward.amount;i+=1){caseGrantIndex+=1;const normalGrantId=`spcase_reward_${grantId}_${caseGrantIndex}`.slice(0,180);statements.push(env.DB.prepare(`INSERT OR IGNORE INTO granted_cases(id,telegram_id,case_type,status,granted_by,reason,created_at) VALUES(?,?,?,'pending',?,?,?)`).bind(normalGrantId,ctx.telegramId,reward.caseType,`seasonal-case:${caseId}`,String(definition.title||'Сезонный кейс').slice(0,300),now));}}
+    for(const reward of decorRewards)statements.push(...decorGrantStatements(env.DB,{telegramId:ctx.telegramId,decorId:reward.id,amount:reward.amount,sourceKey:`seasonal-case:${grantId}:${reward.slot}`,now,gateSql:"EXISTS(SELECT 1 FROM season_pass_case_grants WHERE grant_id=? AND telegram_id=? AND status='opening' AND opening_token=? AND open_request_id=?)",gateBinds:[grantId,ctx.telegramId,token,requestId]}));
     for(const reward of showcaseStyleRewards)statements.push(env.DB.prepare(`INSERT OR IGNORE INTO achievement_showcase_style_ownership(telegram_id,style_id,source_type,source_id,unlocked_at,updated_at) VALUES(?,?,'seasonal_case',?,?,?)`).bind(ctx.telegramId,reward.styleId,`${caseId}:${grantId}:${reward.slot}`,now,now));
     statements.push(caseStateUpdateStatement(env,ctx.telegramId,ensured.state,now));
     statements.push(env.DB.prepare(`UPDATE season_pass_case_grants SET status='opened',rewards_json=?,opened_at=?,opening_started_at=0,opening_token='' WHERE grant_id=? AND telegram_id=? AND status='opening' AND opening_started_at=? AND opening_token=? AND open_request_id=?`).bind(JSON.stringify(rewards),now,grantId,ctx.telegramId,openingStartedAt,token,requestId));
@@ -38120,6 +38142,8 @@ function seasonPassRewardMutationEnvelope(ctx,extra={}){
 
 async function grantSeasonPassReward(env,ctx,reward,executionCtx=null){
   await assertSeasonPassNotForceClosed(env);
+  const decorReward=seasonPassWorldDecorRewardDefinition(reward);
+  if(decorReward)await assertDecorSchema(env.DB);
   const showcaseStyleReward=seasonPassShowcaseStyleRewardDefinition(reward);
   let cosmeticReward=seasonPassCosmeticRewardDefinition(reward);
   if(cosmeticReward?.future){await readLiveContentReleaseRules(env,true);cosmeticReward=seasonPassCosmeticRewardDefinition(reward);}
@@ -38144,7 +38168,13 @@ async function grantSeasonPassReward(env,ctx,reward,executionCtx=null){
     env.DB.prepare(`UPDATE season_pass_claims SET status='pending',reward_json=?,claimed_at=?,error_text='' WHERE season_id=? AND telegram_id=? AND level=? AND lane=? AND status='failed'`).bind(JSON.stringify(reward),now,...key)
   ];
   const entitlementsAdded=[];
-  if(showcaseStyleReward){
+  if(decorReward){
+    statements.push(...decorGrantStatements(env.DB,{
+      telegramId:ctx.telegramId,decorId:decorReward.itemId,amount:Number(reward.amount)||1,
+      sourceKey:`season-pass:${ctx.season.id}:${level}:${lane}`,now,
+      gateSql:"EXISTS(SELECT 1 FROM season_pass_claims WHERE season_id=? AND telegram_id=? AND level=? AND lane=? AND status='pending')",gateBinds:key
+    }));
+  }else if(showcaseStyleReward){
     statements.push(env.DB.prepare(`INSERT OR IGNORE INTO achievement_showcase_style_ownership(telegram_id,style_id,source_type,source_id,unlocked_at,updated_at) SELECT ?,?,'season_pass',?,?,? WHERE EXISTS(SELECT 1 FROM season_pass_claims WHERE season_id=? AND telegram_id=? AND level=? AND lane=? AND status='pending')`).bind(ctx.telegramId,showcaseStyleReward.styleId,`${ctx.season.id}:${level}:${lane}`,now,now,...key));
     entitlementsAdded.push(`${SEASON_PASS_SHOWCASE_STYLE_PREFIX}${showcaseStyleReward.styleId}`);
   }else if(cosmeticReward){
@@ -46470,13 +46500,14 @@ async function normalizeValidateSeasonalCasePayload(env,payload={}){
   const slots=ownerPanelInteger(payload?.slots,1,5)??1,duplicatePoints=ownerPanelInteger(payload?.duplicatePoints,0,999999999)??5000,enabled=Boolean(payload?.enabled),seasonStart=Math.floor(Date.parse(String(season.startsAt||''))/1000),releaseAt=ownerPanelInteger(payload?.releaseAt,0,4102444800)??Math.max(0,seasonStart);
   const groupInput=payload?.groupChances&&typeof payload.groupChances==='object'?payload.groupChances:null;let groupChances=null;
   if(groupInput){groupChances={cosmetic:Number(groupInput.cosmetic),currency:Number(groupInput.currency),case:Number(groupInput.case)};for(const [key,value] of Object.entries(groupChances))if(!Number.isFinite(value)||value<0||value>100)throw new ApiError(400,`Шанс группы ${key}: укажите число от 0 до 100.`);const chanceTotal=groupChances.cosmetic+groupChances.currency+groupChances.case;if(Math.abs(chanceTotal-100)>0.05)throw new ApiError(400,`Сумма шансов групп должна быть 100%. Сейчас ${chanceTotal.toFixed(1)}%.`);}else groupChances=seasonPassSeasonalCaseGroupChances(existing?.reward_groups_json);
-  const cosmeticItems=[],specialItems=[],resourceItems=[],seenKeys=new Set(),rawItems=Array.isArray(payload?.items)?payload.items:[];
+  const cosmeticItems=[],specialItems=[],resourceItems=[],decorItems=[],seenKeys=new Set(),rawItems=Array.isArray(payload?.items)?payload.items:[];
   for(const entry of rawItems.slice(0,240)){const kind=String(entry?.kind||'').trim(),rawItemId=String(entry?.itemId||'').trim(),weight=Number(entry?.weight);if(!Number.isFinite(weight)||weight<=0||weight>100000)continue;
+    if(kind==='world_decor'){const decor=worldRewardDecor(rawItemId);if(!decor)throw new ApiError(400,'Для кейса разрешён только декор Мира Зеффи.');const amount=ownerPanelInteger(entry?.amount,1,20)??1;const key=`world_decor:${decor.id}`;if(seenKeys.has(key))continue;seenKeys.add(key);decorItems.push({key,kind:'world_decor',itemId:decor.id,amount,weight,rarity:'decor',title:decor.title,imageUrl:decor.imageUrl,enabled:true});continue;}
     if(kind==='showcase_style'){const style=achievementShowcaseRewardStyleDefinition(rawItemId);if(!style)continue;const key=`showcase_style:${style.id}`;if(seenKeys.has(key))continue;seenKeys.add(key);specialItems.push({key,kind:'showcase_style',itemId:String(style.id),amount:1,weight,rarity:String(entry?.rarity||style.rarity||'seasonal').slice(0,40),title:String(style.title||style.id).slice(0,140),imageUrl:String(style.imageUrl||''),enabled:true});continue;}
     if(SEASON_PASS_COSMETIC_KINDS.includes(kind)){if(!rawItemId)continue;const item=seasonPassAnyCosmeticCatalog(kind)?.[rawItemId];if(!item)continue;const key=`${kind}:${rawItemId}`;if(seenKeys.has(key))continue;seenKeys.add(key);cosmeticItems.push({key,kind,itemId:rawItemId,amount:1,weight,rarity:String(entry?.rarity||item.rarity||'seasonal').slice(0,40),title:String(item.title||rawItemId).slice(0,140),imageUrl:seasonPassCosmeticImage(kind,rawItemId),enabled:true});continue;}
     if(SEASON_PASS_SEASONAL_CASE_RESOURCE_KINDS.includes(kind)){const itemId=kind==='case'?String(normalizeCaseType(rawItemId)||''):'';if(kind==='case'&&!itemId)continue;const amount=ownerPanelInteger(entry?.amount,1,kind==='case'?20:999999999);if(amount==null)continue;const presentation=seasonPassSeasonalCaseResourcePresentation(kind,itemId,amount);if(!presentation)continue;const key=`resource:${kind}:${itemId||'wallet'}`;if(seenKeys.has(key))continue;seenKeys.add(key);resourceItems.push({key,kind,itemId,amount:presentation.amount,weight,rarity:presentation.rarity,title:presentation.title.slice(0,140),imageUrl:presentation.imageUrl,enabled:true});}}
-  const totalItems=cosmeticItems.length+specialItems.length+resourceItems.length;if(enabled&&!totalItems)throw new ApiError(400,'Добавьте хотя бы одну награду в сезонный кейс.');if(groupChances){const currencyCount=resourceItems.filter(item=>['points','treats','coffee'].includes(item.kind)).length,caseCount=resourceItems.filter(item=>item.kind==='case').length;if(groupChances.cosmetic>0&&!(cosmeticItems.length+specialItems.length))throw new ApiError(400,'Шанс постоянных предметов больше 0%, но косметика или витрина в кейс не выбрана.');if(groupChances.currency>0&&!currencyCount)throw new ApiError(400,'Шанс валюты больше 0%, но очки/зефир/кофе не выбраны.');if(groupChances.case>0&&!caseCount)throw new ApiError(400,'Шанс обычного кейса больше 0%, но постоянные кейсы не выбраны.');}
-  return {season,existing,seasonId,caseId,title,description,imageUrl,openImageUrl,slots,duplicatePoints,groupChances,enabled,releaseAt,cosmeticItems,specialItems,resourceItems,items:[...cosmeticItems,...specialItems,...resourceItems].map(item=>({kind:item.kind,itemId:item.itemId,amount:item.amount,weight:item.weight,rarity:item.rarity,enabled:true})),totalItems};
+  const totalItems=cosmeticItems.length+specialItems.length+resourceItems.length+decorItems.length;if(enabled&&!totalItems)throw new ApiError(400,'Добавьте хотя бы одну награду в сезонный кейс.');if(groupChances){const currencyCount=resourceItems.filter(item=>['points','treats','coffee'].includes(item.kind)).length,caseCount=resourceItems.filter(item=>item.kind==='case').length;if(groupChances.cosmetic>0&&!(cosmeticItems.length+specialItems.length+decorItems.length))throw new ApiError(400,'Шанс постоянных предметов больше 0%, но косметика или витрина в кейс не выбрана.');if(groupChances.currency>0&&!currencyCount)throw new ApiError(400,'Шанс валюты больше 0%, но очки/зефир/кофе не выбраны.');if(groupChances.case>0&&!caseCount)throw new ApiError(400,'Шанс обычного кейса больше 0%, но постоянные кейсы не выбраны.');}
+  return {season,existing,seasonId,caseId,title,description,imageUrl,openImageUrl,slots,duplicatePoints,groupChances,enabled,releaseAt,cosmeticItems,specialItems,resourceItems,decorItems,items:[...cosmeticItems,...specialItems,...resourceItems,...decorItems].map(item=>({kind:item.kind,itemId:item.itemId,amount:item.amount,weight:item.weight,rarity:item.rarity,enabled:true})),totalItems};
 }
 
 function liveContentRulePayload(rule,kind="",itemId="",reason=""){
@@ -53104,7 +53135,8 @@ async function seasonPassReadinessReport(env, seasonIdValue, options={}){
     env.DB.prepare(`SELECT * FROM season_pass_case_resource_items ORDER BY case_id,reward_kind,item_key`).all(),
     env.DB.prepare(`SELECT * FROM season_pass_seasons ORDER BY starts_at ASC`).all()
   ]);
-  const rewards=rewardsResult.results||[],tasks=tasksResult.results||[],storyRows=storyResult.results||[],caseDefs=caseDefsResult.results||[],caseItems=[...(caseItemsResult.results||[]),...(caseSpecialItemsResult.results||[]),...(caseResourceItemsResult.results||[])],seasonRows=seasonsResult.results||[];
+  const caseDecorResults=await env.DB.prepare(`SELECT case_id,item_key,'world_decor' AS reward_kind,decor_id AS item_id,amount,weight,rarity,title,image_url,enabled FROM zeffi_world_seasonal_case_decor`).all().catch(error=>{if(/no such table/i.test(String(error?.message||error)))return {results:[]};throw error;});
+  const rewards=rewardsResult.results||[],tasks=tasksResult.results||[],storyRows=storyResult.results||[],caseDefs=caseDefsResult.results||[],caseItems=[...(caseItemsResult.results||[]),...(caseSpecialItemsResult.results||[]),...(caseResourceItemsResult.results||[]),...(caseDecorResults.results||[])],seasonRows=seasonsResult.results||[];
   const checks=[];const add=(...args)=>checks.push(seasonPassReadinessCheck(...args));
   const startsAt=Number(row.starts_at||0),endsAt=Number(row.ends_at||0),graceAt=Math.max(Number(row.claim_grace_ends_at||0),endsAt);
   const duration=endsAt-startsAt;
@@ -53122,6 +53154,7 @@ async function seasonPassReadinessReport(env, seasonIdValue, options={}){
     if(Number(reward.enabled||0)!==1)disabledSlots.push(key);
     if(!String(reward.title||'').trim()||!String(reward.image_url||'').trim())badPresentation.push(key);
     const rawItem=String(reward.item_id||'').trim();
+    if(rawItem.startsWith('world_decor:')&&!seasonPassWorldDecorRewardDefinition(reward))invalidRewardRefs.push(`${key}: decor ${rawItem}`);
     if(rawItem.startsWith(SEASON_PASS_COSMETIC_PREFIX)&&!seasonPassCosmeticRewardDefinition(reward))invalidRewardRefs.push(`${key}: cosmetic ${rawItem}`);
     if(rawItem.startsWith(SEASON_PASS_SHOWCASE_STYLE_PREFIX)&&!seasonPassShowcaseStyleRewardDefinition(reward))invalidRewardRefs.push(`${key}: showcase ${rawItem}`);
     const seasonal=seasonPassSeasonalCaseRewardDefinition(reward);if(seasonal)seasonalCaseRefs.add(seasonal.caseId);
@@ -53394,14 +53427,20 @@ async function ownerPanelSeasonPass(env, ctx) {
   const requested=String(ctx.body?.seasonId||'').trim(),nowMs=Date.now(),fallback=configuredSeasonPassState(env,nowMs);const selectedRow=requested?await env.DB.prepare(`SELECT * FROM season_pass_seasons WHERE season_id=? LIMIT 1`).bind(requested).first():await selectSeasonPassSeasonRow(env,nowMs);const selected=selectedRow?seasonPassSeasonFromRow(selectedRow,fallback,nowMs):null;if(!selected)throw new ApiError(404,'Сезонный пропуск не найден.');
   const caseIdsSql=`SELECT case_id FROM season_pass_case_definitions WHERE season_id=?`;
   const [seasonsResult,rewardsResult,tasksResult,stats,tariffPurchases,liveops,teaserRow,teaserStats,caseDefinitionsResult,caseItemsResult,caseSpecialItemsResult,caseResourceItemsResult,storyEventsResult,storyStatsResult]=await Promise.all([env.DB.prepare(`SELECT * FROM season_pass_seasons ORDER BY starts_at DESC,updated_at DESC LIMIT 30`).all(),env.DB.prepare(`SELECT level,lane,reward_type,amount,item_id,title,image_url,enabled FROM season_pass_rewards WHERE season_id=? ORDER BY level,lane`).bind(selected.id).all(),env.DB.prepare(`SELECT task_id,period,premium,metric,target,xp_reward,title,description,enabled,sort_order FROM season_pass_tasks WHERE season_id=? ORDER BY sort_order,task_id`).bind(selected.id).all(),env.DB.prepare(`SELECT COUNT(*) AS players,SUM(CASE WHEN premium_tier='elite' THEN 1 ELSE 0 END) AS elite,SUM(CASE WHEN premium_tier='elite_plus' THEN 1 ELSE 0 END) AS elite_plus,MAX(xp) AS max_xp FROM season_pass_players WHERE season_id=?`).bind(selected.id).first(),env.DB.prepare(`SELECT COUNT(*) AS count FROM season_pass_purchases WHERE season_id=? AND status='delivered'`).bind(selected.id).first(),readCaseRuntimeConfig(env).catch(()=>({content:{}})),env.DB.prepare(`SELECT * FROM season_pass_teasers WHERE season_id=? LIMIT 1`).bind(selected.id).first(),env.DB.prepare(`SELECT COUNT(*) AS unlocked,SUM(CASE WHEN notified_at>0 THEN 1 ELSE 0 END) AS notified,SUM(CASE WHEN opened_at>0 THEN 1 ELSE 0 END) AS opened FROM season_pass_teaser_deliveries WHERE season_id=?`).bind(selected.id).first(),env.DB.prepare(`SELECT * FROM season_pass_case_definitions ORDER BY release_at DESC,updated_at DESC`).all(),env.DB.prepare(`SELECT * FROM season_pass_case_items WHERE case_id IN (${caseIdsSql}) ORDER BY case_id,reward_kind,item_key`).bind(selected.id).all(),env.DB.prepare(`SELECT * FROM season_pass_case_special_items WHERE case_id IN (${caseIdsSql}) ORDER BY case_id,reward_kind,item_key`).bind(selected.id).all(),env.DB.prepare(`SELECT * FROM season_pass_case_resource_items WHERE case_id IN (${caseIdsSql}) ORDER BY case_id,reward_kind,item_key`).bind(selected.id).all(),env.DB.prepare(`SELECT * FROM season_pass_story_events WHERE season_id=? ORDER BY unlock_level,sort_order,created_at,event_id`).bind(selected.id).all(),env.DB.prepare(`SELECT event_id,SUM(CASE WHEN seen_at>0 THEN 1 ELSE 0 END) AS seen,SUM(CASE WHEN completed_at>0 THEN 1 ELSE 0 END) AS completed,SUM(CASE WHEN notified_at>0 THEN 1 ELSE 0 END) AS notified FROM season_pass_story_progress WHERE season_id=? GROUP BY event_id`).bind(selected.id).all()]);
-  const seasonRows=seasonsResult.results||[],seasonMap=new Map(seasonRows.map(row=>[String(row.season_id),seasonPassSeasonFromRow(row,configuredSeasonPassState(env,nowMs),nowMs)])),caseItemsById=new Map();for(const row of [...(caseItemsResult.results||[]),...(caseSpecialItemsResult.results||[]),...(caseResourceItemsResult.results||[])]){const id=String(row.case_id),kind=String(row.reward_kind),itemId=String(row.item_id),list=caseItemsById.get(id)||[];list.push({key:String(row.item_key),kind,itemId,amount:Math.max(1,Number(row.amount||1)),weight:Number(row.weight||1),rarity:String(row.rarity||''),title:String(row.title||''),imageUrl:SEASON_PASS_COSMETIC_KINDS.includes(kind)?liveOpsCanonicalContentImage(kind,itemId,row.image_url):String(row.image_url||''),enabled:Number(row.enabled||0)===1,resource:SEASON_PASS_SEASONAL_CASE_RESOURCE_KINDS.includes(kind)});caseItemsById.set(id,list);}
+  const caseDecorResult=await env.DB.prepare(`SELECT case_id,item_key,'world_decor' AS reward_kind,decor_id AS item_id,amount,weight,rarity,title,image_url,enabled FROM zeffi_world_seasonal_case_decor WHERE case_id IN (${caseIdsSql}) ORDER BY case_id,item_key`).bind(selected.id).all().catch(error=>{if(/no such table/i.test(String(error?.message||error)))return {results:[]};throw error;});
+  const seasonRows=seasonsResult.results||[],seasonMap=new Map(seasonRows.map(row=>[String(row.season_id),seasonPassSeasonFromRow(row,configuredSeasonPassState(env,nowMs),nowMs)])),caseItemsById=new Map();for(const row of [...(caseItemsResult.results||[]),...(caseSpecialItemsResult.results||[]),...(caseResourceItemsResult.results||[]),...(caseDecorResult.results||[])]){const id=String(row.case_id),kind=String(row.reward_kind),itemId=String(row.item_id),list=caseItemsById.get(id)||[];list.push({key:String(row.item_key),kind,itemId,amount:Math.max(1,Number(row.amount||1)),weight:Number(row.weight||1),rarity:String(row.rarity||''),title:String(row.title||''),imageUrl:SEASON_PASS_COSMETIC_KINDS.includes(kind)?liveOpsCanonicalContentImage(kind,itemId,row.image_url):String(row.image_url||''),enabled:Number(row.enabled||0)===1,resource:SEASON_PASS_SEASONAL_CASE_RESOURCE_KINDS.includes(kind)});caseItemsById.set(id,list);}
   const seasonalCases=(caseDefinitionsResult.results||[]).map(row=>{const view=ownerPanelSeasonalCaseView(row,seasonMap),isSelected=String(view.seasonId||'')===String(selected.id);view.itemsLoaded=isSelected;if(!isSelected){view.items=[];return view;}const items=(caseItemsById.get(view.caseId)||[]).slice(),known=new Set(items.map(item=>`${item.kind}:${item.itemId}`));for(const [kind,catalog] of Object.entries(liveops?.content||{})){for(const [itemId,item] of Object.entries(catalog||{})){const seasonalRoute=liveContentRoute(item,'seasonal_case',view.caseId);if(item?.enabled!==true||!seasonalRoute||!view.seasonId||String(item.seasonId||'')!==String(view.seasonId))continue;const key=`${kind}:${itemId}`;if(known.has(key))continue;items.push({key:`live:${key}`,kind,itemId,weight:Math.max(.01,Number(seasonalRoute.weight)||1),rarity:String(item.rarity||''),title:String(item.title||itemId),imageUrl:String(item.imageUrl||''),enabled:true,liveContent:true});known.add(key);}}view.items=items;return view;});
   const selectedSeasonalCase=seasonalCases.find(item=>item.seasonId===selected.id)||null,futureReleaseRules=await readLiveContentReleaseRules(env).catch(()=>new Map()),storyStatsMap=new Map((storyStatsResult.results||[]).map(row=>[String(row.event_id),{seen:Number(row.seen||0),completed:Number(row.completed||0),notified:Number(row.notified||0)}])),storyEvents=(storyEventsResult.results||[]).map(row=>({...seasonPassStoryEventView(row),reward:seasonPassStoryRewardConfig(row),stats:storyStatsMap.get(String(row.event_id))||{seen:0,completed:0,notified:0}})),lastReserved=Math.max(Math.floor(nowMs/1000)+3600,...seasonRows.map(row=>Math.max(Number(row.ends_at||0),Number(row.claim_grace_ends_at||0)))),suggestedStart=lastReserved+60,suggestedEnd=suggestedStart+30*24*3600;
-  return {ok:true,selected,seasons:seasonRows.map(row=>seasonPassSeasonFromRow(row,configuredSeasonPassState(env,nowMs),nowMs)),rewards:(rewardsResult.results||[]).map(ownerPanelSeasonPassRewardView),tasks:(tasksResult.results||[]).map(row=>({id:String(row.task_id),period:String(row.period),premium:Number(row.premium||0)===1,metric:String(row.metric),target:Number(row.target||0),xp:Number(row.xp_reward||0),title:String(row.title||''),description:String(row.description||''),enabled:Number(row.enabled||0)===1})),catalogs:ownerPanelSeasonPassCosmeticCatalogs(liveops,futureReleaseRules,seasonMap),teaser:{seasonId:selected.id,targetSeasonId:String(teaserRow?.target_season_id||''),enabled:Number(teaserRow?.enabled||0)===1,unlockLevel:Number(teaserRow?.unlock_level||50),envelopeTitle:String(teaserRow?.envelope_title||'Вам письмо'),title:String(teaserRow?.title||''),previewText:String(teaserRow?.preview_text||''),bodyText:String(teaserRow?.body_text||''),imageUrl:String(teaserRow?.image_url||''),pushText:String(teaserRow?.push_text||''),stats:{unlocked:Number(teaserStats?.unlocked||0),notified:Number(teaserStats?.notified||0),opened:Number(teaserStats?.opened||0)}},storyEvents,seasonalCase:selectedSeasonalCase,seasonalCases,createSuggestion:{startsAt:suggestedStart,endsAt:suggestedEnd},progression:seasonPassProgressionView(selectedRow),tariffPurchases:Number(tariffPurchases?.count||0),stats:{players:Number(stats?.players||0),elite:Number(stats?.elite||0),elitePlus:Number(stats?.elite_plus||0),maxXp:Number(stats?.max_xp||0)}};
+  return {ok:true,selected,seasons:seasonRows.map(row=>seasonPassSeasonFromRow(row,configuredSeasonPassState(env,nowMs),nowMs)),rewards:(rewardsResult.results||[]).map(ownerPanelSeasonPassRewardView),tasks:(tasksResult.results||[]).map(row=>({id:String(row.task_id),period:String(row.period),premium:Number(row.premium||0)===1,metric:String(row.metric),target:Number(row.target||0),xp:Number(row.xp_reward||0),title:String(row.title||''),description:String(row.description||''),enabled:Number(row.enabled||0)===1})),catalogs:{...ownerPanelSeasonPassCosmeticCatalogs(liveops,futureReleaseRules,seasonMap),world_decor:WORLD_REWARD_DECORS.map(item=>({...item,rarity:"decor"}))},teaser:{seasonId:selected.id,targetSeasonId:String(teaserRow?.target_season_id||''),enabled:Number(teaserRow?.enabled||0)===1,unlockLevel:Number(teaserRow?.unlock_level||50),envelopeTitle:String(teaserRow?.envelope_title||'Вам письмо'),title:String(teaserRow?.title||''),previewText:String(teaserRow?.preview_text||''),bodyText:String(teaserRow?.body_text||''),imageUrl:String(teaserRow?.image_url||''),pushText:String(teaserRow?.push_text||''),stats:{unlocked:Number(teaserStats?.unlocked||0),notified:Number(teaserStats?.notified||0),opened:Number(teaserStats?.opened||0)}},storyEvents,seasonalCase:selectedSeasonalCase,seasonalCases,createSuggestion:{startsAt:suggestedStart,endsAt:suggestedEnd},progression:seasonPassProgressionView(selectedRow),tariffPurchases:Number(tariffPurchases?.count||0),stats:{players:Number(stats?.players||0),elite:Number(stats?.elite||0),elitePlus:Number(stats?.elite_plus||0),maxXp:Number(stats?.max_xp||0)}};
 }
 
 function ownerPanelSeasonPassRewardPresentation(typeValue, amountValue, itemValue) {
   const type = String(typeValue || "");
+  if(type==='world_decor'){
+    const item=worldRewardDecor(itemValue);if(!item)throw new ApiError(400,'Выберите только существующий декор Мира Зеффи.');
+    const amount=ownerPanelInteger(amountValue,1,20);if(amount==null)throw new ApiError(400,'Можно выдать от 1 до 20 экземпляров декора.');
+    return {rewardType:'points',publicRewardType:'world_decor',amount,itemId:`world_decor:${item.id}`,publicItemId:item.id,title:amount===1?item.title:`${item.title} ×${amount}`,imageUrl:item.imageUrl};
+  }
   if(type==="showcase_style"){
     const style=achievementShowcaseRewardStyleDefinition(itemValue);if(!style)throw new ApiError(400,"Выберите существующую витрину достижений.");
     return {rewardType:"points",publicRewardType:"showcase_style",amount:1,itemId:`${SEASON_PASS_SHOWCASE_STYLE_PREFIX}${style.id}`,publicItemId:String(style.id),title:`Витрина · ${String(style.title||style.id)}`,imageUrl:String(style.imageUrl||"")};
@@ -53659,15 +53698,17 @@ async function ownerPanelSaveSeasonPassTeaser(env,ctx){
 }
 
 async function ownerPanelSaveSeasonPassSeasonalCase(env,ctx){
-  const normalized=await normalizeValidateSeasonalCasePayload(env,ctx.body||{}),{season,existing,seasonId,caseId,title,description,imageUrl,openImageUrl,slots,duplicatePoints,groupChances,enabled,releaseAt,cosmeticItems,specialItems,resourceItems,totalItems}=normalized;
+  const normalized=await normalizeValidateSeasonalCasePayload(env,ctx.body||{}),{season,existing,seasonId,caseId,title,description,imageUrl,openImageUrl,slots,duplicatePoints,groupChances,enabled,releaseAt,cosmeticItems,specialItems,resourceItems,decorItems,totalItems}=normalized;
   const now=Math.floor(Date.now()/1000),actor=String(ctx.user.id),before=existing?{caseId,title:String(existing.title||''),enabled:Number(existing.enabled||0)===1,slots:Number(existing.slots||1),releaseAt:Number(existing.release_at||0)}:null,rewardItemId=`${SEASON_PASS_SEASONAL_CASE_PREFIX}${caseId}`;
   await ensureSeasonPassCaseSpecialItemsSchema(env);
   const statements=[env.DB.prepare(`INSERT INTO season_pass_case_definitions(case_id,season_id,title,description,closed_image_url,open_image_url,slots,duplicate_points,reward_groups_json,enabled,release_at,updated_at,updated_by) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?) ON CONFLICT(case_id) DO UPDATE SET title=excluded.title,description=excluded.description,closed_image_url=excluded.closed_image_url,open_image_url=excluded.open_image_url,slots=excluded.slots,duplicate_points=excluded.duplicate_points,reward_groups_json=excluded.reward_groups_json,enabled=excluded.enabled,release_at=excluded.release_at,updated_at=excluded.updated_at,updated_by=excluded.updated_by`).bind(caseId,seasonId,title,description,imageUrl,openImageUrl,slots,duplicatePoints,JSON.stringify(groupChances||{}),enabled?1:0,releaseAt,now,actor),env.DB.prepare(`DELETE FROM season_pass_case_items WHERE case_id=?`).bind(caseId),env.DB.prepare(`DELETE FROM season_pass_case_special_items WHERE case_id=?`).bind(caseId),env.DB.prepare(`DELETE FROM season_pass_case_resource_items WHERE case_id=?`).bind(caseId)];
+  statements.push(env.DB.prepare(`DELETE FROM zeffi_world_seasonal_case_decor WHERE case_id=?`).bind(caseId));
+  for(const item of decorItems)statements.push(env.DB.prepare(`INSERT INTO zeffi_world_seasonal_case_decor(case_id,item_key,decor_id,amount,weight,rarity,title,image_url,enabled) VALUES(?,?,?,?,?,?,?,?,1)`).bind(caseId,item.key,item.itemId,item.amount,item.weight,item.rarity,item.title,item.imageUrl));
   for(const item of cosmeticItems)statements.push(env.DB.prepare(`INSERT INTO season_pass_case_items(case_id,item_key,reward_kind,item_id,weight,rarity,title,image_url,enabled) VALUES(?,?,?,?,?,?,?,?,1)`).bind(caseId,item.key,item.kind,item.itemId,item.weight,item.rarity,item.title,item.imageUrl));
   for(const item of specialItems)statements.push(env.DB.prepare(`INSERT INTO season_pass_case_special_items(case_id,item_key,reward_kind,item_id,weight,rarity,title,image_url,enabled) VALUES(?,?,?,?,?,?,?,?,1)`).bind(caseId,item.key,item.kind,item.itemId,item.weight,item.rarity,item.title,item.imageUrl));
   for(const item of resourceItems)statements.push(env.DB.prepare(`INSERT INTO season_pass_case_resource_items(case_id,item_key,reward_kind,item_id,amount,weight,rarity,title,image_url,enabled) VALUES(?,?,?,?,?,?,?,?,?,1)`).bind(caseId,item.key,item.kind,item.itemId,item.amount,item.weight,item.rarity,item.title,item.imageUrl));
   statements.push(env.DB.prepare(`UPDATE season_pass_rewards SET title=CASE WHEN amount=1 THEN ? ELSE ? || ' x' || amount END,image_url=?,updated_at=?,updated_by=? WHERE item_id=?`).bind(title,title,imageUrl,now,actor,rewardItemId));await env.DB.batch(statements);
-  await logStaffAction(env,ctx.user,ctx.access,'owner_panel_season_pass_seasonal_case',null,'season_pass_case',null,null,{seasonId,caseId,before,after:{title,enabled,slots,duplicatePoints,groupChances,releaseAt,itemCount:totalItems,cosmeticItemCount:cosmeticItems.length,specialItemCount:specialItems.length,resourceItemCount:resourceItems.length},editingArchived:season.status==='ended'});return {ok:true,caseId};
+  await logStaffAction(env,ctx.user,ctx.access,'owner_panel_season_pass_seasonal_case',null,'season_pass_case',null,null,{seasonId,caseId,before,after:{title,enabled,slots,duplicatePoints,groupChances,releaseAt,itemCount:totalItems,cosmeticItemCount:cosmeticItems.length,decorItemCount:decorItems.length,specialItemCount:specialItems.length,resourceItemCount:resourceItems.length},editingArchived:season.status==='ended'});return {ok:true,caseId};
 }
 
 async function ownerPanelSaveSeasonPassTariffs(env, ctx) {

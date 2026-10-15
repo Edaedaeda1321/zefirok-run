@@ -1,0 +1,26 @@
+Заменяемые и новые файлы (пути от корня zefirok-run):
+
+- `.assetsignore`
+- `index.html`
+- `world.html`
+- `story-world.html`
+- `src/zeffi-world-service.js`
+- `world/app.js`
+- `world/story/app.js`
+- `world/story/boot.js`
+- `world/story/entry.js`
+- `world/story/style.css`
+- `world/story/map.js`
+- `scripts/check-world-premium-ui.mjs`
+- `scripts/check-world-telegram-safe-area.mjs`
+- `scripts/check-world-dual-v1.mjs`
+- `scripts/check-world-api-wiring.mjs`
+- `scripts/check-world-story-v1.mjs`
+- `scripts/check-world-community-v1.mjs`
+- `world/tests/festival-hall-stages-v1.test.mjs`
+- `world/tests/story-access-v1.test.mjs`
+- `scripts/check-production-gate.mjs`
+- `scripts/check-world-rc-gate.mjs`
+
+Дополнительно: Документация: world/docs/RELEASE_CANDIDATE_RU.md, world/docs/QA_CHECKLIST_RU.md и world/docs/CHANGED_FILES.txt.
+Кодовый пакет не включает миграций D1, исходные арт-паки, __MACOSX и резервные копии.

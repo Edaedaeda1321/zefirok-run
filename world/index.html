@@ -16,9 +16,10 @@
   <link rel="stylesheet" href="./world.css" />
   <link rel="stylesheet" href="./premium-ui.css" />
   <link rel="stylesheet" href="./city-guide.css?v=rc-city-goals2" />
+  <link rel="stylesheet" href="./city-chapters.css?v=cc-decor1" />
   <link rel="stylesheet" href="./resident-requests.css?v=rc-thoughts1" />
   <link rel="stylesheet" href="./resident-thoughts.css?v=rc-thoughts1" />
-  <script type="module" src="./app.js?v=cc-p1-1"></script>
+  <script type="module" src="./app.js?v=cc-decor1"></script>
   <script>
     if(document.documentElement.classList.contains('zeffi-world-framed') && location.origin !== 'null'){
       window.parent.postMessage({type:'zefirok-world-ui-ready'},location.origin);
@@ -57,7 +58,7 @@
     <div class="map-coordinates" hidden aria-hidden="true"><span class="coordinate-dot"></span><span id="coordLabel">24 x 24</span></div>
    </div>
    <div class="map-metrics" id="cityMetrics">
-    <button type="button" class="metrics-toggle" id="metricsToggle" aria-controls="cityMetricsContent" aria-expanded="false" aria-label="Показать всю статистику города"><svg class="metrics-toggle-icon" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 20v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 20v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg> <span>Город в цифрах</span><b class="city-level-badge" id="cityLevelBadge">Ур. 1</b><span class="metrics-chevron">⌄</span></button>
+    <button type="button" class="metrics-toggle" id="metricsToggle" aria-controls="cityMetricsContent" aria-expanded="false" aria-label="Показать всю статистику города"><svg class="metrics-toggle-icon" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 20v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 20v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg> <span>Город и цели</span><b class="city-level-badge" id="cityLevelBadge">Ур. 1</b><span class="metrics-chevron">⌄</span></button>
     <div class="metrics-content" id="cityMetricsContent">
      <div class="metric metric-people"><svg class="metric-icon" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 20v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 20v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg><span data-t="population"></span><strong id="populationCount">0</strong></div>
      <div class="metric metric-comfort" id="comfortCard"><svg class="metric-icon" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.8 4.6a5.3 5.3 0 0 0-7.5 0L12 5.9l-1.3-1.3a5.3 5.3 0 0 0-7.5 7.5L12 21l8.8-8.9a5.3 5.3 0 0 0 0-7.5z"/></svg><span data-t="comfort"></span><strong id="comfortCount">0</strong><small id="comfortTier" aria-live="polite"></small></div>

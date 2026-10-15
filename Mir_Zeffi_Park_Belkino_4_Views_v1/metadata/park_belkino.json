@@ -1,0 +1,121 @@
+{
+  "catalogId": "park-belkino",
+  "buildingId": "park_belkino",
+  "nameRu": "Парк «Белкино»",
+  "category": "park_landmark",
+  "footprint": null,
+  "footprintRecommendation": [
+    9,
+    9
+  ],
+  "footprintVerified": false,
+  "rotations": [
+    "ne",
+    "nw",
+    "se",
+    "sw"
+  ],
+  "rotationsAreTrue3DTurns": false,
+  "rotationNoteRu": "Названия NE/NW/SE/SW предварительные: все четыре картинки - вариации близкого ракурса, а не настоящие повороты одной 3D-модели на 90 градусов.",
+  "states": [
+    "complete"
+  ],
+  "groundLevel": 0,
+  "anchorConvention": "not_calibrated",
+  "anchorX": null,
+  "anchorY": null,
+  "assetScale": null,
+  "camera": "isometric-style images; exact orthographic 2:1 not verified",
+  "hasTransparentBackground": true,
+  "gameIntegrationApproved": false,
+  "files": [
+    {
+      "name": "park_belkino_ne",
+      "directionLabel": "ne",
+      "png": "png/park_belkino_ne.png",
+      "webp": "webp/park_belkino_ne.webp",
+      "sourceImage": "a_highly_detailed_isometric_3d_styled_illustration_1.png",
+      "canvasPx": [
+        1254,
+        1254
+      ],
+      "alphaBBox32": [
+        11,
+        64,
+        1244,
+        1205
+      ],
+      "hasTransparentBackground": true,
+      "alphaTouchesCanvasEdge": false,
+      "sizePngBytes": 2627724,
+      "sizeWebpBytes": 642542,
+      "sha256Png": "bb5d6e0e63ced1544046a35600dc907019df91a8bf658e5a1f7a84717e05d9f0"
+    },
+    {
+      "name": "park_belkino_nw",
+      "directionLabel": "nw",
+      "png": "png/park_belkino_nw.png",
+      "webp": "webp/park_belkino_nw.webp",
+      "sourceImage": "a_highly_detailed_isometric_isometric_style_3d_ill_2_batch_1.png",
+      "canvasPx": [
+        1254,
+        1254
+      ],
+      "alphaBBox32": [
+        18,
+        74,
+        1242,
+        1208
+      ],
+      "hasTransparentBackground": true,
+      "alphaTouchesCanvasEdge": false,
+      "sizePngBytes": 2574232,
+      "sizeWebpBytes": 611542,
+      "sha256Png": "697e711b3d725357f28d6ccefdc59a9f849f9fedf38f4154431d7e90a5bf1291"
+    },
+    {
+      "name": "park_belkino_se",
+      "directionLabel": "se",
+      "png": "png/park_belkino_se.png",
+      "webp": "webp/park_belkino_se.webp",
+      "sourceImage": "a_high_detail_isometric_isometric_like_3d_illustra_3_batch_2.png",
+      "canvasPx": [
+        1254,
+        1254
+      ],
+      "alphaBBox32": [
+        10,
+        66,
+        1234,
+        1211
+      ],
+      "hasTransparentBackground": true,
+      "alphaTouchesCanvasEdge": false,
+      "sizePngBytes": 2619553,
+      "sizeWebpBytes": 631356,
+      "sha256Png": "8a29946fbfe8ff9a469e8b1c753062887e33b8cab40f8943ed6df3349dee8e7f"
+    },
+    {
+      "name": "park_belkino_sw",
+      "directionLabel": "sw",
+      "png": "png/park_belkino_sw.png",
+      "webp": "webp/park_belkino_sw.webp",
+      "sourceImage": "isometric_high_quality_stylized_3d_isometric_game_4_batch_3.png",
+      "canvasPx": [
+        1254,
+        1254
+      ],
+      "alphaBBox32": [
+        19,
+        67,
+        1238,
+        1200
+      ],
+      "hasTransparentBackground": true,
+      "alphaTouchesCanvasEdge": false,
+      "sizePngBytes": 2567524,
+      "sizeWebpBytes": 626938,
+      "sha256Png": "adeee21ec6a40e3c014e5f12814892bd531ff4cd3b4891c2a41d5ed14294c081"
+    }
+  ]
+}

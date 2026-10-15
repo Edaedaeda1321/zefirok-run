@@ -4,7 +4,7 @@ let CATALOG=BASE_CATALOG,CATALOG_ITEMS=BASE_CATALOG_ITEMS,CITY_LEVELS;
 import { RU, tr } from './ru.js?v=rc-levels10';
 import { ROAD_TILE_PRICE } from './economy.js';
 import {
- makeInitialCity, sanitizeCity, cloneCity, reconcileCityProgress, claimCityLevelReward, CITY_LEVELS as BASE_CITY_LEVELS, addObject, moveObject, storeObject,
+ makeInitialCity, sanitizeCity, cloneCity, reconcileCityProgress, claimCityLevelReward, CITY_LEVELS as BASE_CITY_LEVELS, addObject, addGiftDecor, moveObject, storeObject,
   restoreObject, checkPlacement, checkRoadStroke, applyRoadStroke, cityStats, raisedSurfaceConflicts,
  findOccupant, nextRotation, orthogonalPath, keyOf, dims, BuildError, inBounds,
  isObjectConnected, connectedRoads, buildingEffectPreview, isConstructing, constructionRemaining,
@@ -18,6 +18,7 @@ import { buildBusScene, sampleBusScene } from './traffic.js';
 import {createWorldTutorial} from './tutorial.js?v=rc-guide2';
 import {nextCityGoal,cityGoalMilestone} from './city-goal.js';
 import {mountCityGuide} from './city-guide-ui.js';
+import {mountCityChapters} from './city-chapters-ui.js?v=cc-decor1';
 import {mountResidentRequests} from './resident-requests-ui.js?v=rc-thoughts1';
 import {mountResidentThoughts} from './resident-thoughts.js';
 
@@ -34,6 +35,7 @@ const $ = id => document.getElementById(id);
 const canvas = $('worldCanvas');
 let worldTutorial=null;
 let cityGuideUI=null;
+let cityChaptersUI=null;
 let residentUI=null;
 let residentThoughts=null;
 let residentSnapshot=null;
@@ -46,7 +48,7 @@ const state = {
  camera: { x: 0, y: 0, zoom: 1 },
  undo: [], redo: [], pointers: new Map(), pointerStart: null,
  gesture: null, toastTimer: null, drawScheduled: false, pointerDrag: false,
- loadingFailed: false, visualsReady: false, preparingPlacementArt: false, citizenScene: null, trafficScene: null, citizenSnapshot: null, citizenPopulation: -1, citizenComfort: -1, serverRevision: null, serverReady: false, serverBusy: false, serverPurchasesEnabled: false, serverInitData: '', skipAnimation: null, skipAnimationTimer: null, skipAnimationRaf: null,
+ loadingFailed: false, visualsReady: false, preparingPlacementArt: false, citizenScene: null, trafficScene: null, citizenSnapshot: null, citizenPopulation: -1, citizenComfort: -1, serverRevision: null, serverReady: false, serverBusy: false, serverPurchasesEnabled: false, serverInitData: '', decorInventory:{enabled:false,items:[]}, cityChapters:{enabled:false,items:[]}, skipAnimation: null, skipAnimationTimer: null, skipAnimationRaf: null,
  skipPreparingUid: null, skipToken: 0
 };
 const iconCodes = { house: 0x1F3E1, coffee: 0x2615, cake: 0x1F370, flower: 0x1F338,
@@ -287,6 +289,8 @@ function acceptServerCity(payload){
  state.serverRevision=payload.revision;
  state.serverPurchasesEnabled=Boolean(payload.purchasesEnabled);
  state.serverReady=true;
+ if(payload.decorInventory)state.decorInventory=payload.decorInventory;
+ if(payload.cityChapters)state.cityChapters=payload.cityChapters;
  state.undo=[];state.redo=[];
  if(payload.residentRequests)acceptResidentRequests(payload.residentRequests);
  updateUI();scheduleDraw();
@@ -349,6 +353,7 @@ function quoteForAction(kind,args){
  // Same pure engine for display only. Worker recomputes and verifies price.
  let next;
  if(kind==='place')next=addObject(state.city,CATALOG,args.objectKind,args.x,args.y,args.rotation);
+ else if(kind==='place-gift')next=addGiftDecor(state.city,CATALOG,args.objectKind,args.x,args.y,args.rotation);
  else if(kind==='move')next=moveObject(state.city,CATALOG,args.uid,args.x,args.y,args.rotation);
  else if(kind==='store')next=storeObject(state.city,args.uid);
  else if(kind==='restore')next=restoreObject(state.city,CATALOG,args.uid,args.x,args.y,args.rotation);
@@ -388,13 +393,13 @@ async function confirmServerEdit(){
   }
   if(state.draft){
    const d=state.draft;
-   const kind=d.type==='place'?'place':d.type==='restore'?'restore':'move';
-   const args=kind==='place'?{objectKind:d.kind,x:d.x,y:d.y,rotation:d.rotation}:{uid:d.uid,x:d.x,y:d.y,rotation:d.rotation};
+   const kind=d.type==='place'?(d.gift?'place-gift':'place'):d.type==='restore'?'restore':'move';
+   const args=(kind==='place'||kind==='place-gift')?{objectKind:d.kind,x:d.x,y:d.y,rotation:d.rotation}:{uid:d.uid,x:d.x,y:d.y,rotation:d.rotation};
    await performServerAction(kind,args);
    stopDraft();state.mode='select';
-   if(kind==='place')state.selectedUid=state.city.objects[state.city.objects.length-1]?.uid||null;
+   if(kind==='place'||kind==='place-gift')state.selectedUid=state.city.objects[state.city.objects.length-1]?.uid||null;
    else state.selectedUid=d.uid;
-   showToast(kind==='place'?tr('placed'):tr('moved'));updateUI();scheduleDraw();return;
+   showToast(kind==='place'||kind==='place-gift'?tr('placed'):tr('moved'));updateUI();scheduleDraw();return;
   }
   if(state.roadDraft.length){
    await performServerAction(state.mode==='erase'?'erase-road':'road',{positions:state.roadDraft});
@@ -469,6 +474,19 @@ function findFreeSpot(kind,rotation=0,excludeUid=''){
  }
  return {x:9,y:15};
 }
+async function claimWorldChapter(id){
+ if(!SERVER_MODE||!state.serverReady||state.serverBusy)return;
+ state.serverBusy=true;updateUI();
+ try{
+  const result=await serverRequest('chapter/claim',{chapterId:id,requestId:`world-${crypto.randomUUID()}`});
+  if(result.decorInventory)state.decorInventory=result.decorInventory;
+  if(result.cityChapters)state.cityChapters=result.cityChapters;
+  showToast(result.repeated?'Награда уже получена.':'Глава завершена! Новый декор на складе.');
+ }catch(error){
+  if(error.status===409)try{acceptServerCity(await serverRequest('state'));}catch{}
+  showToast(error.message||'Не удалось получить награду главы.',true);
+ }finally{state.serverBusy=false;updateUI();}
+}
 function startPlacement(kind){
  if(!CATALOG[kind])return;
  if(shopCurrentLevel()<shopRequiredLevel(CATALOG[kind])){showToast(shopLockedNotice(CATALOG[kind]),true);return;}
@@ -481,6 +499,14 @@ function startPlacement(kind){
  setCatalogOpen(false);
  if(Number(CATALOG[kind]?.buildMs)>0)void preloadBuildFrames(kind,0);
  updateUI();scheduleDraw();
+}
+function startGiftPlacement(kind){
+ if(!SERVER_MODE||!state.serverReady||state.serverBusy||CATALOG[kind]?.category!=='decor')return;
+ const owned=state.decorInventory?.items?.find(item=>item.id===kind);
+ if(!owned||owned.available<1){showToast('Подарочный декор уже размещён или закончился.',true);return;}
+ state.mode='place';state.selectedUid=null;state.warehouse=false;state.roadDraft=[];
+ state.draft={type:'place',kind,gift:true,rotation:0,...findFreeSpot(kind)};
+ setCatalogOpen(false);updateUI();scheduleDraw();
 }
 function startRestore(uid){
  const item=state.city.objects.find(x=>x.uid===uid && x.stored);
@@ -522,15 +548,15 @@ function updateActions(){
   const d=state.draft,def=CATALOG[d.kind];
   const check=checkPlacement(state.city,CATALOG,d.kind,d.x,d.y,d.rotation,d.type==='move'?d.uid:'');
   const {w,h}=dims(def,d.rotation);
-  const isPurchase=d.type==='place';
+  const isPurchase=d.type==='place'&&!d.gift;
   const price=isPurchase?objectPrice(CATALOG,d.kind):null;
   const enough=!isPurchase||canAfford(state.city.wallet,price);
-  summary=`${nameOf(d.kind)} ${w}x${h} | ${d.rotation*90}°${isPurchase?' | '+tr('price')+': '+priceLabel(price):''}`;
+  summary=`${nameOf(d.kind)} ${w}x${h} | ${d.rotation*90}°${d.gift?' | 🎁 Подарочный декор':isPurchase?' | '+tr('price')+': '+priceLabel(price):''}`;
   feedback=!check.ok?tr(errorLabels[check.code]||'unknownError'):!enough?tr('notEnoughCurrency'):`${d.x+1}:${d.y+1}`;
   kind=d.type==='move'?'previewMove':'preview';
   canCommit=check.ok && enough;
   if(SERVER_MODE&&isPurchase&&!state.serverPurchasesEnabled)canCommit=false;
-  $('confirmEdit').textContent=d.type==='move'?tr('moveItem'):d.type==='restore'?tr('placeFromStock'):tr('buyAndBuild');
+  $('confirmEdit').textContent=d.type==='move'?tr('moveItem'):d.type==='restore'?tr('placeFromStock'):d.gift?'Поставить подарок':tr('buyAndBuild');
  } else if(isRoad){
   kind=state.mode==='erase'?'previewErase':'previewRoad';
   const count=state.roadDraft.filter(p=>state.mode==='erase'?state.city.roads.includes(keyOf(p.x,p.y)):!state.city.roads.includes(keyOf(p.x,p.y))).length;
@@ -748,6 +774,7 @@ function updateUI(){
  syncCitizens(stats);
  updateCityLevelUI(stats);
  updateCityGuide(stats);
+ if(cityChaptersUI)cityChaptersUI.update(state.cityChapters,Boolean(state.serverBusy));
  updateRaisedConflicts();
  $('populationCount').textContent=stats.population.toLocaleString('ru-RU');
  $('comfortCount').textContent=stats.comfort.toLocaleString('ru-RU');
@@ -755,7 +782,7 @@ function updateUI(){
  $('comfortCard').title=`${tr('comfort')}: ${stats.comfort}. ${tr(`comfort_${stats.comfortTier}`)}`;
  $('buildingsCount').textContent=stats.completedStructures;
  $('constructingCount').textContent=stats.constructing;
- $('warehouseBadge').textContent=stats.stored;
+ $('warehouseBadge').textContent=stats.stored+(state.decorInventory?.items||[]).reduce((total,item)=>total+Math.max(0,Number(item.available)||0),0);
  for(const [currency,id] of [['points','walletPoints'],['coffee','walletCoffee'],['treats','walletTreats']])$(id).textContent=state.city.wallet[currency].toLocaleString('ru-RU');
  updateCityBadge();
  $('undoButton').disabled=SERVER_MODE||state.undo.length===0;
@@ -897,11 +924,20 @@ function renderWarehouse(){
  const el=$('warehouseList');if(el.hidden)return;
  const stored=state.city.objects.filter(item=>item.stored);
  el.replaceChildren();
- if(!stored.length){const empty=document.createElement('div');empty.className='warehouse-empty';empty.textContent=tr('warehouseEmpty');el.append(empty);return;}
+ const gifts=SERVER_MODE&&state.decorInventory?.enabled?(state.decorInventory.items||[]).filter(item=>CATALOG[item.id]?.category==='decor'):[];
+ if(gifts.length){
+  for(const gift of gifts){
+   const def=CATALOG[gift.id],button=document.createElement('button');button.className='catalog-card world-gift-item';button.type='button';button.disabled=Number(gift.available)<1;
+   const fig=document.createElement('div');fig.className='catalog-figure';const thumb=document.createElement('canvas');thumb.className='building-thumbnail';thumb.setAttribute('aria-hidden','true');fig.append(thumb);drawCatalogThumbnail(thumb,def);
+   const copy=document.createElement('div');copy.className='catalog-copy';const title=document.createElement('strong');title.textContent=`🎁 ${gift.title||nameOf(gift.id)}`;const size=document.createElement('small');size.textContent=`${def.w} × ${def.h} · Всего: ${gift.total}`;const badge=document.createElement('em');badge.textContent=gift.available>0?`Поставить · доступно ${gift.available}`:`Размещено: ${gift.used}`;copy.append(title,size,badge);
+   button.append(fig,copy);button.addEventListener('click',()=>startGiftPlacement(gift.id));el.append(button);
+  }
+ }
+ if(!stored.length){if(!gifts.length){const empty=document.createElement('div');empty.className='warehouse-empty';empty.textContent=tr('warehouseEmpty');el.append(empty);}return;}
  for(const item of stored){
   const def=CATALOG[item.kind];const button=document.createElement('button');button.className='catalog-card';button.type='button';button.dataset.kind=item.kind;
   const fig=document.createElement('div');fig.className='catalog-figure';const thumb=document.createElement('canvas');thumb.className='building-thumbnail';thumb.setAttribute('aria-hidden','true');fig.append(thumb);drawCatalogThumbnail(thumb,def);
-  const copy=document.createElement('div');copy.className='catalog-copy';const title=document.createElement('strong');title.textContent=nameOf(item.kind);const size=document.createElement('small');size.textContent=`${def.w} x ${def.h}`;const badge=document.createElement('em');badge.textContent=tr('placeFromStock');copy.append(title,size,badge);
+  const copy=document.createElement('div');copy.className='catalog-copy';const title=document.createElement('strong');title.textContent=`${item.giftDecor?'🎁 ':''}${nameOf(item.kind)}`;const size=document.createElement('small');size.textContent=`${def.w} x ${def.h}`;const badge=document.createElement('em');badge.textContent=tr('placeFromStock');copy.append(title,size,badge);
   button.append(fig,copy);button.addEventListener('click',()=>startRestore(item.uid));el.append(button);
  }
 }
@@ -1371,6 +1407,7 @@ function initialize(){
  // A retired 2D/3D preference must never switch the released city to wireframes.
  setSpriteMode(true);
   cityGuideUI=mountCityGuide($('cityLevelDetails'),{nameOf,onAction:cityGuideAction});
+  if(SERVER_MODE)cityChaptersUI=mountCityChapters($('cityLevelDetails'),{onClaim:claimWorldChapter});
   residentUI=mountResidentRequests($('cityLevelDetails'),{onAction:residentRequestAction});
   residentThoughts=mountResidentThoughts($('mapZone'),{onSelect:openResidentThought});
  translateStatic();readSavedCity();bindEvents();renderCategories();renderCatalog();setCatalogOpen(window.innerWidth>700||window.innerHeight>=570);updateUI();resetView();

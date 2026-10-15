@@ -317,6 +317,17 @@ export function cloneCity(city) {
   };
 }
 
+// A gift is a finite entitlement, not a free shop purchase. The Worker
+// verifies the owner's ledger in the SAME batch as the saved city revision.
+export function addGiftDecor(city,catalog,kind,x,y,rotation=0,now=Date.now()){
+  if(!catalog[kind]||catalog[kind].category!=='decor'||catalog[kind].retired)throw new BuildError('GIFT_DECOR_ONLY');
+  checkedPlacement(city,catalog,kind,x,y,rotation);
+  if(!Number.isSafeInteger(now)||now<0)throw new BuildError('INVALID_TIME');
+  const next=cloneCity(city);
+  next.objects.push({uid:`obj-${next.nextId++}`,kind,x,y,rotation,level:1,stored:false,buildStartedAt:0,buildReadyAt:0,giftDecor:true});
+  return next;
+}
+
 export function addObject(city, catalog, kind, x, y, rotation = 0, now = Date.now()) {
   const price = objectPrice(catalog, kind);
   const requiredLevel = Number(catalog[kind]?.minCityLevel || 1);
@@ -669,7 +680,8 @@ export function sanitizeCity(input, catalog) {
     const ready = raw.buildReadyAt == null ? 0 : raw.buildReadyAt;
     if (!Number.isSafeInteger(started) || !Number.isSafeInteger(ready) || started < 0 || ready < 0 ||
         (ready === 0 && started !== 0) || (ready !== 0 && (started <= 0 || ready <= started || ready - started > MAX_BUILD_MS))) throw new BuildError('INVALID_SAVE');
-    const item = { uid: raw.uid, kind: raw.kind, x: raw.stored ? null : Number(raw.x), y: raw.stored ? null : Number(raw.y), rotation: raw.rotation, level: raw.level, stored: raw.stored, buildStartedAt: started, buildReadyAt: ready };
+    if(raw.giftDecor!==undefined&&(raw.giftDecor!==true&&raw.giftDecor!==false||raw.giftDecor===true&&catalog[raw.kind].category!=='decor'))throw new BuildError('INVALID_SAVE');
+    const item = { uid: raw.uid, kind: raw.kind, x: raw.stored ? null : Number(raw.x), y: raw.stored ? null : Number(raw.y), rotation: raw.rotation, level: raw.level, stored: raw.stored, buildStartedAt: started, buildReadyAt: ready, ...(raw.giftDecor===true?{giftDecor:true}:{}) };
     if (!item.stored) {
       // Legacy saves were allowed to put buildings/roads over 3x3 raised plazas.
       // Do not lock out those players; future moves and purchases use strict rules.

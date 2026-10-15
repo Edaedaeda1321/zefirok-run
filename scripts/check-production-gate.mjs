@@ -126,6 +126,7 @@ const steps = [
   ['Zeffi World RC catalogue and no-select UI', 'node', ['scripts/check-world-catalog-rc-ui.mjs']],
   ['Zeffi World guided tutorials (D1 + UI)', 'node', ['--no-warnings','--experimental-sqlite','--test','world/tests/world-tutorial-rc.test.mjs']],
   ['Zeffi World shared D1', 'node', ['--no-warnings','--experimental-sqlite','scripts/check-zeffi-world-integration.mjs']],
+  ['Zeffi World decorated rewards + chapter claims', 'node', ['--no-warnings','--experimental-sqlite','--test','world/tests/world-decor-rewards.test.mjs']],
   ['Zeffi World resident requests RC-3', 'node', ['--no-warnings','--experimental-sqlite','--test','world/tests/resident-requests-rc3.test.mjs']],
   ['Zeffi World resident thought bubbles RC-4', 'node', ['--test','world/tests/resident-thoughts-rc4.test.mjs']],
   ['Zeffi World residents and comfort', 'node', ['--test','world/tests/citizens.test.mjs']],

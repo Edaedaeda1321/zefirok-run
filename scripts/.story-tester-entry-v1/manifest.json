@@ -1,0 +1,71 @@
+{
+  "version": "story-tester-entry-v1",
+  "base_commit": "6ed8bfbe43e06803697b86997afa89c5a9ca10af",
+  "files": {
+    "index.html": {
+      "mode": "replace",
+      "old_sha256": [
+        "d76c652bec8d282ec4430079b8fc5dc09dcfb3a1306d17f206ce79e1c2763071"
+      ],
+      "payload": "index.html",
+      "new_sha256": "999b215ef948aaf7d08c918dbea138622b668eb6f8ad05ebc922178d2e2d8179"
+    },
+    "story-world.html": {
+      "mode": "replace",
+      "old_sha256": [
+        "6a5f7e421fbac9d20064975161f4b8585551f43d87ee3018c84c83ab92432b9f"
+      ],
+      "payload": "story-world.html",
+      "new_sha256": "7dd4b77e731f561bfa1263a8e44bd3a97b3bbd5a57f5551703b86a2e29b5cb02"
+    },
+    "src/zeffi-world-service.js": {
+      "mode": "replace",
+      "old_sha256": [
+        "dfc2c484c0c3f853cbdabc22b3c7ca153b5984547fa2171dda979f23993ff7b5"
+      ],
+      "payload": "src/zeffi-world-service.js",
+      "new_sha256": "bca91af2b92c4305de9a0d775c8b76945c4f8591a7a6186086521d88caa54dcc"
+    },
+    "world/story/boot.js": {
+      "mode": "replace",
+      "old_sha256": [
+        "015b8b50c02bcfb3e90a0a7f853685cc6df167ef20ee72d3af32b511ee79d9bb"
+      ],
+      "payload": "world/story/boot.js",
+      "new_sha256": "5e7d715de3684cd2c6b36921475f0f99cd32996a41ab9642e83e11d34c060f35"
+    },
+    "world/tests/story-access-v1.test.mjs": {
+      "mode": "replace",
+      "old_sha256": [
+        "d211614e4254636cc34db4f7397f1b4359241d29da64e2787d67768d8bb7393b"
+      ],
+      "payload": "world/tests/story-access-v1.test.mjs",
+      "new_sha256": "27870813e76a913176b24cc6b005ef20bc64407075cad636344e8f0eb5593aaf"
+    },
+    "scripts/check-world-story-v1.mjs": {
+      "mode": "replace",
+      "old_sha256": [
+        "72690786e9e643b348df8f07d86cf5b65628533bc6126b61a784397ddb16d99c"
+      ],
+      "payload": "scripts/check-world-story-v1.mjs",
+      "new_sha256": "eed6963a9d41134b1af4a27b69b43f06fc3adb72c343ce54564c149025453c23"
+    },
+    "world/story/app.js": {
+      "mode": "replace_fragment",
+      "old_sha256": [
+        "e44f9f47088499966dc5b95f0721208a5c522f8ba2825f94c6b6bb4209e89c93",
+        "98145166fcb95eb6224574645dca90e6d017b05792deee830be9e0dfc62e8d58"
+      ],
+      "fragment_old": " listen($('returnWorld'),'click',()=>{if(mode==='standalone'){openPanel('test');toast('Это автономная сборка общего мира. Личный город здесь не загружается.');}else location.assign(new URL('../world.html?world_tester=1',document.baseURI).href);});",
+      "fragment_new": " listen($('returnWorld'),'click',()=>{if(mode==='standalone'){openPanel('test');toast('Это автономная сборка общего мира. Личный город здесь не загружается.');}else if(window.parent!==window)window.parent.postMessage({type:'zefirok-world-close'},location.origin);else location.assign(new URL('../',document.baseURI).href);});",
+      "expected_output_sha256": {
+        "e44f9f47088499966dc5b95f0721208a5c522f8ba2825f94c6b6bb4209e89c93": "45f2feb98edbc954e3a11447929f7d1f33461881955edb8825bd81235f9ea91a",
+        "98145166fcb95eb6224574645dca90e6d017b05792deee830be9e0dfc62e8d58": "a00742afce54ddaf2a3098c123f6f8deca92b24a8f1c9754e338437834538835"
+      }
+    }
+  },
+  "ignore_rules": [
+    ".world-story-tester-entry-v1-backup/",
+    "/scripts/.world-story-tester-entry-v1/"
+  ]
+}
