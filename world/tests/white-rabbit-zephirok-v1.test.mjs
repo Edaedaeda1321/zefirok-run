@@ -69,7 +69,7 @@ test('white rabbit: 4 separately loaded WebP variants, review-only direction met
   assert.deepEqual(disk.assets.find(x=>x.id===spriteId),meta);
  }
  assert.equal(new Set(ids).size,4);
- assert.equal(SPRITE_MANIFEST.assets.filter(a=>!['park-belkino-story-v1','white-rabbit-construction-v1','story-festival-hall-v1','zeffi-central-square-v1','zeffi-premium-park-v1','zeffi-global-world-park-v1'].includes(a.packId)).length,365);
+ assert.equal(SPRITE_MANIFEST.assets.filter(a=>!['park-belkino-story-v1','white-rabbit-construction-v1','story-festival-hall-v1','zeffi-central-square-v1','zeffi-premium-park-v1','zeffi-global-world-park-v1'].includes(a.packId)).length,375);
  assert.equal(SPRITE_MANIFEST.assets.filter(a=>a.packId==='park-belkino-story-v1').length,4);
  assert.equal(SPRITE_MANIFEST.assets.filter(a=>a.packId==='white-rabbit-construction-v1').length,6);
  assert.equal(SPRITE_MANIFEST.assets.filter(a=>a.packId==='story-festival-hall-v1').length,16);

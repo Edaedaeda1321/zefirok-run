@@ -7,9 +7,11 @@ export const STORY_MAP_SIZE=48;
 export const STORY_PARK_BELKINO_KIND='story-park-belkino';
 export const STORY_GLOBAL_PARK_KIND='story-global-park-zeffi';
 export const STORY_FESTIVAL_KINDS=Object.freeze({stage_a:'story-festival-stage-a',stage_b:'story-festival-stage-b',stage_c:'story-festival-stage-c',complete:'story-festival-complete'});
+export const STORY_PALACE_KINDS=Object.freeze(Array.from({length:10},(_,i)=>`story-palace-memories-${String(i+1).padStart(2,'0')}`));
 export const STORY_CATALOG=Object.freeze({
  ...CATALOG,
  [STORY_PARK_BELKINO_KIND]:Object.freeze({id:STORY_PARK_BELKINO_KIND,category:'parks',titleKey:'pondPark',descriptionKey:'pondParkDescription',icon:'leaf',w:9,h:9,needsRoad:false,style:'park',height:0,buildMs:0}),
+ ...Object.fromEntries(STORY_PALACE_KINDS.map(id=>[id,Object.freeze({id,category:'plazas',titleKey:'palaceMemories',descriptionKey:'palaceMemoriesDescription',icon:'star',w:6,h:6,needsRoad:false,style:'gold',height:155,buildMs:0,rotatable:false,blockingSurface:true})])),
  [STORY_GLOBAL_PARK_KIND]:Object.freeze({id:STORY_GLOBAL_PARK_KIND,category:'parks',titleKey:'centralParkZeffi',descriptionKey:'centralParkZeffiDescription',icon:'leaf',w:6,h:6,needsRoad:false,style:'park',height:0,buildMs:0}),
  ...Object.fromEntries(Object.values(STORY_FESTIVAL_KINDS).map(id=>[id,Object.freeze({id,category:'plazas',titleKey:'citySquare',descriptionKey:'citySquareDescription',icon:'flag',w:6,h:6,needsRoad:false,style:'rose',height:116,buildMs:0})])),
  ...Object.fromEntries(Array.from({length:6},(_,i)=>{const id=`story-wr-stage-${i+1}`;return [id,Object.freeze({id,category:'shops',titleKey:'whiteRabbitZephirok',descriptionKey:'whiteRabbitZephirokDescription',icon:'coffee',w:4,h:4,needsRoad:true,style:'rose',height:115,buildMs:0})];}))
@@ -19,14 +21,15 @@ export const DISTRICTS=Object.freeze([
  {id:'square',title:'Центральный парк Зеффи',short:'Парк Зеффи',icon:'leaf',focus:[23,23],bounds:[19,19,13,13],chapter:0,kind:'central-park-zeffi',description:'Зелёное сердце общего города: цветы, фонтан и прогулки. Прежняя площадь доступна для постройки игрокам.'},
  {id:'cafe',title:'Кафе «Зефирок»',short:'Зефирок',icon:'coffee',focus:[10.1,11.4],bounds:[7,7,11,12],chapter:0,kind:'white-rabbit-zephirok',description:'Кафе-кондитерская «Зефирок» находится в одном здании с «Белым Кроликом».'},
  {id:'belkino',title:'Парк Белкино',short:'Белкино',icon:'leaf',focus:[12.5,26.5],bounds:[7,21,11,18],chapter:0,kind:STORY_PARK_BELKINO_KIND,description:'Большой парк с ротондой у пруда, зелёными фигурами, историческими руинами и прогулочными дорожками. Здесь запланирована история «Тайны Белкино».'},
- {id:'friends',title:'Квартал друзей',short:'Друзья',icon:'home',focus:[33,11],bounds:[27,6,15,12],chapter:0,kind:'cottage',description:'Уютный жилой квартал. Будущие участки персонажей пока не закреплены за героями: их откроем вместе с сюжетом.'},
+ {id:'friends',title:'Квартал друзей',short:'Друзья',icon:'home',focus:[33,11],bounds:[28,6,14,12],chapter:0,kind:'cottage',description:'Уютный жилой квартал. Будущие участки персонажей пока не закреплены за героями: их откроем вместе с сюжетом.'},
  {id:'station',title:'Городская станция',short:'Станция',icon:'bus',focus:[36,37],bounds:[33,33,11,10],chapter:0,kind:'bus-terminal',description:'Автобусы связывают кафе, центральную часть города и парк. Это декоративный транспорт: без билетов и списаний.'},
  {id:'festival',title:'Дом фестивалей Зеффи',short:'Фестивали',icon:'flag',focus:[25,35.5],bounds:[21,32,9,7],chapter:1,kind:STORY_FESTIVAL_KINDS.complete,description:'Большая общегородская стройка с четырьмя стадиями. Прогресс строительства и взносы участников хранятся на сервере.'},
  {id:'rabbit',title:'«Белый Кролик»',short:'Кролик',icon:'star',focus:[11.3,9.8],bounds:[9,9,4,4],chapter:2,kind:'white-rabbit-zephirok',description:'«Белый Кролик» и кафе «Зефирок» делят одно здание. Сюжетные подробности «Белого Кролика» откроются позже.'},
- {id:'mystery',title:'Неизвестный район',short:'Тайна',icon:'lock',focus:[24,8],bounds:[21,4,6,8],chapter:99,kind:'botanical-garden',description:'Здесь появится новая часть города. Название, герой и условия открытия пока не объявлены.'}
+ {id:'palace',title:'Дворец воспоминаний',short:'Дворец',icon:'star',focus:[25,8],bounds:[22,5,6,6],chapter:0,kind:STORY_PALACE_KINDS[0],description:'Общегородская достопримечательность с десятью состояниями. Взносы отключены сервером. Стройкой управляет владелец проекта.'},
+ {id:'mystery',title:'Неизвестный район',short:'Тайна',icon:'lock',focus:[43,7],bounds:[40,4,6,6],chapter:99,kind:'botanical-garden',description:'Здесь появится новая часть города. Название, герой и условия открытия пока не объявлены.'}
 ]);
 export const PLACES=Object.freeze([
- ...DISTRICTS.map(d=>({...d,uid:({square:'story-central-square',cafe:'story-cafe',belkino:'story-pond',friends:'story-home',station:'story-terminal',festival:'story-festival',rabbit:'story-cafe'})[d.id]||null})),
+ ...DISTRICTS.map(d=>({...d,uid:({square:'story-central-square',cafe:'story-cafe',belkino:'story-pond',friends:'story-home',station:'story-terminal',festival:'story-festival',rabbit:'story-cafe',palace:'story-palace-memories'})[d.id]||null})),
  {id:'community-garden',title:'Сад встреч',short:'Строим вместе',icon:'heart',focus:[15.5,35.5],bounds:[14,34,3,3],chapter:0,kind:'garden',uid:'story-community-garden',description:'Уютный сад рядом с парком Белкино. Жители вместе собирают средства на строительство через общий городской фонд.'}
 ]);
 export const placeById=id=>PLACES.find(p=>p.id===id)||null;
@@ -98,6 +101,9 @@ export function buildStoryMap(state, now=Date.now()) {
   for(const cell of cells)occupied.add(cell);
   city.objects.push({uid:uid||`story-decor-${++sequence}`,kind,x,y,rotation,level:1,stored:false,buildStartedAt:0,buildReadyAt:0,...extra});return true;
  }
+ // Immutable geometry: public Palace is stage-controlled, never owned or chargeable.
+ const palaceStage=Number.isInteger(state.palaceStage)&&state.palaceStage>=1&&state.palaceStage<=10?state.palaceStage:1;
+ place(STORY_PALACE_KINDS[palaceStage-1],22,5,0,'story-palace-memories');
  place(state.whiteRabbitPreview>0?`story-wr-stage-${state.whiteRabbitPreview}`:'white-rabbit-zephirok',9,9,0,'story-cafe');place('bakery',14,11);place('flower-shop',8,14);
  place('cottage',11,14);place('coffee-kiosk',8,17);place('bus-stop',16,14,0,'story-stop-cafe');
  place('family-home',28,9);place('cottage',32,10,0,'story-home');place('bakery',35,11);

@@ -5,7 +5,7 @@ import { preloadSpriteSet, onSpriteUpdate, spriteStatus } from '../sprite-assets
 import { buildCitizenScene, sampleCitizenScene } from '../citizens.js';
 import { buildBusScene, sampleBusScene, preloadBusArt, busArtStatus } from '../traffic.js';
 import { createDemoState, loadDemo, saveDemo, resetDemo, contribute, simulateCommunityHelp, addDemoMaterials, openProject, setDemoChapter, visitPlace, projectStatus, projectTotal, PROJECT_GOAL, FESTIVAL_GOAL, FESTIVAL_MILESTONES, FESTIVAL_AMOUNTS, festivalStage, festivalTotal, festivalNextGoal, contributeFestival, simulateFestivalHelp, addFestivalDemoPoints, setWhiteRabbitPreview } from './model.js';
-import { DISTRICTS, PLACES, placeById, isPlaceOpen, lockedDistricts, STORY_FESTIVAL_KINDS, buildStoryMap, validateStoryMap } from './map.js';
+import { DISTRICTS, PLACES, placeById, isPlaceOpen, lockedDistricts, STORY_FESTIVAL_KINDS, STORY_PALACE_KINDS, buildStoryMap, validateStoryMap } from './map.js';
 import { icon, escapeText as esc, artUrl, requiredStorySpriteIds, centerCamera, worldAt, zoomCamera, clampCamera } from './view.js';
 import {createSharedFundClient, sharedFundQuote, mapStateWithFund} from './shared-fund.js';
 import {communityChronicle,communityEvent,newlyReachedCommunityEvents,paintCommunityScene} from './community-events-p2.js';
@@ -30,6 +30,12 @@ export async function startStoryWorld({mode='standalone',initData=''}={}) {
   Promise.race([preloadSpriteSet(requiredStorySpriteIds(),{pin:true,onProgress:p=>{$('loadProgress').value=Math.round(p.done/p.total*100);}}),timeout]),
   signedStoryClient?signedStoryClient.read():Promise.resolve(null)
  ]).finally(()=>clearTimeout(loadTimer));
+ // The Palace stage is read in the existing story startup response, no extra API.
+ if(signedStoryProgress){
+  const currentId=`palace_memories_${String(signedStoryProgress.palace.stage).padStart(2,'0')}`;
+  const palaceArt=await preloadSpriteSet([currentId],{pin:true});
+  if(palaceArt.failed)throw new Error('Не загрузился Дворец воспоминаний. Проверьте ассеты.');
+ }
  if(warm.failed)throw new Error(`Не удалось загрузить ${warm.failed} игровых изображений. Проверьте, что сборка распакована полностью.`);
  await preloadBusArt();
  booted=true;
@@ -39,7 +45,7 @@ export async function startStoryWorld({mode='standalone',initData=''}={}) {
  // Never import historical local saves or simulated contributions.
  const loaded=mode==='standalone'?loadDemo(storage):{state:createDemoState(),persistent:false};
  let state=loaded.state,persistent=loaded.persistent;
- if(signedStoryProgress)state={...state,chapter:signedStoryProgress.chapter,visited:[...signedStoryProgress.visited]};
+ if(signedStoryProgress)state={...state,chapter:signedStoryProgress.chapter,visited:[...signedStoryProgress.visited],palaceStage:signedStoryProgress.palace.stage};
  const reduce=window.matchMedia('(prefers-reduced-motion: reduce)');
  let paused=reduce.matches,pauseAt=Date.now(),pauseOffset=0;
  let city,citizens,buses,observedStatus,selectedPanel='',selectedAmount=50,selectedFestivalAmount=1_000_000;
@@ -58,7 +64,7 @@ export async function startStoryWorld({mode='standalone',initData=''}={}) {
  function haptic(){try{window.Telegram?.WebApp?.HapticFeedback?.impactOccurred?.('light');}catch{}}
  const worldState=()=>liveMode?mapStateWithFund(state,sharedSnapshot):state;
  const festivalKind=()=>STORY_FESTIVAL_KINDS[festivalStage(worldState())];
- function stageKind(place){if(place.id==='festival')return festivalKind();if((place.id==='cafe'||place.id==='rabbit')&&state.whiteRabbitPreview>0)return `story-wr-stage-${state.whiteRabbitPreview}`;return place.kind;}
+ function stageKind(place){if(place.id==='palace')return STORY_PALACE_KINDS[(state.palaceStage||1)-1];if(place.id==='festival')return festivalKind();if((place.id==='cafe'||place.id==='rabbit')&&state.whiteRabbitPreview>0)return `story-wr-stage-${state.whiteRabbitPreview}`;return place.kind;}
  function schedule(){dirty=true;if(!raf&&!document.hidden&&!disposed)raf=requestAnimationFrame(frame);}
  function rebuild(){
   const next=buildStoryMap(worldState());const errors=validateStoryMap(next);
@@ -166,8 +172,12 @@ export async function startStoryWorld({mode='standalone',initData=''}={}) {
   // a newly unlocked chapter from a second Telegram window.
   if(!next||!storySnapshot||next.chapter<storySnapshot.chapter||
     (next.chapter===storySnapshot.chapter&&next.revision<storySnapshot.revision))return;
+  // A concurrent delayed story response may never revert an advanced Palace.
+  if(next.palace.revision<storySnapshot.palace.revision)next={...next,palace:storySnapshot.palace};
+  const palaceChanged=state.palaceStage!==next.palace.stage;
   const visited=[...new Set([...storySnapshot.visited,...next.visited])];
-  storySnapshot={...next,visited};state={...state,chapter:next.chapter,visited};
+  storySnapshot={...next,visited};state={...state,chapter:next.chapter,visited,palaceStage:next.palace.stage};
+  if(palaceChanged)void preloadSpriteSet([`palace_memories_${String(next.palace.stage).padStart(2,'0')}`],{pin:true}).then(art=>{if(!disposed&&art.failed)console.warn('Palace art stage unavailable');}).catch(()=>{});
   if(!disposed){rebuild();if(selectedPanel)renderPanel();}
  }
  async function syncStoryProgress({quiet=false}={}){
@@ -205,7 +215,7 @@ export async function startStoryWorld({mode='standalone',initData=''}={}) {
   if(liveMode&&kind==='festival-project'&&storySnapshot?.chapter<1)kind='place:festival';
   if(liveMode&&kind==='project')markStoryVisit('community-garden');
   if(liveMode&&kind==='festival-project')markStoryVisit('festival');
-  selectedPanel=kind;renderPanel();if(kind==='community-event')panel.scrollTop=0;selectTab(kind==='buildings'||kind==='project'||kind==='festival-project'?'buildings':kind==='history'||kind.startsWith('place:')?'history':'map');if(!panel.open){if(worldTutorial?.active())panel.show();else panel.showModal();}haptic();worldTutorial?.refresh();}
+  selectedPanel=kind;renderPanel();if(kind==='community-event')panel.scrollTop=0;selectTab(kind==='buildings'||kind==='project'||kind==='festival-project'||kind==='palace-project'?'buildings':kind==='history'||kind.startsWith('place:')?'history':'map');if(!panel.open){if(worldTutorial?.active())panel.show();else panel.showModal();}haptic();worldTutorial?.refresh();}
  function closePanel(){if(panel.open)panel.close();selectedPanel='';selectTab('map');}
  function openPlace(id){
   const place=placeById(id);if(!place)return;
@@ -255,7 +265,12 @@ export async function startStoryWorld({mode='standalone',initData=''}={}) {
  function sharedPanel(kind){
   const selection=kind==='festival-project'?'festival':kind==='project'?'garden':null;
   const notice=sharedError?`<div class="demo-box">${esc(sharedError)}<br/>Настоящие вклады недоступны до успешной синхронизации.</div>`:'';
-  if(!sharedSnapshot)return `<span class="eyebrow">СТРОИМ ВМЕСТЕ</span><h2 id="panelTitle">Городские стройки</h2>${notice||'<div class="demo-box">Загружаем общий прогресс с сервера…</div>'}<button class="secondary" data-action="fund-refresh">Обновить фонд</button>`;
+  // Palace has no payment endpoints. Display its state even if the unrelated
+  // Garden/Festival fund has failed or is still loading.
+  const palaceStage=state.palaceStage||1;
+  const palaceRow=`<button type="button" class="buildings-row" data-action="palace-project"><img src="${artUrl(STORY_PALACE_KINDS[palaceStage-1])}" alt=""><span class="buildings-details"><strong>Дворец воспоминаний</strong><small>${palaceStage===10?'Дворец открыт':`Стадия ${palaceStage} из 10`} · взносы отключены</small></span><span class="buildings-percent">›</span></button>`;
+  if(kind==='palace-project')return `<span class="eyebrow">ГОРОДСКАЯ ДОСТОПРИМЕЧАТЕЛЬНОСТЬ</span><h2 id="panelTitle">Дворец воспоминаний</h2>${cardArt(placeById('palace'))}<div class="demo-box">${palaceStage===10?'Дворец открыт':`Строительство: этап ${palaceStage} из 10`}. Взносы отключены сервером. Прогресс изменяется только владельцем в CC.</div><button class="secondary" data-go="palace">${icon('target')}Показать на карте</button>`;
+  if(!sharedSnapshot)return `<span class="eyebrow">СТРОИМ ВМЕСТЕ</span><h2 id="panelTitle">Городские стройки</h2>${notice||'<div class="demo-box">Загружаем общий прогресс с сервера…</div>'}${palaceRow}<button class="secondary" data-action="fund-refresh">Обновить фонд</button>`;
   if(kind==='community-event'){
    const event=communityEvent(sharedSnapshot,selectedCommunityEvent);
    if(!event)return '<h2 id="panelTitle">Событие ещё не открылось</h2><button class="secondary" data-action="buildings">К стройкам</button>';
@@ -267,7 +282,7 @@ export async function startStoryWorld({mode='standalone',initData=''}={}) {
    const stage=id==='festival'?`Этап ${p.stage+1} из 4`:p.finished?'Готов':'Сбор очков';
    return `<button type="button" class="buildings-row" data-action="${id==='festival'?'festival-project':'project'}"><img src="${artUrl(id==='festival'?STORY_FESTIVAL_KINDS[festivalStage(worldState())]:'garden')}" alt=""/><span class="buildings-details"><strong>${esc(p.title)}</strong><small>${stage} · ${money(p.total)} / ${money(p.goal)} очков</small><span class="mini-track"><span style="width:${percent}%"></span></span></span><span class="buildings-percent">${percent}% ›</span></button>`;
   };
-  if(kind==='buildings')return `<span class="eyebrow">СТРОИМ ВМЕСТЕ</span><h2 id="panelTitle">Городские стройки</h2><p>Участники видят общий прогресс. Очки списываются только после подтверждения.</p>${row('garden')}${row('festival')}${chronicleMarkup('garden')}${chronicleMarkup('festival')}${notice}<button class="secondary" data-action="fund-refresh">Обновить прогресс</button>`;
+  if(kind==='buildings')return `<span class="eyebrow">СТРОИМ ВМЕСТЕ</span><h2 id="panelTitle">Городские стройки</h2><p>Участники видят общий прогресс. Очки списываются только после подтверждения.</p>${row('garden')}${row('festival')}${palaceRow}${chronicleMarkup('garden')}${chronicleMarkup('festival')}${notice}<button class="secondary" data-action="fund-refresh">Обновить прогресс</button>`;
   if(kind==='fund-confirm'){
    const p=pendingDonation,project=p&&sharedSnapshot.projects[p.projectId];
    if(!p||!project)return `<h2 id="panelTitle">Вклад не выбран</h2><button data-action="buildings">К стройкам</button>`;
@@ -336,7 +351,7 @@ export async function startStoryWorld({mode='standalone',initData=''}={}) {
  }
  function renderPanel(){
   const focused=document.activeElement?.getAttribute?.('data-action');let html='';
-  if(liveMode&&['buildings','project','festival-project','fund-confirm','community-event'].includes(selectedPanel)){
+  if(liveMode&&['buildings','project','festival-project','palace-project','fund-confirm','community-event'].includes(selectedPanel)){
    $('panelContent').innerHTML=sharedPanel(selectedPanel);return;
   }
   if(selectedPanel==='history'||selectedPanel==='districts'){
@@ -400,6 +415,7 @@ export async function startStoryWorld({mode='standalone',initData=''}={}) {
    const place=placeById(selectedPanel.slice(6));if(!place)return;
    const locked=!isPlaceOpen(place,worldState());
    html=`<span class="eyebrow">${locked?'БУДУЩЕЕ ГОРОДА':'МЕСТО НА КАРТЕ'}</span><h2 id="panelTitle">${esc(place.title)}</h2><span class="status-pill">${icon(locked?'lock':'check')}${statusLabel(place)}</span>${cardArt(place,locked)}<p>${esc(place.description)}</p>`;
+   if(place.id==='palace'){const stage=state.palaceStage||1;html+=`<div class="demo-box"><strong>${stage===10?'Дворец открыт':`Строительство: стадия ${stage} из 10`}</strong><br>Этот общий объект не принимает взносы и не списывает игровые валюты. Переходы между стадиями публикуются владельцем через CC.</div>`;}
    if(place.id==='cafe')html+='<button class="secondary" data-action="open-rabbit">Белый Кролик · это же здание →</button>';
    if(place.id==='rabbit'&&liveMode)html+='<div class="demo-box">«Белый Кролик» и кафе «Зефирок» находятся в одном здании. Новые события появятся позднее.</div>';
    else if(place.id==='rabbit')html+='<div class="demo-box">«Белый Кролик» и кафе «Зефирок» — одно здание. Шесть кадров строительства доступны в меню тестера. Сюжетные сцены подключим отдельно.</div>';
@@ -417,6 +433,7 @@ export async function startStoryWorld({mode='standalone',initData=''}={}) {
  function execute(action){
   if(action==='story-advance')return void completeStoryChapter();
   if(action==='story-refresh')return void syncStoryProgress();
+  if(action==='palace-project')return openPanel('palace-project');
   if(['fund-confirm','fund-pay','fund-refresh','fund-cancel','buildings'].includes(action))return fundAction(action);
   if(liveMode&&['contribute','festival-contribute','materials','community','festival-topup','festival-help','open-project','reset','reset-confirm','test'].includes(action))return;
   try{

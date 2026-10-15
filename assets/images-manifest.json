@@ -1,8 +1,8 @@
 {
   "version": 2,
   "hashAlgorithm": "sha256",
-  "catalogHash": "decc76f398781e47",
-  "count": 607,
+  "catalogHash": "957b9c3caf056260",
+  "count": 617,
   "images": [
     {
       "fileName": "achievements/background_achivment_panel.webp",
@@ -1595,6 +1595,86 @@
       "path": "/assets/letter/pick/season4_pick_paper.webp",
       "hash": "392777f996f1",
       "size": 484826
+    },
+    {
+      "fileName": "mir_zeffi/decor-reward-thumbs/bench.webp",
+      "label": "Bench",
+      "folder": "mir_zeffi/decor-reward-thumbs",
+      "path": "/assets/mir_zeffi/decor-reward-thumbs/bench.webp",
+      "hash": "2a485e587c9e",
+      "size": 21440
+    },
+    {
+      "fileName": "mir_zeffi/decor-reward-thumbs/extra-bush.webp",
+      "label": "Extra bush",
+      "folder": "mir_zeffi/decor-reward-thumbs",
+      "path": "/assets/mir_zeffi/decor-reward-thumbs/extra-bush.webp",
+      "hash": "e1d26a33bc9e",
+      "size": 27312
+    },
+    {
+      "fileName": "mir_zeffi/decor-reward-thumbs/extra-flowerbed.webp",
+      "label": "Extra flowerbed",
+      "folder": "mir_zeffi/decor-reward-thumbs",
+      "path": "/assets/mir_zeffi/decor-reward-thumbs/extra-flowerbed.webp",
+      "hash": "3429edd9850f",
+      "size": 40764
+    },
+    {
+      "fileName": "mir_zeffi/decor-reward-thumbs/extra-lamp.webp",
+      "label": "Extra lamp",
+      "folder": "mir_zeffi/decor-reward-thumbs",
+      "path": "/assets/mir_zeffi/decor-reward-thumbs/extra-lamp.webp",
+      "hash": "17642a776e94",
+      "size": 23018
+    },
+    {
+      "fileName": "mir_zeffi/decor-reward-thumbs/extra-tree.webp",
+      "label": "Extra tree",
+      "folder": "mir_zeffi/decor-reward-thumbs",
+      "path": "/assets/mir_zeffi/decor-reward-thumbs/extra-tree.webp",
+      "hash": "f3a63460eb27",
+      "size": 36344
+    },
+    {
+      "fileName": "mir_zeffi/decor-reward-thumbs/flowerbed.webp",
+      "label": "Flowerbed",
+      "folder": "mir_zeffi/decor-reward-thumbs",
+      "path": "/assets/mir_zeffi/decor-reward-thumbs/flowerbed.webp",
+      "hash": "f1c6210e62a5",
+      "size": 37582
+    },
+    {
+      "fileName": "mir_zeffi/decor-reward-thumbs/fountain.webp",
+      "label": "Fountain",
+      "folder": "mir_zeffi/decor-reward-thumbs",
+      "path": "/assets/mir_zeffi/decor-reward-thumbs/fountain.webp",
+      "hash": "0661e600b9aa",
+      "size": 31658
+    },
+    {
+      "fileName": "mir_zeffi/decor-reward-thumbs/lamp.webp",
+      "label": "Lamp",
+      "folder": "mir_zeffi/decor-reward-thumbs",
+      "path": "/assets/mir_zeffi/decor-reward-thumbs/lamp.webp",
+      "hash": "f5c1f7a2bf71",
+      "size": 23794
+    },
+    {
+      "fileName": "mir_zeffi/decor-reward-thumbs/monument.webp",
+      "label": "Monument",
+      "folder": "mir_zeffi/decor-reward-thumbs",
+      "path": "/assets/mir_zeffi/decor-reward-thumbs/monument.webp",
+      "hash": "d6dec85a4b37",
+      "size": 24718
+    },
+    {
+      "fileName": "mir_zeffi/decor-reward-thumbs/tree.webp",
+      "label": "Tree",
+      "folder": "mir_zeffi/decor-reward-thumbs",
+      "path": "/assets/mir_zeffi/decor-reward-thumbs/tree.webp",
+      "hash": "9c0944eb5ae3",
+      "size": 29926
     },
     {
       "fileName": "mir_zeffi/icon_all_stroika.webp",

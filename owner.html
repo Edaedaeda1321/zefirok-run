@@ -920,6 +920,13 @@ button.cc29-routed-save{display:inline-flex;align-items:center;justify-content:c
 
 <section class="view" id="view-world-projects"><div class="stack">
   <div class="wp0-hero"><div><span class="cc2-eyebrow">WORLD OPERATIONS · P2</span><h2>🏗 Общие проекты</h2><p>Контроль взносов по проектам и объявления. Реальные суммы и контрольные этапы неизменяемы.</p></div><button type="button" class="btn secondary" data-wp2-reload>Обновить</button></div>
+  <div class="card" id="worldPalaceCard"><div class="section-head"><div><h3>🏰 Дворец воспоминаний</h3><p>Общегородская постройка · 10 состояний · взносы закрыты системно (всегда 0)</p></div><button class="btn secondary small" type="button" id="worldPalaceReload">Обновить</button></div>
+    <div class="wp0-info" id="worldPalaceStatus">Загружаем состояние сервера…</div>
+    <div class="form-grid two" style="margin-top:12px"><div class="field"><label for="worldPalaceStage">Опубликовать строительный этап</label><select id="worldPalaceStage"></select></div><div class="field"><label for="worldPalaceReason">Причина изменения · аудит 10–280 символов</label><textarea id="worldPalaceReason" rows="2" maxlength="280" placeholder="Например: завершили подготовку территории"></textarea></div></div>
+    <div class="actions" style="margin-top:12px"><button type="button" class="btn gold" id="worldPalaceSave">Перевести на новую стадию</button></div>
+    <div class="wp1-history" id="worldPalaceHistory"></div>
+    <p class="wp1-help">Стадии публикуются только вперёд, с аудитом и защитой от повторного запроса. Взносы недоступны даже при прямом обращении к API. Личный дворец игрока строится отдельно.</p>
+  </div>
   <div id="wp2Status-projects" class="wp2-status">Загрузка опубликованной конфигурации...</div>
   <div class="card"><div class="section-head"><div><h3>Общие проекты</h3><p>Изменения доступны только владельцу и требуют отдельной публикации.</p></div></div>
     <div id="wp2Editor-projects" class="wp2-editor"></div>
@@ -1194,6 +1201,8 @@ const CC_SAFE_ENDPOINT_TARGET = Object.freeze({
   "/api/owner/world/access": "read",
   "/api/owner/world/monitor": "read",
   "/api/owner/world/config/save": "live",
+  "/api/owner/world/palace": "read",
+  "/api/owner/world/palace/stage/save": "live",
   "/api/owner/world/tester/add": "live",
   "/api/owner/world/tester/remove": "live",
   "/api/owner/staging/bootstrap": "staging",
@@ -4122,6 +4131,34 @@ function wp1Bind(){
 wp1Bind();
 
 // Mir Zeffi P2: owner-only server-backed editorial configuration.
+// Palace: D1-only, owner-controlled one-way stage editor, independent of the fund.
+let worldPalaceData=null,worldPalaceBusy=false;
+const PALACE_STAGE_LABELS=['Подготовка территории','Фундамент','Нижние стены','Залы и арки','Каркас купола','Обшивка купола','Остекление','Декоративная отделка','Подготовка к открытию','Дворец открыт'];
+async function worldPalaceLoad(){
+ const info=$('worldPalaceStatus');if(!info)return;
+ try{
+  const data=await api('/api/owner/world/palace');worldPalaceData=data.palace;
+  info.textContent=`Текущий этап: ${worldPalaceData.stage}/10 · ${PALACE_STAGE_LABELS[worldPalaceData.stage-1]} · ревизия ${worldPalaceData.revision} · взносы отключены`;
+  const select=$('worldPalaceStage');select.innerHTML=PALACE_STAGE_LABELS.map((title,i)=>`<option value="${i+1}" ${i+1<=worldPalaceData.stage?'disabled':''}>${i+1}. ${esc(title)}</option>`).join('');
+  select.value=String(Math.min(10,worldPalaceData.stage+1));select.disabled=worldPalaceData.stage===10;
+  $('worldPalaceSave').disabled=worldPalaceData.stage===10;
+  $('worldPalaceHistory').innerHTML=(data.history||[]).map(row=>`<div class="row"><div class="grow"><b>Этап ${row.oldStage} → ${row.newStage}</b><span class="meta">${esc(row.reason)} · ${dateTs(row.createdAt)}</span></div></div>`).join('');
+ }catch(e){worldPalaceData=null;info.textContent=`Не удалось получить серверное состояние: ${e.message}`;$('worldPalaceSave').disabled=true;}
+}
+async function worldPalaceSave(){
+ if(worldPalaceBusy||!worldPalaceData)return;
+ const reason=String($('worldPalaceReason').value||'').trim(),stage=Number($('worldPalaceStage').value);
+ if(reason.length<10||reason.length>280)return toast('Укажите причину изменения: от 10 до 280 символов.',true);
+ if(!Number.isSafeInteger(stage)||stage<=worldPalaceData.stage||stage>10)return toast('Выберите следующий допустимый этап.',true);
+ if(!confirm(`Опубликовать Дворец воспоминаний: стадия ${stage}/10? Это увидят все игроки общего города. Взносы останутся закрыты.`))return;
+ worldPalaceBusy=true;$('worldPalaceSave').disabled=true;
+ const requestId=crypto.randomUUID();
+ try{const result=await api('/api/owner/world/palace/stage/save',{requestId,expectedRevision:worldPalaceData.revision,stage,reason});
+  worldPalaceData=result.palace;$('worldPalaceReason').value='';toast('Стадия дворца опубликована.');await worldPalaceLoad();
+ }catch(e){toast(e.message,true);await worldPalaceLoad();}finally{worldPalaceBusy=false;}
+}
+$('worldPalaceReload')?.addEventListener('click',worldPalaceLoad);
+$('worldPalaceSave')?.addEventListener('click',worldPalaceSave);
 const WP2_VIEWS=new Set(['world-projects','world-events','world-story','world-residents']);
 let wp2Data=null,wp2Draft=null,wp2Busy=false;
 const wp2Clone=value=>JSON.parse(JSON.stringify(value));
@@ -4180,9 +4217,9 @@ function wp2Render(){if(!wp2Data||!wp2Draft)return;
  wp2UpdateStatus();
 }
 async function wp2Load(force=false){
- if(wp2Data&&!force){wp2Render();return;}
+ if(wp2Data&&!force){wp2Render();if(state.view==='world-projects')void worldPalaceLoad();return;}
  if(force&&wp2Data&&JSON.stringify(wp2Draft)!==JSON.stringify(wp2Data.draft)&&!confirm('Несохранённые правки пропадут. Перезагрузить черновик?'))return;
- try{wp2Data=await api('/api/owner/world/content');wp2Draft=wp2Clone(wp2Data.draft);wp2Render();}
+ try{wp2Data=await api('/api/owner/world/content');wp2Draft=wp2Clone(wp2Data.draft);wp2Render();if(state.view==='world-projects')void worldPalaceLoad();}
  catch(e){for(const id of ['projects','events','story','residents']){const el=$('wp2Status-'+id);if(el){el.className='wp2-status is-error';el.textContent=e.message;}}throw e;}
 }
 async function wp2Action(action){

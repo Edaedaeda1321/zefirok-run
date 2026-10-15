@@ -53,7 +53,7 @@ test('large buildings and parks cost meaningfully more than smaller ones',()=>{
 });
 
 test('all 50 current catalog prices are positive, safe integers and still server-quoteable',()=>{
- assert.equal(CATALOG_ITEMS.length,51);
+ assert.equal(CATALOG_ITEMS.length,52);
  assert.deepEqual(CATALOG_ITEMS.map(x=>x.id).sort(),Object.keys(OBJECT_PRICES).sort());
  for(const item of CATALOG_ITEMS){
   assert.deepEqual(item.price,OBJECT_PRICES[item.id],item.id);

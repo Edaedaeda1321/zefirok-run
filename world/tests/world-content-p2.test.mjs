@@ -19,6 +19,7 @@ function setup({legacy=false}={}){
  for(const file of ['0115_zeffi_community_fund.sql','0118_zeffi_story_progression.sql','0119_zeffi_world_resident_requests.sql'])sqlite.exec(sql(file));
  if(legacy)sqlite.prepare('INSERT INTO zeffi_world_resident_requests(telegram_id,request_id,template_id,assigned_at,status,progress) VALUES (?,?,?,?,?,?)').run('12345','resident-park','park',1,'ready',1);
  sqlite.exec(sql('0122_zeffi_world_content_p2.sql'));
+ sqlite.exec(sql('0124_zeffi_palace_memories.sql'));
  const adapter={prepare(query){const stmt=sqlite.prepare(query);return{
    bind(...args){return {first:async()=>stmt.get(...args)??null,all:async()=>({results:stmt.all(...args)}),run:async()=>{const r=stmt.run(...args);return {meta:{changes:Number(r.changes)}};}};},
    first:async()=>stmt.get()??null,all:async()=>({results:stmt.all()})

@@ -75,6 +75,7 @@ const VISIBLE_ITEMS = [
   { id: 'coffee-kiosk', buildMs: 300000, category: 'shops', titleKey: 'coffeeKiosk', descriptionKey: 'coffeeKioskDescription', icon: 'coffee', w: 2, h: 2, needsRoad: true, style: 'coffee', height: 44 },
   { id: 'coffee-house', buildMs: 300000, category: 'shops', titleKey: 'coffeeHouse', descriptionKey: 'coffeeHouseDescription', icon: 'coffee', w: 3, h: 3, needsRoad: true, style: 'rose', height: 63 },
   // One iconic building houses both White Rabbit and Cafe Zephirok.
+  { id: 'palace-of-memories', buildMs: 24*60*60*1000, category: 'plazas', titleKey: 'palaceMemories', descriptionKey: 'palaceMemoriesDescription', icon: 'star', w: 6, h: 6, needsRoad: false, style: 'gold', height: 155, rotatable: false, blockingSurface: true },
   { id: 'white-rabbit-zephirok', buildMs: 900000, category: 'shops', titleKey: 'whiteRabbitZephirok', descriptionKey: 'whiteRabbitZephirokDescription', icon: 'coffee', w: 4, h: 4, needsRoad: true, style: 'rose', height: 115 },
   { id: 'bakery', buildMs: 300000, category: 'shops', titleKey: 'bakery', descriptionKey: 'bakeryDescription', icon: 'cake', w: 3, h: 2, needsRoad: true, style: 'butter', height: 56 },
   { id: 'flower-shop', buildMs: 300000, category: 'shops', titleKey: 'flowerShop', descriptionKey: 'flowerShopDescription', icon: 'flower', w: 2, h: 2, needsRoad: true, style: 'mint', height: 45 },
@@ -165,6 +166,7 @@ export const SHOP_UNLOCK_LEVELS = Object.freeze({
   'plaza-monument-base': 9,
   // Level 10
   'white-rabbit-zephirok': 10,
+  'palace-of-memories': 10,
   'plaza-prestige-podium': 10,
 });
 export const CATALOG_ITEMS = Object.freeze(VISIBLE_ITEMS.map(item => {

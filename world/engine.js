@@ -87,6 +87,7 @@ export function skipConstruction(city, uid, now = Date.now()) {
   if (!item || item.stored) throw new BuildError('NOT_OWNED');
   if (!Number.isSafeInteger(now) || now < 0) throw new BuildError('INVALID_TIME');
   if (!isConstructing(item, now)) throw new BuildError('NOT_CONSTRUCTING');
+  if(item.kind==='palace-of-memories')throw new BuildError('SKIP_UNAVAILABLE'); // prestige landmark: no paid acceleration
   const cost = constructionSkipPrice(item, now);
   const next = cloneCity(city);
   chargeWallet(next, {points:cost.points,coffee:cost.coffee,treats:cost.treats});
@@ -224,7 +225,7 @@ export function checkPlacement(city, catalog, kind, x, y, rotation = 0, excludeU
   const def = catalog[kind];
   if (!def) return { ok: false, code: 'UNKNOWN_BUILDING' };
   if (![x, y, rotation].every(isInteger)) return { ok: false, code: 'INVALID_POSITION' };
-  if(kind==='zeffi-central-square' && rotation!==0)return {ok:false,code:'INVALID_POSITION'}; // single supplied camera view
+  if((kind==='zeffi-central-square'||kind==='palace-of-memories') && rotation!==0)return {ok:false,code:'INVALID_POSITION'}; // single supplied camera view
   const { w, h } = dims(def, rotation);
   for(let cx=x;cx<x+w;cx++)for(let cy=y;cy<y+h;cy++){
     if(!inBounds(city,cx,cy))return {ok:false,code:'OUTSIDE_CITY'};
@@ -330,7 +331,8 @@ export function addGiftDecor(city,catalog,kind,x,y,rotation=0,now=Date.now()){
 
 export function addObject(city, catalog, kind, x, y, rotation = 0, now = Date.now()) {
   const price = objectPrice(catalog, kind);
-  const requiredLevel = Number(catalog[kind]?.minCityLevel || 1);
+  if(kind==='palace-of-memories' && city.objects.some(object=>object.kind===kind))throw new BuildError('ALREADY_OWNED');
+  const requiredLevel = Math.max(Number(catalog[kind]?.minCityLevel || 1),kind==='palace-of-memories'?10:1);
   // Use the highest achieved city level. A completed building may have
   // raised the level while the game was closed; moving/storing old
   // purchases is never subject to this purchase-only check.

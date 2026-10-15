@@ -5,8 +5,8 @@ import { CATALOG, CATALOG_ITEMS } from '../world/catalog.js';
 import { OBJECT_PRICES, ROAD_TILE_PRICE, PARCEL_PRICE } from '../world/economy.js';
 import { makeInitialCity, addObject, objectPrice, cityStats, buildingEffectPreview, BuildError } from '../world/engine.js';
 
-assert.equal(CATALOG_ITEMS.length,51);
-assert.equal(Object.keys(OBJECT_PRICES).length,51);
+assert.equal(CATALOG_ITEMS.length,52);
+assert.equal(Object.keys(OBJECT_PRICES).length,52);
 assert.equal(CATALOG.cottage.price.points,5500);
 assert.equal(CATALOG.cottage.minCityLevel,1);
 assert.equal(CATALOG['bus-terminal'].minCityLevel,7);

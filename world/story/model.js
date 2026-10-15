@@ -7,10 +7,10 @@ export const FESTIVAL_GOAL=50_000_000;
 export const FESTIVAL_MILESTONES=Object.freeze([12_500_000,30_000_000,FESTIVAL_GOAL]);
 export const FESTIVAL_AMOUNTS=Object.freeze([100_000,500_000,1_000_000,5_000_000]);
 export const BUILD_DURATION_MS = 45000;
-export const KNOWN_PLACES = Object.freeze(['square','cafe','belkino','friends','station','festival','rabbit','mystery','community-garden']);
+export const KNOWN_PLACES = Object.freeze(['square','cafe','belkino','friends','station','festival','rabbit','mystery','community-garden','palace']);
 const integer = (value, fallback, max) => Number.isSafeInteger(value) && value >= 0 && value <= max ? value : fallback;
 export function createDemoState() {
-  return {version:DEMO_VERSION, chapter:0, materials:400, visited:[], project:{community:340, personal:0, startedAt:0, readyAt:0, opened:false},festival:{community:0,personal:0,credits:2_000_000},whiteRabbitPreview:0};
+  return {version:DEMO_VERSION, chapter:0, materials:400, visited:[], palaceStage:1, project:{community:340, personal:0, startedAt:0, readyAt:0, opened:false},festival:{community:0,personal:0,credits:2_000_000},whiteRabbitPreview:0};
 }
 export function sanitizeDemoState(raw, now=Date.now()) {
   const result=createDemoState();

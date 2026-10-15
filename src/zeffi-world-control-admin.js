@@ -3,6 +3,7 @@
 import {readWorldControl,effectiveWorldControlFlags,WORLD_CONTROL_MODES,WORLD_CONTROL_FLAGS} from './zeffi-world-control.js';
 import {handleOwnerWorldBalance} from './zeffi-world-balance-admin.js';
 import {handleOwnerWorldContent} from './zeffi-world-content-admin.js';
+import {handleOwnerPalace} from './zeffi-world-palace-admin.js';
 
 class ControlError extends Error { constructor(status,message){super(message);this.status=status;} }
 const fail=(status,message)=>{throw new ControlError(status,message);};
@@ -165,6 +166,7 @@ export async function handleOwnerWorldControl({env,ctx,path}){
   if(!ctx?.access?.owner)fail(403,'Только владелец проекта может управлять Миром Зеффи.');
   if(path==='/api/owner/world/balance'||path.startsWith('/api/owner/world/balance/'))return handleOwnerWorldBalance({env,ctx,path});
   if(path==='/api/owner/world/content'||path.startsWith('/api/owner/world/content/'))return handleOwnerWorldContent({env,ctx,path});
+  if(path==='/api/owner/world/palace'||path==='/api/owner/world/palace/stage/save')return handleOwnerPalace({env,ctx,path});
   if(path==='/api/owner/world/overview'){
     const [access,overview]=await Promise.all([accessView(env,db),metrics(db)]);
     return {...access,overview};

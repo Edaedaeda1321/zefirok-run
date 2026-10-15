@@ -13,7 +13,8 @@ export function createStoryProgressClient(initData,{fetchFn=fetch}={}){
    if(!response.ok||data?.ok!==true){const error=new Error(String(data?.error||'История временно недоступна.'));error.code=String(data?.code||'STORY_REQUEST_FAILED');throw error;}
    if(data.version!=='zeffi-story-rc1'||!Number.isInteger(data.chapter)||data.chapter<0||data.chapter>3||
     !Number.isSafeInteger(data.revision)||data.revision<0||!Array.isArray(data.visited)||
-    !Array.isArray(data.unlockedDistricts)||!Array.isArray(data.chapters)||!data.events||typeof data.canAdvance!=='boolean')
+    !Array.isArray(data.unlockedDistricts)||!Array.isArray(data.chapters)||!data.events||typeof data.canAdvance!=='boolean'||
+    !Number.isInteger(data.palace?.stage)||data.palace.stage<1||data.palace.stage>10||data.palace?.contributionsEnabled!==false||!Number.isSafeInteger(data.palace?.revision))
     throw new Error('Сервер вернул некорректные данные истории.');
    return data;
   }finally{clearTimeout(timer);}

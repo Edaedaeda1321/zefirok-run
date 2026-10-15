@@ -12,9 +12,9 @@ function fixture(){
  const db=new DatabaseSync(':memory:');
  db.exec('PRAGMA foreign_keys=ON; CREATE TABLE admin_profile_state(telegram_id TEXT PRIMARY KEY,wallet INTEGER,coffee INTEGER,treats INTEGER,revision INTEGER);');
  db.exec('INSERT INTO admin_profile_state VALUES (\'12345\',70000000,500,1000,0),(\'67890\',70000000,500,1000,0)');
- for(const file of ['0115_zeffi_community_fund.sql','0118_zeffi_story_progression.sql'])
+ for(const file of ['0115_zeffi_community_fund.sql','0118_zeffi_story_progression.sql','0124_zeffi_palace_memories.sql'])
   db.exec(readFileSync(new URL(`../../migrations/${file}`,import.meta.url),'utf8'));
- const adapter={prepare(sql){return{all:async()=>({results:db.prepare(sql).all()}),bind(...args){const stmt=db.prepare(sql);return{
+ const adapter={prepare(sql){return{first:async()=>db.prepare(sql).get()??null,all:async()=>({results:db.prepare(sql).all()}),bind(...args){const stmt=db.prepare(sql);return{
   first:async()=>stmt.get(...args)??null,
   all:async()=>({results:stmt.all(...args)}),
   run:async()=>{const meta=stmt.run(...args);return {meta:{changes:Number(meta.changes)}};}
@@ -45,7 +45,7 @@ const state=f=>f.call({op:'state'});
 test('0118 adds independent story tables and two global D1 events with existing fund links',async()=>{
  const f=fixture();const r=await state(f);assert.equal(r.status,200);
  assert.deepEqual([r.body.chapter,r.body.revision,r.body.completed],[0,0,false]);
- assert.deepEqual(r.body.unlockedDistricts.sort(),['square','cafe','belkino','friends','station','community-garden'].sort());
+ assert.deepEqual(r.body.unlockedDistricts.sort(),['square','cafe','belkino','friends','station','community-garden','palace'].sort());
  assert.equal(r.body.events.garden.total,0);assert.equal(r.body.events.festival.status,'active');
  assert.deepEqual(f.db.prepare('SELECT event_id,project_id,enabled FROM zeffi_story_events ORDER BY event_id').all().map(x=>({...x})),
   [{event_id:'festival',project_id:'festival',enabled:1},{event_id:'garden',project_id:'garden',enabled:1}]);

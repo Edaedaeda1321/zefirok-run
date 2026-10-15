@@ -39,14 +39,16 @@ export function validateWorldBalance(input,{reachability=true}={}){
  });
  const ids=BASE_ITEMS.map(x=>x.id).sort();
  if(!input.items||typeof input.items!=='object'||Array.isArray(input.items))error('Каталог должен включать все существующие объекты и только их.');
- // 2026-10 park release: old saved P1 draft/published JSON lacks exactly one
- // new purchaseable kind. Canonicalize it with the safe default price/unlock
- // without mutating D1 or accepting other missing/unknown catalog entries.
- const newPark='central-park-zeffi';
+ // Two additive catalog extensions. Persisted P1 configs predate these entries.
+ // Only exactly these missing ids are filled from immutable safe defaults; any
+ // unexpected/missing legacy entry still fails closed. No D1 rewrite required.
+ const safeAdditions=new Set(['central-park-zeffi','palace-of-memories']);
  const keys=Object.keys(input.items).sort();
- const legacyIds=ids.filter(id=>id!==newPark);
- const legacy=ids.includes(newPark)&&!Object.hasOwn(input.items,newPark)&&keys.join(',')===legacyIds.join(',');
- const canonicalInput=legacy?{...input.items,[newPark]:{minCityLevel:BASE_CATALOG[newPark].minCityLevel,price:{...BASE_CATALOG[newPark].price}}}:input.items;
+ const absent=ids.filter(id=>!Object.hasOwn(input.items,id));
+ if(keys.some(id=>!ids.includes(id))||absent.some(id=>!safeAdditions.has(id)))
+   error('Каталог должен включать все существующие объекты и только их.');
+ const canonicalInput={...input.items};
+ for(const id of absent)canonicalInput[id]={minCityLevel:BASE_CATALOG[id].minCityLevel,price:{...BASE_CATALOG[id].price}};
  if(Object.keys(canonicalInput).sort().join(',')!==ids.join(','))error('Каталог должен включать все существующие объекты и только их.');
  const items={};const distribution=Array(11).fill(0);
  for(const id of ids){
@@ -61,6 +63,7 @@ export function validateWorldBalance(input,{reachability=true}={}){
  }
  for(let i=1;i<=10;i++)if(!distribution[i])error(`На уровне ${i} не открывается ни один объект.`);
  for(const id of ['cottage','coffee-kiosk','playground'])if(items[id]?.minCityLevel!==1)error(`Базовая постройка ${id} должна оставаться доступна с 1-го уровня.`);
+ if(items['palace-of-memories']?.minCityLevel!==10)error('Дворец воспоминаний открывается только с 10-го уровня.');
  const canonical={schema:1,levels:levels.map(x=>({level:x.level,residents:x.residents,comfort:x.comfort,parks:x.parks,shops:x.shops,reward:x.reward})),items};
  if(reachability)assertWorldBalanceReachable(canonical);
  return canonical;

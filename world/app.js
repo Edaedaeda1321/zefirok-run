@@ -584,7 +584,7 @@ function updateSelection(){
  const skipInProgress=state.skipAnimation?.uid===item.uid;
  const skipPreparing=state.skipPreparingUid===item.uid;
  $('selectionStatus').textContent=skipInProgress?'✨ Магическое завершение…':skipPreparing?'Подготавливаем анимацию…':constructing?`${tr('buildReadyIn')} ${formatRemaining(constructionRemaining(item))}`:(CATALOG[item.kind].needsRoad?(connected?tr('roadOk'):tr('roadMissing')):`${dims(CATALOG[item.kind],item.rotation).w}x${dims(CATALOG[item.kind],item.rotation).h}`);
- $('finishBuildTest').hidden=!constructing || skipInProgress;
+ $('finishBuildTest').hidden=!constructing || skipInProgress || item.kind==='palace-of-memories';
  $('finishBuildTest').disabled=skipInProgress||skipPreparing||(SERVER_MODE&&!state.serverPurchasesEnabled);
  $('selectionBuildProgress').hidden=!constructing;
  if(constructing){
@@ -1129,7 +1129,7 @@ function closeSkipModal(){state.paidSkipUid=null;$('skipModal').hidden=true;}
 function updateSkipQuote(){
  if($('skipModal').hidden || !state.paidSkipUid)return;
  const item=state.city.objects.find(row=>row.uid===state.paidSkipUid&&!row.stored);
- if(!item || !isConstructing(item)){closeSkipModal();return;}
+ if(!item || !isConstructing(item) || item.kind==='palace-of-memories'){closeSkipModal();return;}
  const cost=constructionSkipPrice(item);
  const msToNextReduction=60000-(Math.max(0,Date.now()-Number(item.buildStartedAt||0))%60000);
  const nextPrice=Math.max(5,cost.coffee-25);
@@ -1169,7 +1169,7 @@ function paintSkipAnimation(token){
 async function finishSelectedConstruction(uid){
  if(state.skipPreparingUid || state.skipAnimation)return;
  const item=state.city.objects.find(row=>row.uid===uid&&!row.stored);
- if(!item||!isConstructing(item))return;
+ if(!item||!isConstructing(item)||item.kind==='palace-of-memories')return;
  state.skipPreparingUid=uid;
  updateUI();
  try{

@@ -104,7 +104,7 @@ test('source wiring keeps authenticated requests, existing payment confirmation 
  assert.match(app,/pendingDonation=\{\.\.\.quote,requestId\}/);
  assert.match(app,/if\(liveMode&&\['contribute','festival-contribute','materials'/);
  assert.match(boot,/payload\?\.access!=='tester'/);
- assert.match(boot,/await import\('\.\/app\.js\?v=rc-community5'\)/);
+ assert.match(boot,/await import\('\.\/app\.js\?v=palace1'\)/);
  assert.match(page,/\.\/story\/community-events\.css\?v=rc-community5/);
  assert.match(css,/prefers-reduced-motion/);
  assert.match(fund,/await db\.batch\(statements\)/);

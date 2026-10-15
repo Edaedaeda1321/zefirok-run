@@ -22,7 +22,7 @@ test('RC7 preserves owned legacy 3x3 plaza and adds a separate purchasable 7x7 p
  assert.equal(CATALOG[KIND].buildMs,720_000);
  assert.equal(CATALOG[KIND].minCityLevel,8);
  assert.deepEqual(OBJECT_PRICES[KIND],{points:42000,coffee:0,treats:90});
- assert.equal(CATALOG_ITEMS.length,51);
+ assert.equal(CATALOG_ITEMS.length,52);
  assert.equal(SHOP_UNLOCK_LEVELS[KIND],8);
 });
 

@@ -16,7 +16,7 @@ const GLOBAL='story-global-park-zeffi';
 const NOW=1_800_000_000_000;
 
 test('new park is a separate level-8 6x6 player purchase; 7x7 square retains its existing price and ID',()=>{
- assert.equal(CATALOG_ITEMS.length,51);
+ assert.equal(CATALOG_ITEMS.length,52);
  assert.deepEqual([CATALOG[PARK].w,CATALOG[PARK].h],[6,6]);
  assert.equal(SHOP_UNLOCK_LEVELS[PARK],8);
  assert.deepEqual(OBJECT_PRICES[PARK],{points:65000,coffee:0,treats:150});

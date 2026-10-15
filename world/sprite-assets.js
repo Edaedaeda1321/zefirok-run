@@ -51,8 +51,20 @@ export function setSpriteMode(value) {
 }
 export function onSpriteUpdate(callback) { onUpdate = typeof callback === 'function' ? callback : () => {}; }
 
+export const PALACE_BUILDING_ID='palace-of-memories';
+export function palaceStageSprite(stage){
+ const n=Math.max(1,Math.min(10,Number(stage)||1));
+ return `palace_memories_${String(n).padStart(2,'0')}`;
+}
 export function buildingAssetId(catalogId, rotation = 0, state = 'complete', buildProgress = null) {
- // One approved view: rotate is disabled for this new 7x7 plaza, not for legacy art.
+  if(catalogId===PALACE_BUILDING_ID){
+    if(state==='complete')return palaceStageSprite(10);
+    const step=Number.isFinite(buildProgress)?1+Math.floor(Math.max(0,Math.min(.999999,buildProgress))*9):Number(/^build_0([1-9])$/.exec(state)?.[1]||1);
+    return palaceStageSprite(step);
+  }
+  const storyPalace=/^story-palace-memories-(0[1-9]|10)$/.exec(catalogId);
+  if(storyPalace)return palaceStageSprite(Number(storyPalace[1]));
+ // One approved view: rotate is disabled for this new 6x6 plaza, not for legacy art.
  if(catalogId==='zeffi-central-square'){
   if(state==='complete')return 'zeffi_square_complete';
   const index=Number.isFinite(buildProgress)?Math.min(6,1+Math.floor(Math.max(0,Math.min(.999999,buildProgress))*6)):(state==='build_01'?1:state==='build_02'?3:5);
@@ -224,6 +236,7 @@ export async function preloadSpriteSet(ids,{pin=false,onProgress=()=>{}}={}){
 }
 // Warm construction stages before server purchase, including acceleration FX.
 export function preloadBuildFrames(kind,rotation=0){
+ if(kind===PALACE_BUILDING_ID)return preloadSpriteSet([palaceStageSprite(1),palaceStageSprite(10)]);
  if(kind==='central-park-zeffi')return preloadSpriteSet([...Array(6)].map((_,i)=>`zeffi_park_build_0${i+1}`).concat(catalogSpriteId(kind,rotation,'complete')));
  if(kind==='zeffi-central-square')return preloadSpriteSet([...Array(6)].map((_,i)=>`zeffi_square_build_0${i+1}`).concat('zeffi_square_complete'));
  if(kind==='white-rabbit-zephirok')return preloadSpriteSet([...Array(6)].map((_,i)=>`wrz_build_0${i+1}`).concat(catalogSpriteId(kind,rotation,'complete')).filter(Boolean));

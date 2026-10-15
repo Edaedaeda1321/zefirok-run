@@ -51377,6 +51377,8 @@ const OWNER_CC_ENDPOINT_TARGET = Object.freeze({
   "/api/owner/world/balance/publish": "live",
   "/api/owner/world/balance/draft/restore": "live",
   "/api/owner/world/config/save": "live",
+  "/api/owner/world/palace": "read",
+  "/api/owner/world/palace/stage/save": "live",
   "/api/owner/world/tester/add": "live",
   "/api/owner/world/tester/remove": "live",
   "/api/owner/staging/bootstrap": "staging",

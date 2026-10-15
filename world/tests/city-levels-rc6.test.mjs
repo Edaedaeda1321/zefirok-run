@@ -36,7 +36,7 @@ test('RC6 keeps the exact original levels 1..5 and adds monotonic, reachable lev
 });
 
 test('RC6 reuses all 50 existing paid objects and spreads real unlocks over each level 1..10',()=>{
- assert.equal(CATALOG_ITEMS.length,51);
+ assert.equal(CATALOG_ITEMS.length,52);
  assert.equal(Object.keys(SHOP_UNLOCK_LEVELS).length,CATALOG_ITEMS.length);
  assert.deepEqual(Object.keys(SHOP_UNLOCK_LEVELS).sort(),CATALOG_ITEMS.map(x=>x.id).sort());
  for(const def of CATALOG_ITEMS){
