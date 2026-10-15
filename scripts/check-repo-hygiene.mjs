@@ -55,6 +55,22 @@ if (await exists('BASE_COMMIT.txt')) {
   fail('BASE_COMMIT.txt must not exist; Git history is the source of commit identity.');
 }
 
+// The RU dictionary is a flat JS object. Repeated keys silently override earlier
+// translations, so reject them before the deploy/bundler stage.
+const locale = await readFile(path.join(root, 'world/ru.js'), 'utf8');
+const localeKeys = new Map();
+for (const [index, line] of locale.split(/\r?\n/).entries()) {
+  // Some entries share a line: `price:'...', testPrices:'...'`.
+  const properties = /(?:^|,)\s*(?:(['"])([A-Za-z_$][\w$]*)\1|([A-Za-z_$][\w$]*))\s*:/g;
+  for (const match of line.matchAll(properties)) {
+    const key = match[2] || match[3];
+    if (localeKeys.has(key)) {
+      fail(`world/ru.js duplicates translation key "${key}" at lines ${localeKeys.get(key)} and ${index + 1}`);
+    }
+    localeKeys.set(key, index + 1);
+  }
+}
+
 const entries = await readdir(root, { withFileTypes: true });
 const legacyRootFiles = entries
   .filter((entry) => entry.isFile())

@@ -13,7 +13,7 @@ const REQUIRED_RULES = Object.freeze([
   'package.json', 'package-lock.json',
   '*.zip', '*.patch', '*.diff', '*_test.html', '*_testing*.html', '*New_Version*.html',
   'BASE_COMMIT.txt', 'CODEX_PROMPT.txt', 'PROMPT_FOR_CODEX.txt', 'DAILY_ACTIVITY_UPDATE.txt',
-  'PATCH_NOTES.txt', 'CHANGELOG.md', 'README*', 'THIRD_PARTY_NOTICES.md',
+  'PATCH_NOTES.txt', 'CHANGELOG.md', 'README*', 'ASSET_MAPPING_RU.md', 'PATCH_FILE_SHA256.json', 'THIRD_PARTY_NOTICES.md',
   'profile.html', 'candidate-console.html', 'candidates/'
 ]);
 
