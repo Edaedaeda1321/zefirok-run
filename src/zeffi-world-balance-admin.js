@@ -7,7 +7,7 @@ const fail=(status,message)=>{throw new AdminError(status,message);};
 const now=()=>Math.floor(Date.now()/1000);
 const matchId=id=>typeof id==='string'&&/^[A-Za-z0-9_-]{12,90}$/.test(id);
 const canonical=input=>validateWorldBalance(input,{reachability:true});
-const parse=raw=>raw?JSON.parse(raw):defaultWorldBalance();
+const parse=raw=>raw?validateWorldBalance(JSON.parse(raw),{reachability:false}):defaultWorldBalance();
 const query=(db,sql,args=[])=>args.length?db.prepare(sql).bind(...args):db.prepare(sql);
 const read=(db,sql,args=[])=>query(db,sql,args).first();
 async function row(db){

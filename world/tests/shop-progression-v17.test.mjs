@@ -10,8 +10,8 @@ const now=1800000000000;
 const assertReject=(call,code)=>assert.throws(call,error=>error instanceof BuildError&&error.code===code);
 
 test('v17: all 50 shop objects have distinct costs, no compulsory coffee, coherent level unlocks',()=>{
- assert.equal(CATALOG_ITEMS.length,50);
- assert.equal(Object.keys(OBJECT_PRICES).length,50);
+ assert.equal(CATALOG_ITEMS.length,51);
+ assert.equal(Object.keys(OBJECT_PRICES).length,51);
  for(const def of CATALOG_ITEMS){
   assert.deepEqual(def.price,OBJECT_PRICES[def.id]);
   assert.ok(def.price.points>0,def.id);
@@ -19,7 +19,7 @@ test('v17: all 50 shop objects have distinct costs, no compulsory coffee, cohere
   assert.equal(Number.isSafeInteger(def.minCityLevel),true,def.id);
   assert.ok(def.minCityLevel>=1&&def.minCityLevel<=10,def.id);
  }
- assert.equal(new Set(CATALOG_ITEMS.map(x=>x.id)).size,50);
+ assert.equal(new Set(CATALOG_ITEMS.map(x=>x.id)).size,51);
  assert.deepEqual(ROAD_TILE_PRICE,{points:50,coffee:0,treats:0});
  assert.equal(PARCEL_PRICE.points,1200);
  assert.equal(PARCEL_PRICE.treats,10);

@@ -22,7 +22,7 @@ test('RC7 preserves owned legacy 3x3 plaza and adds a separate purchasable 7x7 p
  assert.equal(CATALOG[KIND].buildMs,720_000);
  assert.equal(CATALOG[KIND].minCityLevel,8);
  assert.deepEqual(OBJECT_PRICES[KIND],{points:42000,coffee:0,treats:90});
- assert.equal(CATALOG_ITEMS.length,50);
+ assert.equal(CATALOG_ITEMS.length,51);
  assert.equal(SHOP_UNLOCK_LEVELS[KIND],8);
 });
 
@@ -79,7 +79,7 @@ test('RC7 single-angle pack has six different construction sprites, one complete
  assert.equal(spriteMetadata('zeffi_square_complete').width,1024);
 });
 
-test('RC7 shared story city always displays only completed 7x7 square; road network and fountains remain valid',()=>{
+test('RC7 old square remains players-only; shared story city displays completed 6x6 park; road network and fountains remain valid',()=>{
  for(const chapter of [0,1,2]){
   const state=setDemoChapter(createDemoState(),chapter);
   for(const funded of [false,true]){
@@ -88,16 +88,16 @@ test('RC7 shared story city always displays only completed 7x7 square; road netw
    assert.deepEqual(validateStoryMap(city),[]);
    const square=city.objects.filter(o=>o.uid==='story-central-square');
    assert.equal(square.length,1);
-   assert.equal(square[0].kind,KIND);
+   assert.equal(square[0].kind,'central-park-zeffi');
    assert.deepEqual([square[0].x,square[0].y],[20,20]);
    assert.equal(square[0].buildReadyAt,0);
    assert.ok(city.objects.some(o=>o.uid==='story-fountain'&&o.x===28&&o.y===24));
    const claimedRoads=new Set(city.roads);
-   for(let x=20;x<27;x++)for(let y=20;y<27;y++)assert.ok(!claimedRoads.has(`${x},${y}`));
+   for(let x=20;x<26;x++)for(let y=20;y<26;y++)assert.ok(!claimedRoads.has(`${x},${y}`));
    assert.equal(city.objects.some(o=>o.kind==='city-square'),false);
   }
  }
- assert.equal(placeById('square').kind,KIND);
+ assert.equal(placeById('square').kind,'central-park-zeffi');
  assert.equal(placeById('square').uid,'story-central-square');
- assert.ok(requiredStorySpriteIds().includes('zeffi_square_complete'));
+ assert.ok(requiredStorySpriteIds().includes('zeffi_park_complete_n'));
 });

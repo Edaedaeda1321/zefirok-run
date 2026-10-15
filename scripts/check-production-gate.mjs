@@ -140,6 +140,7 @@ const steps = [
   ['Zeffi city transport v2', 'node', ['scripts/check-world-city-fix-v2.mjs']],
   ['Zeffi White Rabbit / Zephirok landmark', 'node', ['scripts/check-world-white-rabbit-v1.mjs']],
   ['Zeffi Belkino 9x9 story park', 'node', ['scripts/check-world-park-belkino-v1.mjs']],
+  ['Zeffi premium parks 6x6 and safe global-only map', 'node', ['scripts/check-zeffi-premium-parks-v1.mjs']],
   ['Zeffi World dual tester navigation and mobile UI', 'node', ['scripts/check-world-dual-v1.mjs']],
   ['game task reward engine', 'node', ['scripts/check-game-task-reward-engine.mjs']],
   ['P1 read paths', 'node', ['scripts/check-p1-read-paths.mjs']],

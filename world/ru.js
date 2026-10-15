@@ -22,6 +22,7 @@ export const RU = Object.freeze({
   whiteRabbitZephirokDescription:'Знаковое объединённое здание: «Белый Кролик» и кондитерская «Зефирок». Престижный объект для 5-го уровня города.',
   busTerminal:"Автобусный вокзал Зеффи", busTerminalDescription:"Вокзал 4×3 с платформами. Нужна связь с дорогой.",
   busStop:"Остановка «Сладкая»", busStopDescription:"Небольшая остановка 2×1. Нужна связь с дорогой.",
+  centralParkZeffi:"Центральный парк Зеффи", centralParkZeffiDescription:"Роскошный парк с фонтаном, цветами, фонарями и скамейками. Участок 6×6.",
   pondPark:"Парк с прудом", pondParkDescription:"Сказочный парк с мостиком и водоёмом, 3×3.",
   roseGarden:"Розарий Зеффи", roseGardenDescription:"Цветочный сад с розами и аркой, 3×3.",
   botanicalGarden:"Ботанический сад", botanicalGardenDescription:"Большой цветущий престижный парк, 4×4.",

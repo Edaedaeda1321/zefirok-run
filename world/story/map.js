@@ -5,16 +5,18 @@ import { projectStatus, festivalStage } from './model.js';
 export const STORY_MAP_SIZE=48;
 // Static 9x9 story landmark: never registered in the live shop or server catalog.
 export const STORY_PARK_BELKINO_KIND='story-park-belkino';
+export const STORY_GLOBAL_PARK_KIND='story-global-park-zeffi';
 export const STORY_FESTIVAL_KINDS=Object.freeze({stage_a:'story-festival-stage-a',stage_b:'story-festival-stage-b',stage_c:'story-festival-stage-c',complete:'story-festival-complete'});
 export const STORY_CATALOG=Object.freeze({
  ...CATALOG,
  [STORY_PARK_BELKINO_KIND]:Object.freeze({id:STORY_PARK_BELKINO_KIND,category:'parks',titleKey:'pondPark',descriptionKey:'pondParkDescription',icon:'leaf',w:9,h:9,needsRoad:false,style:'park',height:0,buildMs:0}),
+ [STORY_GLOBAL_PARK_KIND]:Object.freeze({id:STORY_GLOBAL_PARK_KIND,category:'parks',titleKey:'centralParkZeffi',descriptionKey:'centralParkZeffiDescription',icon:'leaf',w:6,h:6,needsRoad:false,style:'park',height:0,buildMs:0}),
  ...Object.fromEntries(Object.values(STORY_FESTIVAL_KINDS).map(id=>[id,Object.freeze({id,category:'plazas',titleKey:'citySquare',descriptionKey:'citySquareDescription',icon:'flag',w:6,h:6,needsRoad:false,style:'rose',height:116,buildMs:0})])),
  ...Object.fromEntries(Array.from({length:6},(_,i)=>{const id=`story-wr-stage-${i+1}`;return [id,Object.freeze({id,category:'shops',titleKey:'whiteRabbitZephirok',descriptionKey:'whiteRabbitZephirokDescription',icon:'coffee',w:4,h:4,needsRoad:true,style:'rose',height:115,buildMs:0})];}))
 });
 export const MAP_VERSION='zeffi-story-map-v1';
 export const DISTRICTS=Object.freeze([
- {id:'square',title:'Центральная площадь',short:'Площадь',icon:'spark',focus:[23.5,23.5],bounds:[19,19,13,13],chapter:0,kind:'zeffi-central-square',description:'Сердце общего города: встречи, прогулки и будущие сюжетные сцены.'},
+ {id:'square',title:'Центральный парк Зеффи',short:'Парк Зеффи',icon:'leaf',focus:[23,23],bounds:[19,19,13,13],chapter:0,kind:'central-park-zeffi',description:'Зелёное сердце общего города: цветы, фонтан и прогулки. Прежняя площадь доступна для постройки игрокам.'},
  {id:'cafe',title:'Кафе «Зефирок»',short:'Зефирок',icon:'coffee',focus:[10.1,11.4],bounds:[7,7,11,12],chapter:0,kind:'white-rabbit-zephirok',description:'Кафе-кондитерская «Зефирок» находится в одном здании с «Белым Кроликом».'},
  {id:'belkino',title:'Парк Белкино',short:'Белкино',icon:'leaf',focus:[12.5,26.5],bounds:[7,21,11,18],chapter:0,kind:STORY_PARK_BELKINO_KIND,description:'Большой парк с ротондой у пруда, зелёными фигурами, историческими руинами и прогулочными дорожками. Здесь запланирована история «Тайны Белкино».'},
  {id:'friends',title:'Квартал друзей',short:'Друзья',icon:'home',focus:[33,11],bounds:[27,6,15,12],chapter:0,kind:'cottage',description:'Уютный жилой квартал. Будущие участки персонажей пока не закреплены за героями: их откроем вместе с сюжетом.'},
@@ -44,16 +46,26 @@ export function buildStoryMap(state, now=Date.now()) {
  for(const y of [13,19,31,39])line(roads,7,y,41,y);
  line(roads,7,13,7,39);line(roads,19,7,19,41);line(roads,31,8,31,39);
  line(roads,13,25,13,39);line(roads,19,23,31,23);line(roads,19,26,31,26);line(roads,23,23,23,29);
-  // Central 7x7 landmark occupies x20..26,y20..26. Bypass, not pave THROUGH it.
-  for(let x=20;x<=26;x++){roads.delete(keyOf(x,23));roads.delete(keyOf(x,26));}
-  for(let y=23;y<=26;y++)roads.delete(keyOf(23,y));
-  line(roads,23,27,23,31); // Reconnect southern walking spur to the y31 arterial.
+ // New central park footprint is x=20..25, y=20..25; a continuous
+ // pedestrian loop runs ON THE NEIGHBORING tiles, never under its base.
+ for(let x=20;x<=25;x++)roads.delete(keyOf(x,23));
+ for(let y=23;y<=25;y++)roads.delete(keyOf(23,y));
+ line(roads,26,19,26,26);
+ line(roads,20,26,26,26);
+ line(roads,23,26,23,31);
 
  // The 9x9 park fills x=8..16,y=22..30. Remove only the interior
  // dead-end spur; the southern pedestrian corridor at y=31 is retained.
  for(let y=25;y<=30;y++)roads.delete(keyOf(13,y));
  // The eastern edge has a walkable sidewalk. Buses remain on x=18 asphalt.
  line(roads,17,22,17,31);
+ // Independent global-only 6x6 park occupies x=34..39, y=22..27.
+ // All four paths remain OUTSIDE the object, reached via y=19/y=31;
+ // no additional pedestrian/asphalt crossing is created.
+ line(roads,40,19,40,31);
+ line(roads,33,21,40,21);
+ line(roads,33,21,33,28);
+ line(roads,33,28,40,28);
  if(state.chapter>=2)line(roads,31,28,40,28);
  // Dedicated asphalt lane for public transport in the shared story city.
  // It is visual + routing-only and stays separate from the pedestrian paths.
@@ -90,8 +102,10 @@ export function buildStoryMap(state, now=Date.now()) {
  place('cottage',11,14);place('coffee-kiosk',8,17);place('bus-stop',16,14,0,'story-stop-cafe');
  place('family-home',28,9);place('cottage',32,10,0,'story-home');place('bakery',35,11);
  place('villa',34,14);place('flower-shop',38,14);place('bus-stop',29,16,0,'story-stop-square');
- // Shared network city always displays the finished plaza; no D1 construction or payments.
- place('zeffi-central-square',20,20,0,'story-central-square');place('coffee-kiosk',27,21);place('fountain',28,24,0,'story-fountain');
+ // Both parks are read-only story objects, with no D1 payments.
+ // Keep the historic 'story-central-square' uid and square place ID for story visits.
+ place('central-park-zeffi',20,20,0,'story-central-square');place('coffee-kiosk',27,21);place('fountain',28,24,0,'story-fountain');
+ place(STORY_GLOBAL_PARK_KIND,34,22,0,'story-global-park-zeffi');
  place('monument',27,28);place('flower-shop',20,27);
  // One large authored park replaces the old tiny pond and the internal
  // playground; keep a public playground south of the walking path instead.
@@ -100,12 +114,12 @@ export function buildStoryMap(state, now=Date.now()) {
  place('bus-terminal',34,36,0,'story-terminal');place('family-home',38,32);place('cottage',38,40);
  if(state.chapter>=1){place(STORY_FESTIVAL_KINDS[festivalStage(state)],22,33,0,'story-festival');place('flowerbed',28,38);}
  // No second White Rabbit villa: both places point to story-cafe.
- if(state.chapter>=2){place('bench',39,27);place('flowerbed',38,25);}
+ if(state.chapter>=2){place('bench',42,27);place('flowerbed',42,25);}
  const status=projectStatus(state,now);
  if(status!=='funding')place('garden',14,34,0,'story-community-garden',status==='building'?{buildStartedAt:state.project.startedAt,buildReadyAt:state.project.readyAt}:{});
  // Keep the future project's footprint reserved even during funding.
  if(status==='funding')for(let x=14;x<17;x++)for(let y=34;y<37;y++)occupied.add(keyOf(x,y));
- const furnishings=[['bench',25,27],['flowerbed',24,27],['bench',12,35],['bench',17,32],['lamp',17,12],['lamp',10,14],['bench',14,14],['flowerbed',17,15],['lamp',30,18],['bench',33,38],['lamp',40,38],['flowerbed',32,18]];
+ const furnishings=[['bench',34,29],['flowerbed',35,20],['bench',25,27],['flowerbed',24,27],['bench',12,35],['bench',17,32],['lamp',17,12],['lamp',10,14],['bench',14,14],['flowerbed',17,15],['lamp',30,18],['bench',33,38],['lamp',40,38],['flowerbed',32,18]];
  for(const [kind,x,y]of furnishings)place(kind,x,y,0,'',{},true);
  const closed=lockedDistricts(state);
  for(let x=4;x<44;x+=2)for(let y=4;y<44;y+=2){

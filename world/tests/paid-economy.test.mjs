@@ -14,8 +14,8 @@ const beforeAfter=(old,price,newer)=>{
 };
 
 test('the paid catalog includes 50 items with complete costs; paths are retired but saves are readable',()=>{
- assert.equal(CATALOG_ITEMS.length,50);
- assert.equal(Object.keys(OBJECT_PRICES).length,50);
+ assert.equal(CATALOG_ITEMS.length,51);
+ assert.equal(Object.keys(OBJECT_PRICES).length,51);
  assert.equal(RETIRED_PATH_ITEMS.length,9);
  assert.equal(CATEGORIES.includes('paths'),false);
  assert.equal(CATALOG_ITEMS.some(i=>i.category==='paths'),false);

@@ -20,6 +20,11 @@ SPRITE_MANIFEST.assets.push(
 import { ZEFFI_CENTRAL_SQUARE_SPRITES } from './zeffi-central-square-art.js';
 SPRITE_MANIFEST.assets.push(...ZEFFI_CENTRAL_SQUARE_SPRITES);
 
+// Premium centre park: 6 construction frames, 4 finished review views;
+// separate read-only park for shared city uses its own supplied WebP.
+import { ZEFFI_PREMIUM_PARK_SPRITES } from './zeffi-premium-park-art.js';
+SPRITE_MANIFEST.assets.push(...ZEFFI_PREMIUM_PARK_SPRITES);
+
 // White Rabbit six construction phases and four stages of the story-only festival.
 SPRITE_MANIFEST.assets.push(
   {"id":"wrz_build_01","packId":"white-rabbit-construction-v1","category":"commercial","buildingId":"white_rabbit_zephirok","catalogId":"white-rabbit-zephirok","state":"build_01","facing":"n","footprint":[4,4],"fileWebp":"assets/white-rabbit-construction-v1/white_rabbit_build_01.webp","width":896,"height":896,"anchorX":448.0,"anchorY":752,"assetScale":3.147894,"projection":"zeffi-orthographic-2to1-v012-72x36-scale3","roadMask":null,"groundAlphaBounds":[41,185,866,752],"directionVerified":false,"runtimeNotes":"Single supplied view per construction phase; all four rotations share this art while building. Existing approved four finished facings are unchanged."},

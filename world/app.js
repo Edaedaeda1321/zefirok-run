@@ -307,7 +307,7 @@ function initialArtIds(city){
  }
  for(const item of city.objects||[]){
   if(item.stored||!isConstructing(item))continue;
-  for(const stage of ['build_01','build_02','build_03']){
+  for(const stage of (item.kind==='central-park-zeffi' ? ['build_01','build_02','build_03','build_04','build_05','build_06'] : ['build_01','build_02','build_03'])){
    const id=parkConstructionAssetId(item.kind,item.rotation,stage)||buildingAssetId(item.kind,item.rotation,stage);
    if(id)ids.add(id);
   }

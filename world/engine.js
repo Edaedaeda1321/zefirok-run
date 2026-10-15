@@ -461,7 +461,7 @@ export const COMFORT_BY_KIND = Object.freeze({
   'garden':24, 'playground':15,
   'bus-terminal':15, 'bus-stop':5,
   'pond-park':24, 'rose-garden':20, 'botanical-garden':32,
-  'sports-playground':14, 'city-square':12, 'zeffi-central-square':36,
+  'sports-playground':14, 'city-square':12, 'zeffi-central-square':36, 'central-park-zeffi':42,
   'tree':2, 'flowerbed':2, 'lamp':3, 'bench':3,
   'fountain':8, 'monument':12,
   'extra-tree':2, 'extra-flowerbed':2, 'extra-bush':1,
@@ -471,7 +471,7 @@ export const COMFORT_BY_KIND = Object.freeze({
 });
 export const PARK_RESIDENTS_BY_KIND = Object.freeze({
   'garden':2,'playground':1,'pond-park':2,'rose-garden':2,
-  'botanical-garden':3,'sports-playground':1
+  'botanical-garden':3,'sports-playground':1,'central-park-zeffi':2
 });
 export function buildingEffectPreview(def){
   if(!def)return {population:0,comfort:0,needsRoad:false};

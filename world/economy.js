@@ -11,6 +11,7 @@ export const OBJECT_PRICES = Object.freeze({
   'sports-playground': Object.freeze({ points: 10800, coffee: 0, treats: 0 }),
   'city-square': Object.freeze({ points: 12000, coffee: 0, treats: 12 }),
   'zeffi-central-square': Object.freeze({ points: 42000, coffee: 0, treats: 90 }),
+  'central-park-zeffi': Object.freeze({ points: 65000, coffee: 0, treats: 150 }),
   'cottage': Object.freeze({ points: 5500, coffee: 0, treats: 0 }),
   'family-home': Object.freeze({ points: 10000, coffee: 0, treats: 0 }),
   'villa': Object.freeze({ points: 17500, coffee: 0, treats: 35 }),

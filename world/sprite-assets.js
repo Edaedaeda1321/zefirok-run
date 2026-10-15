@@ -58,6 +58,12 @@ export function buildingAssetId(catalogId, rotation = 0, state = 'complete', bui
   const index=Number.isFinite(buildProgress)?Math.min(6,1+Math.floor(Math.max(0,Math.min(.999999,buildProgress))*6)):(state==='build_01'?1:state==='build_02'?3:5);
   return `zeffi_square_build_0${index}`;
  }
+ if(catalogId==='central-park-zeffi'){
+  const facing=FACINGS[((rotation%4)+4)%4];
+  if(state==='complete')return `zeffi_park_complete_${facing}`;
+  const index=Number.isFinite(buildProgress)?Math.min(6,1+Math.floor(Math.max(0,Math.min(.999999,buildProgress))*6)):Math.max(1,Math.min(6,Number(/^build_0([1-6])$/.exec(state)?.[1]||1)));
+  return `zeffi_park_build_0${index}`;
+ }
  if(catalogId==='white-rabbit-zephirok' && /^build_0[1-3]$/.test(state)){
   const index=Number.isFinite(buildProgress)?Math.min(6,1+Math.floor(Math.max(0,Math.min(.999999,buildProgress))*6)):(state==='build_01'?1:state==='build_02'?3:5);
   return `wrz_build_${String(index).padStart(2,'0')}`;
@@ -84,6 +90,7 @@ export function decorAssetId(catalogId, rotation = 0, variation = 0) {
 // handles missing/undecoded WebP art; removed legacy sprites are not fetched.
 export function fallbackSpriteId(kind, rotation=0, state='complete', variation=0) {
  if(state==='complete'){
+  if(kind==='story-global-park-zeffi')return 'zeffi_global_park_n';
   const direction=FACINGS[((rotation%4)+4)%4];
   const storyPark=storyParkDirectional.get(`${kind}:${direction}`);
   if(storyPark)return storyPark;
@@ -217,6 +224,7 @@ export async function preloadSpriteSet(ids,{pin=false,onProgress=()=>{}}={}){
 }
 // Warm construction stages before server purchase, including acceleration FX.
 export function preloadBuildFrames(kind,rotation=0){
+ if(kind==='central-park-zeffi')return preloadSpriteSet([...Array(6)].map((_,i)=>`zeffi_park_build_0${i+1}`).concat(catalogSpriteId(kind,rotation,'complete')));
  if(kind==='zeffi-central-square')return preloadSpriteSet([...Array(6)].map((_,i)=>`zeffi_square_build_0${i+1}`).concat('zeffi_square_complete'));
  if(kind==='white-rabbit-zephirok')return preloadSpriteSet([...Array(6)].map((_,i)=>`wrz_build_0${i+1}`).concat(catalogSpriteId(kind,rotation,'complete')).filter(Boolean));
  const ids=['build_01','build_02','build_03'].map(stage=>

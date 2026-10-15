@@ -5,8 +5,8 @@ import { CATALOG, CATALOG_ITEMS } from '../world/catalog.js';
 import { OBJECT_PRICES, ROAD_TILE_PRICE, PARCEL_PRICE } from '../world/economy.js';
 import { makeInitialCity, addObject, objectPrice, cityStats, buildingEffectPreview, BuildError } from '../world/engine.js';
 
-assert.equal(CATALOG_ITEMS.length,50);
-assert.equal(Object.keys(OBJECT_PRICES).length,50);
+assert.equal(CATALOG_ITEMS.length,51);
+assert.equal(Object.keys(OBJECT_PRICES).length,51);
 assert.equal(CATALOG.cottage.price.points,5500);
 assert.equal(CATALOG.cottage.minCityLevel,1);
 assert.equal(CATALOG['bus-terminal'].minCityLevel,7);
@@ -40,4 +40,4 @@ assert.doesNotMatch(ui,/catalog-level-lock/);
 assert.match(ui,/shopShortfall\(/);
 assert.match(css,/catalog-card\.is-level-locked/);
 assert.match(worker,/addObject\(city,CATALOG/);
-console.log('World shop v17: 50 prices, 10 levels, server purchase guard, UI and preserved old systems PASS');
+console.log('World shop v17: 51 prices, 10 levels, server purchase guard, UI and preserved old systems PASS');

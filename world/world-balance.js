@@ -38,10 +38,19 @@ export function validateWorldBalance(input,{reachability=true}={}){
   return {level:i+1,titleKey:CITY_LEVELS[i].titleKey,residents:raw.residents,comfort:raw.comfort,parks:raw.parks,shops:raw.shops,reward:raw.reward?{...raw.reward}:null};
  });
  const ids=BASE_ITEMS.map(x=>x.id).sort();
- if(!input.items||typeof input.items!=='object'||Array.isArray(input.items)||Object.keys(input.items).sort().join(',')!==ids.join(','))error('Каталог должен включать все существующие объекты и только их.');
+ if(!input.items||typeof input.items!=='object'||Array.isArray(input.items))error('Каталог должен включать все существующие объекты и только их.');
+ // 2026-10 park release: old saved P1 draft/published JSON lacks exactly one
+ // new purchaseable kind. Canonicalize it with the safe default price/unlock
+ // without mutating D1 or accepting other missing/unknown catalog entries.
+ const newPark='central-park-zeffi';
+ const keys=Object.keys(input.items).sort();
+ const legacyIds=ids.filter(id=>id!==newPark);
+ const legacy=ids.includes(newPark)&&!Object.hasOwn(input.items,newPark)&&keys.join(',')===legacyIds.join(',');
+ const canonicalInput=legacy?{...input.items,[newPark]:{minCityLevel:BASE_CATALOG[newPark].minCityLevel,price:{...BASE_CATALOG[newPark].price}}}:input.items;
+ if(Object.keys(canonicalInput).sort().join(',')!==ids.join(','))error('Каталог должен включать все существующие объекты и только их.');
  const items={};const distribution=Array(11).fill(0);
  for(const id of ids){
-  const raw=input.items[id];
+  const raw=canonicalInput[id];
   if(!raw||typeof raw!=='object'||Array.isArray(raw)||Object.keys(raw).sort().join(',')!=='minCityLevel,price')error('Неверные поля объекта '+id);
   if(!Number.isInteger(raw.minCityLevel)||raw.minCityLevel<1||raw.minCityLevel>10)error('Недопустимый уровень открытия: '+id);
   if(!raw.price||typeof raw.price!=='object'||Object.keys(raw.price).sort().join(',')!=='coffee,points,treats')error('Неверная цена: '+id);
