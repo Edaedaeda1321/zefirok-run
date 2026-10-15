@@ -105,6 +105,7 @@ const steps = [
   ['season achievements', 'node', ['scripts/check-season-achievements.mjs']],
   ['achievement art overrides', 'node', ['scripts/check-achievement-art-overrides.mjs']],
   ['health dashboard', 'node', ['scripts/check-health-dashboard.mjs']],
+  ['D1 hot-path read efficiency', 'node', ['--no-warnings','--experimental-sqlite','scripts/check-d1-read-hot-paths.mjs']],
   ['migration history', 'node', ['scripts/check-migrations.mjs']],
   ['schema contract', 'node', ['scripts/check-database-schema.mjs', '--contract-only']],
   ['deploy assets', 'node', ['scripts/check-deploy-assets.mjs']],

@@ -25888,10 +25888,11 @@ async function syncOperationalProblems(env, options = {}) {
   try {
     const queue = await env.DB.prepare(
       `SELECT
-         SUM(CASE WHEN status = 'failed' THEN 1 ELSE 0 END) AS failed_count,
-         SUM(CASE WHEN status IN ('pending','delivering') AND created_at <= ? THEN 1 ELSE 0 END) AS overdue_count,
-         MIN(CASE WHEN status IN ('pending','delivering') THEN created_at ELSE NULL END) AS oldest_at
-       FROM reward_delivery_queue`
+         (SELECT COUNT(*) FROM reward_delivery_queue WHERE status='failed') AS failed_count,
+         (SELECT COUNT(*) FROM reward_delivery_queue
+            WHERE status IN ('pending','delivering') AND created_at<=?) AS overdue_count,
+         (SELECT MIN(created_at) FROM reward_delivery_queue
+            WHERE status IN ('pending','delivering')) AS oldest_at`
     ).bind(now - 15 * 60).first();
     const failed = Number(queue?.failed_count || 0);
     const overdue = Number(queue?.overdue_count || 0);
@@ -26044,7 +26045,9 @@ async function buildAdminOverview(env, options = {}) {
     phase("level_cases_d1", () => env.DB.prepare(`SELECT COALESCE(SUM(case_count),0) AS count FROM level_case_openings WHERE opened_at >= ?`).bind(startAt).first()),
     phase("granted_cases_d1", () => env.DB.prepare(`SELECT COUNT(*) AS count FROM granted_cases WHERE opened_at >= ?`).bind(startAt).first()),
     phase("shop_ops_d1", () => env.DB.prepare(`SELECT COUNT(*) AS count FROM shop_stock_consumptions WHERE created_at >= ?`).bind(startAt).first()),
-    phase("reward_queue_d1", () => env.DB.prepare(`SELECT SUM(CASE WHEN status IN ('pending','delivering') THEN 1 ELSE 0 END) AS pending, SUM(CASE WHEN status = 'failed' THEN 1 ELSE 0 END) AS failed FROM reward_delivery_queue`).first()),
+    phase("reward_queue_d1", () => env.DB.prepare(`SELECT
+      (SELECT COUNT(*) FROM reward_delivery_queue WHERE status IN ('pending','delivering')) AS pending,
+      (SELECT COUNT(*) FROM reward_delivery_queue WHERE status='failed') AS failed`).first()),
     phase("tickets_d1", () => env.DB.prepare(`SELECT COUNT(*) AS count FROM support_tickets WHERE status IN ('new','working')`).first()),
     phase("issues_d1", () => env.DB.prepare(`SELECT COUNT(*) AS count, SUM(CASE WHEN severity IN ('critical','high') THEN 1 ELSE 0 END) AS urgent FROM admin_operational_issues WHERE status != 'resolved' AND (status != 'snoozed' OR snoozed_until <= ?)`).bind(now).first()),
     phase("errors_d1", () => env.DB.prepare(`SELECT COUNT(*) AS count FROM staff_action_log WHERE success = 0 AND created_at >= ?`).bind(now - 3600).first()),
