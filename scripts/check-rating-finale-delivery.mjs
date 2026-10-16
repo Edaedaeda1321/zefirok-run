@@ -19,6 +19,12 @@ assert(worker.includes('const [topResult, me, reward, nextSeasonRow, finale]'), 
 assert(worker.includes('    finale,\n    reward:'), 'finale not serialized to client');
 assert(worker.includes('try { await queueLeaderboardWinnerNotification(env, String(season.id), now); }'), 'winner enqueue missing after close');
 assert(worker.includes('await recoverLeaderboardWinnerNotifications(env);'), 'crash recovery not scheduled');
+const criticalQueues=between(worker,'async function processCriticalServerQueues(env) {','async function processMinuteLiveOps(env) {');
+const winnerCronStep=between(criticalQueues,'["leaderboard",','["rewardQueue",');
+assert(winnerCronStep.includes('Math.floor(Date.now() / 60000) % 10 === 0'), 'winner recovery must run at ten-minute cadence');
+assert(winnerCronStep.includes('await recoverLeaderboardWinnerNotifications(env);'), 'throttled fallback must remain active');
+assert(worker.includes('try { await queueLeaderboardWinnerNotification(env, String(season.id), now); }'), 'season finalization must continue to enqueue immediately');
+
 assert(rating.includes('const result = data?.finale;'), 'UI must consume authoritative finale');
 assert(rating.includes('data-rating-finale-claim-area'), 'winner claim missing from finale');
 assert(rating.includes('data-rating-finale-outcome'), 'nonwinner result missing');

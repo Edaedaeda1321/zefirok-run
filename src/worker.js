@@ -4840,8 +4840,13 @@ async function processCriticalServerQueues(env) {
   return runServerCronSteps("critical-queues", [
     ["leaderboard", () => recordCronServiceStatus(env, "season-processing", async () => {
       const season = await ensureSeason(env);
-      try { await recoverLeaderboardWinnerNotifications(env); }
-      catch (error) { console.error("Rating winner notification recovery failed", error); }
+      // Finalization already enqueues the winner notice immediately. Recovery is
+      // a seven-day, idempotent fallback: checking every ten minutes avoids
+      // repeatedly scanning old seasons on each minute Cron tick.
+      if (Math.floor(Date.now() / 60000) % 10 === 0) {
+        try { await recoverLeaderboardWinnerNotifications(env); }
+        catch (error) { console.error("Rating winner notification recovery failed", error); }
+      }
       await expireLeaderboardRewardsAndNotify(env);
       try { await clearOperationalIssue(env, "leaderboard"); } catch {}
       return { seasonId: String(season?.id || "") };
