@@ -1120,7 +1120,7 @@ const LEGAL_DOCUMENTS = Object.freeze({
 });
 const LEGAL_BUILTIN_HASHES = Object.freeze({"agreement":{"version":"2026-08-13.1","sha256Ru":"7b9dad94ff4319c98b5fd01ade558ed3e409db705a8417551f89eb0dc4792c46","sha256En":"3f93d567fefd8e936a7ac8f63a9a5ceefc6bd6ecfcdfaad2e3733cf6e34d02d0","sha256Bundle":"93f28cca0556b480ee44a73ef775187a397dfc61bd4efda1171526a84fa69e84"},"privacy":{"version":"2026-08-13.2","sha256Ru":"687bba9ab60ee35124a17806ba7904870b1a3e09d23610430d45b92cd4719433","sha256En":"e0531d156e2ad0210b16349094499f7560cfca6167d911306926ed8e6ff45cbd","sha256Bundle":"435dd20f418603b3329dd1ab17a5e5ee619eee5341f425a547114fd235d4eee3"},"consent":{"version":"2026-08-13.1","sha256Ru":"10bcaf97ef31fad736f5e4f987ffad94c30c964e759b72c9a49c97738ede48d7","sha256En":"64383734cc3469028242d0c90867ccc42c7605269b187a94056fc963460ddb41","sha256Bundle":"11ebecc6978dac4f887b2ed4316f12f9ebafd4c41d5eeafed331ee12ae2948e0"}});
 
-const WORKER_BUILD = "1.2.5";
+const WORKER_BUILD = "1.3.0";
 const V07944_RELEASE_CANDIDATE_AUDIT = Object.freeze({ reset: true, claims: true, purchases: true, xp: true, concurrency: true });
 
 // =============================================================
@@ -1568,10 +1568,10 @@ const REWARD_LIMIT_RESET_AT_SECONDS = 1784805300; // 23.07.2026 11:15 UTC
 // НАСТРОЙКИ ВЕРСИИ И РАЗДЕЛА «ОБНОВЛЕНИЕ» В БОТЕ.
 // Схема версии: первая цифра — год игры, вторая — сезонное обновление, третья — исправление.
 // Примеры: 1.0.1 — фикс, 1.2.0 — сезонное обновление, 2.0.0 — второй год игры.
-const GAME_VERSION = "1.2.5";
-const GAME_UPDATE_DATE = "28 сентября 2026";
-const GAME_UPDATE_TITLE = "Сладкий Забег 1.2.5 — прогресс, сезоны и важные исправления";
-const GAME_UPDATE_TYPE = "Обновление прогрессии, интерфейса и сезонных систем";
+const GAME_VERSION = "1.3.0";
+const GAME_UPDATE_DATE = "17 октября 2026";
+const GAME_UPDATE_TITLE = "Сладкий Забег 1.3.0 — новый сезон и сезонные обновления";
+const GAME_UPDATE_TYPE = "Сезонное обновление без сброса прогресса";
 
 // Что произошло с прогрессом в этом релизе:
 // "reset" — крупное обновление с обнулением прогресса;
@@ -1580,21 +1580,14 @@ const GAME_UPDATE_PROGRESS_MODE = "keep";
 const GAME_UPDATE_RESET_REASON = "Прогресс сохраняется. Обновление не сбрасывает валюты, XP, покупки, рейтинг за всё время или коллекцию.";
 
 const GAME_UPDATE_NOTES = Object.freeze([
-  "Переработали отображение уровня: новые шильдики заметнее, меняются вместе с прогрессом и используются в рейтинге и профилях.",
-  "Полностью обновили интерфейс раздела «Документы и конфиденциальность», отображение версий и статусов подтверждения.",
-  "Перед стартом забега игра теперь получает и подготавливает актуальную сцену целиком, чтобы она не менялась и не догружалась уже во время забега.",
-  "Пересмотрели экономику скинов и кейсов — цены стали доступнее.",
-  "Обновили награды за уровни профиля: с ростом уровня повышается ценность кейсов и наград за прогрессию.",
-  "Добавили сюжетные оформления профиля, которые можно получать из сезонного контента.",
-  "Сюжетные воспоминания пройденных сезонов теперь постоянно сохраняются в Альбоме Зеффи.",
-  "Переработали ежедневную активность — прогресс стал понятнее и информативнее.",
-  "Добавили экран итогов рейтингового сезона с результатами и итоговой статистикой игрока.",
-  "Исправили отображение витрин достижений и улучшили стабильность их загрузки.",
-  "Исправили витрину 2 сезона «Ночь сладких чудес», из-за которой могли пропадать названия достижений.",
-  "Исправили сезонный пропуск: бонус ×2 к XP у Элит+ продолжает действовать после основной прогрессии в течение сезона.",
-  "Исправили получение наград 50+ после основной дорожки, включая несколько накопленных наград.",
-  "Исправили отдельные ошибки сюжетных оформлений и отображения классической сцены кафе.",
-  "Прогресс аккаунта сохраняется — обновление не сбрасывает валюты, XP, покупки или коллекции.",
+  "Новый сезон: новая глава, сезонные активности и коллекционные награды по правилам событий.",
+  "Обновили сезонный пропуск: новая дорожка с бесплатными и Элитными наградами, сезонные задания и призы.",
+  "Обновили сезонный рейтинг: оформление соревнований, результаты и награды для лидеров.",
+  "Добавили окно «О сезоне» на главной странице, в пропуске и рейтинге — важная информация о текущем сезоне теперь под рукой.",
+  "Продолжаем расширять сезонные коллекции и сюжетные материалы.",
+  "Улучшили отображение сезонной информации и исправили положение кнопки почты в профиле.",
+  "Начали подготовку к будущему «Миру Зеффи». Подробности появятся позже.",
+  "Прогресс сохраняется: валюты, XP, покупки, достижения и коллекции не сбрасываются."
 ]);
 
 
@@ -1652,31 +1645,20 @@ const DEFAULT_SEASON_RESET_PLAN = Object.freeze({
 
 // Встроенная релизная новость. BOT_NEWS_IMAGE_URL в Cloudflare может переопределить картинку.
 const DEFAULT_BOT_NEWS_IMAGE_URL = "";
-const RELEASE_125_BOT_NEWS_IMAGE_URL = "/assets/news/news_pick_v_1.2.5.webp?v=f8d4c9b50c00";
-const BOT_NEWS_TITLE = "Сладкий Забег 1.2.5 — прогресс, сезоны и важные исправления ✨";
-const BOT_NEWS_TEXT = `Вышло обновление «Сладкого Забега» 1.2.5. В нём мы заметно обновили прогрессию и интерфейс, сохранили историю сезонов и исправили несколько важных ошибок сезонных систем.
+const RELEASE_130_BOT_NEWS_IMAGE_URL = "/assets/rating/season-leaderboard-banner.webp";
+const BOT_NEWS_TITLE = "Сладкий Забег 1.3.0 — новый сезон уже здесь! ✨";
+const BOT_NEWS_TEXT = `Встречай «Сладкий Забег» 1.3.0! 🐾 Новая сезонная глава, обновлённые разделы и ещё больше поводов возвращаться к Зеффи.
 
-⭐ Что нового
+🌷 Новый сезон — новые активности, награды и сезонная история.
+🎟 Сезонный пропуск — свежая дорожка наград, бесплатная и Элитная линии.
+🏆 Рейтинг — новый сезон соревнований, обновлённое оформление и призы лидерам.
+📖 «О сезоне» — новое удобное окно с информацией о сезоне на главной, в пропуске и рейтинге.
+🎀 Коллекции — сезонные оформления и сюжетные материалы, доступные по условиям событий.
+🛠 Улучшения — обновили сезонный интерфейс и поправили кнопку почты в профиле.
+🏡 «Мир Зеффи» — пока только готовим основу будущего режима. Подробности расскажем позже.
 
-🏅 Переработали шильдики уровня в рейтинге и профилях — теперь оформление меняется вместе с прогрессом.
-📄 Полностью обновили раздел «Документы и конфиденциальность».
-🎮 Перед забегом игра теперь подготавливает актуальную сцену целиком, чтобы она не менялась и не догружалась уже во время игры.
-🛍 Пересмотрели цены на скины и кейсы — они стали доступнее.
-🎁 Обновили награды за уровни профиля: чем выше уровень, тем ценнее награды.
-🎨 Добавили сюжетные оформления профиля из сезонного контента.
-📖 Сюжетные воспоминания пройденных сезонов теперь сохраняются в Альбоме Зеффи.
-🎯 Переработали ежедневную активность — прогресс стал понятнее.
-🏆 Добавили экран итогов рейтингового сезона с результатами и статистикой.
-
-✅ Исправления
-
-🖼 Улучшили загрузку витрин достижений и исправили названия достижений 2 сезона «Ночь сладких чудес».
-🎟 Исправили сезонный пропуск: ×2 XP у Элит+ больше не пропадает после основной дорожки.
-🎁 Исправили награды 50+, в том числе получение нескольких накопленных наград.
-🌸 Исправили отдельные ошибки сюжетных оформлений и классической сцены кафе.
-
-Прогресс аккаунта сохраняется. Спасибо, что играете вместе с нами! ❤️`;
-const BOT_NEWS_PUBLISHED_AT = 1790608800;
+❤️ Весь существующий прогресс, валюты, покупки и коллекции сохраняются. Спасибо, что играете с нами!`;
+const BOT_NEWS_PUBLISHED_AT = 1792184400; // 17.10.2026 00:00 МСК
 // =============================================================
 
 const PLAYER_BOT_COMMANDS = Object.freeze([
@@ -4439,7 +4421,7 @@ async function runScheduledMaintenancePreflight(env) {
     ["runtime-compatibility", () => ensureRuntimeCompatibilitySchema(env)],
     ["daily-loyalty-schema", () => ensureDailyLoyaltySchema(env)],
     ["release-106-player-fix", () => ensureRelease106PlayerFix(env)],
-    ["release-125-news", () => ensureRelease125News(env)]
+    ["release-130-news", () => ensureRelease130News(env)]
   ];
   const errors = [];
   const results = [];
@@ -8190,7 +8172,7 @@ async function ensureGameNewsReadSchema(env) {
 }
 
 async function eligibleGameNewsRowForPlayer(env, telegramId) {
-  await ensureRelease125News(env);
+  await ensureRelease130News(env);
   await ensureGameNewsReadSchema(env);
   const id=String(telegramId||"").trim();if(!id)return null;
   const now=Math.floor(Date.now()/1000);
@@ -11570,11 +11552,11 @@ async function ensureRelease106PlayerFix(env) {
         SELECT 'release106_xp_info_' || telegram_id || '_1',telegram_id,'sweet','pending','release:1.0.6',?,? FROM (${playerSource})`).bind(RELEASE_106_COMPENSATION_REASON, now),
       env.DB.prepare(`INSERT OR IGNORE INTO granted_cases(id,telegram_id,case_type,status,granted_by,reason,created_at)
         SELECT 'release106_xp_info_' || telegram_id || '_2',telegram_id,'sweet','pending','release:1.0.6',?,? FROM (${playerSource})`).bind(RELEASE_106_COMPENSATION_REASON, now),
-      env.DB.prepare(`UPDATE bot_news SET status='archived' WHERE status='published' AND published_at<?`).bind(BOT_NEWS_PUBLISHED_AT),
+      env.DB.prepare(`UPDATE bot_news SET status='archived' WHERE status='published' AND published_at<? AND created_by LIKE 'release:%'`).bind(BOT_NEWS_PUBLISHED_AT),
       env.DB.prepare(`INSERT INTO bot_news(title,body,image_url,status,created_at,published_at,created_by,created_by_name)
         SELECT ?,?,?,'published',?,?,?,'Система релиза'
         WHERE NOT EXISTS(SELECT 1 FROM bot_news WHERE title=? AND published_at=? LIMIT 1)`)
-        .bind(BOT_NEWS_TITLE,BOT_NEWS_TEXT,DEFAULT_BOT_NEWS_IMAGE_URL,BOT_NEWS_PUBLISHED_AT,BOT_NEWS_PUBLISHED_AT,'release:1.0.6',BOT_NEWS_TITLE,BOT_NEWS_PUBLISHED_AT),
+        .bind(BOT_NEWS_TITLE,BOT_NEWS_TEXT,RELEASE_130_BOT_NEWS_IMAGE_URL,BOT_NEWS_PUBLISHED_AT,BOT_NEWS_PUBLISHED_AT,'release:1.0.6',BOT_NEWS_TITLE,BOT_NEWS_PUBLISHED_AT),
       env.DB.prepare(`INSERT INTO bot_system_state(state_key,state_value,updated_at) VALUES(?, 'done', ?)
         ON CONFLICT(state_key) DO UPDATE SET state_value='done',updated_at=excluded.updated_at`).bind(RELEASE_106_PLAYER_FIX_KEY,now)
     ]);
@@ -11583,32 +11565,32 @@ async function ensureRelease106PlayerFix(env) {
   return release106PlayerFixPromise;
 }
 
-const RELEASE_125_NEWS_KEY = "release-1.2.5-news-v3";
-let release125NewsReady = false;
-let release125NewsPromise = null;
+const RELEASE_130_NEWS_KEY = "release-1.3.0-news-v1";
+let release130NewsReady = false;
+let release130NewsPromise = null;
 
-async function ensureRelease125News(env) {
-  if (release125NewsReady) return;
-  if (release125NewsPromise) return release125NewsPromise;
-  release125NewsPromise = (async () => {
+async function ensureRelease130News(env) {
+  if (release130NewsReady) return;
+  if (release130NewsPromise) return release130NewsPromise;
+  release130NewsPromise = (async () => {
     requireDatabase(env);
-    const state = await getSystemState(env, RELEASE_125_NEWS_KEY);
-    if (state?.value === "done") { release125NewsReady = true; return; }
+    const state = await getSystemState(env, RELEASE_130_NEWS_KEY);
+    if (state?.value === "done") { release130NewsReady = true; return; }
     const now = Math.floor(Date.now() / 1000);
     await env.DB.batch([
-      env.DB.prepare(`UPDATE bot_news SET status='archived' WHERE status='published' AND published_at<?`).bind(BOT_NEWS_PUBLISHED_AT),
+      env.DB.prepare(`UPDATE bot_news SET status='archived' WHERE status='published' AND published_at<? AND created_by LIKE 'release:%'`).bind(BOT_NEWS_PUBLISHED_AT),
       env.DB.prepare(`INSERT INTO bot_news(title,body,image_url,status,created_at,published_at,created_by,created_by_name)
         SELECT ?,?,?,'published',?,?,?,'Система релиза'
         WHERE NOT EXISTS(SELECT 1 FROM bot_news WHERE title=? AND published_at=? LIMIT 1)`)
-        .bind(BOT_NEWS_TITLE,BOT_NEWS_TEXT,RELEASE_125_BOT_NEWS_IMAGE_URL,BOT_NEWS_PUBLISHED_AT,BOT_NEWS_PUBLISHED_AT,'release:1.2.5',BOT_NEWS_TITLE,BOT_NEWS_PUBLISHED_AT),
-      env.DB.prepare(`UPDATE bot_news SET image_url=? WHERE created_by='release:1.2.5' AND published_at=?`)
-        .bind(RELEASE_125_BOT_NEWS_IMAGE_URL,BOT_NEWS_PUBLISHED_AT),
+        .bind(BOT_NEWS_TITLE,BOT_NEWS_TEXT,RELEASE_130_BOT_NEWS_IMAGE_URL,BOT_NEWS_PUBLISHED_AT,BOT_NEWS_PUBLISHED_AT,'release:1.3.0',BOT_NEWS_TITLE,BOT_NEWS_PUBLISHED_AT),
+      env.DB.prepare(`UPDATE bot_news SET image_url=? WHERE title=? AND published_at=?`)
+        .bind(RELEASE_130_BOT_NEWS_IMAGE_URL,BOT_NEWS_TITLE,BOT_NEWS_PUBLISHED_AT),
       env.DB.prepare(`INSERT INTO bot_system_state(state_key,state_value,updated_at) VALUES(?, 'done', ?)
-        ON CONFLICT(state_key) DO UPDATE SET state_value='done',updated_at=excluded.updated_at`).bind(RELEASE_125_NEWS_KEY,now)
+        ON CONFLICT(state_key) DO UPDATE SET state_value='done',updated_at=excluded.updated_at`).bind(RELEASE_130_NEWS_KEY,now)
     ]);
-    release125NewsReady = true;
-  })().finally(() => { release125NewsPromise = null; });
-  return release125NewsPromise;
+    release130NewsReady = true;
+  })().finally(() => { release130NewsPromise = null; });
+  return release130NewsPromise;
 }
 
 async function createGrantedCases(env, telegramId, caseTypeValue, quantityValue, grantedBy, reasonValue) {
@@ -18005,7 +17987,7 @@ async function sendBotNews(env, chatId) {
 ${escapeHtml(body)}${newsCta}
 
 Версия: <b>${escapeHtml(GAME_VERSION)}</b>`;
-  const imageUrl = String(useBuiltInRelease ? RELEASE_125_BOT_NEWS_IMAGE_URL : (news.image_url || env.BOT_NEWS_IMAGE_URL || DEFAULT_BOT_NEWS_IMAGE_URL)).trim();
+  const imageUrl = String(useBuiltInRelease ? RELEASE_130_BOT_NEWS_IMAGE_URL : (news.image_url || env.BOT_NEWS_IMAGE_URL || DEFAULT_BOT_NEWS_IMAGE_URL)).trim();
   if (imageUrl) {
     try {
       const compactCaption = `<b>📰 ${escapeHtml(title)}</b>\n\nВерсия <b>${escapeHtml(GAME_VERSION)}</b> уже доступна. Подробный список изменений — следующим сообщением.`;
@@ -21926,7 +21908,7 @@ async function publishBotNews(chatId, requester, rawPayload, env) {
 }
 
 async function latestBotNews(env, telegramId = "") {
-  await ensureRelease125News(env);await ensureGameNewsReadSchema(env);
+  await ensureRelease130News(env);await ensureGameNewsReadSchema(env);
   const id=String(telegramId||"").trim();
   if(id)return eligibleGameNewsRowForPlayer(env,id);
   const now=Math.floor(Date.now()/1000);
@@ -54131,7 +54113,7 @@ async function ownerPanelNews(env, ctx) {
   const news=rows.map(toNews);
   return {ok:true,
     channelHelp:{bot:"Публикация сохраняет пост в разделе «Новости» бота и запускает доставку только подходящей аудитории через безопасную очередь/Cron.",game:"Игра выбирает актуальную опубликованную новость по аудитории игрока, сроку показа и закреплению. Прочтение хранится отдельно для каждой новости."},
-    gameNews:published?{...toNews(published),version:GAME_VERSION,source:"Control Center · таргетированная новость"}:{title:BOT_NEWS_TITLE,body:BOT_NEWS_TEXT,imageUrl:RELEASE_125_BOT_NEWS_IMAGE_URL,version:GAME_VERSION,source:"встроенное релизное окно"},
+    gameNews:published?{...toNews(published),version:GAME_VERSION,source:"Control Center · таргетированная новость"}:{title:BOT_NEWS_TITLE,body:BOT_NEWS_TEXT,imageUrl:RELEASE_130_BOT_NEWS_IMAGE_URL,version:GAME_VERSION,source:"встроенное релизное окно"},
     news,newsTypes:[...GAME_NEWS_TYPES].map((key)=>({key,title:ownerPanelNewsTypeLabel(key)})),audiences,
     ctaActions:[{key:"",title:"Без кнопки"},{key:"battle_pass",title:"Открыть Battle Pass"},{key:"rating",title:"Открыть рейтинг"},{key:"cases",title:"Посмотреть кейсы"},{key:"play",title:"Играть"}],
     assetCatalog:{source:assetCatalog.source,catalogHash:assetCatalog.catalogHash||"",count:assetCatalog.count},presets:[...mediaPresets,...assetCatalog.presets]
