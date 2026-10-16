@@ -38140,6 +38140,8 @@ async function getSeasonPassProfileBonusForUser(env,telegramId){
     return {ok:true,active:false,multiplier:1,premiumTier:'none',passLevel:0,seasonId:forcedClosure.nextSeasonId||'',status:'upcoming',startsAt:forcedClosure.startsAt,endsAt:forcedClosure.endsAt,claimWindowOpen:false,forceClosed:true,claimableCount:0,rewardClaimableCount:0,taskClaimableCount:0,overflowClaimableCount:0,seasonalCaseClaimableCount:0};
   }
   const season=await loadSeasonPassSeason(env);
+  // Reuse the startup bonus response; no additional D1 read for the main premiere.
+  const premiere=season.status==='active'?{id:season.id,title:season.title,status:season.status,heroImage:season.visuals?.battlePass?.heroImage||'',presentation:season.visuals?.battlePass?.premiere?.main||{enabled:false}}:null;
   if(season.status==='ended'){
     const player=season.claimWindowOpen?await ensureSeasonPassPlayer(env,season,String(telegramId)):null;
     const [attention,tierActivationNotice]=player?await Promise.all([seasonPassAttentionForPlayer(env,season,String(telegramId),player),pendingSeasonPassTierActivationNotice(env,String(telegramId),season)]):[{claimableCount:0,rewardCount:0,taskCount:0,overflowCount:0},null];
@@ -38151,7 +38153,7 @@ async function getSeasonPassProfileBonusForUser(env,telegramId){
     seasonPassAttentionForPlayer(env,season,String(telegramId),player),
     pendingSeasonPassTierActivationNotice(env,String(telegramId),season)
   ]);
-  return {ok:true,active,multiplier:active?2:1,premiumTier:String(player?.premium_tier||'none'),passLevel:seasonPassProfileDisplayLevel(player),seasonId:season.id,status:season.status,endsAt:season.endsAt,claimWindowOpen:false,tierActivationNotice,claimableCount:attention.claimableCount,rewardClaimableCount:attention.rewardCount,taskClaimableCount:attention.taskCount,overflowClaimableCount:attention.overflowCount,seasonalCaseClaimableCount:attention.seasonalCaseCount||0};
+  return {ok:true,active,premiere,multiplier:active?2:1,premiumTier:String(player?.premium_tier||'none'),passLevel:seasonPassProfileDisplayLevel(player),seasonId:season.id,status:season.status,endsAt:season.endsAt,claimWindowOpen:false,tierActivationNotice,claimableCount:attention.claimableCount,rewardClaimableCount:attention.rewardCount,taskClaimableCount:attention.taskCount,overflowClaimableCount:attention.overflowCount,seasonalCaseClaimableCount:attention.seasonalCaseCount||0};
 }
 
 async function getSeasonPassProfileBonus(request,env){
@@ -52850,7 +52852,8 @@ async function ownerPanelSaveRatingVisuals(env, ctx) {
   const row=await env.DB.prepare(`SELECT * FROM leaderboard_seasons WHERE id=? LIMIT 1`).bind(seasonId).first();
   if(!row)throw new ApiError(404,'Рейтинговый сезон не найден.');
   const heroImage=await validateSeasonVisualHeroImage(env,ctx.body?.heroImage);
-  const before=seasonVisualsView(row.visuals_json),nextJson=seasonVisualsMerge(row.visuals_json,'rating',heroImage),now=Math.floor(Date.now()/1000);
+  const premiere=Object.prototype.hasOwnProperty.call(ctx.body||{},'premiere')?await seasonPremierePatchView(env,ctx.body.premiere):null;
+  const before=seasonVisualsView(row.visuals_json),nextJson=seasonVisualsMerge(row.visuals_json,'rating',premiere?{heroImage,premiere}:{heroImage}),now=Math.floor(Date.now()/1000);
   await env.DB.prepare(`UPDATE leaderboard_seasons SET visuals_json=?,updated_at=? WHERE id=?`).bind(nextJson,now,seasonId).run();
   const updated=await env.DB.prepare(`SELECT * FROM leaderboard_seasons WHERE id=? LIMIT 1`).bind(seasonId).first();
   await logStaffAction(env,ctx.user,ctx.access,'owner_panel_rating_visuals',null,'season',seasonId,null,{seasonId,before:before.rating,after:seasonVisualsView(updated?.visuals_json).rating});
@@ -53076,6 +53079,16 @@ function seasonStoryCollectibleView(raw){
     }
   };
 }
+// SEASON_PREMIERE_V1_PRESENTATION
+function seasonPremierePageView(raw){
+ const v=raw&&typeof raw==='object'&&!Array.isArray(raw)?raw:{};
+ return {enabled:v.enabled===true,title:String(v.title||'').trim().slice(0,90),subtitle:String(v.subtitle||'').trim().slice(0,140),description:String(v.description||'').trim().slice(0,360),imageUrl:seasonPassReadinessAssetPath(v.imageUrl),features:(Array.isArray(v.features)?v.features:[]).slice(0,3).map(s=>String(s||'').trim().slice(0,115))};
+}
+async function seasonPremierePatchView(env,raw,manifest=null){
+ const v=seasonPremierePageView(raw);
+ if(String(raw?.imageUrl||'').trim())v.imageUrl=await validateSeasonVisualHeroImage(env,raw.imageUrl,manifest||await seasonPassReadinessImageManifest(env));
+ return v;
+}
 function seasonVisualsView(raw){
   const data=seasonVisualsObject(raw),battlePass=data?.battlePass&&typeof data.battlePass==='object'&&!Array.isArray(data.battlePass)?data.battlePass:{};
   const navigation=battlePass?.navigation&&typeof battlePass.navigation==='object'&&!Array.isArray(battlePass.navigation)?battlePass.navigation:{};
@@ -53083,9 +53096,10 @@ function seasonVisualsView(raw){
   const tariffs=battlePass?.tariffs&&typeof battlePass.tariffs==='object'&&!Array.isArray(battlePass.tariffs)?battlePass.tariffs:{};
   const storyCollectible=seasonStoryCollectibleView(battlePass?.storyCollectible);
   return {
-    rating:{heroImage:seasonPassReadinessAssetPath(data?.rating?.heroImage)},
+    rating:{heroImage:seasonPassReadinessAssetPath(data?.rating?.heroImage),premiere:seasonPremierePageView(data?.rating?.premiere)},
     battlePass:{
       heroImage:seasonPassReadinessAssetPath(battlePass.heroImage),
+      premiere:{main:seasonPremierePageView(battlePass?.premiere?.main),pass:seasonPremierePageView(battlePass?.premiere?.pass)},
       navigation:{
         seasonIcon:seasonPassReadinessAssetPath(navigation.seasonIcon),
         tasksIcon:seasonPassReadinessAssetPath(navigation.tasksIcon)
@@ -53113,7 +53127,8 @@ function seasonVisualsView(raw){
 function seasonVisualsMerge(raw,surface,value){
   const data=seasonVisualsObject(raw),current=data?.[surface]&&typeof data[surface]==='object'&&!Array.isArray(data[surface])?data[surface]:{};
   if(surface!=='battlePass'){
-    data[surface]={...current,heroImage:String(value||'')};
+    if(value&&typeof value==='object'&&!Array.isArray(value))data[surface]={...current,...value};
+    else data[surface]={...current,heroImage:String(value||'')};
     return JSON.stringify(data);
   }
   const patch=value&&typeof value==='object'&&!Array.isArray(value)?value:{heroImage:String(value||'')};
@@ -53121,7 +53136,7 @@ function seasonVisualsMerge(raw,surface,value){
     ...(current?.[key]&&typeof current[key]==='object'&&!Array.isArray(current[key])?current[key]:{}),
     ...(patch?.[key]&&typeof patch[key]==='object'&&!Array.isArray(patch[key])?patch[key]:{})
   });
-  data.battlePass={...current,...patch,navigation:nested('navigation'),tasks:nested('tasks'),tariffs:nested('tariffs'),storyCollectible:nested('storyCollectible')};
+  data.battlePass={...current,...patch,navigation:nested('navigation'),tasks:nested('tasks'),tariffs:nested('tariffs'),storyCollectible:nested('storyCollectible'),premiere:{...nested('premiere'),main:{...(current?.premiere?.main||{}),...(patch?.premiere?.main||{})},pass:{...(current?.premiere?.pass||{}),...(patch?.premiere?.pass||{})}}};
   return JSON.stringify(data);
 }
 async function requireSeasonVisualsSchema(env,table){
@@ -53888,6 +53903,13 @@ async function ownerPanelSaveSeasonPassVisuals(env,ctx){
       effectiveAchievementIds.add(achievementId);
     }
     patch.storyCollectible=normalized;
+  }
+  if(Object.prototype.hasOwnProperty.call(body,'premiere')){
+    const input=body.premiere&&typeof body.premiere==='object'?body.premiere:{};
+    patch.premiere={};
+    for(const page of ['main','pass']){
+      if(Object.prototype.hasOwnProperty.call(input,page))patch.premiere[page]=await seasonPremierePatchView(env,input[page]);
+    }
   }
   const before=seasonVisualsView(row.visuals_json),nextJson=seasonVisualsMerge(row.visuals_json,'battlePass',patch),now=Math.floor(Date.now()/1000);
   await env.DB.prepare(`UPDATE season_pass_seasons SET visuals_json=?,updated_at=?,updated_by=? WHERE season_id=?`).bind(nextJson,now,String(ctx.user.id),seasonId).run();

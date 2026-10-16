@@ -1813,6 +1813,19 @@ body.zefirok-run-expanded>iframe[data-run-expanded="true"]{width:100%!important;
     }
   }
 
+  // Season Premiere V1: accept only the current game iframe, never arbitrary children.
+  window.addEventListener('message', event=>{
+    if(event.origin!==window.location.origin || event.source!==frame()?.contentWindow)return;
+    if(event.data?.type!=='zefirok-season-premiere-state')return;
+    const season=event.data.premiere||{};
+    const initData=String(window.SweetRunPlatform?.auth?.legacyInitData?.()||window.Telegram?.WebApp?.initData||'');
+    if(!initData||!season.id||season.status!=='active')return;
+    const model={surface:'main',id:String(season.id),seasonTitle:String(season.title||''),userId:String(event.data.userId||''),status:season.status,heroImage:season.heroImage,premiere:season.presentation,action:()=>openSeasonPassOverlay(initData)};
+    window.ZeffiSeasonPremiere?.consider(model,{delay:1150,blocked:()=>{
+      if(document.querySelector('.zefirok-season-pass-layer:not([hidden]),.zefirok-rating-layer:not([hidden]),.zefirok-achievements-layer:not([hidden])'))return true;
+      try{const child=frame()?.contentDocument;return Boolean(child&&[...child.querySelectorAll('.zgt-layer:not([hidden]),.zcc-main-layer:not([hidden]),[aria-modal="true"]')].some(el=>el.getClientRects().length>0))}catch{return true}
+    }});
+  });
   let seasonPassLayer = null;
   let seasonPassRefreshPending = false;
 
@@ -2957,6 +2970,143 @@ body.zefirok-run-expanded>iframe[data-run-expanded="true"]{width:100%!important;
   installTelegramViewportBridge();
 })();
 </script>
+<style id="zsp-season-premiere-style-v1">
+/* Season Premiere V1. Three surfaces share one art-driven sheet. */
+.zsp-overlay{position:fixed;inset:0;z-index:2147483600;display:flex;align-items:center;justify-content:center;padding:max(14px,env(safe-area-inset-top,0px)) 12px max(14px,env(safe-area-inset-bottom,0px));box-sizing:border-box;background:rgba(54,30,44,.64);backdrop-filter:blur(9px);-webkit-backdrop-filter:blur(9px);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:#713b54}
+.zsp-overlay[hidden]{display:none!important}
+.zsp-card{position:relative;box-sizing:border-box;width:min(450px,100%);max-height:min(90dvh,780px);overflow:auto;overscroll-behavior:contain;border:1px solid rgba(243,212,221,.9);border-radius:28px;background:linear-gradient(180deg,#fffdfb 0%,#fff6f8 100%);box-shadow:0 30px 78px rgba(59,28,47,.35);animation:zsp-enter .55s cubic-bezier(.17,.8,.24,1) both}
+.zsp-card[data-surface="pass"]{background:linear-gradient(180deg,#fffdf8,#fff7e8)}
+.zsp-card[data-surface="rating"]{background:linear-gradient(180deg,#fffdf8,#fff5e7)}
+.zsp-close{position:absolute;right:12px;top:12px;z-index:3;display:grid;place-items:center;width:41px;height:41px;border:1px solid rgba(255,255,255,.8);border-radius:15px;background:rgba(255,250,253,.92);color:#8f5770;font:900 22px/1 inherit;cursor:pointer;box-shadow:0 4px 14px rgba(99,52,74,.16)}
+.zsp-visual{position:relative;min-height:215px;max-height:37dvh;height:min(37dvh,285px);overflow:hidden;background:radial-gradient(circle at 50% 36%,#fff9e7,#f6d0df 82%)}
+.zsp-card[data-surface="rating"] .zsp-visual{background:radial-gradient(circle at 50% 30%,#fff9d3,#efd4a3 80%)}
+.zsp-visual img.zsp-cover{width:100%;height:100%;object-fit:cover;object-position:center 45%;display:block}
+.zsp-visual:after{position:absolute;inset:50% 0 0;content:"";background:linear-gradient(180deg,transparent,rgba(99,43,70,.48));pointer-events:none}
+.zsp-brand{position:absolute;z-index:1;left:17px;bottom:14px;display:flex;gap:10px;align-items:center;max-width:calc(100% - 34px);color:#fff;text-shadow:0 2px 8px rgba(69,28,40,.32)}
+.zsp-brand img{width:47px;height:47px;object-fit:contain;filter:drop-shadow(0 3px 6px rgba(81,38,57,.3))}
+.zsp-brand span{font-size:12px;letter-spacing:.12em;font-weight:950;line-height:1.35;text-transform:uppercase}
+.zsp-info{padding:18px 19px 19px}
+.zsp-eyebrow{display:inline-flex;align-items:center;border-radius:999px;background:#fce5ee;padding:7px 12px;color:#ad587e;letter-spacing:.1em;font-weight:900;font-size:10px;text-transform:uppercase}
+.zsp-card[data-surface="pass"] .zsp-eyebrow,.zsp-card[data-surface="rating"] .zsp-eyebrow{background:#fff0cd;color:#a27020}
+.zsp-info h2{margin:11px 0 6px;color:#7c3c5b;font-size:clamp(23px,6vw,30px);font-weight:950;line-height:1.12;letter-spacing:-.04em;overflow-wrap:anywhere}
+.zsp-info .zsp-subtitle{display:block;margin:0;color:#a36d84;font-size:13px;font-weight:800;line-height:1.4}
+.zsp-description{margin:11px 0 14px;color:#895e70;font-size:12px;font-weight:650;line-height:1.55;white-space:pre-line}
+.zsp-list{display:grid;gap:8px;margin:12px 0 16px}
+.zsp-feature{display:flex;align-items:center;gap:11px;min-height:51px;padding:9px 11px;border-radius:16px;border:1px solid #f1dbe3;background:rgba(255,255,255,.9)}
+.zsp-feature img{flex:none;width:38px;height:38px;object-fit:contain;filter:drop-shadow(0 3px 5px rgba(111,70,72,.11))}
+.zsp-feature span{min-width:0;color:#75445a;font-weight:800;font-size:12px;line-height:1.35;overflow-wrap:anywhere}
+.zsp-feature.is-reward{background:#fff7e5;border-color:#f0deb4}
+.zsp-feature.is-reward span{color:#855b25}
+.zsp-actions{display:grid;gap:8px}
+.zsp-action{width:100%;min-height:49px;padding:12px 14px;border-radius:15px;border:0;background:linear-gradient(135deg,#e98db1,#c95787);color:#fff;font:900 14px/1.2 inherit;box-shadow:0 8px 18px rgba(191,82,125,.23);cursor:pointer}
+.zsp-card[data-surface="pass"] .zsp-action,.zsp-card[data-surface="rating"] .zsp-action{background:linear-gradient(120deg,#e5b854,#bb832d);box-shadow:0 8px 18px rgba(179,130,40,.23)}
+.zsp-later{width:100%;min-height:43px;border:0;border-radius:12px;background:transparent;color:#9f7484;font:800 12px/1.2 inherit;cursor:pointer}
+.zsp-manual{display:inline-flex!important;align-items:center;gap:7px;min-height:36px;padding:7px 12px;border:1px solid #e9cad5;border-radius:13px;background:linear-gradient(135deg,#fffbfc,#fff2f6);color:#8c4c6c;font:900 11px/1.2 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;cursor:pointer;box-shadow:0 3px 10px rgba(119,62,81,.1)}
+.zsp-manual img{width:24px;height:24px;object-fit:contain}
+.hero .zsp-manual{margin:6px 0 8px}
+.rating-v6-hero .zsp-manual{position:absolute;right:12px;top:11px;z-index:5;background:rgba(255,250,243,.97)}
+@keyframes zsp-enter{from{opacity:0;transform:translateY(20px) scale(.97)}to{opacity:1;transform:translateY(0) scale(1)}}
+@media(max-width:390px){.zsp-card{border-radius:23px}.zsp-info{padding:14px 15px 15px}.zsp-visual{min-height:160px;height:min(29dvh,220px)}.zsp-feature{min-height:47px}.zsp-feature img{width:34px;height:34px}.zsp-feature span{font-size:11px}.zsp-info h2{font-size:23px}.zsp-description{font-size:11px}}
+@media(max-height:620px){.zsp-visual{height:145px;min-height:145px}.zsp-info{padding:12px 15px}.zsp-feature{min-height:38px;padding:5px 8px}.zsp-list{gap:5px;margin:8px 0 10px}}
+@media(prefers-reduced-motion:reduce){.zsp-card{animation:none}}
+
+
+</style>
+
+<script id="zsp-season-premiere-runtime-v1">
+/* Premium Season Premiere V1; UI-only. Never fetches game state or grants rewards. */
+(()=>{
+ 'use strict';
+ if(window.ZeffiSeasonPremiere)return;
+ const ROOT='zefirok-season-premiere-v1', SESSION_KEY=ROOT+':session';
+ const ICONS=Object.freeze({
+  main:'/assets/ui/icon_battlepass.webp',pass:'/assets/season-pass/season.webp',rating:'/assets/ui/icon_itog_reiting_season.webp'
+ });
+ const FEATURE_ICONS=Object.freeze({
+  main:['/assets/season-pass/season.webp','/assets/season-pass/quest.webp','/assets/ui/icon_reiting.webp'],
+  pass:['/assets/season-pass/season.webp','/assets/season-pass/elite.webp','/assets/season-pass/xp.webp'],
+  rating:['/assets/ui/icon_reiting.webp','/assets/ui/icon_itog_reiting_season.webp','/assets/season-pass/season.webp']
+ });
+ const DEFAULTS=Object.freeze({
+  main:['Новый сезон начался','Сладкий Забег приглашает в новое приключение.','Открой историю сезона','Получай награды за задания','Соревнуйся в рейтинге','Открыть сезон'],
+  pass:['Сокровища нового сезона','Пройди дорожку наград и собери коллекцию сезона.','50 уровней и бесплатные награды','Эксклюзивная линия Элитного пропуска','Сезонные задания и бонусы XP','Посмотреть награды'],
+  rating:['Борьба за первое место','Новый сезон рейтинга открыт. Твой лучший результат имеет значение.','Выполняй зачтённые забеги','Поднимайся к вершине таблицы','Соревнуйся за награду лидера','К соревнованию']
+ });
+ const FALLBACK=Object.freeze({
+  main:'/assets/season-pass/season_pass1.webp',pass:'/assets/season-pass/season_pass1.webp',rating:'/assets/rating/v8/season-1-cafe-opening.webp'
+ });
+ const imgSafe=(value,fallback)=>{const v=String(value||'').trim();return /^\/(?:assets)\/[A-Za-z0-9_./%+?=&-]+$/.test(v)&&!v.includes('..')?v:fallback};
+ const string=(x,max=180)=>String(x||'').trim().slice(0,max);
+ const key=(c)=>`${ROOT}:${c.userId||'anonymous'}:${c.surface}:${c.id}`;
+ const sessionOwner=()=>{try{return sessionStorage.getItem(SESSION_KEY)||''}catch{return ''}};
+ let current=null,layer=null,previousFocus=null,previousBodyOverflow='',timer=0,lastAutokey='';
+ function normalize(data){
+  if(!data||typeof data!=='object')return null;
+  const surface=String(data.surface||'');if(!DEFAULTS[surface])return null;
+  const raw=data.premiere||{},defaults=DEFAULTS[surface];
+  const id=string(data.id,150),userId=string(data.userId,40);if(!id)return null;
+  const features=Array.isArray(raw.features)?raw.features:[];
+  return {id,userId,surface,enabled:raw.enabled===true,status:String(data.status||''),
+   title:string(raw.title||defaults[0],90),subtitle:string(raw.subtitle||data.seasonTitle||defaults[1],140),
+   description:string(raw.description||defaults[1],360),
+   art:imgSafe(raw.imageUrl||data.heroImage,FALLBACK[surface]),
+   features:[0,1,2].map(i=>string(features[i]||defaults[i+2],115)),
+   reward:data.reward&&typeof data.reward==='object'?{
+    title:string(data.reward.title,110),imageUrl:imgSafe(data.reward.imageUrl,'')}:null,
+   actionLabel:defaults[5],action:typeof data.action==='function'?data.action:null};
+ }
+ const anyModal=()=>[...document.querySelectorAll('[aria-modal="true"]')].some(el=>
+  el!==layer&&el.isConnected&&!el.hidden&&el.getClientRects().length>0&&getComputedStyle(el).display!=='none') ||
+  Boolean(document.querySelector('.zgt-layer:not([hidden]),.zcc-season-layer:not([hidden]),.zcc-rating-layer:not([hidden])')) ||
+  Boolean(window.ZefirokPageGuide?.isOpen?.());
+ function make(tag,cls,txt){const el=document.createElement(tag);if(cls)el.className=cls;if(txt!==undefined)el.textContent=txt;return el}
+ function close(){if(!layer||layer.hidden)return;layer.hidden=true;document.body.style.overflow=previousBodyOverflow;try{previousFocus?.focus?.({preventScroll:true})}catch{}previousFocus=null}
+ function render(config){
+  if(!layer){layer=make('section','zsp-overlay');layer.hidden=true;layer.setAttribute('role','presentation');document.body.append(layer);
+   layer.addEventListener('click',e=>{if(e.target===layer||e.target.closest?.('[data-zsp-close]'))close()});
+   layer.addEventListener('keydown',e=>{if(e.key==='Escape'){e.preventDefault();close()}if(e.key==='Tab'){
+    const controls=[...layer.querySelectorAll('button:not([disabled])')];if(!controls.length)return;
+    if(e.shiftKey&&document.activeElement===controls[0]){e.preventDefault();controls[controls.length-1].focus()}
+    else if(!e.shiftKey&&document.activeElement===controls[controls.length-1]){e.preventDefault();controls[0].focus()}
+   }});
+  }
+  layer.replaceChildren();const card=make('article','zsp-card');card.dataset.surface=config.surface;card.setAttribute('role','dialog');card.setAttribute('aria-modal','true');card.setAttribute('aria-label',config.title);
+  const closeButton=make('button','zsp-close','×');closeButton.type='button';closeButton.dataset.zspClose='';closeButton.setAttribute('aria-label','Закрыть приветствие');card.append(closeButton);
+  const visual=make('div','zsp-visual');const art=make('img','zsp-cover');art.src=config.art;art.alt='';art.decoding='async';art.loading='eager';art.addEventListener('error',()=>{if(!art.src.endsWith(FALLBACK[config.surface]))art.src=FALLBACK[config.surface]},{once:true});visual.append(art);
+  const brand=make('div','zsp-brand');const brandArt=make('img');brandArt.src=ICONS[config.surface];brandArt.alt='';brandArt.setAttribute('aria-hidden','true');brand.append(brandArt,make('span','',config.surface==='main'?'Сладкий Забег':config.surface==='pass'?'Сезонный пропуск':'Рейтинг сезона'));visual.append(brand);card.append(visual);
+  const info=make('div','zsp-info');info.append(make('span','zsp-eyebrow','ПРЕМЬЕРА СЕЗОНА'),make('h2','',config.title),make('span','zsp-subtitle',config.subtitle),make('p','zsp-description',config.description));
+  const list=make('div','zsp-list');const labels=config.features;
+  labels.forEach((label,i)=>{if(!label)return;const row=make('div','zsp-feature');const image=make('img');image.src=FEATURE_ICONS[config.surface][i];image.alt='';image.loading='lazy';row.append(image,make('span','',label));list.append(row)});
+  if(config.surface==='rating'&&config.reward?.title){const row=make('div','zsp-feature is-reward');const image=make('img');image.src=config.reward.imageUrl||'/assets/ui/icon_itog_reiting_season.webp';image.alt='';row.append(image,make('span','','Награда лидеру: '+config.reward.title));list.append(row)}
+  info.append(list);const actions=make('div','zsp-actions'),main=make('button','zsp-action',config.actionLabel),later=make('button','zsp-later','Продолжить без просмотра');main.type='button';later.type='button';later.dataset.zspClose='';main.addEventListener('click',()=>{close();try{config.action?.()}catch(e){console.error('Season premiere navigation failed',e)}});actions.append(main,later);info.append(actions);card.append(info);layer.append(card);
+  previousFocus=document.activeElement;previousBodyOverflow=document.body.style.overflow;document.body.style.overflow='hidden';layer.hidden=false;closeButton.focus({preventScroll:true});
+ }
+ function openManual(data){const next=data?normalize(data):current;if(!next||!next.enabled||next.status!=='active')return false;render(next);return true}
+ function consider(data,{delay=850,blocked=null}={}){
+  const next=normalize(data);if(!next||!next.enabled||next.status!=='active')return false;current=next;
+  const k=key(next);if(timer&&k===lastAutokey)return true;
+  lastAutokey=k;if(timer)clearTimeout(timer);
+  timer=setTimeout(()=>{timer=0;
+   if(!current||key(current)!==k)return;
+   if(sessionOwner()||anyModal()||(typeof blocked==='function'&&blocked()))return;
+   try{if(localStorage.getItem(k)==='1')return}catch{}
+   try{sessionStorage.setItem(SESSION_KEY,k)}catch{}
+   try{localStorage.setItem(k,'1')}catch{}
+   render(next);
+  },delay);return true;
+ }
+ function setCurrent(data){const next=normalize(data);if(!next)return false;current=next;return true}
+ function ensureManual(target,data){const next=data?normalize(data):current;if(!next||!next.enabled||next.status!=='active'||!target)return;
+  const currentButton=target.querySelector('[data-zsp-manual]');if(currentButton){currentButton.onclick=()=>openManual(next);return}
+  const button=make('button','zsp-manual');button.type='button';button.dataset.zspManual='';const image=make('img');image.src=ICONS[next.surface];image.alt='';button.append(image,make('span','','О сезоне'));
+  button.onclick=()=>openManual(next);target.append(button);
+ }
+ window.ZeffiSeasonPremiere={consider,openManual,setCurrent,ensureManual,close,get active(){return Boolean(layer&&!layer.hidden)}};
+})();
+
+</script>
+
+
 </head>
 <body>
 <iframe allow="clipboard-write" referrerpolicy="no-referrer" sandbox="allow-scripts allow-same-origin" data-srcdoc="&lt;!DOCTYPE html&gt;
@@ -22018,6 +22168,9 @@ function createTutorialDeck(layer, mount, options, words) {
 
       function applySeasonPassProfileBonus(payload) {
         const data = payload &amp;&amp; typeof payload === &quot;object&quot; ? payload : {};
+        if (data.premiere &amp;&amp; data.premiere.status === &quot;active&quot;) {
+          try { window.parent.postMessage({type:&quot;zefirok-season-premiere-state&quot;,premiere:data.premiere,userId:String(telegramProfile?.id||&quot;&quot;)},window.parent.location.origin); } catch (error) {}
+        }
         if (Object.prototype.hasOwnProperty.call(data, &quot;premiumTier&quot;)) renderProfilePassTierBadge(data.premiumTier);
         else renderProfilePassTierBadge();
         if (Object.prototype.hasOwnProperty.call(data, &quot;passLevel&quot;)) seasonPassProfileLevel = Math.max(0, Math.floor(Number(data.passLevel || 0)));
