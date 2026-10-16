@@ -7688,6 +7688,13 @@ html&gt;body{padding:
     color: var(--ink);
     text-align: center;
   }
+  /* The dialog is focused programmatically; avoid the browser's blue focus ring. */
+  #zefirok-maltipoo-runner .release-dialog:focus {
+    outline: none;
+  }
+  #zefirok-maltipoo-runner .release-dialog {
+    -webkit-tap-highlight-color: transparent;
+  }
   #zefirok-maltipoo-runner .release-image-wrap {
     width: 100%;
     aspect-ratio: 1 / 1;
@@ -23517,7 +23524,7 @@ function createTutorialDeck(layer, mount, options, words) {
       function caseExperienceSkipOpening() {
         if (!caseExperiencePendingOpened || caseExperienceRevealStarted || Date.now() &lt; caseExperienceCanSkipAt) return;
         const shell = caseContentEl?.querySelector(&quot;.case-xp-opening&quot;);
-        if (!shell) return;
+        if (!shell || shell.classList.contains(&quot;is-skipping&quot;)) return;
         shell.classList.add(&quot;is-skipping&quot;);
         hapticImpact(&quot;light&quot;, 40);
         caseExperienceClearTimers();
@@ -33391,6 +33398,10 @@ html &gt; body.zefirok-game-expanded{height:var(--zefirok-visible-height,100dvh)
 #zefirok-maltipoo-runner .case-xp-opening-heading p{margin:6px 0 0;color:#9a7e76;font-size:12px}
 #zefirok-maltipoo-runner .case-xp-case-stage{position:relative;z-index:2;display:grid;place-items:center;width:100%;height:350px;min-height:350px;margin:-8px 0 -3px;padding:0;border:0!important;border-radius:0!important;background:transparent!important;box-shadow:none!important;overflow:visible;appearance:none;-webkit-appearance:none}
 #zefirok-maltipoo-runner .case-xp-case-stage:active{transform:none!important}
+/* Touch highlight was covering the entire case animation with an opaque gray rectangle on iOS. */
+#zefirok-maltipoo-runner .case-xp-case-stage{-webkit-tap-highlight-color:transparent;-webkit-touch-callout:none;-webkit-user-select:none;user-select:none}
+#zefirok-maltipoo-runner .case-xp-case-stage:focus{outline:none}
+#zefirok-maltipoo-runner .case-xp-case-stage:focus-visible .case-xp-case-stack{outline:2px solid rgba(212,94,137,.66);outline-offset:5px;border-radius:50%}
 #zefirok-maltipoo-runner .case-xp-stage-vignette{position:absolute;width:260px;height:260px;border-radius:50%;background:radial-gradient(circle,color-mix(in srgb,var(--case-accent-2) 40%,#fff) 0%,color-mix(in srgb,var(--case-accent) 10%,transparent) 48%,transparent 72%);filter:blur(3px);opacity:.74}
 #zefirok-maltipoo-runner .case-xp-rays{position:absolute;width:310px;height:310px;border-radius:50%;opacity:.16;background:repeating-conic-gradient(from 0deg,var(--case-accent) 0deg 5deg,transparent 5deg 20deg);mask-image:radial-gradient(circle,transparent 0 23%,#000 27% 64%,transparent 70%);-webkit-mask-image:radial-gradient(circle,transparent 0 23%,#000 27% 64%,transparent 70%)}
 #zefirok-maltipoo-runner .case-xp-particles{position:absolute;inset:30px 35px;pointer-events:none}
