@@ -2878,10 +2878,11 @@ async function ensureDailyLoyaltySchema(env) {
   if (dailyLoyaltySchemaReady) return;
   if (dailyLoyaltySchemaPromise) return dailyLoyaltySchemaPromise;
   const promise = (async () => {
-    // Hot path: migrations create and seed these tables before code is released.
-    // A fresh Worker isolate therefore pays only one tiny probe instead of a DDL batch.
+    // Migrations create and seed these tables before code is released.
+    // Zero-row subqueries check the presence of four auxiliary tables at SQL
+    // preparation time without four full scans of sqlite_master per isolate.
     try {
-      const probe = await env.DB.prepare(`SELECT s.id FROM daily_loyalty_seasons s JOIN daily_loyalty_settings ds ON ds.season_id=s.id WHERE EXISTS(SELECT 1 FROM daily_loyalty_progressive_rewards wr WHERE wr.season_id=s.id AND wr.week_number=1 AND wr.cycle_day=1) AND EXISTS(SELECT 1 FROM daily_loyalty_comeback_tiers ct WHERE ct.season_id=s.id) AND EXISTS(SELECT 1 FROM daily_loyalty_economy_guard eg WHERE eg.season_id=s.id) AND EXISTS(SELECT 1 FROM sqlite_master WHERE type='table' AND name='player_game_presence') AND EXISTS(SELECT 1 FROM sqlite_master WHERE type='table' AND name='daily_loyalty_return_tests') AND EXISTS(SELECT 1 FROM sqlite_master WHERE type='table' AND name='daily_loyalty_protection_settings') AND EXISTS(SELECT 1 FROM sqlite_master WHERE type='table' AND name='daily_loyalty_protection_grants') LIMIT 1`).first();
+      const probe = await env.DB.prepare(`SELECT s.id FROM daily_loyalty_seasons s JOIN daily_loyalty_settings ds ON ds.season_id=s.id WHERE EXISTS(SELECT 1 FROM daily_loyalty_progressive_rewards wr WHERE wr.season_id=s.id AND wr.week_number=1 AND wr.cycle_day=1) AND EXISTS(SELECT 1 FROM daily_loyalty_comeback_tiers ct WHERE ct.season_id=s.id) AND EXISTS(SELECT 1 FROM daily_loyalty_economy_guard eg WHERE eg.season_id=s.id) AND NOT EXISTS(SELECT 1 FROM player_game_presence LIMIT 0) AND NOT EXISTS(SELECT 1 FROM daily_loyalty_return_tests LIMIT 0) AND NOT EXISTS(SELECT 1 FROM daily_loyalty_protection_settings LIMIT 0) AND NOT EXISTS(SELECT 1 FROM daily_loyalty_protection_grants LIMIT 0) LIMIT 1`).first();
       if (probe?.id) return;
     } catch (error) {
       // Compatibility fallback below repairs an environment where the migration was missed.
@@ -4847,7 +4848,11 @@ async function processCriticalServerQueues(env) {
     })],
     ["rewardQueue", () => recordCronServiceStatus(env, "reward-delivery", () => processRewardDeliveryQueue(env, 25))],
     ["staffNotifications", () => processPendingLeaderboardStaffNotifications(env, 30)],
-    ["seasonEndReminders", () => processSeasonEndReminders(env)],
+    // Seasonal reminders have 3-day / 24-hour windows. A five-minute cadence
+    // avoids repeatedly scanning unchanged legacy deliveries every minute.
+    ["seasonEndReminders", () => Math.floor(Date.now() / 60000) % 5 === 0
+      ? processSeasonEndReminders(env)
+      : { skipped:true, reason:'five-minute-cadence' }],
     ["seasonPassLetters", () => processSeasonPassTeaserNotifications(env)],
     ["seasonPassStory", () => processSeasonPassStoryNotifications(env)],
     ["ratingDethroneRecovery", () => recoverOwnerRatingDethroneNotifications(env, 12)],
@@ -29983,7 +29988,19 @@ async function ensureSafeControlCenterSchema(env) {
         env.DB.prepare(`CREATE INDEX IF NOT EXISTS idx_reward_delivery_queue_player ON reward_delivery_queue(telegram_id, status, created_at DESC)`)
       ]);
       await addRuntimeColumnIfMissing(env, "reward_delivery_queue", "operation_id", "TEXT NOT NULL DEFAULT ''");
-      await env.DB.prepare(`UPDATE reward_delivery_queue SET operation_id='rq:v1:'||json_array(source_type,source_id,telegram_id,reward_kind,reward_id) WHERE TRIM(operation_id)=''`).run();
+      // Migration 0087 backfilled operation_id and installed the legacy insert
+      // trigger. This compatibility repair is still available for missed legacy
+      // data, but must run only once per database, not once per Worker isolate.
+      const operationBackfillMarker = 'reward-queue:operation-id-backfill:v1';
+      const operationBackfillState = await env.DB.prepare(
+        `SELECT state_value FROM bot_system_state WHERE state_key=? LIMIT 1`
+      ).bind(operationBackfillMarker).first();
+      if (String(operationBackfillState?.state_value || '') !== 'ready') {
+        await env.DB.prepare(`UPDATE reward_delivery_queue SET operation_id='rq:v1:'||json_array(source_type,source_id,telegram_id,reward_kind,reward_id) WHERE TRIM(operation_id)=''`).run();
+        await env.DB.prepare(`INSERT INTO bot_system_state(state_key,state_value,updated_at) VALUES(?,'ready',?)
+          ON CONFLICT(state_key) DO UPDATE SET state_value='ready',updated_at=excluded.updated_at`
+        ).bind(operationBackfillMarker,Math.floor(Date.now()/1000)).run();
+      }
       await env.DB.batch([
         env.DB.prepare(`CREATE UNIQUE INDEX IF NOT EXISTS idx_reward_delivery_operation_id ON reward_delivery_queue(operation_id) WHERE operation_id<>''`),
         env.DB.prepare(`CREATE TRIGGER IF NOT EXISTS trg_reward_delivery_operation_id_legacy AFTER INSERT ON reward_delivery_queue WHEN TRIM(NEW.operation_id)='' BEGIN UPDATE reward_delivery_queue SET operation_id='rq:v1:'||json_array(NEW.source_type,NEW.source_id,NEW.telegram_id,NEW.reward_kind,NEW.reward_id) WHERE id=NEW.id; END`)
@@ -35584,7 +35601,9 @@ async function ensureSeasonPassSchema(env) {
   if (seasonPassSchemaPromise) return seasonPassSchemaPromise;
   const promise = (async () => {
     const markerReady = await seasonPassSchemaMarkerReady(env);
-    if (await seasonPassSchemaQuickCheck(env)) {
+    // The marker was written only after a successful schema check. Production
+    // migrations and the release schema contract enforce subsequent changes.
+    if (markerReady || await seasonPassSchemaQuickCheck(env)) {
       if (!markerReady) await markSeasonPassSchemaReady(env);
       await ensureSeason3StoryPresetRuntime(env);
       await ensureSeason4StoryPresetRuntime(env);
