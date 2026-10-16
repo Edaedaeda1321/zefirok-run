@@ -1645,7 +1645,7 @@ const DEFAULT_SEASON_RESET_PLAN = Object.freeze({
 
 // Встроенная релизная новость. BOT_NEWS_IMAGE_URL в Cloudflare может переопределить картинку.
 const DEFAULT_BOT_NEWS_IMAGE_URL = "";
-const RELEASE_130_BOT_NEWS_IMAGE_URL = "/assets/rating/season-leaderboard-banner.webp";
+const RELEASE_130_BOT_NEWS_IMAGE_URL = "/assets/news/news_update_1.3.0.jpg";
 const BOT_NEWS_TITLE = "Сладкий Забег 1.3.0 — новый сезон уже здесь! ✨";
 const BOT_NEWS_TEXT = `Встречай «Сладкий Забег» 1.3.0! 🐾 Новая сезонная глава, обновлённые разделы и ещё больше поводов возвращаться к Зеффи.
 
@@ -11565,7 +11565,7 @@ async function ensureRelease106PlayerFix(env) {
   return release106PlayerFixPromise;
 }
 
-const RELEASE_130_NEWS_KEY = "release-1.3.0-news-v1";
+const RELEASE_130_NEWS_KEY = "release-1.3.0-news-v2-image";
 let release130NewsReady = false;
 let release130NewsPromise = null;
 
@@ -17987,7 +17987,12 @@ async function sendBotNews(env, chatId) {
 ${escapeHtml(body)}${newsCta}
 
 Версия: <b>${escapeHtml(GAME_VERSION)}</b>`;
-  const imageUrl = String(useBuiltInRelease ? RELEASE_130_BOT_NEWS_IMAGE_URL : (news.image_url || env.BOT_NEWS_IMAGE_URL || DEFAULT_BOT_NEWS_IMAGE_URL)).trim();
+  const rawImageUrl = String(useBuiltInRelease ? RELEASE_130_BOT_NEWS_IMAGE_URL : (news.image_url || env.BOT_NEWS_IMAGE_URL || DEFAULT_BOT_NEWS_IMAGE_URL)).trim();
+  // Telegram sendPhoto accepts HTTPS URLs or file_id values, not relative asset paths.
+  // Resolve only root-relative paths, preserving other existing image sources.
+  const imageUrl = rawImageUrl.startsWith("/")
+    ? new URL(rawImageUrl, configuredGameUrl(env)).toString()
+    : rawImageUrl;
   if (imageUrl) {
     try {
       const compactCaption = `<b>📰 ${escapeHtml(title)}</b>\n\nВерсия <b>${escapeHtml(GAME_VERSION)}</b> уже доступна. Подробный список изменений — следующим сообщением.`;
