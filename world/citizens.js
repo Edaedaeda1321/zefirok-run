@@ -202,8 +202,14 @@ export function buildCitizenScene(city,catalog,population,now=Date.now(),comfort
    for(const stop of activityRoute.stops)reservations.set(stop.uid,(reservations.get(stop.uid)||0)+1);
   }
   const track=activityRoute?.track||roamingTrack(start,neighbors,i,new Set((city.crosswalks||[]).map(c=>c.id)));
-  routes.push({id:`citizen-${i}`,variant:i%OUTFITS.length,role,track,
-   offset:hash(`${i}:${origin.uid}:phase`)%(activityRoute?.duration||8500),
+  // New players now see all four residents. Spread roaming phases across
+  // the full track, otherwise two walkers from the same house can overlap
+  // for an entire minute and still look like only one person on screen.
+  const roamPeriod=Math.max(STEP_MS,(track.length-1)*STEP_MS);
+  const offset=activityRoute
+   ?hash(`${i}:${origin.uid}:phase`)%activityRoute.duration
+   :Math.floor(i*roamPeriod/count)+(hash(`${origin.uid}:${i}:visual`)%400);
+  routes.push({id:`citizen-${i}`,variant:i%OUTFITS.length,role,track,offset,
    ...(activityRoute?{stops:activityRoute.stops,timed:activityRoute.timed,duration:activityRoute.duration}:{})});
  }
  return {routes,population};

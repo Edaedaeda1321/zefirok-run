@@ -179,24 +179,65 @@
     <div class="map-coordinates" hidden aria-hidden="true"><span class="coordinate-dot"></span><span id="coordLabel">24 x 24</span></div>
    </div>
    <div class="map-metrics" id="cityMetrics">
-    <button type="button" class="metrics-toggle" id="metricsToggle" aria-controls="cityMetricsContent" aria-expanded="false" aria-label="Показать всю статистику города"><svg class="metrics-toggle-icon" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 20v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 20v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg> <span>Город в цифрах</span><b class="city-level-badge" id="cityLevelBadge">Ур. 1</b><span class="metrics-chevron">⌄</span></button>
+    <button type="button" class="metrics-toggle" id="metricsToggle" aria-controls="cityStatsSheet" aria-expanded="false" aria-label="Открыть окно «Город в цифрах»"><svg class="metrics-toggle-icon" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 20v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 20v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg> <span>Город в цифрах</span><b class="city-level-badge" id="cityLevelBadge">Ур. 1</b><span class="metrics-chevron">⌄</span></button>
     <div class="metrics-content" id="cityMetricsContent">
      <div class="metric metric-people"><svg class="metric-icon" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 20v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 20v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg><span data-t="population"></span><strong id="populationCount">0</strong></div>
      <div class="metric metric-comfort" id="comfortCard"><svg class="metric-icon" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.8 4.6a5.3 5.3 0 0 0-7.5 0L12 5.9l-1.3-1.3a5.3 5.3 0 0 0-7.5 7.5L12 21l8.8-8.9a5.3 5.3 0 0 0 0-7.5z"/></svg><span data-t="comfort"></span><strong id="comfortCount">0</strong><small id="comfortTier" aria-live="polite"></small></div>
      <div class="metric metric-completed"><svg class="metric-icon" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m3 11 9-8 9 8v9H3z"/><path d="M9 20v-8h6v8"/></svg><span data-t="completedStructures"></span><strong id="buildingsCount">0</strong></div>
      <div class="metric metric-build"><svg class="metric-icon" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 12-7 7a2 2 0 0 1-3-3l7-7"/><path d="m11 6 3-3 7 7-3 3"/><path d="M16 5 19 2"/></svg><span data-t="buildInProgress"></span><strong id="constructingCount">0</strong></div>
     </div>
-    <div class="city-level-details" id="cityLevelDetails">
-     <div class="city-level-name" id="cityLevelName">Маленькое поселение</div>
-     <div class="city-level-next" id="cityLevelNext">Следующий уровень</div>
-     <div class="city-level-row"><span>Жители</span><b id="cityLevelResidents">0 / 4</b></div>
-     <div class="city-level-track"><span id="cityLevelResidentsBar"></span></div>
-     <div class="city-level-row"><span>Уют</span><b id="cityLevelComfort">0 / 30</b></div>
-     <div class="city-level-track city-level-track--comfort"><span id="cityLevelComfortBar"></span></div>
-     <div class="city-level-conditions" id="cityLevelConditions">Парк: 0 / 1</div>
-     <div class="city-level-reward"><span id="cityRewardText">Развивай город, чтобы получить подарок!</span><button type="button" id="claimCityReward" hidden>Забрать</button></div>
-    </div>
    </div>
+   <div class="city-stats-backdrop" id="cityStatsBackdrop" hidden></div>
+   <section class="city-stats-sheet" id="cityStatsSheet" role="dialog" aria-modal="true" aria-labelledby="cityStatsTitle" hidden>
+    <div class="city-stats-sheet__header">
+     <div class="city-stats-sheet__titles">
+      <small>РАЗВИТИЕ ГОРОДА</small>
+      <strong id="cityStatsTitle">Город в цифрах</strong>
+      <p id="cityStatsHeroText">Открывай цели, следи за уровнем и получай награды за развитие.</p>
+     </div>
+     <button type="button" class="city-stats-sheet__close" id="closeCityStats" aria-label="Закрыть окно «Город в цифрах»">✕</button>
+    </div>
+    <div class="city-stats-sheet__hero">
+     <div class="city-stats-sheet__level">
+      <span class="city-stats-sheet__eyebrow">Текущий этап</span>
+      <strong id="cityLevelNameSheet">Маленькое поселение</strong>
+      <span class="city-stats-sheet__next" id="cityLevelNextSheet">Следующий уровень</span>
+     </div>
+     <div class="city-stats-sheet__badge" id="cityStatsLevelBadge">Ур. 1</div>
+    </div>
+    <div class="city-stats-tabs" role="tablist" aria-label="Разделы окна «Город в цифрах»">
+     <button type="button" class="city-stats-tab is-active" id="cityStatsTabGoals" data-city-tab="goals" role="tab" aria-selected="true" aria-controls="cityStatsPanelGoals">Задания</button>
+     <button type="button" class="city-stats-tab" id="cityStatsTabProgress" data-city-tab="progress" role="tab" aria-selected="false" aria-controls="cityStatsPanelProgress">Книга развития</button>
+     <button type="button" class="city-stats-tab" id="cityStatsTabStats" data-city-tab="stats" role="tab" aria-selected="false" aria-controls="cityStatsPanelStats">Статистика</button>
+    </div>
+    <div class="city-stats-panels">
+     <section class="city-stats-panel is-active" id="cityStatsPanelGoals" data-city-panel="goals" role="tabpanel" aria-labelledby="cityStatsTabGoals">
+      <div id="cityGuideHost"></div>
+      <div id="residentRequestsHost"></div>
+     </section>
+     <section class="city-stats-panel" id="cityStatsPanelProgress" data-city-panel="progress" role="tabpanel" aria-labelledby="cityStatsTabProgress" hidden>
+      <div id="cityChaptersHost"></div>
+     </section>
+     <section class="city-stats-panel" id="cityStatsPanelStats" data-city-panel="stats" role="tabpanel" aria-labelledby="cityStatsTabStats" hidden>
+      <div class="city-stats-section">
+       <div class="city-stats-section__header">
+        <strong>Путь к следующему уровню</strong>
+        <small>Все условия и награда за развитие города</small>
+       </div>
+       <div class="city-level-details city-level-details--sheet" id="cityLevelDetails">
+        <div class="city-level-name" id="cityLevelName">Маленькое поселение</div>
+        <div class="city-level-next" id="cityLevelNext">Следующий уровень</div>
+        <div class="city-level-row"><span>Жители</span><b id="cityLevelResidents">0 / 4</b></div>
+        <div class="city-level-track"><span id="cityLevelResidentsBar"></span></div>
+        <div class="city-level-row"><span>Уют</span><b id="cityLevelComfort">0 / 30</b></div>
+        <div class="city-level-track city-level-track--comfort"><span id="cityLevelComfortBar"></span></div>
+        <div class="city-level-conditions" id="cityLevelConditions">Парк: 0 / 1</div>
+        <div class="city-level-reward"><span id="cityRewardText">Развивай город, чтобы получить подарок!</span><button type="button" id="claimCityReward" hidden>Забрать</button></div>
+       </div>
+      </div>
+     </section>
+    </div>
+   </section>
    <div class="world-tools" role="toolbar" aria-label="Инструменты города">
     <button id="openBuildCatalog" type="button" class="tool-button tool-build" aria-controls="bottomPanel" aria-expanded="true"><svg class="tool-glyph" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 12-7 7a2 2 0 0 1-3-3l7-7"/><path d="m11 6 3-3 7 7-3 3"/><path d="M16 5 19 2"/></svg><small>Строить</small></button>
     <button id="toolSelect" data-tool="select" type="button" class="tool-button is-active" aria-label="Режим просмотра" title="Режим просмотра"><svg class="tool-glyph" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m5 3 14 9-7 1-3 7z"/><path d="m12 13 5 7"/></svg><small>Выбор</small></button>

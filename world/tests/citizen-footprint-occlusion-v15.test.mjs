@@ -23,7 +23,7 @@ test('legacy 3D monument plazas can no longer be walked through on old overlappi
   assert.ok(walkerRoads.has(tile),`healthy neighboring road remains walkable: ${tile}`);
  }
  const scene=buildCitizenScene(city,CATALOG,2,10_000);
- assert.equal(scene.routes.length,1,'normal residents still walk on safe part of road');
+ assert.equal(scene.routes.length,2,'both starter residents keep safe road routes');
  for(const citizen of scene.routes){
   for(let i=0;i<citizen.track.length;i++){
    const point=citizen.track[i],next=citizen.track[(i+1)%citizen.track.length];
@@ -76,7 +76,7 @@ test('walkable scene never changes purchases, wallets, progression or original r
  const city=makeInitialCity();
  const original=JSON.stringify(city);
  const ordinary=buildCitizenScene(city,CATALOG,2,80000,15);
- assert.equal(ordinary.routes.length,1);
+ assert.equal(ordinary.routes.length,2);
  assert.equal(JSON.stringify(city),original);
  assert.ok(ordinary.routes[0].track.every(t=>connectedRoads(city).has(t.id)));
  assert.deepEqual(walkableCitizenRoads(city,CATALOG),connectedRoads(city));

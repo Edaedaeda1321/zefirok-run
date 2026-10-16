@@ -19,7 +19,7 @@ test('starter town has two residents and 15 comfort; only one completed house',(
  assert.equal(stats.comfortTier,'empty');
  assert.equal(stats.structures,1);
  assert.equal(stats.completedStructures,1);
- assert.equal(stats.visibleCitizens,1);
+ assert.equal(stats.visibleCitizens,2);
  assert.equal(stats.buildings,4); // legacy compatibility
  assert.equal(stats.connected,1);
 });
@@ -43,7 +43,7 @@ test('population increases only when occupied buildings finish and connect to th
  c=addObject(c,CATALOG,'family-home',16,11,0,now);
  assert.equal(cityStats(c,CATALOG,now).population,2);
  assert.equal(cityStats(c,CATALOG,now+300001).population,6);
- assert.equal(cityStats(c,CATALOG,now+300001).visibleCitizens,2);
+ assert.equal(cityStats(c,CATALOG,now+300001).visibleCitizens,4);
  assert.equal(cityStats(c,CATALOG,now+300001).completedStructures,2);
  c=storeObject(c,c.objects.at(-1).uid);
  assert.equal(cityStats(c,CATALOG,now+300001).population,2);
@@ -75,11 +75,11 @@ test('diverse city with homes, shops and park earns one diversity bonus',()=>{
 test('comfort tiers and visible NPC budget grow deterministically with the city',()=>{
  assert.deepEqual([0,19,20,49,50,99,100,199,200].map(comfortTierFor),
   ['empty','empty','corner','corner','district','district','town','town','magical']);
- assert.deepEqual([0,2,4,5,16,48,1000].map(visibleCitizenCount),[0,1,1,2,4,12,12]);
+ assert.deepEqual([0,2,4,5,16,48,1000].map(visibleCitizenCount),[0,2,4,4,4,12,12]);
 });
 test('all sampled citizen routes stay on connected Road and never teleport',()=>{
  const city=initial(),roads=connectedRoads(city),scene=buildCitizenScene(city,CATALOG,2,100000);
- assert.equal(scene.routes.length,1);
+ assert.equal(scene.routes.length,2);
  for(const citizen of scene.routes){
   for(let i=0;i<citizen.track.length;i++){
    const p=citizen.track[i],next=citizen.track[(i+1)%citizen.track.length];
@@ -95,6 +95,25 @@ test('all sampled citizen routes stay on connected Road and never teleport',()=>
  }
  assert.equal(buildCitizenScene(city,CATALOG,1000).routes.length,12);
 });
+test('four residents give four visible walkers on valid connected roads',()=>{
+ const city=initial();
+ const scene=buildCitizenScene(city,CATALOG,4,120_000,40);
+ assert.equal(visibleCitizenCount(4,40),4);
+ assert.equal(scene.routes.length,4);
+ const sampled=sampleCitizenScene(scene,125_000);
+ assert.equal(sampled.length,4);
+ assert.equal(new Set(sampled.map(person=>person.id)).size,4);
+ // All four walkers must be perceptibly distinct in a tiny town: a mere
+ // increase in route count used to leave multiple NPCs on top of each other.
+ for(let now=100_000;now<110_000;now+=1_000){
+  const people=sampleCitizenScene(scene,now);
+  const visiblePositions=new Set(people.map(person=>Math.round(person.x*5)/5));
+  assert.ok(visiblePositions.size>=3,`walkers overlap too much at ${now}`);
+ }
+ const safe=connectedRoads(city);
+ assert.ok(scene.routes.every(person=>person.track.every(point=>safe.has(point.id))));
+ assert.ok([4,5,6,8,9,16,40,48].every((p,i,array)=>i===0||visibleCitizenCount(p)>=visibleCitizenCount(array[i-1])));
+});
 test('the animation is derived and never persists into save JSON, wallet or D1',()=>{
  const city=initial(),original=JSON.stringify(city),before={...city.wallet};
  const scene=buildCitizenScene(city,CATALOG,2,100000);
@@ -109,8 +128,14 @@ test('hosted and sandbox pages show residents, comfort and a rank without the ol
   for(const id of ['populationCount','comfortCount','comfortTier','buildingsCount','constructingCount'])
    assert.match(html,new RegExp(`id="${id}"`));
   assert.doesNotMatch(html,/id="connectedCount"|id="roadsCount"/);
+  for(const id of ['cityStatsSheet','cityStatsTabGoals','cityStatsTabProgress','cityStatsTabStats','closeCityStats'])
+   assert.match(html,new RegExp(`id="${id}"`));
  }
  const app=read('../app.js'),renderer=read('../renderer.js');
+ const css=read('../premium-ui.css');
+ assert.match(app,/document\.body\.append\(\$\('cityStatsBackdrop'\),\$\('cityStatsSheet'\),\$\('toast'\)\)/);
+ assert.match(css,/\.city-stats-sheet\{position:fixed;z-index:2147482000/);
+ assert.match(css,/\.toast\{position:fixed;top:[^}]*z-index:2147482300/);
  assert.match(app,/buildCitizenScene\(state\.city,CATALOG,stats\.population,Date\.now\(\),stats\.comfort\)/);
  assert.match(app,/sampleCitizenScene\(state\.citizenScene,now\)/);
  assert.match(renderer,/drawCitizen\(ctx,layer\.person/);

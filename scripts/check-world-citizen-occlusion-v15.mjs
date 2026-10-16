@@ -12,7 +12,7 @@ const walkable=walkableCitizenRoads(city,CATALOG);
 assert.equal(walkable.has('12,13'),false);
 assert.equal(walkable.has('11,13'),true);
 const scene=buildCitizenScene(city,CATALOG,2);
-assert.equal(scene.routes.length,1);
+assert.equal(scene.routes.length,2);
 for(const walker of scene.routes)for(const step of walker.track)assert.ok(walkable.has(step.id));
 for(const kind of ['playground','garden','bus-terminal','botanical-garden']){
  const def=CATALOG[kind],item={x:10,y:9,rotation:0};

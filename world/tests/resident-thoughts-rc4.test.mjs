@@ -13,11 +13,13 @@ const read=path=>readFileSync(new URL(path,import.meta.url),'utf8');
 test('thoughts map to existing citizens only, respecting the smallest player city',()=>{
  const town=makeInitialCity(),stats=cityStats(town,CATALOG);
  const scene=buildCitizenScene(town,CATALOG,stats.population,Date.now(),stats.comfort);
- assert.equal(scene.routes.length,1,'a starter city has only one visible walker');
+ assert.equal(scene.routes.length,2,'both starter residents have visible walkers');
  const shown=assignResidentThoughts([mia,leya],scene.routes);
- assert.equal(shown.length,1,'a second wish must not spawn a phantom walker');
+ assert.equal(shown.length,2,'two real residents can show two server-backed requests');
  assert.equal(shown[0].citizenId,scene.routes[0].id);
  assert.equal(shown[0].request.id,mia.id);
+ assert.deepEqual(shown.map(x=>x.citizenId),['citizen-0','citizen-1']);
+ assert.deepEqual(shown.map(x=>x.request.id),[mia.id,leya.id]);
  assert.ok(sampleCitizenScene(scene).some(c=>c.id===shown[0].citizenId));
  assert.deepEqual(assignResidentThoughts([mia,leya],[]),[]);
 });

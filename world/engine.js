@@ -518,9 +518,13 @@ export function comfortTierFor(score){
   return 'empty';
 }
 export function visibleCitizenCount(population,comfort=0){
-  // Cosier streets draw more visible walkers, but never exceed the mobile cap.
-  const total=Math.ceil(Math.max(0,population)/4)+Math.floor(Math.max(0,comfort)/60);
-  return Math.min(12,Math.max(0,population>0?total:0));
+  // The starter town shows its actual residents, rather than only one NPC.
+  // Keep the visual budget monotonic as the town grows (no 8 -> 3 drop),
+  // never create more walkers than residents, and cap rendering at twelve.
+  const residents=Math.max(0,Math.floor(Number(population)||0));
+  if(!residents)return 0;
+  const baseline=Math.ceil(residents/4)+Math.floor(Math.max(0,Number(comfort)||0)/60);
+  return Math.min(12,residents,Math.max(Math.min(4,residents),baseline));
 }
 function comfortFromCopy(kind,count,base){
   // Prevent decorating with dozens of the same cheap 1x1 objects solely for XP.

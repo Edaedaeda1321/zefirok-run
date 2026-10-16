@@ -130,7 +130,7 @@ function showToast(message, isError = false) {
  el.classList.toggle('error', isError);
  el.classList.add('visible');
  clearTimeout(state.toastTimer);
- state.toastTimer = setTimeout(() => el.classList.remove('visible'), 2650);
+ state.toastTimer = setTimeout(() => el.classList.remove('visible'), isError?5300:2650);
 }
 function translateStatic() {
  // Keep local development translations, replace all sandbox copy in hosted RC.
@@ -238,10 +238,7 @@ function openResidentThought(item){
  if(!residentSnapshot?.enabled||!residentSnapshot.requests?.some(request=>request.id===item.id))return;
  if(activeEdit())return;
  if(state.catalogOpen)setCatalogOpen(false,{animate:false});
- const metrics=$('cityMetrics'),toggle=$('metricsToggle');
- metrics.classList.add('is-expanded');
- toggle.setAttribute('aria-expanded','true');
- toggle.setAttribute('aria-label','Скрыть подробную статистику города');
+ openCityGuideStats('goals');
  residentUI?.focusRequest(item.id);
  scheduleDraw();
 }
@@ -621,10 +618,38 @@ function syncCitizens(stats){
 }
 // All RC-2 actions reuse existing controls and server-authoritative operations.
 // Recommendations never commit a purchase on the player's behalf.
+function setCityStatsTab(tab='goals'){
+ const next=['goals','progress','stats'].includes(tab)?tab:'goals';
+ for(const button of document.querySelectorAll('[data-city-tab]')){
+  const active=button.dataset.cityTab===next;
+  button.classList.toggle('is-active',active);
+  button.setAttribute('aria-selected',String(active));
+ }
+ for(const panel of document.querySelectorAll('[data-city-panel]')){
+  const active=panel.dataset.cityPanel===next;
+  panel.classList.toggle('is-active',active);
+  panel.hidden=!active;
+ }
+}
+function openCityGuideStats(tab='goals'){
+ const sheet=$('cityStatsSheet'),backdrop=$('cityStatsBackdrop');
+ if(!sheet||!backdrop)return;
+ setCityStatsTab(tab);
+ sheet.hidden=false;backdrop.hidden=false;
+ $('cityMetrics').classList.add('is-expanded');
+ $('metricsToggle').setAttribute('aria-expanded','true');
+ $('metricsToggle').setAttribute('aria-label','Закрыть окно «Город в цифрах»');
+ document.body.classList.add('city-stats-open');
+ $('closeCityStats').focus({preventScroll:true});
+}
 function closeCityGuideStats(){
- const panel=$('cityMetrics');panel.classList.remove('is-expanded');
+ const sheet=$('cityStatsSheet'),backdrop=$('cityStatsBackdrop');
+ if(sheet)sheet.hidden=true;
+ if(backdrop)backdrop.hidden=true;
+ $('cityMetrics').classList.remove('is-expanded');
  $('metricsToggle').setAttribute('aria-expanded','false');
- $('metricsToggle').setAttribute('aria-label','Показать всю статистику города');
+ $('metricsToggle').setAttribute('aria-label','Открыть окно «Город в цифрах»');
+ document.body.classList.remove('city-stats-open');
 }
 function cityGuideAction(advice){
  if(SERVER_MODE&&!state.serverReady){showToast('Подождите загрузки города.',true);return;}
@@ -689,12 +714,20 @@ function updateCityGuide(stats){
 function updateCityLevelUI(stats){
  const lvl=stats.cityLevel,def=CITY_LEVELS[lvl-1],next=stats.nextCityLevel;
  $('cityLevelBadge').textContent=`Ур. ${lvl}`;
- $('cityLevelName').textContent=tr(def.titleKey);
+ if($('cityStatsLevelBadge'))$('cityStatsLevelBadge').textContent=`Ур. ${lvl}`;
+ const levelTitle=tr(def.titleKey);
+ $('cityLevelName').textContent=levelTitle;
+ if($('cityLevelNameSheet'))$('cityLevelNameSheet').textContent=levelTitle;
  // Show the *actual* catalogue pool unlocked by the next level, not an imaginary prize.
  const unlockedNext=next?CATALOG_ITEMS.filter(item=>item.minCityLevel===next.level):[];
  const unlockNames=unlockedNext.slice(0,2).map(item=>nameOf(item.id)).join(', ');
  const unlockMore=unlockedNext.length>2?` и ещё ${unlockedNext.length-2}`:'';
- $('cityLevelNext').textContent=next?`До уровня ${next.level} · ${tr(next.titleKey)} · Новые постройки: ${unlockNames}${unlockMore}`:'Максимальный уровень города!';
+ const nextText=next?`До уровня ${next.level} · ${tr(next.titleKey)} · Новые постройки: ${unlockNames}${unlockMore}`:'Максимальный уровень города!';
+ $('cityLevelNext').textContent=nextText;
+ if($('cityLevelNextSheet'))$('cityLevelNextSheet').textContent=nextText;
+ if($('cityStatsHeroText'))$('cityStatsHeroText').textContent=next
+  ?`Сейчас у тебя уровень ${lvl}. Выполни задания жителей, закрой требования и открой ${tr(next.titleKey)}.`
+  :'Ты достиг максимального уровня города. Все этапы развития уже пройдены!';
  const limits=next||def;
  for(const [value,bar,current,target] of [
   ['cityLevelResidents','cityLevelResidentsBar',stats.population,limits.residents],
@@ -1304,12 +1337,17 @@ function bindEvents(){
   }catch(error){showToast(error?.message||statusError(error),true);}
  });
  $('metricsToggle').addEventListener('click',()=>{
-  const panel=$('cityMetrics'),expanded=!panel.classList.contains('is-expanded');
-  panel.classList.toggle('is-expanded',expanded);
-  $('metricsToggle').setAttribute('aria-expanded',String(expanded));
-  $('metricsToggle').setAttribute('aria-label',expanded?'Скрыть подробную статистику':'Показать всю статистику города');
+  const expanded=$('cityMetrics').classList.contains('is-expanded');
+  if(expanded)closeCityGuideStats();
+  else openCityGuideStats('goals');
   scheduleDraw();
  });
+ const dismissStats=()=>{closeCityGuideStats();$('metricsToggle').focus({preventScroll:true});};
+ $('closeCityStats')?.addEventListener('click',dismissStats);
+ $('cityStatsBackdrop')?.addEventListener('click',dismissStats);
+ for(const button of document.querySelectorAll('[data-city-tab]')){
+  button.addEventListener('click',()=>setCityStatsTab(button.dataset.cityTab||'goals'));
+ }
  if(location.pathname.endsWith('/world/index.html')){
   $('zeffiReturnGame').addEventListener('click',()=>{location.href=new URL('../index.html',location.href).href;});
  }
@@ -1375,6 +1413,7 @@ function bindEvents(){
  canvas.addEventListener('wheel',event=>{event.preventDefault();zoomTo(state.camera.zoom*(event.deltaY<0?1.12:.89));},{passive:false});
  document.addEventListener('keydown',event=>{
   if(event.key==='Escape'){
+   if(!$('cityStatsSheet').hidden){closeCityGuideStats();$('metricsToggle').focus({preventScroll:true});return;}
    if(state.catalogOpen){setCatalogOpen(false);return;}
    if(!$('skipModal').hidden){closeSkipModal();return;}
    if(!$('confirmModal').hidden){$('confirmModal').hidden=true;return;}
@@ -1423,13 +1462,16 @@ function bindEvents(){
  },1000);
 }
 function initialize(){
+ // Isolated map canvas and the builder sheet use independent stacking contexts.
+ // Root-level UI is required for dialogs and critical errors to be readable.
+ document.body.append($('cityStatsBackdrop'),$('cityStatsSheet'),$('toast'));
  onSpriteUpdate(()=>{if(state.visualsReady)refreshArt();});
  window.addEventListener('zeffi-transit-sprites-ready',()=>{if(state.visualsReady)scheduleDraw();});
  // A retired 2D/3D preference must never switch the released city to wireframes.
  setSpriteMode(true);
-  cityGuideUI=mountCityGuide($('cityLevelDetails'),{nameOf,onAction:cityGuideAction});
-  if(SERVER_MODE)cityChaptersUI=mountCityChapters($('cityLevelDetails'),{onClaim:claimWorldChapter});
-  residentUI=mountResidentRequests($('cityLevelDetails'),{onAction:residentRequestAction});
+  cityGuideUI=mountCityGuide($('cityGuideHost'),{nameOf,onAction:cityGuideAction});
+  if(SERVER_MODE)cityChaptersUI=mountCityChapters($('cityChaptersHost'),{onClaim:claimWorldChapter});
+  residentUI=mountResidentRequests($('residentRequestsHost'),{onAction:residentRequestAction});
   residentThoughts=mountResidentThoughts($('mapZone'),{onSelect:openResidentThought});
  translateStatic();readSavedCity();bindEvents();renderCategories();renderCatalog();setCatalogOpen(window.innerWidth>700||window.innerHeight>=570);updateUI();resetView();
  if(SERVER_MODE){
