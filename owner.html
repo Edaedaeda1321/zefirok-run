@@ -558,8 +558,9 @@ button.cc29-routed-save{display:inline-flex;align-items:center;justify-content:c
  if(window.ZeffiSeasonPremiere)return;
  const ROOT='zefirok-season-premiere-v1', SESSION_KEY=ROOT+':session';
  const ICONS=Object.freeze({
-  main:'/assets/ui/icon_battlepass.webp',pass:'/assets/season-pass/season.webp',rating:'/assets/ui/icon_itog_reiting_season.webp'
+  main:'/assets/ui/icon_o_sezone.webp',pass:'/assets/ui/icon_o_sezone.webp',rating:'/assets/ui/icon_o_sezone.webp'
  });
+ const PREVIOUS_BUTTON_ICONS=new Set(["/assets/ui/icon_battlepass.webp","/assets/season-pass/season.webp","/assets/ui/icon_itog_reiting_season.webp"]);
  const FEATURE_ICONS=Object.freeze({
   main:['/assets/season-pass/season.webp','/assets/season-pass/quest.webp','/assets/ui/icon_reiting.webp'],
   pass:['/assets/season-pass/season.webp','/assets/season-pass/elite.webp','/assets/season-pass/xp.webp'],
@@ -588,7 +589,7 @@ button.cc29-routed-save{display:inline-flex;align-items:center;justify-content:c
   return {id,userId,surface,enabled:raw.enabled===true,status:String(data.status||''),
    title:string(raw.title||defaults[0],90),subtitle:string(raw.subtitle||data.seasonTitle||defaults[1],140),
    description:string(raw.description||defaults[1],360),
-   art:imgSafe(raw.imageUrl||data.heroImage,FALLBACK[surface]),manualIcon:imgSafe(raw.iconUrl,ICONS[surface]),
+   art:imgSafe(raw.imageUrl||data.heroImage,FALLBACK[surface]),manualIcon:imgSafe(PREVIOUS_BUTTON_ICONS.has(String(raw.iconUrl||'').trim())?'':raw.iconUrl,ICONS[surface]),
    features:[0,1,2].map(i=>string(features[i]||defaults[i+2],115)),
    reward:data.reward&&typeof data.reward==='object'?{
     title:string(data.reward.title,110),imageUrl:imgSafe(data.reward.imageUrl,'')}:null,
@@ -904,7 +905,7 @@ button.cc29-routed-save{display:inline-flex;align-items:center;justify-content:c
 <div><label for="zspCcRatingFeature2">Особенность 2</label><input type="text" id="zspCcRatingFeature2" maxlength="115"></div>
 <div><label for="zspCcRatingFeature3">Особенность 3</label><input type="text" id="zspCcRatingFeature3" maxlength="115"></div>
  <div><label for="zspCcRatingImageUrl">Обложка из уже имеющихся ассетов</label><div class="zsp-cc-art"><img id="zspCcRatingPreviewImage" src="/assets/rating/v8/season-1-cafe-opening.webp" alt="Предпросмотр обложки"><div><input type="text" id="zspCcRatingImageUrl" maxlength="600" placeholder="/assets/..."><div class="actions"><button class="btn secondary small" type="button" data-project-image-picker-target="zspCcRatingImageUrl">Выбрать из проекта</button><button class="btn secondary small" type="button" data-zsp-cc-clear="Rating">Сбросить</button></div></div></div></div>
- <div class="zsp-cc-icon-picker"><label for="zspCcRatingIconUrl">Иконка кнопки «О сезоне»</label><div class="zsp-cc-art"><img id="zspCcRatingIconPreview" src="/assets/ui/icon_itog_reiting_season.webp" alt="Иконка кнопки «О сезоне»"><div><input type="text" id="zspCcRatingIconUrl" maxlength="600" placeholder="/assets/..."><div class="actions"><button class="btn secondary small" type="button" data-project-image-picker-target="zspCcRatingIconUrl">Выбрать нашу иконку</button><button class="btn secondary small" type="button" data-zsp-cc-icon-clear="Rating">По умолчанию</button></div></div></div></div>
+ <div class="zsp-cc-icon-picker"><label for="zspCcRatingIconUrl">Иконка кнопки «О сезоне»</label><div class="zsp-cc-art"><img id="zspCcRatingIconPreview" src="/assets/ui/icon_o_sezone.webp" alt="Иконка кнопки «О сезоне»"><div><input type="text" id="zspCcRatingIconUrl" maxlength="600" placeholder="/assets/..."><div class="actions"><button class="btn secondary small" type="button" data-project-image-picker-target="zspCcRatingIconUrl">Выбрать нашу иконку</button><button class="btn secondary small" type="button" data-zsp-cc-icon-clear="Rating">По умолчанию</button></div></div></div></div>
  <button class="zsp-cc-preview" type="button" data-zsp-cc-preview="Rating">Предпросмотр на телефоне</button>
  </div></section>
 <div class="actions" style="margin-top:10px"><button class="btn gold" id="ratingVisualSave" type="button">Сохранить визуал</button></div><div class="info" style="margin-top:9px">Пустое значение означает встроенный фон текущей версии. Новый путь попадает в уже существующий <b>/api/leaderboard/state</b> — отдельного запроса у игроков нет.</div></div>
@@ -1021,7 +1022,7 @@ button.cc29-routed-save{display:inline-flex;align-items:center;justify-content:c
 <div><label for="zspCcMainFeature2">Особенность 2</label><input type="text" id="zspCcMainFeature2" maxlength="115"></div>
 <div><label for="zspCcMainFeature3">Особенность 3</label><input type="text" id="zspCcMainFeature3" maxlength="115"></div>
  <div><label for="zspCcMainImageUrl">Обложка из уже имеющихся ассетов</label><div class="zsp-cc-art"><img id="zspCcMainPreviewImage" src="/assets/season-pass/season_pass1.webp" alt="Предпросмотр обложки"><div><input type="text" id="zspCcMainImageUrl" maxlength="600" placeholder="/assets/..."><div class="actions"><button class="btn secondary small" type="button" data-project-image-picker-target="zspCcMainImageUrl">Выбрать из проекта</button><button class="btn secondary small" type="button" data-zsp-cc-clear="Main">Сбросить</button></div></div></div></div>
- <div class="zsp-cc-icon-picker"><label for="zspCcMainIconUrl">Иконка кнопки «О сезоне»</label><div class="zsp-cc-art"><img id="zspCcMainIconPreview" src="/assets/ui/icon_battlepass.webp" alt="Иконка кнопки «О сезоне»"><div><input type="text" id="zspCcMainIconUrl" maxlength="600" placeholder="/assets/..."><div class="actions"><button class="btn secondary small" type="button" data-project-image-picker-target="zspCcMainIconUrl">Выбрать нашу иконку</button><button class="btn secondary small" type="button" data-zsp-cc-icon-clear="Main">По умолчанию</button></div></div></div></div>
+ <div class="zsp-cc-icon-picker"><label for="zspCcMainIconUrl">Иконка кнопки «О сезоне»</label><div class="zsp-cc-art"><img id="zspCcMainIconPreview" src="/assets/ui/icon_o_sezone.webp" alt="Иконка кнопки «О сезоне»"><div><input type="text" id="zspCcMainIconUrl" maxlength="600" placeholder="/assets/..."><div class="actions"><button class="btn secondary small" type="button" data-project-image-picker-target="zspCcMainIconUrl">Выбрать нашу иконку</button><button class="btn secondary small" type="button" data-zsp-cc-icon-clear="Main">По умолчанию</button></div></div></div></div>
  <button class="zsp-cc-preview" type="button" data-zsp-cc-preview="Main">Предпросмотр на телефоне</button>
  </div><div class="zsp-cc-group" data-premiere-editor="Pass">
  <h5><img src="/assets/season-pass/season.webp" alt="">Сезонный пропуск</h5>
@@ -1033,7 +1034,7 @@ button.cc29-routed-save{display:inline-flex;align-items:center;justify-content:c
 <div><label for="zspCcPassFeature2">Особенность 2</label><input type="text" id="zspCcPassFeature2" maxlength="115"></div>
 <div><label for="zspCcPassFeature3">Особенность 3</label><input type="text" id="zspCcPassFeature3" maxlength="115"></div>
  <div><label for="zspCcPassImageUrl">Обложка из уже имеющихся ассетов</label><div class="zsp-cc-art"><img id="zspCcPassPreviewImage" src="/assets/season-pass/season_pass1.webp" alt="Предпросмотр обложки"><div><input type="text" id="zspCcPassImageUrl" maxlength="600" placeholder="/assets/..."><div class="actions"><button class="btn secondary small" type="button" data-project-image-picker-target="zspCcPassImageUrl">Выбрать из проекта</button><button class="btn secondary small" type="button" data-zsp-cc-clear="Pass">Сбросить</button></div></div></div></div>
- <div class="zsp-cc-icon-picker"><label for="zspCcPassIconUrl">Иконка кнопки «О сезоне»</label><div class="zsp-cc-art"><img id="zspCcPassIconPreview" src="/assets/season-pass/season.webp" alt="Иконка кнопки «О сезоне»"><div><input type="text" id="zspCcPassIconUrl" maxlength="600" placeholder="/assets/..."><div class="actions"><button class="btn secondary small" type="button" data-project-image-picker-target="zspCcPassIconUrl">Выбрать нашу иконку</button><button class="btn secondary small" type="button" data-zsp-cc-icon-clear="Pass">По умолчанию</button></div></div></div></div>
+ <div class="zsp-cc-icon-picker"><label for="zspCcPassIconUrl">Иконка кнопки «О сезоне»</label><div class="zsp-cc-art"><img id="zspCcPassIconPreview" src="/assets/ui/icon_o_sezone.webp" alt="Иконка кнопки «О сезоне»"><div><input type="text" id="zspCcPassIconUrl" maxlength="600" placeholder="/assets/..."><div class="actions"><button class="btn secondary small" type="button" data-project-image-picker-target="zspCcPassIconUrl">Выбрать нашу иконку</button><button class="btn secondary small" type="button" data-zsp-cc-icon-clear="Pass">По умолчанию</button></div></div></div></div>
  <button class="zsp-cc-preview" type="button" data-zsp-cc-preview="Pass">Предпросмотр на телефоне</button>
  </div></section>
   <div class="actions" style="margin-top:12px"><button class="btn gold" id="passVisualSave" type="button">Сохранить визуал сезона</button></div>
@@ -2880,6 +2881,7 @@ function passStoryMemoryFromForm(){return Array.from({length:6},(_,offset)=>{con
 function syncPassStoryMemoryArt(index){const input=$(`passStoryMemory${index}Art`),preview=$(`passStoryMemory${index}ArtPreview`),label=$(`passStoryMemory${index}ArtLabel`),path=$(`passStoryMemory${index}ArtPath`);if(!input||!preview||!label||!path)return;const value=String(input.value||'').trim();preview.src=value||FALLBACK;preview.onerror=()=>{preview.onerror=null;preview.src=FALLBACK;};label.textContent=value?'Арт выбран':'Не выбрано';path.textContent=value||'Выберите картинку';}
 function renderPassStoryCollectible(visuals){const cfg=visuals?.storyCollectible&&typeof visuals.storyCollectible==='object'?visuals.storyCollectible:{},series=cfg.achievementSeries&&typeof cfg.achievementSeries==='object'?cfg.achievementSeries:{},steps=Array.isArray(series.steps)?series.steps:[],memories=Array.isArray(cfg.milestones)?cfg.milestones:[];$('passStoryCollectibleEnabled').checked=Boolean(cfg.enabled);$('passStoryCollectiblePerRun').value=Math.max(1,Math.min(10,Number(cfg.perRun)||1));$('passStoryCollectibleUnlockLevel').value=Math.max(1,Math.min(50,Number(cfg.unlockLevel)||1));$('passStoryCollectibleTitle').value=String(cfg.title||'');$('passStoryCollectibleId').value=String(cfg.id||'story-find');$('passStoryCollectibleIconUrl').value=String(cfg.iconUrl||'');$('passStoryCollectiblePickupText').value=String(cfg.pickupText||'');$('passStoryCollectibleReactionText').value=String(cfg.reactionText||'');$('passStoryCollectibleShowAfterRun').checked=cfg.showAfterRun!==false;$('passStoryCollectibleSeriesEnabled').checked=Boolean(series.enabled);const defaults=[{target:5,title:'По следу'},{target:25,title:'Всё ближе'},{target:50,title:'История восстановлена'}];for(let index=1;index<=3;index+=1){const step=steps[index-1]||defaults[index-1];$(`passStoryCollectibleStep${index}Target`).value=Number(step.target||defaults[index-1].target);$(`passStoryCollectibleStep${index}Title`).value=String(step.title||defaults[index-1].title);const select=$(`passStoryCollectibleStep${index}Achievement`);if(select){select.innerHTML=passStoryAchievementOptions(String(step.achievementId||''));select.value=String(step.achievementId||'');}}const memoryDefaults=[5,15,30,50,0,0];for(let index=1;index<=6;index+=1){const item=memories[index-1]||{};$(`passStoryMemory${index}Target`).value=Number(item.target||memoryDefaults[index-1]||0);$('passStoryMemory'+index+'Title').value=String(item.title||$('passStoryMemory'+index+'Title').defaultValue||'');$('passStoryMemory'+index+'Text').value=String(item.storyText||'');$('passStoryMemory'+index+'Art').value=String(item.artUrl||'');syncPassStoryMemoryArt(index);}syncPassStoryCollectibleIcon();if(!state.achievements)void loadAchievementsConfig().then(()=>renderPassStoryCollectible(visuals)).catch(()=>{});}
 /* CC visual editor: no additional requests; saves into existing season visuals endpoint. */
+const zspCcLegacyButtonIcons=new Set(["/assets/ui/icon_battlepass.webp","/assets/season-pass/season.webp","/assets/ui/icon_itog_reiting_season.webp"]);
 function zspCcFields(page){
 
  const path='zspCc'+page;
@@ -2896,7 +2898,7 @@ function zspCcRenderImage(page){
 function zspCcRenderIcon(page){
  const {val}=zspCcFields(page),input=val('IconUrl'),preview=val('IconPreview');
  if(!input||!preview)return;
- const fallback=page==='Main'?'/assets/ui/icon_battlepass.webp':page==='Rating'?'/assets/ui/icon_itog_reiting_season.webp':'/assets/season-pass/season.webp';
+ const fallback='/assets/ui/icon_o_sezone.webp';
  preview.onerror=()=>{preview.onerror=null;preview.src=fallback};
  preview.src=String(input.value||'').trim()||fallback;
 }
@@ -2905,6 +2907,7 @@ function zspCcFill(page,raw){
  if(!val('Enabled'))return;
  val('Enabled').checked=data.enabled===true;
  for(const [id,text] of [['Title',data.title],['Subtitle',data.subtitle],['Description',data.description],['ImageUrl',data.imageUrl],['IconUrl',data.iconUrl],['Feature1',features[0]],['Feature2',features[1]],['Feature3',features[2]]])val(id).value=String(text||'');
+ const iconInput=val('IconUrl');if(iconInput&&zspCcLegacyButtonIcons.has(iconInput.value))iconInput.value='';
  zspCcRenderImage(page);zspCcRenderIcon(page);
 }
 function zspCcRead(page){

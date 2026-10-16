@@ -10518,8 +10518,9 @@ body { min-height: var(--zefirok-app-height, 100dvh); }
  if(window.ZeffiSeasonPremiere)return;
  const ROOT='zefirok-season-premiere-v1', SESSION_KEY=ROOT+':session';
  const ICONS=Object.freeze({
-  main:'/assets/ui/icon_battlepass.webp',pass:'/assets/season-pass/season.webp',rating:'/assets/ui/icon_itog_reiting_season.webp'
+  main:'/assets/ui/icon_o_sezone.webp',pass:'/assets/ui/icon_o_sezone.webp',rating:'/assets/ui/icon_o_sezone.webp'
  });
+ const PREVIOUS_BUTTON_ICONS=new Set(["/assets/ui/icon_battlepass.webp","/assets/season-pass/season.webp","/assets/ui/icon_itog_reiting_season.webp"]);
  const FEATURE_ICONS=Object.freeze({
   main:['/assets/season-pass/season.webp','/assets/season-pass/quest.webp','/assets/ui/icon_reiting.webp'],
   pass:['/assets/season-pass/season.webp','/assets/season-pass/elite.webp','/assets/season-pass/xp.webp'],
@@ -10548,7 +10549,7 @@ body { min-height: var(--zefirok-app-height, 100dvh); }
   return {id,userId,surface,enabled:raw.enabled===true,status:String(data.status||''),
    title:string(raw.title||defaults[0],90),subtitle:string(raw.subtitle||data.seasonTitle||defaults[1],140),
    description:string(raw.description||defaults[1],360),
-   art:imgSafe(raw.imageUrl||data.heroImage,FALLBACK[surface]),manualIcon:imgSafe(raw.iconUrl,ICONS[surface]),
+   art:imgSafe(raw.imageUrl||data.heroImage,FALLBACK[surface]),manualIcon:imgSafe(PREVIOUS_BUTTON_ICONS.has(String(raw.iconUrl||'').trim())?'':raw.iconUrl,ICONS[surface]),
    features:[0,1,2].map(i=>string(features[i]||defaults[i+2],115)),
    reward:data.reward&&typeof data.reward==='object'?{
     title:string(data.reward.title,110),imageUrl:imgSafe(data.reward.imageUrl,'')}:null,

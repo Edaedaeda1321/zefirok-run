@@ -1,4 +1,5 @@
 /* CC visual editor: no additional requests; saves into existing season visuals endpoint. */
+const zspCcLegacyButtonIcons=new Set(["/assets/ui/icon_battlepass.webp","/assets/season-pass/season.webp","/assets/ui/icon_itog_reiting_season.webp"]);
 function zspCcFields(page){
  const path='zspCc'+page;
  const val=name=>document.getElementById(path+name);
@@ -14,7 +15,7 @@ function zspCcRenderImage(page){
 function zspCcRenderIcon(page){
  const {val}=zspCcFields(page),input=val('IconUrl'),preview=val('IconPreview');
  if(!input||!preview)return;
- const fallback=page==='Main'?'/assets/ui/icon_battlepass.webp':page==='Rating'?'/assets/ui/icon_itog_reiting_season.webp':'/assets/season-pass/season.webp';
+ const fallback='/assets/ui/icon_o_sezone.webp';
  preview.onerror=()=>{preview.onerror=null;preview.src=fallback};
  preview.src=String(input.value||'').trim()||fallback;
 }
@@ -23,6 +24,7 @@ function zspCcFill(page,raw){
  if(!val('Enabled'))return;
  val('Enabled').checked=data.enabled===true;
  for(const [id,text] of [['Title',data.title],['Subtitle',data.subtitle],['Description',data.description],['ImageUrl',data.imageUrl],['IconUrl',data.iconUrl],['Feature1',features[0]],['Feature2',features[1]],['Feature3',features[2]]])val(id).value=String(text||'');
+ const iconInput=val('IconUrl');if(iconInput&&zspCcLegacyButtonIcons.has(iconInput.value))iconInput.value='';
  zspCcRenderImage(page);zspCcRenderIcon(page);
 }
 function zspCcRead(page){
