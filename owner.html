@@ -487,8 +487,8 @@ button.cc29-routed-save{display:inline-flex;align-items:center;justify-content:c
 <link rel="stylesheet" href="./assets/zeffi-world-cc-p1.css?v=world-p1-1" />
 <link rel="stylesheet" href="./assets/zeffi-world-cc-p2.css?v=world-p2-1" />
 <style id="zsp-season-premiere-style-v1">
-/* Season Premiere V1. Three surfaces share one art-driven sheet. */
-.zsp-overlay{position:fixed;inset:0;z-index:2147483600;display:flex;align-items:center;justify-content:center;padding:max(14px,env(safe-area-inset-top,0px)) 12px max(14px,env(safe-area-inset-bottom,0px));box-sizing:border-box;background:rgba(54,30,44,.64);backdrop-filter:blur(9px);-webkit-backdrop-filter:blur(9px);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:#713b54}
+/* Season Premiere V1.3: official in-game typefaces and compact manual entry. */
+.zsp-overlay{position:fixed;inset:0;z-index:2147483600;display:flex;align-items:center;justify-content:center;padding:max(14px,env(safe-area-inset-top,0px)) 12px max(14px,env(safe-area-inset-bottom,0px));box-sizing:border-box;background:rgba(54,30,44,.64);backdrop-filter:blur(9px);-webkit-backdrop-filter:blur(9px);font-family:"Sofia Sans","Arial Rounded MT Bold","Trebuchet MS",system-ui,sans-serif;color:#713b54}
 .zsp-overlay[hidden]{display:none!important}
 .zsp-card{position:relative;box-sizing:border-box;width:min(450px,100%);max-height:min(90dvh,780px);overflow:auto;overscroll-behavior:contain;border:1px solid rgba(243,212,221,.9);border-radius:28px;background:linear-gradient(180deg,#fffdfb 0%,#fff6f8 100%);box-shadow:0 30px 78px rgba(59,28,47,.35);animation:zsp-enter .55s cubic-bezier(.17,.8,.24,1) both}
 .zsp-card[data-surface="pass"]{background:linear-gradient(180deg,#fffdf8,#fff7e8)}
@@ -517,15 +517,22 @@ button.cc29-routed-save{display:inline-flex;align-items:center;justify-content:c
 .zsp-action{width:100%;min-height:49px;padding:12px 14px;border-radius:15px;border:0;background:linear-gradient(135deg,#e98db1,#c95787);color:#fff;font:900 14px/1.2 inherit;box-shadow:0 8px 18px rgba(191,82,125,.23);cursor:pointer}
 .zsp-card[data-surface="pass"] .zsp-action,.zsp-card[data-surface="rating"] .zsp-action{background:linear-gradient(120deg,#e5b854,#bb832d);box-shadow:0 8px 18px rgba(179,130,40,.23)}
 .zsp-later{width:100%;min-height:43px;border:0;border-radius:12px;background:transparent;color:#9f7484;font:800 12px/1.2 inherit;cursor:pointer}
-.zsp-manual{display:inline-flex!important;align-items:center;gap:7px;min-height:36px;padding:7px 12px;border:1px solid #e9cad5;border-radius:13px;background:linear-gradient(135deg,#fffbfc,#fff2f6);color:#8c4c6c;font:900 11px/1.2 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;cursor:pointer;box-shadow:0 3px 10px rgba(119,62,81,.1)}
-.zsp-manual img{width:24px;height:24px;object-fit:contain}
-.hero .zsp-manual{margin:6px 0 8px}
-.rating-v6-hero .zsp-manual{position:absolute;right:12px;top:11px;z-index:5;background:rgba(255,250,243,.97)}
+.zsp-manual{box-sizing:border-box;display:inline-flex!important;align-items:center;justify-content:center;gap:6px;min-height:34px;padding:6px 10px;border:1px solid #e9cad5;border-radius:12px;background:linear-gradient(135deg,#fffbfc,#fff2f6);color:#8c4c6c;font:900 12px/1.1 "Sofia Sans","Arial Rounded MT Bold","Trebuchet MS",system-ui,sans-serif!important;white-space:nowrap;cursor:pointer;box-shadow:0 3px 10px rgba(119,62,81,.1);-webkit-tap-highlight-color:transparent}
+.zsp-manual img{display:block;flex:none;width:22px;height:22px;object-fit:contain}
+.zsp-manual:focus-visible{outline:2px solid #d25a8c;outline-offset:3px}
+#seasonPassPage .hero .zsp-manual{position:relative;z-index:2;margin:9px 0 0;max-width:100%;font:900 12px/1.1 "Sofia Sans","Arial Rounded MT Bold","Trebuchet MS",system-ui,sans-serif!important}
+#zefirok-maltipoo-runner .rating-v6-season-line{display:flex;flex-wrap:wrap;align-items:center;align-self:start;gap:5px;min-width:0;max-width:100%}
+#zefirok-maltipoo-runner .rating-v6-season-line .rating-v6-season-pill{flex:none;justify-self:auto;margin:0}
+#zefirok-maltipoo-runner .rating-v6-season-line .zsp-manual{position:static!important;flex:none;z-index:auto;min-height:29px;height:29px;padding:4px 7px;border-radius:999px;border-color:#eed0b2;background:#fff9ef;box-shadow:0 2px 6px rgba(129,94,58,.10);font:900 10px/1.1 var(--font-sans,"Sofia Sans",system-ui,sans-serif)!important;color:#8a5771}
+#zefirok-maltipoo-runner .rating-v6-season-line .zsp-manual img{width:18px;height:18px}
+@media(max-width:380px){#zefirok-maltipoo-runner .rating-v6-season-line{gap:4px}#zefirok-maltipoo-runner .rating-v6-season-line .zsp-manual{padding:3px 6px;font-size:9px!important}}
+
 @keyframes zsp-enter{from{opacity:0;transform:translateY(20px) scale(.97)}to{opacity:1;transform:translateY(0) scale(1)}}
 @media(max-width:390px){.zsp-card{border-radius:23px}.zsp-info{padding:14px 15px 15px}.zsp-visual{min-height:160px;height:min(29dvh,220px)}.zsp-feature{min-height:47px}.zsp-feature img{width:34px;height:34px}.zsp-feature span{font-size:11px}.zsp-info h2{font-size:23px}.zsp-description{font-size:11px}}
 @media(max-height:620px){.zsp-visual{height:145px;min-height:145px}.zsp-info{padding:12px 15px}.zsp-feature{min-height:38px;padding:5px 8px}.zsp-list{gap:5px;margin:8px 0 10px}}
 @media(prefers-reduced-motion:reduce){.zsp-card{animation:none}}
-
+/* Season Premiere V1.2: fast entry without motion overload. */
+.zsp-card[data-surface="main"]{animation-duration:.16s}
 .zsp-cc-editor{margin-top:14px;padding:14px;border:1px solid #ebcdd7;border-radius:19px;background:linear-gradient(140deg,#fffdfb,#fff5f8)}
 .zsp-cc-editor h4{margin:0;color:#7c435e;font-size:16px;font-weight:900}
 .zsp-cc-editor .zsp-cc-hint{display:block;margin:6px 0 14px;color:#95697d;font-size:11px;line-height:1.5;font-weight:650}
@@ -542,11 +549,10 @@ button.cc29-routed-save{display:inline-flex;align-items:center;justify-content:c
 .zsp-cc-art > div{flex:1;min-width:0;display:grid;gap:6px}
 .zsp-cc-art button,.zsp-cc-preview{min-height:37px;padding:8px 12px;border:1px solid #e6c4d0;border-radius:11px;background:#fff3f8;color:#8f4c6c;font-size:11px;font-weight:900;cursor:pointer}
 .zsp-cc-preview{width:100%;margin-top:4px;background:linear-gradient(120deg,#f7e4eb,#fff6f8)}
-
 </style>
 
 <script id="zsp-season-premiere-runtime-v1">
-/* Premium Season Premiere V1; UI-only. Never fetches game state or grants rewards. */
+/* Season Premiere V1.3: working manual season information on Pass + Rating. UI-only. */
 (()=>{
  'use strict';
  if(window.ZeffiSeasonPremiere)return;
@@ -570,8 +576,9 @@ button.cc29-routed-save{display:inline-flex;align-items:center;justify-content:c
  const imgSafe=(value,fallback)=>{const v=String(value||'').trim();return /^\/(?:assets)\/[A-Za-z0-9_./%+?=&-]+$/.test(v)&&!v.includes('..')?v:fallback};
  const string=(x,max=180)=>String(x||'').trim().slice(0,max);
  const key=(c)=>`${ROOT}:${c.userId||'anonymous'}:${c.surface}:${c.id}`;
- const sessionOwner=()=>{try{return sessionStorage.getItem(SESSION_KEY)||''}catch{return ''}};
+ const sessionOwner=surface=>{try{const seen=sessionStorage.getItem(SESSION_KEY)||'';return seen.includes(':'+surface+':')?seen:''}catch{return ''}};
  let current=null,layer=null,previousFocus=null,previousBodyOverflow='',timer=0,lastAutokey='';
+ const manualModels=new WeakMap();
  function normalize(data){
   if(!data||typeof data!=='object')return null;
   const surface=String(data.surface||'');if(!DEFAULTS[surface])return null;
@@ -581,7 +588,7 @@ button.cc29-routed-save{display:inline-flex;align-items:center;justify-content:c
   return {id,userId,surface,enabled:raw.enabled===true,status:String(data.status||''),
    title:string(raw.title||defaults[0],90),subtitle:string(raw.subtitle||data.seasonTitle||defaults[1],140),
    description:string(raw.description||defaults[1],360),
-   art:imgSafe(raw.imageUrl||data.heroImage,FALLBACK[surface]),
+   art:imgSafe(raw.imageUrl||data.heroImage,FALLBACK[surface]),manualIcon:imgSafe(raw.iconUrl,ICONS[surface]),
    features:[0,1,2].map(i=>string(features[i]||defaults[i+2],115)),
    reward:data.reward&&typeof data.reward==='object'?{
     title:string(data.reward.title,110),imageUrl:imgSafe(data.reward.imageUrl,'')}:null,
@@ -605,7 +612,7 @@ button.cc29-routed-save{display:inline-flex;align-items:center;justify-content:c
   layer.replaceChildren();const card=make('article','zsp-card');card.dataset.surface=config.surface;card.setAttribute('role','dialog');card.setAttribute('aria-modal','true');card.setAttribute('aria-label',config.title);
   const closeButton=make('button','zsp-close','×');closeButton.type='button';closeButton.dataset.zspClose='';closeButton.setAttribute('aria-label','Закрыть приветствие');card.append(closeButton);
   const visual=make('div','zsp-visual');const art=make('img','zsp-cover');art.src=config.art;art.alt='';art.decoding='async';art.loading='eager';art.addEventListener('error',()=>{if(!art.src.endsWith(FALLBACK[config.surface]))art.src=FALLBACK[config.surface]},{once:true});visual.append(art);
-  const brand=make('div','zsp-brand');const brandArt=make('img');brandArt.src=ICONS[config.surface];brandArt.alt='';brandArt.setAttribute('aria-hidden','true');brand.append(brandArt,make('span','',config.surface==='main'?'Сладкий Забег':config.surface==='pass'?'Сезонный пропуск':'Рейтинг сезона'));visual.append(brand);card.append(visual);
+  const brand=make('div','zsp-brand');const brandArt=make('img');brandArt.src=config.manualIcon;brandArt.alt='';brandArt.setAttribute('aria-hidden','true');brand.append(brandArt,make('span','',config.surface==='main'?'Сладкий Забег':config.surface==='pass'?'Сезонный пропуск':'Рейтинг сезона'));visual.append(brand);card.append(visual);
   const info=make('div','zsp-info');info.append(make('span','zsp-eyebrow','ПРЕМЬЕРА СЕЗОНА'),make('h2','',config.title),make('span','zsp-subtitle',config.subtitle),make('p','zsp-description',config.description));
   const list=make('div','zsp-list');const labels=config.features;
   labels.forEach((label,i)=>{if(!label)return;const row=make('div','zsp-feature');const image=make('img');image.src=FEATURE_ICONS[config.surface][i];image.alt='';image.loading='lazy';row.append(image,make('span','',label));list.append(row)});
@@ -613,29 +620,85 @@ button.cc29-routed-save{display:inline-flex;align-items:center;justify-content:c
   info.append(list);const actions=make('div','zsp-actions'),main=make('button','zsp-action',config.actionLabel),later=make('button','zsp-later','Продолжить без просмотра');main.type='button';later.type='button';later.dataset.zspClose='';main.addEventListener('click',()=>{close();try{config.action?.()}catch(e){console.error('Season premiere navigation failed',e)}});actions.append(main,later);info.append(actions);card.append(info);layer.append(card);
   previousFocus=document.activeElement;previousBodyOverflow=document.body.style.overflow;document.body.style.overflow='hidden';layer.hidden=false;closeButton.focus({preventScroll:true});
  }
- function openManual(data){const next=data?normalize(data):current;if(!next||!next.enabled||next.status!=='active')return false;render(next);return true}
+ function openManual(data){
+  // Manual information is available for every authenticated active season.
+  // The CC enabled switch controls ONLY automatic display, never this button.
+  const next=data?normalize(data):current;
+  if(!next||next.status!=='active')return false;
+  render(next);return true;
+ }
  function consider(data,{delay=850,blocked=null}={}){
-  const next=normalize(data);if(!next||!next.enabled||next.status!=='active')return false;current=next;
-  const k=key(next);if(timer&&k===lastAutokey)return true;
+  const next=normalize(data);
+  if(!next||!next.enabled||next.status!=='active')return false;
+  current=next;
+  const k=key(next);
+  if(sessionOwner(next.surface))return false;
+  try{if(localStorage.getItem(k)==='1')return false}catch{}
+  if(timer&&k===lastAutokey)return true;
   lastAutokey=k;if(timer)clearTimeout(timer);
-  timer=setTimeout(()=>{timer=0;
-   if(!current||key(current)!==k)return;
-   if(sessionOwner()||anyModal()||(typeof blocked==='function'&&blocked()))return;
+  // The main screen uses delay:0. Open synchronously on receipt of the
+  // authenticated season snapshot, not 1150ms after the game finishes loading.
+  // If a high-priority dialog is open, retry in the UI only; no API or D1 calls.
+  const attempt=(retries=0)=>{
+   timer=0;
+   if(!current||key(current)!==k||sessionOwner(next.surface))return;
    try{if(localStorage.getItem(k)==='1')return}catch{}
+   let busy=document.visibilityState==='hidden';
+   try{if(!busy)busy=anyModal()||(typeof blocked==='function'&&blocked())}catch{busy=true}
+   if(busy){
+    if(retries<240)timer=setTimeout(()=>attempt(retries+1),retries<20?120:650);
+    return;
+   }
+   try{render(next)}catch(error){console.error('Season premiere display failed',error);return}
+   if(!layer||layer.hidden)return;
    try{sessionStorage.setItem(SESSION_KEY,k)}catch{}
    try{localStorage.setItem(k,'1')}catch{}
-   render(next);
-  },delay);return true;
+  };
+  if(Number(delay)<=0)attempt();else timer=setTimeout(()=>attempt(),delay);
+  return true;
  }
  function setCurrent(data){const next=normalize(data);if(!next)return false;current=next;return true}
- function ensureManual(target,data){const next=data?normalize(data):current;if(!next||!next.enabled||next.status!=='active'||!target)return;
-  const currentButton=target.querySelector('[data-zsp-manual]');if(currentButton){currentButton.onclick=()=>openManual(next);return}
-  const button=make('button','zsp-manual');button.type='button';button.dataset.zspManual='';const image=make('img');image.src=ICONS[next.surface];image.alt='';button.append(image,make('span','','О сезоне'));
-  button.onclick=()=>openManual(next);target.append(button);
+ function ensureManual(target,data){
+  const next=data?normalize(data):current;
+  if(!next||next.status!=='active'||!target)return false;
+  let host=target;
+  // Place rating info BESIDE the season badge, not above the prize card.
+  if(next.surface==='rating'){
+   const title=target.querySelector('.rating-v6-hero-copy');
+   const badge=title?.querySelector('.rating-v6-season-pill');
+   if(!title||!badge)return false;
+   let row=title.querySelector('.rating-v6-season-line');
+   if(!row){row=make('div','rating-v6-season-line');badge.replaceWith(row);row.append(badge)}
+   host=row;
+  }
+  let button=target.querySelector('[data-zsp-manual]');
+  if(!button){
+   button=make('button','zsp-manual');button.type='button';button.dataset.zspManual='';
+   const image=make('img');image.alt='';image.setAttribute('aria-hidden','true');
+   button.append(image,make('span','','О сезоне'));
+  }
+  const image=button.querySelector('img');if(image)image.src=next.manualIcon;
+  button.setAttribute('aria-label','О сезоне: '+next.title);
+  manualModels.set(button,data||next);
+  if(button.parentNode!==host){
+   if(next.surface==='pass'){
+    const info=target.querySelector(':scope > p');
+    if(info&&info.parentNode===host)info.insertAdjacentElement('afterend',button);
+    else host.append(button);
+   }else host.append(button);
+  }
+  return true;
  }
+ // Capture the actual button click before the surrounding Pass/Rating views can
+ // treat it as a navigation or card click; keyboard activation still emits click.
+ if(typeof document!=='undefined'&&typeof document.addEventListener==='function')document.addEventListener('click',event=>{
+  const button=event.target?.closest?.('[data-zsp-manual]');
+  if(!button||!manualModels.has(button))return;
+  event.preventDefault();event.stopPropagation();
+  try{openManual(manualModels.get(button))}catch(error){console.error('Season premiere manual opening failed',error)}
+ },true);
  window.ZeffiSeasonPremiere={consider,openManual,setCurrent,ensureManual,close,get active(){return Boolean(layer&&!layer.hidden)}};
 })();
-
 </script>
 
 
@@ -841,6 +904,7 @@ button.cc29-routed-save{display:inline-flex;align-items:center;justify-content:c
 <div><label for="zspCcRatingFeature2">Особенность 2</label><input type="text" id="zspCcRatingFeature2" maxlength="115"></div>
 <div><label for="zspCcRatingFeature3">Особенность 3</label><input type="text" id="zspCcRatingFeature3" maxlength="115"></div>
  <div><label for="zspCcRatingImageUrl">Обложка из уже имеющихся ассетов</label><div class="zsp-cc-art"><img id="zspCcRatingPreviewImage" src="/assets/rating/v8/season-1-cafe-opening.webp" alt="Предпросмотр обложки"><div><input type="text" id="zspCcRatingImageUrl" maxlength="600" placeholder="/assets/..."><div class="actions"><button class="btn secondary small" type="button" data-project-image-picker-target="zspCcRatingImageUrl">Выбрать из проекта</button><button class="btn secondary small" type="button" data-zsp-cc-clear="Rating">Сбросить</button></div></div></div></div>
+ <div class="zsp-cc-icon-picker"><label for="zspCcRatingIconUrl">Иконка кнопки «О сезоне»</label><div class="zsp-cc-art"><img id="zspCcRatingIconPreview" src="/assets/ui/icon_itog_reiting_season.webp" alt="Иконка кнопки «О сезоне»"><div><input type="text" id="zspCcRatingIconUrl" maxlength="600" placeholder="/assets/..."><div class="actions"><button class="btn secondary small" type="button" data-project-image-picker-target="zspCcRatingIconUrl">Выбрать нашу иконку</button><button class="btn secondary small" type="button" data-zsp-cc-icon-clear="Rating">По умолчанию</button></div></div></div></div>
  <button class="zsp-cc-preview" type="button" data-zsp-cc-preview="Rating">Предпросмотр на телефоне</button>
  </div></section>
 <div class="actions" style="margin-top:10px"><button class="btn gold" id="ratingVisualSave" type="button">Сохранить визуал</button></div><div class="info" style="margin-top:9px">Пустое значение означает встроенный фон текущей версии. Новый путь попадает в уже существующий <b>/api/leaderboard/state</b> — отдельного запроса у игроков нет.</div></div>
@@ -957,6 +1021,7 @@ button.cc29-routed-save{display:inline-flex;align-items:center;justify-content:c
 <div><label for="zspCcMainFeature2">Особенность 2</label><input type="text" id="zspCcMainFeature2" maxlength="115"></div>
 <div><label for="zspCcMainFeature3">Особенность 3</label><input type="text" id="zspCcMainFeature3" maxlength="115"></div>
  <div><label for="zspCcMainImageUrl">Обложка из уже имеющихся ассетов</label><div class="zsp-cc-art"><img id="zspCcMainPreviewImage" src="/assets/season-pass/season_pass1.webp" alt="Предпросмотр обложки"><div><input type="text" id="zspCcMainImageUrl" maxlength="600" placeholder="/assets/..."><div class="actions"><button class="btn secondary small" type="button" data-project-image-picker-target="zspCcMainImageUrl">Выбрать из проекта</button><button class="btn secondary small" type="button" data-zsp-cc-clear="Main">Сбросить</button></div></div></div></div>
+ <div class="zsp-cc-icon-picker"><label for="zspCcMainIconUrl">Иконка кнопки «О сезоне»</label><div class="zsp-cc-art"><img id="zspCcMainIconPreview" src="/assets/ui/icon_battlepass.webp" alt="Иконка кнопки «О сезоне»"><div><input type="text" id="zspCcMainIconUrl" maxlength="600" placeholder="/assets/..."><div class="actions"><button class="btn secondary small" type="button" data-project-image-picker-target="zspCcMainIconUrl">Выбрать нашу иконку</button><button class="btn secondary small" type="button" data-zsp-cc-icon-clear="Main">По умолчанию</button></div></div></div></div>
  <button class="zsp-cc-preview" type="button" data-zsp-cc-preview="Main">Предпросмотр на телефоне</button>
  </div><div class="zsp-cc-group" data-premiere-editor="Pass">
  <h5><img src="/assets/season-pass/season.webp" alt="">Сезонный пропуск</h5>
@@ -968,6 +1033,7 @@ button.cc29-routed-save{display:inline-flex;align-items:center;justify-content:c
 <div><label for="zspCcPassFeature2">Особенность 2</label><input type="text" id="zspCcPassFeature2" maxlength="115"></div>
 <div><label for="zspCcPassFeature3">Особенность 3</label><input type="text" id="zspCcPassFeature3" maxlength="115"></div>
  <div><label for="zspCcPassImageUrl">Обложка из уже имеющихся ассетов</label><div class="zsp-cc-art"><img id="zspCcPassPreviewImage" src="/assets/season-pass/season_pass1.webp" alt="Предпросмотр обложки"><div><input type="text" id="zspCcPassImageUrl" maxlength="600" placeholder="/assets/..."><div class="actions"><button class="btn secondary small" type="button" data-project-image-picker-target="zspCcPassImageUrl">Выбрать из проекта</button><button class="btn secondary small" type="button" data-zsp-cc-clear="Pass">Сбросить</button></div></div></div></div>
+ <div class="zsp-cc-icon-picker"><label for="zspCcPassIconUrl">Иконка кнопки «О сезоне»</label><div class="zsp-cc-art"><img id="zspCcPassIconPreview" src="/assets/season-pass/season.webp" alt="Иконка кнопки «О сезоне»"><div><input type="text" id="zspCcPassIconUrl" maxlength="600" placeholder="/assets/..."><div class="actions"><button class="btn secondary small" type="button" data-project-image-picker-target="zspCcPassIconUrl">Выбрать нашу иконку</button><button class="btn secondary small" type="button" data-zsp-cc-icon-clear="Pass">По умолчанию</button></div></div></div></div>
  <button class="zsp-cc-preview" type="button" data-zsp-cc-preview="Pass">Предпросмотр на телефоне</button>
  </div></section>
   <div class="actions" style="margin-top:12px"><button class="btn gold" id="passVisualSave" type="button">Сохранить визуал сезона</button></div>
@@ -2815,6 +2881,7 @@ function syncPassStoryMemoryArt(index){const input=$(`passStoryMemory${index}Art
 function renderPassStoryCollectible(visuals){const cfg=visuals?.storyCollectible&&typeof visuals.storyCollectible==='object'?visuals.storyCollectible:{},series=cfg.achievementSeries&&typeof cfg.achievementSeries==='object'?cfg.achievementSeries:{},steps=Array.isArray(series.steps)?series.steps:[],memories=Array.isArray(cfg.milestones)?cfg.milestones:[];$('passStoryCollectibleEnabled').checked=Boolean(cfg.enabled);$('passStoryCollectiblePerRun').value=Math.max(1,Math.min(10,Number(cfg.perRun)||1));$('passStoryCollectibleUnlockLevel').value=Math.max(1,Math.min(50,Number(cfg.unlockLevel)||1));$('passStoryCollectibleTitle').value=String(cfg.title||'');$('passStoryCollectibleId').value=String(cfg.id||'story-find');$('passStoryCollectibleIconUrl').value=String(cfg.iconUrl||'');$('passStoryCollectiblePickupText').value=String(cfg.pickupText||'');$('passStoryCollectibleReactionText').value=String(cfg.reactionText||'');$('passStoryCollectibleShowAfterRun').checked=cfg.showAfterRun!==false;$('passStoryCollectibleSeriesEnabled').checked=Boolean(series.enabled);const defaults=[{target:5,title:'По следу'},{target:25,title:'Всё ближе'},{target:50,title:'История восстановлена'}];for(let index=1;index<=3;index+=1){const step=steps[index-1]||defaults[index-1];$(`passStoryCollectibleStep${index}Target`).value=Number(step.target||defaults[index-1].target);$(`passStoryCollectibleStep${index}Title`).value=String(step.title||defaults[index-1].title);const select=$(`passStoryCollectibleStep${index}Achievement`);if(select){select.innerHTML=passStoryAchievementOptions(String(step.achievementId||''));select.value=String(step.achievementId||'');}}const memoryDefaults=[5,15,30,50,0,0];for(let index=1;index<=6;index+=1){const item=memories[index-1]||{};$(`passStoryMemory${index}Target`).value=Number(item.target||memoryDefaults[index-1]||0);$('passStoryMemory'+index+'Title').value=String(item.title||$('passStoryMemory'+index+'Title').defaultValue||'');$('passStoryMemory'+index+'Text').value=String(item.storyText||'');$('passStoryMemory'+index+'Art').value=String(item.artUrl||'');syncPassStoryMemoryArt(index);}syncPassStoryCollectibleIcon();if(!state.achievements)void loadAchievementsConfig().then(()=>renderPassStoryCollectible(visuals)).catch(()=>{});}
 /* CC visual editor: no additional requests; saves into existing season visuals endpoint. */
 function zspCcFields(page){
+
  const path='zspCc'+page;
  const val=name=>document.getElementById(path+name);
  return {path,val};
@@ -2826,16 +2893,23 @@ function zspCcRenderImage(page){
  preview.onerror=()=>{preview.onerror=null;preview.src=fallback};
  preview.src=String(image.value||'').trim()||fallback;
 }
+function zspCcRenderIcon(page){
+ const {val}=zspCcFields(page),input=val('IconUrl'),preview=val('IconPreview');
+ if(!input||!preview)return;
+ const fallback=page==='Main'?'/assets/ui/icon_battlepass.webp':page==='Rating'?'/assets/ui/icon_itog_reiting_season.webp':'/assets/season-pass/season.webp';
+ preview.onerror=()=>{preview.onerror=null;preview.src=fallback};
+ preview.src=String(input.value||'').trim()||fallback;
+}
 function zspCcFill(page,raw){
  const {val}=zspCcFields(page),data=raw||{},features=Array.isArray(data.features)?data.features:[];
  if(!val('Enabled'))return;
  val('Enabled').checked=data.enabled===true;
- for(const [id,text] of [['Title',data.title],['Subtitle',data.subtitle],['Description',data.description],['ImageUrl',data.imageUrl],['Feature1',features[0]],['Feature2',features[1]],['Feature3',features[2]]])val(id).value=String(text||'');
- zspCcRenderImage(page);
+ for(const [id,text] of [['Title',data.title],['Subtitle',data.subtitle],['Description',data.description],['ImageUrl',data.imageUrl],['IconUrl',data.iconUrl],['Feature1',features[0]],['Feature2',features[1]],['Feature3',features[2]]])val(id).value=String(text||'');
+ zspCcRenderImage(page);zspCcRenderIcon(page);
 }
 function zspCcRead(page){
  const {val}=zspCcFields(page);
- return {enabled:Boolean(val('Enabled')?.checked),title:String(val('Title')?.value||'').trim(),subtitle:String(val('Subtitle')?.value||'').trim(),description:String(val('Description')?.value||'').trim(),imageUrl:String(val('ImageUrl')?.value||'').trim(),features:[1,2,3].map(n=>String(val('Feature'+n)?.value||'').trim())};
+ return {enabled:Boolean(val('Enabled')?.checked),title:String(val('Title')?.value||'').trim(),subtitle:String(val('Subtitle')?.value||'').trim(),description:String(val('Description')?.value||'').trim(),imageUrl:String(val('ImageUrl')?.value||'').trim(),iconUrl:String(val('IconUrl')?.value||'').trim(),features:[1,2,3].map(n=>String(val('Feature'+n)?.value||'').trim())};
 }
 function zspCcPreview(page){
  const rating=page==='Rating';
@@ -2848,11 +2922,15 @@ document.addEventListener('input',event=>{const input=event.target;
  if(input?.id==='zspCcMainImageUrl')zspCcRenderImage('Main');
  if(input?.id==='zspCcPassImageUrl')zspCcRenderImage('Pass');
  if(input?.id==='zspCcRatingImageUrl')zspCcRenderImage('Rating');
+ if(input?.id==='zspCcMainIconUrl')zspCcRenderIcon('Main');
+ if(input?.id==='zspCcPassIconUrl')zspCcRenderIcon('Pass');
+ if(input?.id==='zspCcRatingIconUrl')zspCcRenderIcon('Rating');
 });
-document.addEventListener('change',event=>{const id=event.target?.id||'';if(/^zspCc(?:Main|Pass|Rating)ImageUrl$/.test(id))zspCcRenderImage(id.slice(5,id.indexOf('ImageUrl')))});
+document.addEventListener('change',event=>{const id=event.target?.id||'';if(/^zspCc(?:Main|Pass|Rating)ImageUrl$/.test(id))zspCcRenderImage(id.slice(5,id.indexOf('ImageUrl')));if(/^zspCc(?:Main|Pass|Rating)IconUrl$/.test(id))zspCcRenderIcon(id.slice(5,id.indexOf('IconUrl')))});
 document.addEventListener('click',event=>{
  const preview=event.target.closest?.('[data-zsp-cc-preview]');if(preview)zspCcPreview(preview.dataset.zspCcPreview);
  const clear=event.target.closest?.('[data-zsp-cc-clear]');if(clear){const page=clear.dataset.zspCcClear;const input=document.getElementById('zspCc'+page+'ImageUrl');if(input){input.value='';zspCcRenderImage(page)}}
+ const iconClear=event.target.closest?.('[data-zsp-cc-icon-clear]');if(iconClear){const page=iconClear.dataset.zspCcIconClear;const input=document.getElementById('zspCc'+page+'IconUrl');if(input){input.value='';zspCcRenderIcon(page)}}
 });
 
 function renderPassVisuals(){const season=state.pass?.selected,visuals=season?.visuals?.battlePass||{},info=$('passVisualInfo');for(const field of PASS_VISUAL_FIELDS){const input=$(field.id);if(!input)continue;input.value=passVisualValue(visuals,field.path);syncPassVisualField(field);}renderPassStoryCollectible(visuals);zspCcFill('Main',visuals?.premiere?.main);zspCcFill('Pass',visuals?.premiere?.pass);if(info)info.innerHTML=season?`Настройка для <b>${esc(season.title)}</b> · ${esc(season.status)}. Все выбранные картинки и сюжетная находка приходят игроку в существующем state пропуска — дополнительных запросов нет.`:'Сезон не выбран.';if($('passVisualSave'))$('passVisualSave').disabled=!season;}

@@ -53082,11 +53082,12 @@ function seasonStoryCollectibleView(raw){
 // SEASON_PREMIERE_V1_PRESENTATION
 function seasonPremierePageView(raw){
  const v=raw&&typeof raw==='object'&&!Array.isArray(raw)?raw:{};
- return {enabled:v.enabled===true,title:String(v.title||'').trim().slice(0,90),subtitle:String(v.subtitle||'').trim().slice(0,140),description:String(v.description||'').trim().slice(0,360),imageUrl:seasonPassReadinessAssetPath(v.imageUrl),features:(Array.isArray(v.features)?v.features:[]).slice(0,3).map(s=>String(s||'').trim().slice(0,115))};
+ return {enabled:v.enabled===true,title:String(v.title||'').trim().slice(0,90),subtitle:String(v.subtitle||'').trim().slice(0,140),description:String(v.description||'').trim().slice(0,360),imageUrl:seasonPassReadinessAssetPath(v.imageUrl),iconUrl:seasonPassReadinessAssetPath(v.iconUrl),features:(Array.isArray(v.features)?v.features:[]).slice(0,3).map(s=>String(s||'').trim().slice(0,115))};
 }
 async function seasonPremierePatchView(env,raw,manifest=null){
  const v=seasonPremierePageView(raw);
  if(String(raw?.imageUrl||'').trim())v.imageUrl=await validateSeasonVisualHeroImage(env,raw.imageUrl,manifest||await seasonPassReadinessImageManifest(env));
+ if(String(raw?.iconUrl||'').trim())v.iconUrl=await validateSeasonVisualHeroImage(env,raw.iconUrl,manifest||await seasonPassReadinessImageManifest(env));
  return v;
 }
 function seasonVisualsView(raw){

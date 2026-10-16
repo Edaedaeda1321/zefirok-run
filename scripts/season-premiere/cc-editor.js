@@ -11,16 +11,23 @@ function zspCcRenderImage(page){
  preview.onerror=()=>{preview.onerror=null;preview.src=fallback};
  preview.src=String(image.value||'').trim()||fallback;
 }
+function zspCcRenderIcon(page){
+ const {val}=zspCcFields(page),input=val('IconUrl'),preview=val('IconPreview');
+ if(!input||!preview)return;
+ const fallback=page==='Main'?'/assets/ui/icon_battlepass.webp':page==='Rating'?'/assets/ui/icon_itog_reiting_season.webp':'/assets/season-pass/season.webp';
+ preview.onerror=()=>{preview.onerror=null;preview.src=fallback};
+ preview.src=String(input.value||'').trim()||fallback;
+}
 function zspCcFill(page,raw){
  const {val}=zspCcFields(page),data=raw||{},features=Array.isArray(data.features)?data.features:[];
  if(!val('Enabled'))return;
  val('Enabled').checked=data.enabled===true;
- for(const [id,text] of [['Title',data.title],['Subtitle',data.subtitle],['Description',data.description],['ImageUrl',data.imageUrl],['Feature1',features[0]],['Feature2',features[1]],['Feature3',features[2]]])val(id).value=String(text||'');
- zspCcRenderImage(page);
+ for(const [id,text] of [['Title',data.title],['Subtitle',data.subtitle],['Description',data.description],['ImageUrl',data.imageUrl],['IconUrl',data.iconUrl],['Feature1',features[0]],['Feature2',features[1]],['Feature3',features[2]]])val(id).value=String(text||'');
+ zspCcRenderImage(page);zspCcRenderIcon(page);
 }
 function zspCcRead(page){
  const {val}=zspCcFields(page);
- return {enabled:Boolean(val('Enabled')?.checked),title:String(val('Title')?.value||'').trim(),subtitle:String(val('Subtitle')?.value||'').trim(),description:String(val('Description')?.value||'').trim(),imageUrl:String(val('ImageUrl')?.value||'').trim(),features:[1,2,3].map(n=>String(val('Feature'+n)?.value||'').trim())};
+ return {enabled:Boolean(val('Enabled')?.checked),title:String(val('Title')?.value||'').trim(),subtitle:String(val('Subtitle')?.value||'').trim(),description:String(val('Description')?.value||'').trim(),imageUrl:String(val('ImageUrl')?.value||'').trim(),iconUrl:String(val('IconUrl')?.value||'').trim(),features:[1,2,3].map(n=>String(val('Feature'+n)?.value||'').trim())};
 }
 function zspCcPreview(page){
  const rating=page==='Rating';
@@ -33,9 +40,13 @@ document.addEventListener('input',event=>{const input=event.target;
  if(input?.id==='zspCcMainImageUrl')zspCcRenderImage('Main');
  if(input?.id==='zspCcPassImageUrl')zspCcRenderImage('Pass');
  if(input?.id==='zspCcRatingImageUrl')zspCcRenderImage('Rating');
+ if(input?.id==='zspCcMainIconUrl')zspCcRenderIcon('Main');
+ if(input?.id==='zspCcPassIconUrl')zspCcRenderIcon('Pass');
+ if(input?.id==='zspCcRatingIconUrl')zspCcRenderIcon('Rating');
 });
-document.addEventListener('change',event=>{const id=event.target?.id||'';if(/^zspCc(?:Main|Pass|Rating)ImageUrl$/.test(id))zspCcRenderImage(id.slice(5,id.indexOf('ImageUrl')))});
+document.addEventListener('change',event=>{const id=event.target?.id||'';if(/^zspCc(?:Main|Pass|Rating)ImageUrl$/.test(id))zspCcRenderImage(id.slice(5,id.indexOf('ImageUrl')));if(/^zspCc(?:Main|Pass|Rating)IconUrl$/.test(id))zspCcRenderIcon(id.slice(5,id.indexOf('IconUrl')))});
 document.addEventListener('click',event=>{
  const preview=event.target.closest?.('[data-zsp-cc-preview]');if(preview)zspCcPreview(preview.dataset.zspCcPreview);
  const clear=event.target.closest?.('[data-zsp-cc-clear]');if(clear){const page=clear.dataset.zspCcClear;const input=document.getElementById('zspCc'+page+'ImageUrl');if(input){input.value='';zspCcRenderImage(page)}}
+ const iconClear=event.target.closest?.('[data-zsp-cc-icon-clear]');if(iconClear){const page=iconClear.dataset.zspCcIconClear;const input=document.getElementById('zspCc'+page+'IconUrl');if(input){input.value='';zspCcRenderIcon(page)}}
 });
