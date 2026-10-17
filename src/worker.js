@@ -46452,6 +46452,7 @@ async function normalizeValidateSeasonPassRewardPayload(env,payload={}){
   let reward;
   if(String(payload?.rewardType||'')==='seasonal_case'){
     const caseId=String(payload?.itemId||'').trim(),definition=await env.DB.prepare(`SELECT * FROM season_pass_case_definitions WHERE case_id=? LIMIT 1`).bind(caseId).first();if(!definition)throw new ApiError(400,'Выберите существующий сезонный кейс.');
+    if(String(definition.season_id||'')!==seasonId)throw new ApiError(409,'Сезонный кейс должен принадлежать тому же Season Pass.');
     const amount=ownerPanelInteger(payload?.amount,1,20);if(amount==null)throw new ApiError(400,'Количество сезонных кейсов должно быть от 1 до 20.');
     reward={rewardType:'case',publicRewardType:'seasonal_case',amount,itemId:`${SEASON_PASS_SEASONAL_CASE_PREFIX}${caseId}`,publicItemId:caseId,title:amount===1?String(definition.title||'Сезонный кейс'):`${String(definition.title||'Сезонный кейс')} ×${amount}`,imageUrl:String(definition.closed_image_url||SYSTEM_IMAGE_FALLBACK)};
   }else reward=ownerPanelSeasonPassRewardPresentation(payload?.rewardType,payload?.amount,payload?.itemId);
@@ -46637,6 +46638,18 @@ async function normalizeValidateLiveContentPayload(env,payload={}){
     }
   }
   routes=normalizedRoutes;
+  // S3 cosmetics must be earned ONLY through a Season Pass reward slot or a
+  // seasonal case that is itself in the same Pass. Do not leave an alternative
+  // free/native/ordinary-case/shop/manual route open after season launch.
+  if(futureSeasonContentSeasonKey(kind,itemId)==='season3'&&(status==='open'||status==='scheduled')){
+    const invalid=Object.keys(routes).filter(type=>type!=='season_pass'&&type!=='seasonal_case');
+    if(invalid.length)throw new ApiError(409,'Предметы Сезона 3 можно получать только через сезонный пропуск или его сезонный кейс.');
+    if(routes.seasonal_case){
+      const caseId=String(routes.seasonal_case.destinationId||'');
+      const passSlot=await env.DB.prepare(`SELECT 1 AS assigned FROM season_pass_rewards WHERE season_id=? AND enabled=1 AND item_id=? LIMIT 1`).bind(seasonId,`${SEASON_PASS_SEASONAL_CASE_PREFIX}${caseId}`).first();
+      if(!passSlot)throw new ApiError(409,'Этот сезонный кейс сначала нужно назначить наградой пропуска Сезона 3.');
+    }
+  }
   if((status==='open'||status==='scheduled')&&liveContentRouteCount(routes)<=0)throw new ApiError(409,'Открытый или запланированный контент должен иметь хотя бы один канал получения.');
   const released=status==='open',primary=liveContentPrimaryRoute(routes,before.destinationType),destinationType=primary.type,destinationId=String(primary.route?.destinationId||''),destinationConfig=liveContentLegacyRouteConfig(destinationType,primary.route);
   const weight=Math.max(.01,Number((routes.case||routes.seasonal_case)?.weight)||1),shop=routes.shop||{},pass=routes.season_pass||{};
@@ -53583,9 +53596,57 @@ async function ownerPanelSaveSeasonPassOverflow(env, ctx) {
 
 async function ownerPanelSetSeasonPassReward(env, ctx) {
   const normalized=await normalizeValidateSeasonPassRewardPayload(env,ctx.body||{}),{seasonId,level,lane,reward}=normalized;
-  const before=await env.DB.prepare(`SELECT * FROM season_pass_rewards WHERE season_id=? AND level=? AND lane=? LIMIT 1`).bind(seasonId,level,lane).first(),now=Math.floor(Date.now()/1000);
-  await env.DB.prepare(`INSERT INTO season_pass_rewards(season_id,level,lane,reward_type,amount,item_id,title,image_url,enabled,updated_at,updated_by) VALUES(?,?,?,?,?,?,?,?,1,?,?) ON CONFLICT(season_id,level,lane) DO UPDATE SET reward_type=excluded.reward_type,amount=excluded.amount,item_id=excluded.item_id,title=excluded.title,image_url=excluded.image_url,enabled=1,updated_at=excluded.updated_at,updated_by=excluded.updated_by`).bind(seasonId,level,lane,reward.rewardType,reward.amount,reward.itemId,reward.title,reward.imageUrl,now,String(ctx.user.id)).run();
-  await logStaffAction(env,ctx.user,ctx.access,"owner_panel_season_pass_reward",null,"season_pass_reward",null,null,{seasonId,level,lane,before:before||null,after:reward});
+  const before=await env.DB.prepare(`SELECT * FROM season_pass_rewards WHERE season_id=? AND level=? AND lane=? LIMIT 1`).bind(seasonId,level,lane).first(),now=Math.floor(Date.now()/1000),actor=String(ctx.user.id);
+  const oldCosmetic=seasonPassCosmeticRewardDefinition(before);
+  const newCosmetic=seasonPassCosmeticRewardDefinition({item_id:reward.itemId});
+  const oldS3=oldCosmetic?.future&&futureSeasonContentSeasonKey(oldCosmetic.kind,oldCosmetic.itemId)==='season3';
+  const newS3=newCosmetic?.future&&futureSeasonContentSeasonKey(newCosmetic.kind,newCosmetic.itemId)==='season3';
+  const touchesS3=Boolean(oldS3||newS3);
+  if(touchesS3){
+    const bound=await env.DB.prepare(`SELECT season_id FROM season_pass_case_presets WHERE preset_id='season3_belkino_case_v1' LIMIT 1`).first();
+    if(!bound||String(bound.season_id)!==seasonId)throw new ApiError(409,'Награду «Тайн Белкино» можно назначать только на Season Pass Сезона 3.');
+    if(before&&String(before.item_id||'')!==String(reward.itemId||'')){
+      const delivered=await env.DB.prepare(`SELECT 1 AS used FROM season_pass_claims WHERE season_id=? AND level=? AND lane=? AND status='delivered' LIMIT 1`).bind(seasonId,level,lane).first();
+      if(delivered)throw new ApiError(409,'Этот слот уже получали игроки. Нельзя подменить выданную награду Сезона 3.');
+    }
+  }
+  const statements=[];
+  if(touchesS3){
+    await ensureLiveContentReleaseSchema(env);
+    const liveRules=await readLiveContentReleaseRules(env,true);
+    const oldKey=oldS3?liveContentReleaseKey(oldCosmetic.kind,oldCosmetic.itemId):'';
+    const newKey=newS3?liveContentReleaseKey(newCosmetic.kind,newCosmetic.itemId):'';
+    if(oldS3&&oldKey!==newKey){
+      const previous=liveRules.get(oldKey),pass=liveContentRoute(previous,'season_pass',seasonId);
+      if(pass&&Number(pass.level)===level&&String(pass.lane||'free')===lane){
+        const remaining={...previous.routes};delete remaining.season_pass;
+        const stillOpen=liveContentRouteCount(remaining)>0;
+        const prepared=await prepareLiveContentMutation(env,{kind:oldCosmetic.kind,itemId:oldCosmetic.itemId,seasonId,status:stillOpen?'open':'archived',releaseAt:0,released:stillOpen,routes:remaining,destinationType:previous.destinationType,before:previous},actor,{now});
+        statements.push(...prepared.statements);
+      }
+    }
+    if(newS3){
+      const previous=liveRules.get(newKey)||{kind:newCosmetic.kind,itemId:newCosmetic.itemId,seasonId,status:'hidden',releaseAt:0,released:false,everReleased:false,routes:{}};
+      if(previous.seasonId&&previous.seasonId!==seasonId)throw new ApiError(409,'Live Content предмета привязан к другому сезону. Исправьте привязку, прежде чем менять награду.');
+      const previousPass=liveContentRoute(previous,'season_pass');
+      if(previousPass&&(String(previousPass.destinationId)!==seasonId||Number(previousPass.level)!==level||String(previousPass.lane||'free')!==lane))throw new ApiError(409,'Этот косметический предмет уже назначен на другой слот Season Pass.');
+      const duplicate=await env.DB.prepare(`SELECT level,lane FROM season_pass_rewards WHERE season_id=? AND enabled=1 AND item_id=? AND (level<>? OR lane<>?) LIMIT 1`).bind(seasonId,reward.itemId,level,lane).first();
+      if(duplicate)throw new ApiError(409,'Этот предмет уже находится на другом уровне пропуска. Нельзя создать второе назначение.');
+      const routes={season_pass:{enabled:true,destinationId:seasonId,level,lane,...(previousPass?.previousReward?{previousReward:previousPass.previousReward}:{})}};
+      const seasonal=liveContentRoute(previous,'seasonal_case');
+      if(seasonal){
+        const caseId=String(seasonal.destinationId||'');
+        const assigned=await env.DB.prepare(`SELECT 1 AS assigned FROM season_pass_case_definitions c JOIN season_pass_rewards r ON r.season_id=c.season_id AND r.item_id=? AND r.enabled=1 WHERE c.case_id=? AND c.season_id=? LIMIT 1`).bind(`${SEASON_PASS_SEASONAL_CASE_PREFIX}${caseId}`,caseId,seasonId).first();
+        if(assigned)routes.seasonal_case=seasonal;
+      }
+      const prepared=await prepareLiveContentMutation(env,{kind:newCosmetic.kind,itemId:newCosmetic.itemId,seasonId,status:'open',releaseAt:0,released:true,routes,destinationType:'season_pass',before:previous},actor,{now});
+      statements.push(...prepared.statements);
+    }
+  }
+  if(!newS3)statements.push(env.DB.prepare(`INSERT INTO season_pass_rewards(season_id,level,lane,reward_type,amount,item_id,title,image_url,enabled,updated_at,updated_by) VALUES(?,?,?,?,?,?,?,?,1,?,?) ON CONFLICT(season_id,level,lane) DO UPDATE SET reward_type=excluded.reward_type,amount=excluded.amount,item_id=excluded.item_id,title=excluded.title,image_url=excluded.image_url,enabled=1,updated_at=excluded.updated_at,updated_by=excluded.updated_by`).bind(seasonId,level,lane,reward.rewardType,reward.amount,reward.itemId,reward.title,reward.imageUrl,now,actor));
+  await env.DB.batch(statements);
+  if(touchesS3)invalidateLiveContentReleaseCache();
+  await logStaffAction(env,ctx.user,ctx.access,"owner_panel_season_pass_reward",null,"season_pass_reward",null,null,{seasonId,level,lane,before:before||null,after:reward,liveContentSynced:touchesS3});
   return {ok:true,reward:{level,lane,...reward,rewardType:reward.publicRewardType||reward.rewardType,itemId:reward.publicItemId||reward.itemId,enabled:true}};
 }
 
