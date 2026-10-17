@@ -1374,14 +1374,28 @@ function seasonPassElitePlusBenefitsConfig(rawValue) {
   return { xpBoost, bonusLevels, caseType, caseCount, cosmetics };
 }
 
+// A paid Elite+ cosmetic is delivered by the Season Pass tier, not by a
+// manual giveaway. Future-season art must be published for THIS season and
+// reachable through its pass (direct rewards or pass-linked seasonal case).
+// Keep the historic manual route compatible with already published seasons.
+function seasonPassElitePlusCosmeticAllowed(kind,itemId,seasonId,rule=liveContentReleaseRuleCached(kind,itemId)) {
+  if(!futureSeasonContentItem(kind,itemId))return true;
+  const id=String(seasonId||"").trim();
+  if(!id||!rule?.released||String(rule.seasonId||"")!==id)return false;
+  return liveContentRouteEnabled(rule,"season_pass",id)
+    || liveContentRouteEnabled(rule,"seasonal_case")
+    || liveContentRouteEnabled(rule,"manual");
+}
+
 function seasonPassElitePlusBenefitsView(rawValue, options = {}) {
   const config = seasonPassElitePlusBenefitsConfig(rawValue);
   const publicView = Boolean(options.publicView);
+  const seasonId = String(options.seasonId||"");
   const caseLabels = { small:"Обычный кейс", sweet:"Серебряный кейс", gold:"Золотой кейс", mythic:"Мифический кейс", legendary:"Легендарный кейс", alex:"Кейс Алекса" };
   const cosmetics = config.cosmetics.map(({kind,itemId}) => {
     const item = seasonPassAnyCosmeticCatalog(kind)?.[itemId];
     const future = Boolean(futureSeasonContentItem(kind,itemId));
-    const released = !future || liveContentRouteAllowedCached(kind,itemId,"manual");
+    const released = !future || seasonPassElitePlusCosmeticAllowed(kind,itemId,seasonId);
     if (publicView && future && !released) {
       return { kind:"secret", itemId:"", title:"Секретная награда сезона", imageUrl:"/assets/season-pass/season.webp?v=07939", future:true, released:false };
     }
@@ -36170,7 +36184,7 @@ function seasonPassSeasonFromRow(row, fallback, nowMs = Date.now()) {
       elite:{points:seasonPassInteger(row.elite_price_points,DEFAULT_SEASON_PASS_ELITE_PRICE.points),treats:seasonPassInteger(row.elite_price_treats,DEFAULT_SEASON_PASS_ELITE_PRICE.treats),coffee:seasonPassInteger(row.elite_price_coffee,DEFAULT_SEASON_PASS_ELITE_PRICE.coffee)},
       elite_plus:{points:seasonPassInteger(row.elite_plus_price_points,DEFAULT_SEASON_PASS_ELITE_PLUS_PRICE.points),treats:seasonPassInteger(row.elite_plus_price_treats,DEFAULT_SEASON_PASS_ELITE_PLUS_PRICE.treats),coffee:seasonPassInteger(row.elite_plus_price_coffee,DEFAULT_SEASON_PASS_ELITE_PLUS_PRICE.coffee)}
     },
-    tierSettings:{ elitePlus:seasonPassElitePlusBenefitsView(row.elite_plus_benefits_json) }
+    tierSettings:{ elitePlus:seasonPassElitePlusBenefitsView(row.elite_plus_benefits_json,{seasonId:String(row.season_id||"")}) }
   };
 }
 
@@ -38639,8 +38653,8 @@ async function elitePlusBenefitPlan(env,ctx,player,now,options={}){
   const benefitCosmetics=Array.isArray(benefits.cosmetics)?benefits.cosmetics:[];
   const hasFutureCosmetics=benefitCosmetics.some((item)=>item?.future&&item?.kind&&item?.itemId);
   const freshLiveRules=hasFutureCosmetics?await readLiveContentReleaseRules(env,true):null;
-  const hidden=benefitCosmetics.find((item)=>{if(!item?.future)return false;const rule=freshLiveRules?.get(liveContentReleaseKey(item.kind,item.itemId));return !rule?.released||!liveContentRouteEnabled(rule,'manual');});
-  if(hidden)throw new ApiError(409,'Эксклюзивная награда тарифа относится к скрытому будущему контенту. Откройте контент релизным обновлением перед продажей тарифа.');
+  const hidden=benefitCosmetics.find((item)=>{if(!item?.future)return false;const rule=freshLiveRules?.get(liveContentReleaseKey(item.kind,item.itemId));return !seasonPassElitePlusCosmeticAllowed(item.kind,item.itemId,ctx.season.id,rule);});
+  if(hidden)throw new ApiError(409,'Эксклюзивная награда Элитного+ не опубликована для этого сезона или не доступна через сезонный пропуск. Проверьте маршруты в Управлении контентом.');
   const bonusAlreadyGranted=Boolean(options.bonusAlreadyGranted);
   const source=String(options.source||'elite_plus');
   const state=(await ensureCasePlayerState(env,ctx.telegramId,{})).state;
@@ -51182,7 +51196,7 @@ async function albumAcquisitionSources(env) {
     for(const season of seasons){
       const status=seasonStatus(season);if(status==="upcoming")continue;
       const benefits=seasonPassElitePlusBenefitsConfig(season.elite_plus_benefits_json);
-      for(const item of benefits.cosmetics)if(routeOK(item.kind,item.itemId,"manual"))add(item.kind,item.itemId,{type:"elite_plus",id:String(season.season_id),availability:status,
+      for(const item of benefits.cosmetics)if(seasonPassElitePlusCosmeticAllowed(item.kind,item.itemId,season.season_id,rules.get(liveContentReleaseKey(item.kind,item.itemId))))add(item.kind,item.itemId,{type:"elite_plus",id:String(season.season_id),availability:status,
         text:`${season.title||"Сезонный пропуск"} — бонус активации тарифа «Элитный+».`,note:status==="historical"?"Тариф завершённого сезона больше не продаётся.":"Проверь состав и доступность тарифа перед покупкой."});
     }
     const caseDefs=new Map(caseRows.map(row=>[String(row.case_id),row]));
