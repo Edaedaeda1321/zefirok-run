@@ -83,5 +83,9 @@ test('runtime and disk manifest contain identical restored roads and grounded be
   for(const id of [...Object.keys(originalRoadHashes),...Array.from('nesw',f=>`flower_v1_bench_${f}`)]){
     assert.deepEqual(idx.get(id),meta(id),id);
   }
+  // Verify EVERY metadata record: extra landmark stages must never be omitted from the disk manifest.
   assert.equal(disk.assets.length,SPRITE_MANIFEST.assets.length);
+  for (const asset of SPRITE_MANIFEST.assets) {
+    assert.deepEqual(idx.get(asset.id),asset,`disk manifest differs from runtime: ${asset.id}`);
+  }
 });

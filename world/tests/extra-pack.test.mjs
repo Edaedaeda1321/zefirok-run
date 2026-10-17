@@ -42,7 +42,9 @@ test('9 deprecated decorative paths are hidden but remain readable, while plazas
  const paths=CATALOG_ITEMS.filter(x=>x.category==='paths');
  const plazas=CATALOG_ITEMS.filter(x=>x.category==='plazas');
  const decor=CATALOG_ITEMS.filter(x=>x.id.startsWith('extra-'));
- assert.equal(paths.length,0);assert.equal(RETIRED_PATH_ITEMS.length,9);assert.equal(plazas.length,11);assert.equal(decor.length,10);
+ assert.equal(paths.length,0);assert.equal(RETIRED_PATH_ITEMS.length,9);assert.equal(plazas.length,12);assert.equal(decor.length,10);
+ // Palace of Memories is now an existing 6x6 prestige plaza, not a new Extra asset.
+ assert.ok(plazas.some(x=>x.id==='palace-of-memories'));
  assert.deepEqual(RETIRED_PATH_ITEMS.map(x=>x.layer),Array(9).fill('surface'));
  assert.deepEqual(plazas.filter(x=>x.id.startsWith('plaza-')).map(x=>x.layer),Array(8).fill('surface'));
  assert.ok(!CATEGORIES.includes('paths')&&CATEGORIES.includes('plazas'));

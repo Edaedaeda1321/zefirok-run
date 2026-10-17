@@ -16,13 +16,17 @@ const target={
 };
 
 test('style pack contributes 40 independent images in 10 groups, not missing terrain',()=>{
- assert.equal(SPRITE_MANIFEST.assets.filter(a=>!['park-belkino-story-v1','white-rabbit-construction-v1','story-festival-hall-v1','zeffi-central-square-v1'].includes(a.packId)).length,365);
+ assert.equal(SPRITE_MANIFEST.assets.filter(a=>!['park-belkino-story-v1','white-rabbit-construction-v1','story-festival-hall-v1','zeffi-central-square-v1'].includes(a.packId)).length,396);
+ // Includes 10 Palace of Memories stages, 10 Meeting Garden stages and 11 premium park assets.
+ assert.equal(SPRITE_MANIFEST.assets.filter(a=>a.packId==='palace-memories-review-v1').length,10);
+ assert.equal(SPRITE_MANIFEST.assets.filter(a=>a.packId==='meeting-garden-v1').length,10);
+ assert.equal(SPRITE_MANIFEST.assets.filter(a=>['zeffi-premium-park-v1','zeffi-global-world-park-v1'].includes(a.packId)).length,11);
  assert.equal(SPRITE_MANIFEST.assets.filter(a=>a.packId==='park-belkino-story-v1').length,4);
  assert.equal(SPRITE_MANIFEST.assets.filter(a=>a.packId==='white-rabbit-construction-v1').length,6);
  assert.equal(SPRITE_MANIFEST.assets.filter(a=>a.packId==='story-festival-hall-v1').length,16);
  assert.equal(SPRITE_MANIFEST.assets.filter(a=>a.packId==='zeffi-central-square-v1').length,7);
  assert.equal(flower.length,40);
- assert.equal(CATALOG_ITEMS.length,50);
+ assert.equal(CATALOG_ITEMS.length,52);
  assert.deepEqual(new Set(flower.map(a=>a.catalogId)),new Set(Object.keys(target)));
  assert.equal(existsSync(join(root,'assets/flower-style-v1/webp/terrain')),false);
  for(const a of flower){

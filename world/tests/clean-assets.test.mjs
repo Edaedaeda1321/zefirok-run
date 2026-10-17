@@ -11,7 +11,9 @@ import { makeInitialCity, sanitizeCity } from '../engine.js';
 const root=dirname(fileURLToPath(new URL('../index.html',import.meta.url)));
 const ids=new Set(SPRITE_MANIFEST.assets.map(a=>a.id));
 const legacyBusAtlas='assets/transport-v2/bus-atlas.webp'; // Required for cached v2 clients during rollout.
-const spritePaths=new Set([...SPRITE_MANIFEST.assets.map(a=>a.fileWebp),BUS_ART.file.replace(/^\.\//,''),legacyBusAtlas]);
+// Canonical 6x6 park master is retained as WebP source art; the optimized four-angle sprites are used at runtime.
+const parkMasterArt='assets/zeffi-central-park-v1/webp_states/central_park_zeffi_complete.webp';
+const spritePaths=new Set([...SPRITE_MANIFEST.assets.map(a=>a.fileWebp),BUS_ART.file.replace(/^\.\//,''),legacyBusAtlas,parkMasterArt]);
 function visit(path,output=[]){ for(const entry of readdirSync(path,{withFileTypes:true})){
  const full=join(path,entry.name);if(entry.isDirectory())visit(full,output);else output.push(relative(root,full).replaceAll('\\','/'));
 }return output; }
@@ -19,7 +21,7 @@ function visit(path,output=[]){ for(const entry of readdirSync(path,{withFileTyp
 test('only live sprites and one retained legacy bus atlas are packaged (no PNG or GLB)',()=>{
  const actual=visit(join(root,'assets')).filter(p=>p.endsWith('.webp'));
  assert.deepEqual(new Set(actual),spritePaths);
- assert.equal(actual.length,spritePaths.size); // 361 existing images + new atlas + old atlas for cached clients
+ assert.equal(actual.length,spritePaths.size); // Runtime sprites, retained bus atlases and the one original park master.
  assert.ok(!visit(root).some(p=>/\.(png|glb|jpg|jpeg)$/i.test(p)));
  assert.ok(!SPRITE_MANIFEST.assets.some(a=>Object.hasOwn(a,'filePng')||Object.hasOwn(a,'sourceGlb')));
  const code=readFileSync(join(root,'sprite-assets.js'),'utf-8');
