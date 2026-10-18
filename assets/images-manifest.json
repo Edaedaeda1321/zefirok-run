@@ -1,7 +1,7 @@
 {
   "version": 2,
   "hashAlgorithm": "sha256",
-  "catalogHash": "facd9cb0cd152e55",
+  "catalogHash": "3dce812d45ff8a63",
   "count": 621,
   "images": [
     {
@@ -2313,8 +2313,8 @@
       "label": "White rabbit background season4",
       "folder": "optimized/v0.79.5",
       "path": "/assets/optimized/v0.79.5/white_rabbit_background_season4.webp",
-      "hash": "5fb773f6fd61",
-      "size": 1649344
+      "hash": "313fc59cb980",
+      "size": 1151272
     },
     {
       "fileName": "rating/avatars/avatar-bear-bow.webp",
