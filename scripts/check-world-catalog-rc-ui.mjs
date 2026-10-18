@@ -24,8 +24,8 @@ for(const [kind,html] of [['hosted',world],['offline',sandbox]]){
  assert.match(html,/<button[^>]*id="resetButton"[^>]*hidden/,`${kind}: скрытый DOM-хук для локальной разработки сохранён`);
 }
 assert.doesNotMatch(app,/querySelector\('\.panel-footer/, 'старая запись в удалённый footer не должна вызывать ошибку');
-assert.match(world,/premium-ui\.css\?v=zeffi-bus-image-v3/,'production CSS must refresh');
-assert.match(world,/app\.js\?v=zeffi-bus-image-v3/,'production catalog JS must refresh');
+assert.match(world,/premium-ui\.css\?v=bus-roads1/,'production CSS must refresh');
+assert.match(world,/app\.js\?v=first-home1/,'production catalog JS must refresh');
 for(const css of [ui,story]){
  assert.match(css,/-webkit-user-select:none;user-select:none;/,'игровой текст нельзя выделять на iOS');
  assert.match(css,/input,textarea,\[contenteditable="true"\]\{-webkit-user-select:text;/,'поля ввода остаются пригодны для редактирования');
