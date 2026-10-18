@@ -65,6 +65,7 @@ const steps = [
   ['multi-platform foundation', 'node', ['scripts/check-multiplatform-foundation.mjs']],
   ['iOS dev client', 'node', ['scripts/check-ios-poc.mjs']],
   ['index srcdoc integrity', 'node', ['scripts/check-index-srcdoc.mjs']],
+  ['runner loop freeze recovery', 'node', ['scripts/check-runner-loop-recovery.mjs']],
   ['task modal UI', 'node', ['scripts/check-task-modal-ui.mjs']],
   ['daily prestige materials', 'node', ['scripts/check-daily-prestige-v31.mjs']],
   ['daily streak admin setter', 'node', ['scripts/check-daily-streak-admin-set.mjs']],

@@ -15508,6 +15508,8 @@ function installProgressInfo(){
         warehouseRenderSkipped: 0,
         particlesDropped: 0,
         visibilityPauses: 0,
+        runnerLoopRecoveries: 0,
+        runnerLoopFrameErrors: 0,
         renderedFrames: 0,
         fixedSimulationSteps: 0,
         fixedStepCatchUpDrops: 0,
@@ -20517,14 +20519,46 @@ function createTutorialDeck(layer, mount, options, words) {
         return true;
       }
 
+      // Runner rAF recovery v1: WebKit can lose a frame; a thrown draw/update
+      // must not silently stop every subsequent frame. This never awards points.
+      const RUNNER_FRAME_STALL_MS = 2400;
+      let runnerLastFrameAt = 0;
+      let runnerLastRecoveryAt = 0;
+      let runnerFrameFailures = 0;
+
       function cancelGameLoop() {
         if (state.rafId) window.cancelAnimationFrame(state.rafId);
         state.rafId = 0;
+        runnerLastFrameAt = 0;
       }
 
       function scheduleGameLoop() {
         if (!state.running || state.rafId || gameplayCoachFrozen) return;
+        if (!runnerLastFrameAt) runnerLastFrameAt = performance.now();
         state.rafId = window.requestAnimationFrame(loop);
+      }
+
+      function runnerLoopWatchdog() {
+        // Never silently resume a paused, hidden, finished or tutorial-frozen run.
+        if (!state.running || state.paused || state.over || gameplayCoachFrozen || document.visibilityState !== &quot;visible&quot;) return;
+        if (!runnerStartupGateReleased || !state.caseRunId || authoritativeRunSessionReadyId !== String(state.caseRunId)) return;
+        const now = performance.now();
+        if (!runnerLastFrameAt) { runnerLastFrameAt = now; return; }
+        if (now - runnerLastFrameAt &lt; RUNNER_FRAME_STALL_MS || now - runnerLastRecoveryAt &lt; RUNNER_FRAME_STALL_MS) return;
+        // A stale requestAnimationFrame can happen after mobile WebView interruption.
+        // Re-arm rendering only. No reset(), runStart, purchases, rewards or clock catch-up.
+        if (state.rafId) window.cancelAnimationFrame(state.rafId);
+        state.rafId = 0;
+        state.last = now;
+        fixedStepAccumulator = 0;
+        renderInterpolationAlpha = 1;
+        renderExtrapolationSeconds = 0;
+        syncSimulationRenderHistory();
+        runnerLastRecoveryAt = now;
+        runnerLastFrameAt = now;
+        runnerFrameFailures = 0;
+        clientPerformance.runnerLoopRecoveries += 1;
+        scheduleGameLoop();
       }
 
       function simulationRenderValue(previousValue, currentValue) {
@@ -20633,6 +20667,8 @@ function createTutorialDeck(layer, mount, options, words) {
       function loop(now) {
         state.rafId = 0;
         if (!state.running) return;
+        runnerLastFrameAt = performance.now();
+        try {
         recordClientFrame(now);
         const rawDelta = Math.max(0, (now - state.last) / 1000);
         state.last = now;
@@ -20675,7 +20711,32 @@ function createTutorialDeck(layer, mount, options, words) {
         draw();
         const drawMs = performance.now() - drawStartedAt;
         recordClientPhaseTimings(updateMs, drawMs);
-        if (state.running) scheduleGameLoop();
+        runnerFrameFailures = 0;
+        } catch (error) {
+          clientPerformance.runnerLoopFrameErrors += 1;
+          runnerFrameFailures += 1;
+          // Report the first and final failure; never spam the console every frame.
+          if (runnerFrameFailures === 1 || runnerFrameFailures === 3) console.error(&quot;Sweet Run: frame failed&quot;, error);
+          state.last = performance.now();
+          fixedStepAccumulator = 0;
+          renderInterpolationAlpha = 1;
+          renderExtrapolationSeconds = 0;
+          if (runnerFrameFailures &gt;= 3 &amp;&amp; state.running &amp;&amp; !state.paused &amp;&amp; !state.over) {
+            // Keep the SAME authoritative run. Pause safely on persistent failures
+            // instead of farming invisible frames or leaving the user frozen.
+            try {
+              togglePause();
+              showProfileToast(&quot;Забег приостановлен из-за ошибки отображения. Попробуй продолжить.&quot;, &quot;warning&quot;, 4400);
+            } catch (pauseError) {
+              console.error(&quot;Sweet Run: safe pause failed&quot;, pauseError);
+              state.running = false;
+              state.paused = true;
+              cancelGameLoop();
+            }
+          }
+        } finally {
+          if (state.running &amp;&amp; !state.paused &amp;&amp; !state.over) scheduleGameLoop();
+        }
       }
 
       function compactArrayInPlace(items, keep) {
@@ -31894,6 +31955,8 @@ function createTutorialDeck(layer, mount, options, words) {
         }
       }, 1000);
 
+      // Timer is independent of rAF: recover a lost WebKit frame without user taps.
+      window.setInterval(runnerLoopWatchdog, 1200);
       if (CLIENT_ANTI_CHEAT_ENABLED) {
         window.clearInterval(antiCheatGuardTimer);
         antiCheatGuardTimer = window.setInterval(antiCheatRuntimeGuard, Math.max(500, CLIENT_ANTI_CHEAT_GUARD_INTERVAL_MS));
