@@ -1,8 +1,8 @@
 {
   "version": 2,
   "hashAlgorithm": "sha256",
-  "catalogHash": "3fe2330a23e62d74",
-  "count": 618,
+  "catalogHash": "facd9cb0cd152e55",
+  "count": 621,
   "images": [
     {
       "fileName": "achievements/background_achivment_panel.webp",
@@ -1741,6 +1741,14 @@
       "size": 91630
     },
     {
+      "fileName": "mir_zeffi/icon_shop_road_bus.webp",
+      "label": "Icon shop road bus",
+      "folder": "mir_zeffi",
+      "path": "/assets/mir_zeffi/icon_shop_road_bus.webp",
+      "hash": "500e04fd1014",
+      "size": 216690
+    },
+    {
       "fileName": "mir_zeffi/icon_transport.webp",
       "label": "Icon transport",
       "folder": "mir_zeffi",
@@ -1827,6 +1835,22 @@
       "path": "/assets/news/news_update_1.2.8.webp",
       "hash": "0d7f0306cdad",
       "size": 230352
+    },
+    {
+      "fileName": "news/news_update_1.3.0.jpg",
+      "label": "News update 1.3.0",
+      "folder": "news",
+      "path": "/assets/news/news_update_1.3.0.jpg",
+      "hash": "16f16aaa0bb3",
+      "size": 485295
+    },
+    {
+      "fileName": "news/news_update_1.3.0.webp",
+      "label": "News update 1.3.0",
+      "folder": "news",
+      "path": "/assets/news/news_update_1.3.0.webp",
+      "hash": "2af26e404919",
+      "size": 242794
     },
     {
       "fileName": "news/news.webp",

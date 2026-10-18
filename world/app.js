@@ -15,7 +15,7 @@ import { drawWorld, drawCatalogThumbnail, screenToTile, isoToScreen, PROJECT_FOC
 import { onSpriteUpdate, setSpriteMode, spriteStatus, preloadBuildFrames, preloadSpriteSet, spriteManifest, catalogSpriteId, parkConstructionAssetId, buildingAssetId } from './sprite-assets.js';
 import { buildCitizenScene, sampleCitizenScene } from './citizens.js?v=rc-life1';
 import { buildBusScene, sampleBusScene } from './traffic.js';
-import {createWorldTutorial} from './tutorial.js?v=rc-guide2';
+import {createWorldTutorial} from './tutorial.js?v=first-home1';
 import {nextCityGoal,cityGoalMilestone} from './city-goal.js';
 import {mountCityGuide} from './city-guide-ui.js';
 import {mountCityChapters} from './city-chapters-ui.js?v=world-chapters-v2';
@@ -270,6 +270,7 @@ async function residentRequestAction(item){
  if(item.itemId)cityGuideAction({type:'build',itemId:item.itemId});
 }
 function acceptServerCity(payload){
+ if(payload.onboarding)state.onboarding=payload.onboarding;
  // Only the signed server state can supply the published World economy.
  if(SERVER_MODE){
   if(!payload?.economy)throw new Error('Сервер не передал опубликованную конфигурацию города.');
@@ -344,7 +345,7 @@ async function bootWorldServer(){
   const result=await serverRequest('state');
   await prepareInitialArt(result.city);
   acceptServerCity(result);unlockServer();refreshArt();
-  if(result.tutorial)setupPersonalTutorial(result.tutorial.personal);
+  if(result.tutorial)setupPersonalTutorial(result.tutorial.personal,result.onboarding);
  }catch(error){serverLock(error.message||'Ошибка загрузки города.',true);}
 }
 function quoteForAction(kind,args){
@@ -359,7 +360,7 @@ function quoteForAction(kind,args){
  else if(kind==='parcel')next=buyParcel(state.city,args.cx,args.cy);
  else if(kind==='road'||kind==='erase-road')next=applyRoadStroke(state.city,CATALOG,args.positions,{erasing:kind==='erase-road'});
  else if(kind==='bus-road'||kind==='erase-bus-road')next=applyBusRoadStroke(state.city,CATALOG,args.positions,{erasing:kind==='erase-bus-road'});
- else if(kind==='skip')next=skipConstruction(state.city,args.uid).city;
+ else if(kind==='skip')next=skipConstruction(state.city,args.uid,Date.now(),{tutorialFree:isFreeTutorialSkip(state.city.objects.find(o=>o.uid===args.uid))}).city;
  else if(kind==='claim-level'){claimCityLevelReward(state.city,CATALOG,args.level);return {points:0,treats:0,coffee:0};}
  else throw new Error('Unsupported world action');
  return {points:state.city.wallet.points-next.wallet.points,treats:state.city.wallet.treats-next.wallet.treats,coffee:state.city.wallet.coffee-next.wallet.coffee};
@@ -399,6 +400,7 @@ async function confirmServerEdit(){
    stopDraft();state.mode='select';
    if(kind==='place'||kind==='place-gift'||kind==='place-pass-garden')state.selectedUid=state.city.objects[state.city.objects.length-1]?.uid||null;
    else state.selectedUid=d.uid;
+   if(kind==='place'&&d.kind==='cottage'&&state.onboarding?.required&&state.onboarding.homeUid===state.selectedUid)worldTutorial?.signal('tutorial-home-built');
    showToast(kind==='place'||kind==='place-gift'||kind==='place-pass-garden'?tr('placed'):tr('moved'));updateUI();scheduleDraw();return;
   }
   if(state.roadDraft.length){
@@ -500,6 +502,7 @@ function startPlacement(kind){
  setCatalogOpen(false);
  if(Number(CATALOG[kind]?.buildMs)>0)void preloadBuildFrames(kind,0);
  updateUI();scheduleDraw();
+ if(kind==='cottage'&&state.onboarding?.required)worldTutorial?.signal('tutorial-cottage-selected');
 }
 function startPassGardenPlacement(){
  const kind='meeting-garden-pass';
@@ -597,7 +600,7 @@ function updateSelection(){
  const skipPreparing=state.skipPreparingUid===item.uid;
  $('selectionStatus').textContent=skipInProgress?'✨ Магическое завершение…':skipPreparing?'Подготавливаем анимацию…':constructing?`${tr('buildReadyIn')} ${formatRemaining(constructionRemaining(item))}`:(CATALOG[item.kind].needsRoad?(connected?tr('roadOk'):tr('roadMissing')):`${dims(CATALOG[item.kind],item.rotation).w}x${dims(CATALOG[item.kind],item.rotation).h}`);
  $('finishBuildTest').hidden=!constructing || skipInProgress || ['palace-of-memories','meeting-garden-pass'].includes(item.kind);
- $('finishBuildTest').disabled=skipInProgress||skipPreparing||(SERVER_MODE&&!state.serverPurchasesEnabled);
+ $('finishBuildTest').disabled=skipInProgress||skipPreparing||(SERVER_MODE&&!state.serverPurchasesEnabled&&!isFreeTutorialSkip(item));
  $('selectionBuildProgress').hidden=!constructing;
  if(constructing){
    const now=Date.now();
@@ -606,7 +609,7 @@ function updateSelection(){
    $('selectionBuildPercent').textContent=`${progress}%`;
    $('selectionBuildFill').style.width=`${progress}%`;
    $('selectionBuildTrack').setAttribute('aria-valuenow',String(progress));
-   const cost=constructionSkipPrice(item);
+   const cost=skipQuote(item);
    $('finishBuildTestLabel').textContent=skipPreparing?'Подготовка…':'Ускорить';
    $('finishBuildTestCost').textContent=cost.coffee.toLocaleString('ru-RU');
    $('finishBuildTest').setAttribute('aria-label',`Ускорить строительство за ${cost.coffee} кофе`);
@@ -1214,10 +1217,10 @@ function updateSkipQuote(){
  if($('skipModal').hidden || !state.paidSkipUid)return;
  const item=state.city.objects.find(row=>row.uid===state.paidSkipUid&&!row.stored);
  if(!item || !isConstructing(item) || item.kind==='palace-of-memories'){closeSkipModal();return;}
- const cost=constructionSkipPrice(item);
+ const cost=skipQuote(item);
  const msToNextReduction=60000-(Math.max(0,Date.now()-Number(item.buildStartedAt||0))%60000);
  const nextPrice=Math.max(5,cost.coffee-25);
- const moreDiscount=cost.coffee>5 && cost.remaining>msToNextReduction;
+ const moreDiscount=!cost.free&&cost.coffee>5 && cost.remaining>msToNextReduction;
  $('skipModalRemaining').textContent=formatRemaining(cost.remaining);
  $('skipModalCost').textContent=cost.coffee.toLocaleString('ru-RU');
  $('skipModalWallet').textContent=state.city.wallet.coffee.toLocaleString('ru-RU');
@@ -1227,7 +1230,8 @@ function updateSkipQuote(){
   $('skipModalDiscountWait').textContent=formatRemaining(msToNextReduction);
   $('skipModalDiscountPrice').textContent=nextPrice.toLocaleString('ru-RU');
  }
- $('skipAccept').disabled=state.skipPreparingUid!==null || !canAfford(state.city.wallet,cost) || (SERVER_MODE&&!state.serverPurchasesEnabled);
+ $('skipModal').querySelector('.skip-premium-note').textContent=cost.free?'Подарок Зеффи: один раз ускоряем первый построенный дом бесплатно. Кофе не списывается.':'Спишется только кофе. Цена уменьшается по мере строительства.';
+ $('skipAccept').disabled=state.skipPreparingUid!==null || !canAfford(state.city.wallet,cost) || (SERVER_MODE&&!state.serverPurchasesEnabled&&!cost.free);
  $('skipAccept').setAttribute('aria-label',`Ускорить строительство за ${cost.coffee} кофе`);
 }
 function clearSkipAnimation(){
@@ -1265,7 +1269,8 @@ async function finishSelectedConstruction(uid){
   if(!current||!isConstructing(current))return;
   const now=Date.now();
   const result=SERVER_MODE?{city:null}:skipConstruction(state.city,uid,now);
-  if(SERVER_MODE){await performServerAction('skip',{uid});}
+  if(SERVER_MODE){await performServerAction('skip',{uid});
+   if(state.onboarding?.required&&state.onboarding.homeUid===uid&&state.onboarding.freeSkipUsed)worldTutorial?.signal('tutorial-home-ready');}
   // Persist the coffee charge/completion BEFORE visual FX; closing the tab
   // cannot consume currency without completing the underlying building.
   state.skipPreparingUid=null;
@@ -1280,14 +1285,43 @@ async function finishSelectedConstruction(uid){
  finally{state.skipPreparingUid=null;updateUI();scheduleDraw();}
 }
 // Guided, real UI actions. No purchase/claim step is ever automated.
+function tutorialHome(){return state.city.objects.find(item=>item.uid===state.onboarding?.homeUid&&item.kind==='cottage'&&!item.stored);}
+function isFreeTutorialSkip(item){return Boolean(SERVER_MODE&&item&&state.onboarding?.required&&!state.onboarding.freeSkipUsed&&
+ state.onboarding.homeUid===item.uid&&item.kind==='cottage'&&isConstructing(item));}
+function skipQuote(item){const quote=constructionSkipPrice(item);return isFreeTutorialSkip(item)?{...quote,free:true,coffee:0}:quote;}
 function tutorialHomeTarget(){
  const affordable=shopSortedItems().filter(item=>item.category==='homes' && shopRequiredLevel(item)<=shopCurrentLevel() && !shopShortfall(objectPrice(CATALOG,item.id)));
  const available=affordable[0] || shopSortedItems().find(item=>item.category==='homes');
  return available?`.catalog-card[data-kind="${available.id}"]`:'.catalog-card';
 }
-function setupPersonalTutorial(step){
+function setupPersonalTutorial(step,onboarding=null){
  if(!SERVER_MODE||worldTutorial)return;
  const save=async(mode,value)=>{await serverRequest('tutorial',{op:'progress',mode,step:value});};
+ if(onboarding?.required){
+  worldTutorial=createWorldTutorial({mode:'personal',mandatory:true,save,
+   onFinish:()=>showToast('Первый дом готов! Теперь можно развивать город ✨'),
+   onStep:index=>{
+    // Recover from a client disconnect after D1 committed a house purchase, but
+    // before the separate tutorial progress request reached the server.
+    if(state.onboarding?.homeUid&&!worldTutorial?.isReplay()){
+     if(index===3)queueMicrotask(()=>worldTutorial?.signal('tutorial-cottage-selected'));
+     if(index===4)queueMicrotask(()=>worldTutorial?.signal('tutorial-home-built'));
+    }
+    if(index===5){
+     const home=tutorialHome();
+     if(home){state.selectedUid=home.uid;state.mode='select';stopDraft();updateUI();scheduleDraw();
+      if(!isConstructing(home)&&!worldTutorial?.isReplay())queueMicrotask(()=>worldTutorial?.signal('tutorial-home-ready'));}
+    }
+   },steps:[
+    {title:'Добро пожаловать в Мир Зеффи!',text:'Уютный стартовый домик уже стоит. Сейчас ты сам построишь ещё один, а я покажу, как ускорять стройку.',actionLabel:'Начать'},
+    {title:'Открой строительство',text:'Нажми «Строить» — все здания находятся здесь.',target:'#openBuildCatalog',trigger:'click',enter:()=>setCatalogOpen(false)},
+    {title:'Перейди в «Жильё»',text:'Здесь находятся домики. Первый собственный дом построим на настоящие игровые очки.',target:'[data-category="homes"]',trigger:'click',scrollCatalog:true,enter:()=>{state.warehouse=false;setCatalogOpen(true);renderCategories();renderCatalog();}},
+    {title:'Выбери домик',text:'Нажми карточку «Домик». Если очков не хватает, вернись в забег и продолжи обучение позже — шаг не пропадёт.',target:'.catalog-card[data-kind="cottage"]',trigger:'signal:tutorial-cottage-selected',scrollCatalog:true,enter:()=>{state.category='homes';state.warehouse=false;renderCategories();renderCatalog();setCatalogOpen(true);}},
+    {title:'Построй свой первый дом!',text:'Дом стоит очки. Зеффи уже нашла свободное место для постройки. Нажми «Подтвердить» — этот шаг завершится только после сохранения покупки.',target:'#confirmEdit',trigger:'signal:tutorial-home-built'},
+    {title:'Ускорим строительство бесплатно',text:()=>state.onboarding?.freeSkipUsed?'Первое ускорение было подарком за 0 кофе. Следующие ускорения оплачиваются кофе.':'Подтверди подарок Зеффи за 0 кофе.'+(!$('skipModal').hidden?' Нажми кнопку «Ускорить» в этом окне.':' Нажми «Ускорить» у своего домика, а затем подтверди 0 кофе. Если дом уже готов, урок завершится сам.'),target:()=>!$('skipModal').hidden?'#skipAccept':isConstructing(tutorialHome())?'#finishBuildTest':null,trigger:'signal:tutorial-home-ready'}
+   ]});
+  worldTutorial.start(Number(step)||0);return;
+ }
  worldTutorial=createWorldTutorial({mode:'personal',save,onFinish:()=>showToast('Отлично! Теперь ты знаешь основы своего города ✨'),steps:[
   {title:'Привет! Это твой городок',text:'Я Зеффи! Покажу, как выбирать постройки, размещать их и развивать город. Никаких обязательных трат.',actionLabel:'Начать'},
   {title:'Открой строительство',text:'Нажми на «Строить». Здесь собраны дома, парки и украшения.',target:'#openBuildCatalog',trigger:'click',enter:()=>setCatalogOpen(false)},
@@ -1400,6 +1434,7 @@ function bindEvents(){
   preloadBuildFrames(item.kind,item.rotation); // begin preloading before confirmation
   $('skipModal').hidden=false;
   updateSkipQuote();
+  worldTutorial?.refresh();
   $('skipCancel').focus();
  });
  $('skipCancel').addEventListener('click',closeSkipModal);
@@ -1483,6 +1518,7 @@ function bindEvents(){
   updateSkipQuote();
   // A finished timer is a server event, not a client claim. Refresh once when
   // the number of active builds decreases; never poll D1 every second.
+  if(SERVER_MODE&&state.onboarding?.required&&worldTutorial?.currentStep()===5&&tutorialHome()&&!isConstructing(tutorialHome()))worldTutorial.signal('tutorial-home-ready');
   if(SERVER_MODE&&state.serverReady&&!state.serverBusy&&active<previousConstructionCount){
    void serverRequest('state').then(result=>{
     if(!state.serverBusy && result.revision>=state.serverRevision)acceptServerCity(result);
