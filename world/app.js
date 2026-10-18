@@ -5,7 +5,7 @@ import { RU, tr } from './ru.js?v=rc-levels10';
 import { ROAD_TILE_PRICE } from './economy.js';
 import {
  makeInitialCity, sanitizeCity, cloneCity, reconcileCityProgress, claimCityLevelReward, CITY_LEVELS as BASE_CITY_LEVELS, addObject, addGiftDecor, addPassGarden, moveObject, storeObject,
-  restoreObject, checkPlacement, checkRoadStroke, applyRoadStroke, cityStats, raisedSurfaceConflicts,
+  restoreObject, checkPlacement, checkRoadStroke, applyRoadStroke, applyBusRoadStroke, cityStats, raisedSurfaceConflicts,
  findOccupant, nextRotation, orthogonalPath, keyOf, dims, BuildError, inBounds,
  isObjectConnected, connectedRoads, buildingEffectPreview, isConstructing, constructionRemaining,
  constructionSkipPrice, skipConstruction, topUpTestWallet, buyParcel,
@@ -18,7 +18,7 @@ import { buildBusScene, sampleBusScene } from './traffic.js';
 import {createWorldTutorial} from './tutorial.js?v=rc-guide2';
 import {nextCityGoal,cityGoalMilestone} from './city-goal.js';
 import {mountCityGuide} from './city-guide-ui.js';
-import {mountCityChapters} from './city-chapters-ui.js?v=cc-decor1';
+import {mountCityChapters} from './city-chapters-ui.js?v=world-chapters-v2';
 import {mountResidentRequests} from './resident-requests-ui.js?v=rc-thoughts1';
 import {mountResidentThoughts} from './resident-thoughts.js';
 
@@ -138,7 +138,7 @@ function translateStatic() {
   v01:'МИР ЗЕФФИ · РАННИЙ ДОСТУП',
   welcomePoints:'24 × 24 клетки · личный город с сохранением на сервере',
   welcomeText:'Создавай личный район, строй дома и дороги, украшай улицы и развивай город. Строительство и награды сохраняются на сервере, а доступные платные действия используют твои игровые валюты только после подтверждения.',
-  helpRoad:'Прокладывай дороги инструментом «Дороги» на карте. Оплачиваются только новые клетки, а стоимость подтверждает сервер.',
+  helpRoad:'Обычные дороги строй кнопкой «Дороги». Отдельную автобусную полосу можно проложить в каталоге «Транспорт»: 50 очков за новую клетку, поверх готовой Road бесплатно. Две готовые остановки, соединённые автобусной дорогой, запускают маршрут; автостанция с 7-го уровня необязательна.',
   phaseInfo:'Прогресс района хранится в игре. Валюты и награды начисляются и списываются только после подтверждения сервером.',
   noMoney:'Покупки и награды подтверждаются сервером',
   testPrices:'СТОИМОСТЬ ПОСТРОЙКИ',
@@ -358,6 +358,7 @@ function quoteForAction(kind,args){
  else if(kind==='restore')next=restoreObject(state.city,CATALOG,args.uid,args.x,args.y,args.rotation);
  else if(kind==='parcel')next=buyParcel(state.city,args.cx,args.cy);
  else if(kind==='road'||kind==='erase-road')next=applyRoadStroke(state.city,CATALOG,args.positions,{erasing:kind==='erase-road'});
+ else if(kind==='bus-road'||kind==='erase-bus-road')next=applyBusRoadStroke(state.city,CATALOG,args.positions,{erasing:kind==='erase-bus-road'});
  else if(kind==='skip')next=skipConstruction(state.city,args.uid).city;
  else if(kind==='claim-level'){claimCityLevelReward(state.city,CATALOG,args.level);return {points:0,treats:0,coffee:0};}
  else throw new Error('Unsupported world action');
@@ -401,8 +402,9 @@ async function confirmServerEdit(){
    showToast(kind==='place'||kind==='place-gift'||kind==='place-pass-garden'?tr('placed'):tr('moved'));updateUI();scheduleDraw();return;
   }
   if(state.roadDraft.length){
-   await performServerAction(state.mode==='erase'?'erase-road':'road',{positions:state.roadDraft});
-   state.roadDraft=[];state.roadValid=true;showToast(tr('roadsBuilt'));updateUI();scheduleDraw();
+   const kind=state.mode==='erase'?'erase-road':state.mode==='bus-road'?'bus-road':state.mode==='erase-bus-road'?'erase-bus-road':'road';
+   await performServerAction(kind,{positions:state.roadDraft});
+   state.roadDraft=[];state.roadValid=true;showToast(kind==='bus-road'?'Автобусная дорога готова!':kind==='erase-bus-road'?'Автобусная разметка убрана.':kind==='erase-road'?tr('roadsErased'):tr('roadsBuilt'));updateUI();scheduleDraw();
   }
  }catch(error){showToast(error.message||tr('unknownError'),true);updateUI();scheduleDraw();}
 }
@@ -538,7 +540,9 @@ function activeEdit(){return Boolean(state.draft)||state.roadDraft.length>0||Boo
 function updateActions(){
  const visible=activeEdit(); $('editActions').hidden=!visible;
  if(!visible)return;
- const isRoad=state.mode==='road'||state.mode==='erase';
+ const isRoad=['road','erase','bus-road','erase-bus-road'].includes(state.mode);
+ const isBusRoad=state.mode==='bus-road'||state.mode==='erase-bus-road';
+ const removing=state.mode==='erase'||state.mode==='erase-bus-road';
  const isExpand=state.mode==='expand';
  $('rotateButton').hidden=isRoad||isExpand||Boolean(state.draft && CATALOG[state.draft.kind]?.rotatable===false);
  let canCommit=true;
@@ -565,15 +569,16 @@ function updateActions(){
   if(SERVER_MODE&&isPurchase&&!state.serverPurchasesEnabled)canCommit=false;
   $('confirmEdit').textContent=d.type==='move'?tr('moveItem'):d.type==='restore'?tr('placeFromStock'):d.gift?'Поставить подарок':tr('buyAndBuild');
  } else if(isRoad){
-  kind=state.mode==='erase'?'previewErase':'previewRoad';
-  const count=state.roadDraft.filter(p=>state.mode==='erase'?state.city.roads.includes(keyOf(p.x,p.y)):!state.city.roads.includes(keyOf(p.x,p.y))).length;
-  const cost=roadStrokePrice(state.city,state.roadDraft,{erasing:state.mode==='erase'});
+  kind=removing?'previewErase':'previewRoad';
+  const known=new Set(isBusRoad?(state.city.busRoads||[]):state.city.roads);
+  const count=state.roadDraft.filter(p=>removing?known.has(keyOf(p.x,p.y)):!known.has(keyOf(p.x,p.y))).length;
+  const cost=roadStrokePrice(state.city,state.roadDraft,{erasing:removing});
   const enough=canAfford(state.city.wallet,cost);
-  summary=`Road: ${count} ${tr('size').toLowerCase()}${state.mode==='road'?' | '+tr('price')+': '+priceLabel(cost):''}`;
+  summary=`${isBusRoad?'Автобусная дорога':'Road'}: ${count} ${tr('size').toLowerCase()}${!removing?' | '+tr('price')+': '+priceLabel(cost):''}`;
   canCommit=state.roadValid && count>0 && enough;
-  if(SERVER_MODE&&state.mode==='road'&&!state.serverPurchasesEnabled)canCommit=false;
-  feedback=!state.roadValid?tr('invalidPlace'):!enough?tr('notEnoughCurrency'):`${tr('roadSelected')} ${count}`;
-  $('confirmEdit').textContent=state.mode==='erase'?tr('eraseRoad'):tr('buyRoad');
+  if(SERVER_MODE&&!removing&&!state.serverPurchasesEnabled)canCommit=false;
+  feedback=!state.roadValid?tr('invalidPlace'):!enough?tr('notEnoughCurrency'):(isBusRoad?'Полоса на карте: '+count:`${tr('roadSelected')} ${count}`);
+  $('confirmEdit').textContent=isBusRoad?(removing?'Убрать автобусную разметку':'Проложить автобусную дорогу'):removing?tr('eraseRoad'):tr('buyRoad');
  }
  $('previewKind').textContent=tr(kind);
  $('editSummary').textContent=summary;
@@ -838,10 +843,11 @@ function updateUI(){
  let hint='hintSelect';
  if(state.mode==='road')hint='hintRoad';
  if(state.mode==='erase')hint='hintErase';
+ if(state.mode==='bus-road'||state.mode==='erase-bus-road')hint=null;
  if(state.mode==='place'||state.mode==='restore')hint='hintPlace';
  if(state.mode==='move')hint='hintMove';
  if(state.mode==='expand')hint='hintExpand';
- $('mapHint').textContent=tr(hint);
+ $('mapHint').textContent=hint?tr(hint):(state.mode==='bus-road'?'Тяни по карте: автобусная дорога. Две остановки на одной линии запускают автобус.':'Тяни по карте, чтобы убрать автобусную разметку. Обычная Road останется.');
  $('mapNotice').hidden=activeEdit()||Boolean(selectedItem());
  $('warehouseList').hidden=!state.warehouse;
  $('catalogList').hidden=state.warehouse;
@@ -904,6 +910,29 @@ function shopLockedNotice(def){
 }
 function renderCatalog(){
  const el=$('catalogList');el.replaceChildren();
+ if(state.category==='transport'){
+  for(const [mode,title,description] of [
+   ['bus-road','🚌 Автобусная дорога','50 очков за новую клетку · поверх Road бесплатно'],
+   ['erase-bus-road','Убрать автобусную разметку','Бесплатно · обычная дорога останется']
+  ]){
+   const button=document.createElement('button');button.type='button';button.className='catalog-card world-bus-road-tool';
+   button.dataset.busRoadTool=mode;
+   const figure=document.createElement('div');figure.className='catalog-figure world-bus-road-figure';
+   const symbol=document.createElement('span');symbol.textContent=mode==='bus-road'?'🚌':'↶';symbol.setAttribute('aria-hidden','true');figure.append(symbol);
+   const copy=document.createElement('div');copy.className='catalog-copy';
+   const label=document.createElement('strong');label.textContent=title;
+   const info=document.createElement('small');info.textContent=description;
+   const cost=document.createElement('em');cost.className='catalog-price';
+   cost.textContent=mode==='bus-road'?'По стоимости Road':'Без списаний';
+   copy.append(label,info,cost);button.append(figure,copy);
+   button.addEventListener('click',()=>{
+    if(SERVER_MODE&&!state.serverReady){showToast('Дождись подключения города.',true);return;}
+    if(mode==='bus-road'&&SERVER_MODE&&!state.serverPurchasesEnabled){showToast('Строительство сейчас закрыто.',true);return;}
+    switchMode(mode);
+   });
+   el.append(button);
+  }
+ }
  for(const def of shopSortedItems()){
   const locked=shopRequiredLevel(def)>shopCurrentLevel();
   const price=objectPrice(CATALOG,def.id);
@@ -1029,11 +1058,12 @@ function confirmLocalEdit(){
    updateUI();scheduleDraw();if(changed)showToast(tr(msg)+(paid?' '+tr('charged')+': '+priceLabel(paid):''));return;
   }
   if(state.roadDraft.length){
-   const erasing=state.mode==='erase';
+   const erasing=state.mode==='erase'||state.mode==='erase-bus-road';
+   const bus=state.mode==='bus-road'||state.mode==='erase-bus-road';
    const paid=roadStrokePrice(state.city,state.roadDraft,{erasing});
-   const next=applyRoadStroke(state.city,CATALOG,state.roadDraft,{erasing});
+   const next=bus?applyBusRoadStroke(state.city,CATALOG,state.roadDraft,{erasing}):applyRoadStroke(state.city,CATALOG,state.roadDraft,{erasing});
    const changed=applyChange(next);state.roadDraft=[];state.roadValid=true;
-   updateUI();scheduleDraw();if(changed)showToast(tr(erasing?'roadsErased':'roadsBuilt')+(erasing?'':` ${tr('charged')}: ${priceLabel(paid)}`));
+   updateUI();scheduleDraw();if(changed)showToast((bus?(erasing?'Автобусная разметка убрана.':'Автобусная дорога готова!'):tr(erasing?'roadsErased':'roadsBuilt'))+(erasing?'':` ${tr('charged')}: ${priceLabel(paid)}`));
   }
  }catch(error){showToast(statusError(error),true);updateUI();scheduleDraw();}
 }
@@ -1124,7 +1154,7 @@ function onPointerDown(event){
  state.pointerStart={id:event.pointerId,pos,original:{...pos},tile,last:tile,moved:false};
  if(state.mode==='place'||state.mode==='move'||state.mode==='restore'){
   if(validTile(tile)){state.draft.x=tile.x;state.draft.y=tile.y;updateActions();scheduleDraw();}
- } else if(state.mode==='road'||state.mode==='erase') {
+ } else if(['road','erase','bus-road','erase-bus-road'].includes(state.mode)) {
   state.roadDraft=[];extendRoad(tile);
  }
 }
@@ -1151,7 +1181,7 @@ function onPointerMove(event){
  } else if(state.mode==='place'||state.mode==='move'||state.mode==='restore'){
   const tile=tileFromEvent(event);
   if(validTile(tile)){state.draft.x=tile.x;state.draft.y=tile.y;updateActions();scheduleDraw();}
- } else if(state.mode==='road'||state.mode==='erase')extendRoad(tileFromEvent(event));
+ } else if(['road','erase','bus-road','erase-bus-road'].includes(state.mode))extendRoad(tileFromEvent(event));
  start.pos=pos;
 }
 function onPointerUp(event){
@@ -1175,7 +1205,7 @@ function onPointerUp(event){
   }
  }
  state.pointerStart=null;
- if(state.mode==='road'||state.mode==='erase'){updateActions();scheduleDraw();}
+ if(['road','erase','bus-road','erase-bus-road'].includes(state.mode)){updateActions();scheduleDraw();}
  if(state.mode==='place'&&state.draft)worldTutorial?.signal('map-picked');
 }
 function onPointerCancel(event){state.pointers.delete(event.pointerId);state.pointerStart=null;state.gesture=null;}

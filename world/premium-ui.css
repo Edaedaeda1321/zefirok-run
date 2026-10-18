@@ -624,3 +624,8 @@ input,textarea,[contenteditable="true"]{-webkit-user-select:text;user-select:tex
  .city-stats-sheet__badge{padding:9px 10px;font-size:13px}
  .city-stats-sheet .resident-requests__bottom,.city-stats-sheet .world-chapter__reward{align-items:flex-start}
 }
+
+/* Bus-route editor: catalog controls, not paid building objects. */
+.world-bus-road-figure{background:linear-gradient(145deg,#eef9ff,#dcebf8)!important}
+.world-bus-road-figure span{font-size:27px!important;line-height:1}
+.world-bus-road-tool:focus-visible{outline:2px solid #5297c1;outline-offset:2px}

@@ -143,6 +143,8 @@ const steps = [
   ['Zeffi story RC progression wiring', 'node', ['scripts/check-world-story-progression-rc.mjs']],
   ['Zeffi story RC progression D1 and API', 'node', ['--no-warnings','--experimental-sqlite','--test','world/tests/story-progression-rc.test.mjs']],
   ['Zeffi city transport v2', 'node', ['scripts/check-world-city-fix-v2.mjs']],
+  ['Zeffi personal bus road construction and D1 safety', 'node', ['--test','world/tests/bus-roads-personal.test.mjs']],
+  ['Zeffi personal bus road authoritative D1 mutations', 'node', ['--no-warnings','--experimental-sqlite','--test','world/tests/bus-roads-d1.test.mjs']],
   ['Zeffi White Rabbit / Zephirok landmark', 'node', ['scripts/check-world-white-rabbit-v1.mjs']],
   ['Zeffi Belkino 9x9 story park', 'node', ['scripts/check-world-park-belkino-v1.mjs']],
   ['Zeffi premium parks 6x6 and safe global-only map', 'node', ['scripts/check-zeffi-premium-parks-v1.mjs']],

@@ -3,7 +3,7 @@
 // Tables are provisioned only by migrations/0114_zeffi_world.sql.
 import {
   makeInitialCity, sanitizeCity, addObject, addGiftDecor, addPassGarden, moveObject, storeObject, restoreObject,
-  applyRoadStroke, buyParcel, skipConstruction, cityStats, reconcileCityProgress, claimCityLevelReward, CITY_LEVELS, BuildError
+  applyRoadStroke, applyBusRoadStroke, buyParcel, skipConstruction, cityStats, reconcileCityProgress, claimCityLevelReward, CITY_LEVELS, BuildError
 } from '../world/engine.js';
 import { CATALOG } from '../world/catalog.js';
 import {publishedWorldEconomy} from './zeffi-world-balance.js';
@@ -17,7 +17,7 @@ import {readWorldExtras,claimCityChapter,assertDecorSchema,worldRewardDecor,worl
 const ZERO = Object.freeze({points:0,treats:0,coffee:0});
 const MAX_CITY_JSON = 180_000;
 const MAX_REQUEST_LENGTH = 20_000;
-const WORLD_ACTIONS = new Set(['place','place-gift','place-pass-garden','move','store','restore','road','erase-road','parcel','skip','claim-level']);
+const WORLD_ACTIONS = new Set(['place','place-gift','place-pass-garden','move','store','restore','road','erase-road','bus-road','erase-bus-road','parcel','skip','claim-level']);
 const RESULT_HEADERS = Object.freeze({ 'Content-Type':'application/json; charset=utf-8', 'Cache-Control':'no-store, private', 'X-Content-Type-Options':'nosniff' });
 
 class WorldError extends Error {
@@ -88,7 +88,7 @@ function canonicalAction(body){
     if(!coordinate(args.cx)||!coordinate(args.cy))failure(400,'BAD_ACTION','Некорректные координаты участка.');
     Object.assign(result,{cx:args.cx,cy:args.cy});
   }
-  if(kind==='road'||kind==='erase-road'){
+  if(['road','erase-road','bus-road','erase-bus-road'].includes(kind)){
     if(!Array.isArray(args.positions)||args.positions.length===0||args.positions.length>256)failure(400,'BAD_ACTION','Слишком длинная дорога.');
     for(const pos of args.positions)if(!pos||!coordinate(pos.x)||!coordinate(pos.y))failure(400,'BAD_ACTION','Некорректные клетки Road.');
     result.positions=args.positions.map(p=>({x:p.x,y:p.y}));
@@ -105,6 +105,8 @@ function operate(city,action,now,catalog=CATALOG){
     case 'restore':return restoreObject(city,catalog,action.uid,action.x,action.y,action.rotation);
     case 'road':return applyRoadStroke(city,catalog,action.positions);
     case 'erase-road':return applyRoadStroke(city,catalog,action.positions,{erasing:true});
+    case 'bus-road':return applyBusRoadStroke(city,catalog,action.positions);
+    case 'erase-bus-road':return applyBusRoadStroke(city,catalog,action.positions,{erasing:true});
     case 'parcel':return buyParcel(city,action.cx,action.cy);
     case 'skip':return skipConstruction(city,action.uid,now).city;
     case 'claim-level':return claimCityLevelReward(city,catalog,action.level,now);
@@ -194,7 +196,9 @@ async function handleMutation(db,env,telegramId,body,readProfile,operationGate,e
   const bill=cost.points>0||cost.treats>0||cost.coffee>0;
   const credit=granting&&['points','treats','coffee'].some(key=>reward[key]>0);
   const profileTouched=bill||credit;
-  if(bill){
+  // Marking an already-paid road costs zero, but is still a construction action.
+  // The World purchase kill switch must close it just like any paid street.
+  if(bill||action.kind==='bus-road'){
     if(!paymentsEnabled(env))failure(403,'WORLD_PURCHASES_DISABLED','Серверные покупки пока закрыты. Балансы не списаны.');
     await operationGate(telegramId,['purchases']);
   }

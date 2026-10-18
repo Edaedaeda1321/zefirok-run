@@ -915,7 +915,11 @@ export function drawWorld(canvas,city,catalog,cam,overlay={}) {
  }
  if(overlay.roadDraft?.length){
   const bad=!overlay.roadValid;
-  for(const point of overlay.roadDraft)drawOverlayCell(ctx,point.x,point.y,bad?'rgba(225,92,107,.56)':overlay.mode==='erase'?'rgba(239,97,108,.56)':'rgba(109,207,156,.66)',bad?'world_ground_overlay_blocked':overlay.mode==='erase'?'world_road_preview_remove':'world_road_preview_build');
+  for(const point of overlay.roadDraft){
+   const removing=overlay.mode==='erase'||overlay.mode==='erase-bus-road';
+   const bus=overlay.mode==='bus-road'||overlay.mode==='erase-bus-road';
+   drawOverlayCell(ctx,point.x,point.y,bad?'rgba(225,92,107,.56)':removing?'rgba(239,97,108,.56)':bus?'rgba(84,169,210,.66)':'rgba(109,207,156,.66)',bad?'world_ground_overlay_blocked':removing?'world_road_preview_remove':'world_road_preview_build');
+  }
  }
  if(overlay.draft){
   const draft=overlay.draft,def=catalog[draft.kind];

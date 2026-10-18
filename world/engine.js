@@ -313,6 +313,7 @@ export function cloneCity(city) {
     wallet: {...city.wallet},
     progress: {bestLevel:city.progress?.bestLevel||1,claimedLevels:[...(city.progress?.claimedLevels||[])]},
     roads: [...city.roads],
+    ...(Array.isArray(city.busRoads)?{busRoads:[...city.busRoads]}:{}),
     lockedRoads: [...city.lockedRoads],
     objects: city.objects.map(item => ({ ...item }))
   };
@@ -437,8 +438,37 @@ export function applyRoadStroke(city, catalog, positions, { erasing = false } = 
   const next = cloneCity(city);
   chargeWallet(next, price);
   const ids = new Set(positions.map(p => keyOf(p.x, p.y)));
-  if (erasing) next.roads = next.roads.filter(id => !ids.has(id));
-  else next.roads = [...new Set([...next.roads, ...ids])];
+  if (erasing) {
+    next.roads = next.roads.filter(id => !ids.has(id));
+    // Removing an ordinary Road tile must remove its bus asphalt too.
+    if (Array.isArray(next.busRoads)){
+      next.busRoads=next.busRoads.filter(id=>!ids.has(id));
+      if(!next.busRoads.length)delete next.busRoads;
+    }
+  } else next.roads = [...new Set([...next.roads, ...ids])];
+  return next;
+}
+
+// Dedicated bus asphalt overlays an ordinary road. Existing purchased Road
+// cells are marked for free; empty cells cost the usual Road price.
+// Both sets are persisted together via the same CAS-protected city mutation.
+export function applyBusRoadStroke(city,catalog,positions,{erasing=false}={}){
+  const check=checkRoadStroke(city,catalog,positions);
+  if(!check.ok)throw new BuildError(check.code);
+  const cost=roadStrokePrice(city,positions,{erasing});
+  const next=cloneCity(city);
+  if(!erasing){
+    chargeWallet(next,cost);
+    const ids=positions.map(p=>keyOf(p.x,p.y));
+    next.roads=[...new Set([...next.roads,...ids])];
+    next.busRoads=[...new Set([...(next.busRoads||[]),...ids])];
+  }else{
+    const removed=new Set(positions.map(p=>keyOf(p.x,p.y)));
+    if(Array.isArray(next.busRoads)){
+      next.busRoads=next.busRoads.filter(id=>!removed.has(id));
+      if(!next.busRoads.length)delete next.busRoads;
+    }
+  }
   return next;
 }
 
@@ -690,6 +720,14 @@ export function sanitizeCity(input, catalog) {
   }
   for (const key of [keyOf(7,13),keyOf(8,13)]) if (!city.roads.includes(key)) throw new BuildError('INVALID_SAVE');
   city.lockedRoads = [keyOf(7, 13), keyOf(8, 13)];
+  // Backwards compatible: existing personal cities have no busRoads field and
+  // keep using ordinary roads for transit until the player marks a bus lane.
+  if(input.busRoads!==undefined){
+    if(!Array.isArray(input.busRoads)||input.busRoads.length>city.roads.length ||
+      input.busRoads.some(id=>typeof id!=='string'||!roadSeen.has(id)) ||
+      new Set(input.busRoads).size!==input.busRoads.length)throw new BuildError('INVALID_SAVE');
+    if(input.busRoads.length)city.busRoads=[...input.busRoads];
+  }
   const seen = new Set();
   for (const raw of input.objects) {
     if (!raw || typeof raw.uid !== 'string' || !/^obj-\d+$/.test(raw.uid) || seen.has(raw.uid) || !catalog[raw.kind] || !isInteger(raw.rotation) || raw.rotation < 0 || raw.rotation > 3 || !isInteger(raw.level) || raw.level < 1 || raw.level > 3 || typeof raw.stored !== 'boolean') throw new BuildError('INVALID_SAVE');
