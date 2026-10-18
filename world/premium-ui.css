@@ -629,3 +629,19 @@ input,textarea,[contenteditable="true"]{-webkit-user-select:text;user-select:tex
 .world-bus-road-figure{background:linear-gradient(145deg,#eef9ff,#dcebf8)!important}
 .world-bus-road-figure span{font-size:27px!important;line-height:1}
 .world-bus-road-tool:focus-visible{outline:2px solid #5297c1;outline-offset:2px}
+
+/* ZEFFI_BUS_SHOP_IMAGE_V3 */
+/* Show the user-supplied pink bus road art at card scale, never emoji fallback. */
+.world-bus-road-tool[data-bus-road-tool='bus-road'] .world-bus-road-figure{background:linear-gradient(145deg,#fffaf6,#ffeaf3)!important}
+.world-bus-road-tool[data-bus-road-tool='bus-road'] .world-bus-road-figure::after{display:none}
+.world-bus-road-tool .world-bus-road-figure .world-bus-road-shop-art{display:block;position:absolute;inset:0;width:100%;height:100%;max-width:100%;max-height:100%;object-fit:contain;z-index:2;pointer-events:none;filter:drop-shadow(0 3px 5px rgba(137,73,104,.16))}
+.world-bus-road-tool .world-bus-road-figure .world-bus-road-shop-art[hidden]{display:none!important}
+.world-bus-road-tool .world-bus-road-figure .world-bus-road-art-error{position:relative;z-index:2;padding:5px;text-align:center;font-size:10px;font-weight:700;color:#a15a72;line-height:1.25}
+.world-bus-road-tool .world-bus-road-figure .world-bus-road-art-error[hidden]{display:none!important}
+.catalog-card.world-bus-road-tool{overflow:hidden;min-width:0;justify-content:flex-start}
+.world-bus-road-tool .catalog-figure{height:38%;min-height:52px;flex:0 0 auto;max-width:100%}
+.world-bus-road-tool .catalog-copy{min-width:0;max-width:100%;overflow:hidden;gap:3px;flex:1 1 auto}
+.world-bus-road-tool .catalog-copy strong{white-space:normal;overflow:hidden;overflow-wrap:anywhere;line-height:1.16;max-width:100%;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2}
+.world-bus-road-tool .catalog-copy small{white-space:normal;overflow:hidden;overflow-wrap:anywhere;line-height:1.25;max-width:100%;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:3}
+.world-bus-road-tool .catalog-copy .catalog-price{max-width:100%;min-width:0;flex:0 0 auto;white-space:normal;margin-top:auto;overflow:hidden}
+@media(max-width:380px){.world-bus-road-tool .catalog-figure{height:31%;min-height:40px}.world-bus-road-tool .catalog-copy small{-webkit-line-clamp:2}}

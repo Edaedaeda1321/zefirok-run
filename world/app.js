@@ -915,13 +915,26 @@ function renderCatalog(){
  const el=$('catalogList');el.replaceChildren();
  if(state.category==='transport'){
   for(const [mode,title,description] of [
-   ['bus-road','🚌 Автобусная дорога','50 очков за новую клетку · поверх Road бесплатно'],
+   ['bus-road','Автобусная дорога','50 очков за новую клетку · поверх Road бесплатно'],
    ['erase-bus-road','Убрать автобусную разметку','Бесплатно · обычная дорога останется']
   ]){
    const button=document.createElement('button');button.type='button';button.className='catalog-card world-bus-road-tool';
    button.dataset.busRoadTool=mode;
    const figure=document.createElement('div');figure.className='catalog-figure world-bus-road-figure';
-   const symbol=document.createElement('span');symbol.textContent=mode==='bus-road'?'🚌':'↶';symbol.setAttribute('aria-hidden','true');figure.append(symbol);
+   if(mode==='bus-road'){
+    // ZEFFI_BUS_CARD_IMAGE_V3: render the supplied original WebP, NEVER an emoji bus.
+    const art=document.createElement('img');art.className='world-bus-road-shop-art';
+    art.alt='Автобусная дорога';art.width=1254;art.height=1254;
+    art.loading='eager';art.decoding='async';
+    const artError=document.createElement('div');artError.className='world-bus-road-art-error';
+    artError.textContent='Изображение не загрузилось';artError.hidden=true;
+    art.addEventListener('error',()=>{art.hidden=true;artError.hidden=false;console.warn('Zeffi bus road artwork unavailable:',art.src);},{once:true});
+    figure.append(art,artError);
+    // Relative to this ES module, so both /world.html and file:// previews work.
+    art.src=new URL('../assets/mir_zeffi/icon_shop_road_bus.webp',import.meta.url).href;
+   }else{
+    const symbol=document.createElement('span');symbol.textContent='↶';symbol.setAttribute('aria-hidden','true');figure.append(symbol);
+   }
    const copy=document.createElement('div');copy.className='catalog-copy';
    const label=document.createElement('strong');label.textContent=title;
    const info=document.createElement('small');info.textContent=description;
