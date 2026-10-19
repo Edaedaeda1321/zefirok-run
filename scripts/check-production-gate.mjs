@@ -98,6 +98,7 @@ const steps = [
   ['case opening stability', 'node', ['scripts/check-case-stability.mjs']],
   ['Elite+ XP lifetime', 'node', ['scripts/check-elite-plus-xp-lifetime.mjs']],
   ['mail claim stability', 'node', ['scripts/check-mail-claim-stability.mjs']],
+  ['Control Center profile XP grants and compensations', 'node', ['--no-warnings','--experimental-sqlite','scripts/check-cc-player-profile-xp.mjs']],
   ['runner case milestones', 'node', ['scripts/check-run-case-milestones.mjs']],
   ['player level-up celebration', 'node', ['scripts/check-level-up-celebration.mjs']],
   ['season 3 story', 'node', ['scripts/check-season3-story.mjs']],

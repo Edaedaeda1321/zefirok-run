@@ -5261,7 +5261,7 @@ async function ensurePlayerGiftInboxSchema(env) {
 }
 
 function normalizePlayerGiftRewards(input) {
-  const allowed = new Set(["points", "zefir", "coffee", "case", "seasonal_case", "avatar", "frame", "trail", "skin", "showcase_style", "booster", "streak_protection", "season_pass_xp", "season_pass_tier", "season_pass_xp_grant"]);
+  const allowed = new Set(["points", "zefir", "coffee", "profile_xp", "case", "seasonal_case", "avatar", "frame", "trail", "skin", "showcase_style", "booster", "streak_protection", "season_pass_xp", "season_pass_tier", "season_pass_xp_grant"]);
   const merged = new Map();
   for (const raw of Array.isArray(input) ? input : []) {
     if (!raw || typeof raw !== "object") continue;
@@ -5839,7 +5839,7 @@ async function claimPlayerMailV3(request, env, ctx, preauthorizedTelegramId = ""
     try{await recordPlayerTimeline(env,telegramId,"mail_claim",`получил вложение письма «${String(row.title||"Почта Зеффи")}»`,{mailId,rewards,reason:row.reason},`mail_${mailId}`,null);}catch{}
     const rewardKinds=new Set(rewards.map((reward)=>String(reward?.kind||"").toLowerCase()));
     const caseRefreshRequired=[...rewardKinds].some((kind)=>["case","seasonal_case","avatar","frame","trail","skin","music","season_pass_tier"].includes(kind));
-    const profileRefreshRequired=[...rewardKinds].some((kind)=>["points","zefir","coffee","streak_protection","avatar","frame","trail","skin","music","season_pass_tier","season_pass_xp_grant"].includes(kind));
+    const profileRefreshRequired=[...rewardKinds].some((kind)=>["points","zefir","coffee","profile_xp","streak_protection","avatar","frame","trail","skin","music","season_pass_tier","season_pass_xp_grant"].includes(kind));
     const seasonPassRefreshRequired=[...rewardKinds].some((kind)=>["season_pass_tier","season_pass_xp_grant"].includes(kind));
     scheduleRunSettlementBackground(ctx,ensureAuthoritativeProfileRow(env,telegramId,`mail-v3-post-claim:${mailId}`),"mail v3 post-claim profile fold failed");
     scheduleRunSettlementBackground(ctx,reconcileDeliveredSeasonPassCasesForPlayer(env,telegramId),"mail v3 post-claim case reconcile failed");
@@ -6598,7 +6598,7 @@ async function claimPlayerGift(request, env, ctx) {
     const gifts = await playerGiftInboxSnapshot(env,telegramId);
     const rewardKinds = new Set(rewards.map((reward)=>String(reward?.kind||"").toLowerCase()));
     const caseRefreshRequired = [...rewardKinds].some((kind)=>["case","seasonal_case","avatar","frame","trail","skin","music","season_pass_tier"].includes(kind));
-    const profileRefreshRequired = [...rewardKinds].some((kind)=>["points","zefir","coffee","avatar","frame","trail","skin","music","season_pass_tier","season_pass_xp_grant"].includes(kind));
+    const profileRefreshRequired = [...rewardKinds].some((kind)=>["points","zefir","coffee","profile_xp","avatar","frame","trail","skin","music","season_pass_tier","season_pass_xp_grant"].includes(kind));
     const seasonPassRefreshRequired = [...rewardKinds].some((kind)=>["season_pass_tier","season_pass_xp_grant"].includes(kind));
     scheduleRunSettlementBackground(ctx,
       ensureAuthoritativeProfileRow(env,telegramId,`gift-post-claim:${giftId}`),
@@ -45647,6 +45647,7 @@ async function ownerV85NormalizeCustomCompensationRewards(env,input){
     booster:new Set(runBoosterCatalogItems().map(item=>String(item.id)))
   };
   const checked=[];
+  let totalProfileXp=0;
   let boundSeason=null;
   const activeSeason=async()=>{
     if(boundSeason)return boundSeason;
@@ -45666,6 +45667,14 @@ async function ownerV85NormalizeCustomCompensationRewards(env,input){
     if(["points","zefir","coffee"].includes(kind)){
       if(!Number.isFinite(amount)||amount<1||amount>5000000)throw new ApiError(400,`Количество для «${grantRewardTitle(kind)}» должно быть от 1 до 5 000 000.`);
       checked.push({kind,id:"",amount});
+      continue;
+    }
+    if(kind==="profile_xp"){
+      const xpAmount=Number(item.amount);
+      if(!Number.isSafeInteger(xpAmount)||xpAmount<1||xpAmount>5000000)throw new ApiError(400,"XP игрового уровня должен быть целым числом от 1 до 5 000 000.");
+      totalProfileXp+=xpAmount;
+      if(totalProfileXp>5000000)throw new ApiError(400,"Суммарно в одной компенсации можно выдать не более 5 000 000 XP игрового уровня.");
+      checked.push({kind,id:"",amount:xpAmount});
       continue;
     }
     if(kind==="case"){
@@ -45764,7 +45773,7 @@ async function ownerPanelV85CompensationSend(env,ctx){
   const hasLegendary=rewards.some(r=>String(r?.kind)==="case"&&String(r?.id)==="legendary");
   const customHighImpact=templateId==="__custom__"&&rewards.some(r=>{
     const kind=String(r?.kind||""),id=String(r?.id||""),amount=Math.max(1,Number(r?.amount||1));
-    return kind==="skin"||kind==="showcase_style"||kind==="seasonal_case"||kind==="season_pass_tier"||(kind==="season_pass_xp_grant"&&amount>=1000)||(kind==="case"&&["mythic","legendary"].includes(id))||(kind==="points"&&amount>=1000000)||(["zefir","coffee"].includes(kind)&&amount>=1000);
+    return kind==="skin"||kind==="showcase_style"||kind==="seasonal_case"||kind==="season_pass_tier"||(["season_pass_xp_grant","profile_xp"].includes(kind)&&amount>=1000)||(kind==="case"&&["mythic","legendary"].includes(id))||(kind==="points"&&amount>=1000000)||(["zefir","coffee"].includes(kind)&&amount>=1000);
   });
   const payload={templateId,templateTitle:String(template.title||"Уведомление"),mailTitle,preview,imageUrl,rewards,reason,message,segmentKey,targetMode:target,audienceSnapshotAt,targetCount:ids.length,targetIds:target==="all"?[]:ids.slice(0,10000),reportChatId:String(ctx.user.id)};
   if(hasLegendary||ids.length>250||(customHighImpact&&ids.length>1)){
@@ -52600,8 +52609,8 @@ function ownerPanelDirectGrantUi(htmlValue) {
     );
   }
   const script = `<script id="zefirok-owner-reward-grant-ui-v2">(()=>{
-    const options=[['streak_protection','🛡 Защита серии'],['booster:points','⚡ ×2 очки · 2 забега'],['booster:treats','⚡ ×2 зефир · 2 забега'],['booster:coffee','⚡ ×2 кофе · 2 забега'],['booster:shield','🛡 Щит Зеффи · 1 забег'],['booster:second_chance','💗 Второй шанс · 1 забег'],['booster:pause','⏸ Пауза Зеффи · 1 забег'],['season_pass:elite','🎟 Пропуск · Элит'],['season_pass:elite_plus','✨ Пропуск · Элит+'],['season_pass_xp','⚡ EXP пропуска (+ к текущему)']];
-    const enhance=()=>{const select=document.getElementById('playerGrantKind');if(!select)return;for(const [value,label] of options){if(!Array.from(select.options||[]).some(option=>option.value===value)){const option=document.createElement('option');option.value=value;option.textContent=label;select.appendChild(option);}}const card=select.closest('.card');const description=card?.querySelector('.section-head p');if(description&&description.textContent!=='Начисляется напрямую на аккаунт, без Почты Зеффи. Компенсации работают отдельно через письма.')description.textContent='Начисляется напрямую на аккаунт, без Почты Зеффи. Компенсации работают отдельно через письма.';const amount=document.getElementById('playerGrantAmount');const amountLabel=amount?.closest('.field')?.querySelector('label');if(amountLabel&&amountLabel.textContent!=='Количество / EXP')amountLabel.textContent='Количество / EXP';const sync=()=>{if(!amount)return;const isTier=select.value==='season_pass:elite'||select.value==='season_pass:elite_plus';const isShowcase=String(select.value||'').startsWith('showcase_style:');const isProtection=select.value==='streak_protection';const fixed=isTier||isShowcase;amount.disabled=fixed;if(fixed)amount.value='1';if(isProtection){if(amount.max!=='30')amount.max='30';}else if(amount.hasAttribute('max'))amount.removeAttribute('max');};if(select.dataset.directGrantUiV2!=='1'){select.dataset.directGrantUiV2='1';select.addEventListener('change',sync);}sync();};
+    const options=[['streak_protection','🛡 Защита серии'],['booster:points','⚡ ×2 очки · 2 забега'],['booster:treats','⚡ ×2 зефир · 2 забега'],['booster:coffee','⚡ ×2 кофе · 2 забега'],['booster:shield','🛡 Щит Зеффи · 1 забег'],['booster:second_chance','💗 Второй шанс · 1 забег'],['booster:pause','⏸ Пауза Зеффи · 1 забег'],['season_pass:elite','🎟 Пропуск · Элит'],['season_pass:elite_plus','✨ Пропуск · Элит+'],['season_pass_xp','⚡ EXP пропуска (+ к текущему)'],['profile_xp','⭐ XP игрового уровня (+ к текущему)']];
+    const enhance=()=>{const select=document.getElementById('playerGrantKind');if(!select)return;for(const [value,label] of options){if(!Array.from(select.options||[]).some(option=>option.value===value)){const option=document.createElement('option');option.value=value;option.textContent=label;select.appendChild(option);}}const card=select.closest('.card');const description=card?.querySelector('.section-head p');if(description&&description.textContent!=='Начисляется напрямую на аккаунт, без Почты Зеффи. Компенсации работают отдельно через письма.')description.textContent='Начисляется напрямую на аккаунт, без Почты Зеффи. Компенсации работают отдельно через письма.';const amount=document.getElementById('playerGrantAmount');const amountLabel=amount?.closest('.field')?.querySelector('label');if(amountLabel&&amountLabel.textContent!=='Количество / EXP')amountLabel.textContent='Количество / EXP';const sync=()=>{if(!amount)return;const isTier=select.value==='season_pass:elite'||select.value==='season_pass:elite_plus';const isShowcase=String(select.value||'').startsWith('showcase_style:');const isProtection=select.value==='streak_protection';const fixed=isTier||isShowcase;amount.disabled=fixed;if(fixed)amount.value='1';if(isProtection){if(amount.max!=='30')amount.max='30';}else if(select.value==='profile_xp'){amount.max='5000000';}else if(amount.hasAttribute('max'))amount.removeAttribute('max');};if(select.dataset.directGrantUiV2!=='1'){select.dataset.directGrantUiV2='1';select.addEventListener('change',sync);}sync();};
     const start=()=>{enhance();new MutationObserver(records=>{if(records.some(record=>Array.from(record.addedNodes).some(node=>node.nodeType===1&&(node.id==='playerGrantKind'||node.id==='playerGrantAmount'||node.querySelector?.('#playerGrantKind,#playerGrantAmount')))))enhance();}).observe(document.getElementById('view-player')||document.body,{childList:true,subtree:true});};if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start,{once:true});else start();
   })();</script>`;
   const closeIndex = html.lastIndexOf("</body>");
@@ -52680,6 +52689,16 @@ async function ownerPanelGrantDirectReward(env, ctx, telegramId, kind, itemId, a
       bumpPlayerAccountRevisionStatement(env, telegramId, now)
     ],baseResult);
     if (Number(results?.[0]?.meta?.changes || 0) < 1) throw new ApiError(404, "Профиль игрока не найден.");
+  } else if (kind === "profile_xp") {
+    // Fold any queued legacy XP override before adding fresh XP, otherwise a
+    // later authoritative read could restore the old override and erase it.
+    await ensureAuthoritativeProfileRow(env, telegramId, `owner-xp:${sourceId}`);
+    const results = await ownerGrantCommit(env,ctx,[
+      env.DB.prepare(`UPDATE admin_profile_state SET profile_xp=MIN(999999999,profile_xp+?),revision=revision+1,updated_at=?,updated_by=? WHERE telegram_id=?`)
+        .bind(amount,now,`owner-direct:${ctx.user.id}:${sourceId}`,telegramId),
+      bumpPlayerAccountRevisionStatement(env,telegramId,now)
+    ],baseResult);
+    if (Number(results?.[0]?.meta?.changes || 0) < 1) throw new ApiError(404,"Профиль игрока не найден.");
   } else if(kind==='streak_protection'){
     await ensureDailyLoyaltySchema(env);await ensureAuthoritativeProfileRow(env,telegramId,`owner-protection:${sourceId}`);
     const protectionConfig=await loadDailyLoyaltyConfig(env,{allowDisabled:true}),statements=[];
@@ -52776,10 +52795,10 @@ async function ownerPanelGrantPlayerOnce(env, ctx) {
   }
 
   const kind = rawKind === "treats" ? "zefir" : rawKind;
-  if (!["points", "zefir", "coffee", "case", "seasonal_case", "skin", "booster", "showcase_style", "streak_protection"].includes(kind)) throw new ApiError(400, "Неизвестный тип награды.");
+  if (!["points", "zefir", "coffee", "profile_xp", "case", "seasonal_case", "skin", "booster", "showcase_style", "streak_protection"].includes(kind)) throw new ApiError(400, "Неизвестный тип награды.");
   const singleItemReward = kind === "skin" || kind === "showcase_style";
   const cosmeticSkin = kind === "skin";
-  const amount = singleItemReward ? 1 : ownerPanelInteger(ctx.body?.amount, 1, kind === 'streak_protection' ? 30 : (kind === "case" || kind === "seasonal_case") ? 20 : kind === "booster" ? 999 : 10000000);
+  const amount = singleItemReward ? 1 : ownerPanelInteger(ctx.body?.amount, 1, kind === 'streak_protection' ? 30 : kind === "profile_xp" ? 5000000 : (kind === "case" || kind === "seasonal_case") ? 20 : kind === "booster" ? 999 : 10000000);
   if (amount == null) throw new ApiError(400, "Некорректное количество награды.");
   let itemId = "";
   if (kind === "case") {
