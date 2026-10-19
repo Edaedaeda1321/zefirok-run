@@ -1848,7 +1848,7 @@ button{-webkit-tap-highlight-color:transparent}
   color:#553b58;
   background:
     linear-gradient(180deg,rgba(31,18,54,.24),rgba(85,36,77,.17)),
-    url('/assets/optimized/v0.79.5/background_season2.webp') center 34%/cover no-repeat
+    var(--seasonal-case-bg,linear-gradient(140deg,#cdbcae,#e5c9da 60%,#faeef2)) center 34%/cover no-repeat
 }
 .seasonal-case-xp-shell::before{
   content:"";
@@ -3787,7 +3787,7 @@ img[src$="/xp.webp"]{
 .seasonal-case-opening-card.is-opening-busy .seasonal-case-opening-close{visibility:visible}
 
 .seasonal-case-xp-shell{--case-accent:#b96bd4!important;--case-accent-2:#f1c9ff!important;--case-deep:#60366e!important;--reward-accent:#c06ee0!important;position:relative!important;isolation:isolate!important;display:flex!important;flex-direction:column!important;align-items:center!important;min-height:570px!important;padding:28px 22px 22px!important;overflow:hidden!important;color:#553b58!important;background:linear-gradient(180deg,rgba(255,253,251,.95),rgba(255,248,252,.95))!important}
-.seasonal-case-xp-shell::before{content:""!important;position:absolute!important;inset:0!important;z-index:0!important;background:linear-gradient(180deg,rgba(48,24,70,.18),rgba(255,250,254,.76) 56%,rgba(255,250,247,.98) 100%),url('/assets/optimized/v0.79.5/background_season2.webp') center 34%/cover no-repeat!important;opacity:.62!important;pointer-events:none!important}
+.seasonal-case-xp-shell::before{content:""!important;position:absolute!important;inset:0!important;z-index:0!important;background:linear-gradient(180deg,rgba(48,24,70,.18),rgba(255,250,254,.76) 56%,rgba(255,250,247,.98) 100%),var(--seasonal-case-bg,linear-gradient(140deg,#cdbcae,#e5c9da 60%,#faeef2)) center 34%/cover no-repeat!important;opacity:.62!important;pointer-events:none!important}
 .seasonal-case-xp-shell>*{position:relative;z-index:2}
 .seasonal-case-xp-result-kicker{position:relative;z-index:4;display:inline-flex;align-items:center;gap:7px;min-height:29px;padding:6px 11px;border:1px solid rgba(185,107,212,.28);border-radius:999px;background:rgba(251,239,255,.94);box-shadow:0 5px 16px rgba(86,50,84,.08);font-size:10px;font-weight:900;letter-spacing:.09em;color:#60366e}
 .seasonal-case-xp-result-kicker i{font-style:normal;color:#b96bd4;font-size:13px}
@@ -3801,7 +3801,7 @@ img[src$="/xp.webp"]{
 .seasonal-case-xp-preparing-bar i{display:block;width:44%;height:100%;border-radius:inherit;background:linear-gradient(90deg,transparent,#b96bd4,#f1c9ff,transparent);animation:caseXpLoading 1.1s ease-in-out infinite}
 .seasonal-case-xp-preparing-note{position:relative;z-index:3;display:inline-flex;align-items:center;gap:7px;max-width:290px;color:#9b849b;font-size:10px;line-height:1.35}
 .seasonal-case-xp-preparing-note i{width:7px;height:7px;border-radius:50%;background:#70b788;box-shadow:0 0 0 4px rgba(112,183,136,.12);flex:0 0 auto}
-.seasonal-case-xp-opening{min-height:590px!important;padding-top:31px!important;background:linear-gradient(180deg,rgba(28,17,53,.16) 0%,rgba(255,248,252,.78) 57%,#fff 100%),url('/assets/optimized/v0.79.5/background_season2.webp') center 28%/cover no-repeat!important}
+.seasonal-case-xp-opening{min-height:590px!important;padding-top:31px!important;background:linear-gradient(180deg,rgba(28,17,53,.16) 0%,rgba(255,248,252,.78) 57%,#fff 100%),var(--seasonal-case-bg,linear-gradient(140deg,#cdbcae,#e5c9da 60%,#faeef2)) center 28%/cover no-repeat!important}
 .seasonal-case-xp-opening-heading{position:relative;z-index:4;min-height:93px}
 .seasonal-case-xp-opening-heading small{display:block;margin-bottom:4px;color:#9a55b3!important;font-size:10px;font-weight:950;letter-spacing:.11em;text-shadow:none!important}
 .seasonal-case-xp-opening-heading h2{margin:0;color:#4f354f!important;font-size:25px;letter-spacing:-.03em;text-shadow:none!important}
@@ -3817,7 +3817,7 @@ img[src$="/xp.webp"]{
 .seasonal-case-xp-skip-note{position:relative;z-index:4;color:#aa91aa!important;font-weight:700!important}
 
 /* Main-game result layout, themed only for the current season. */
-.seasonal-case-xp-reveal{--reward-accent:#c06ee0;justify-content:flex-start!important;min-height:610px!important;padding-top:30px!important;background:radial-gradient(circle at 50% 41%,rgba(192,110,224,.17),transparent 44%),linear-gradient(180deg,rgba(255,253,250,.88) 0%,rgba(255,248,252,.94) 55%,#fff 78%),url('/assets/optimized/v0.79.5/background_season2.webp') center 18%/cover no-repeat!important;opacity:0;transform:translateY(8px);transition:opacity .28s ease,transform .34s cubic-bezier(.2,.8,.2,1)}
+.seasonal-case-xp-reveal{--reward-accent:#c06ee0;justify-content:flex-start!important;min-height:610px!important;padding-top:30px!important;background:radial-gradient(circle at 50% 41%,rgba(192,110,224,.17),transparent 44%),linear-gradient(180deg,rgba(255,253,250,.88) 0%,rgba(255,248,252,.94) 55%,#fff 78%),var(--seasonal-case-bg,linear-gradient(140deg,#cdbcae,#e5c9da 60%,#faeef2)) center 18%/cover no-repeat!important;opacity:0;transform:translateY(8px);transition:opacity .28s ease,transform .34s cubic-bezier(.2,.8,.2,1)}
 .seasonal-case-xp-reveal::before{opacity:.16!important;filter:saturate(.85) hue-rotate(8deg)}
 .seasonal-case-xp-reveal.is-visible{opacity:1;transform:none}
 .seasonal-case-xp-reveal[data-reward-tier="rare"]{--reward-accent:#74aab5}.seasonal-case-xp-reveal[data-reward-tier="superrare"]{--reward-accent:#c46bb0}.seasonal-case-xp-reveal[data-reward-tier="epic"]{--reward-accent:#9a61cb}.seasonal-case-xp-reveal[data-reward-tier="mythic"]{--reward-accent:#d25aae}.seasonal-case-xp-reveal[data-reward-tier="legendary"]{--reward-accent:#d8a22f}
@@ -7399,7 +7399,24 @@ img[src$="/xp.webp"]{
     const entry=(Array.isArray(serverPass?.seasonalCases)?serverPass.seasonalCases:[]).find(item=>String(item?.caseId||"")===String(caseId||""));
     const imageUrl=String(entry?.imageUrl||REWARD_ASSETS.goldCase||"/assets/cases/seasonal/season_2_closed.webp");
     const openImageUrl=String(entry?.openImageUrl||seasonalCaseOpenImageFallback(imageUrl));
-    return {caseId:String(entry?.caseId||caseId||""),title:String(entry?.title||"Сезонный кейс"),seasonTitle:String(entry?.seasonTitle||serverPass?.season?.title||"Ночь сладких чудес"),imageUrl,openImageUrl};
+    return {caseId:String(entry?.caseId||caseId||""),title:String(entry?.title||"Сезонный кейс"),seasonTitle:String(entry?.seasonTitle||serverPass?.season?.title||""),backgroundImageUrl:String(entry?.backgroundImageUrl||entry?.caseInfo?.backgroundImageUrl||""),imageUrl,openImageUrl};
+  }
+
+  // The image chosen in Control Center is authoritative for this case only.
+  // Legacy cases use a themed fallback, never an unconditional Season 2 image.
+  function seasonalCaseBackgroundUrl(meta){
+    const raw=String(meta?.backgroundImageUrl||'').trim();
+    if(/^\/assets\/[A-Za-z0-9_+.%/-]+\.(?:webp|png|jpe?g|avif)$/i.test(raw)&&!raw.includes('..'))return raw;
+    const title=`${String(meta?.title||'')} ${String(meta?.seasonTitle||'')}`;
+    if(/белкин|belkino/i.test(title))return '/assets/season/s3/minigame/currency/belkina_background_season3.webp';
+    if(/бел(?:ый|ого) кролик|white rabbit/i.test(title))return '/assets/optimized/v0.79.5/white_rabbit_background_season4.webp';
+    if(/ноч(?:ь|ные) сладк|season\s*2/i.test(title))return '/assets/optimized/v0.79.5/background_season2.webp';
+    return '';
+  }
+  function seasonalCaseBackgroundStyle(meta,extra=''){
+    const url=seasonalCaseBackgroundUrl(meta);
+    const declarations=[extra,url?`--seasonal-case-bg:url('${url}')`:''].filter(Boolean);
+    return declarations.length?` style="${declarations.join(';')}"`:'';
   }
 
   function seasonalCaseOpeningEls(){return {layer:el("seasonalCaseOpening"),card:el("seasonalCaseOpeningCard"),content:el("seasonalCaseOpeningContent"),close:el("seasonalCaseOpeningClose")};}
@@ -7432,7 +7449,7 @@ img[src$="/xp.webp"]{
     seasonalCaseClearAnimation();
     seasonalCaseOpeningBusy=true;
     card.classList.add("is-opening-busy");
-    content.innerHTML=`<div class="seasonal-case-xp-shell seasonal-case-xp-preparing">
+    content.innerHTML=`<div class="seasonal-case-xp-shell seasonal-case-xp-preparing"${seasonalCaseBackgroundStyle(meta)}>
       <div class="seasonal-case-xp-result-kicker"><i aria-hidden="true">✦</i><span>${checking?"ПРОВЕРЯЕМ ОТКРЫТИЕ":"ПОДГОТОВКА"}</span></div>
       <div class="seasonal-case-xp-preparing-art"><span class="seasonal-case-xp-preparing-glow" aria-hidden="true"></span><img class="seasonal-case-xp-preparing-case" src="${String(meta.imageUrl||IMAGE_ERROR_FALLBACK).replace(/"/g,'&quot;')}" alt=""></div>
       <h2 id="seasonalCaseOpeningTitle">${checking?"Проверяем":"Готовим"} ${String(meta.title||"сезонный кейс").replace(/</g,'&lt;')}</h2>
@@ -7449,7 +7466,7 @@ img[src$="/xp.webp"]{
     seasonalCaseClearAnimation();
     seasonalCaseOpeningBusy=false;
     card.classList.remove("is-opening-busy");
-    content.innerHTML=`<div class="seasonal-case-xp-shell seasonal-case-xp-status">
+    content.innerHTML=`<div class="seasonal-case-xp-shell seasonal-case-xp-status"${seasonalCaseBackgroundStyle(meta)}>
       <div class="seasonal-case-xp-result-kicker"><i aria-hidden="true">${retryable?"↻":"!"}</i><span>${retryable?"ПРОВЕРКА СЕРВЕРА":"ОТКРЫТИЕ ПРЕРВАНО"}</span></div>
       <div class="seasonal-case-xp-status-case"><img src="${String(meta.imageUrl||IMAGE_ERROR_FALLBACK).replace(/"/g,'&quot;')}" alt=""></div>
       <span class="seasonal-case-xp-status-pill">${retryable?"кейс не списывается повторно":"ошибка"}</span>
@@ -7470,7 +7487,7 @@ img[src$="/xp.webp"]{
     const reduced=Boolean(window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches);
     const duration=reduced?420:SEASONAL_CASE_ANIMATION_MS;
     const closed=String(meta.imageUrl||IMAGE_ERROR_FALLBACK),opened=String(meta.openImageUrl||seasonalCaseOpenImageFallback(closed)||closed);
-    content.innerHTML=`<div class="seasonal-case-xp-shell seasonal-case-xp-opening" style="--case-xp-duration:${duration}ms">
+    content.innerHTML=`<div class="seasonal-case-xp-shell seasonal-case-xp-opening"${seasonalCaseBackgroundStyle(meta,`--case-xp-duration:${duration}ms`)}>
       <div class="seasonal-case-xp-opening-heading"><small>СЕЗОННЫЙ КЕЙС · ${String(meta.seasonTitle||"Ночь сладких чудес").replace(/</g,'&lt;')}</small><h2 id="seasonalCaseOpeningTitle">${String(meta.title||"Сезонный кейс").replace(/</g,'&lt;')}</h2><p>Лунный свет раскрывает награду</p></div>
       <button class="seasonal-case-xp-case-stage" data-seasonal-case-skip type="button" aria-label="Ускорить открытие">
         <span class="seasonal-case-xp-stage-vignette" aria-hidden="true"></span><span class="seasonal-case-xp-rays" aria-hidden="true"></span>
@@ -7546,7 +7563,7 @@ img[src$="/xp.webp"]{
     seasonalCaseOpeningBusy=false;card.classList.remove("is-opening-busy");
     const kicker=rewards.length>1?`НАГРАДА ${index+1} ИЗ ${rewards.length}`:"НАГРАДА ПОЛУЧЕНА";
     const source=`Сезонный кейс · ${String(state.meta?.title||state.meta?.seasonTitle||"Ночь сладких чудес")}`;
-    content.innerHTML=`<div class="seasonal-case-xp-shell seasonal-case-xp-reveal" data-reward-tier="${seasonalCaseInfoEscape(view.tier)}">
+    content.innerHTML=`<div class="seasonal-case-xp-shell seasonal-case-xp-reveal" data-reward-tier="${seasonalCaseInfoEscape(view.tier)}"${seasonalCaseBackgroundStyle(state.meta)}>
       <div class="seasonal-case-xp-reward-bg" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i></div>
       <div class="seasonal-case-xp-result-kicker"><i aria-hidden="true">✦</i><span>${seasonalCaseInfoEscape(kicker)}</span></div>
       <small class="seasonal-case-xp-season-source">${seasonalCaseInfoEscape(source)}</small>
@@ -7653,7 +7670,7 @@ img[src$="/xp.webp"]{
   function seasonalCaseRewardSummary(data){return Array.isArray(data?.case?.rewards)?data.case.rewards.map(item=>({premium:false,icon:"",image:item.imageUrl||"",name:item.title||(item.kind==="points"?`${Number(item.amount||0).toLocaleString("ru-RU")} очков`:"Сезонная награда"),description:item.description||"",source:data?.case?.title||"Сезонный кейс",rewardType:item.kind||item.rewardType||"",kind:item.kind||item.rewardType||"",rarity:item.rarity||"",amount:Number(item.amount||0),itemId:item.itemId||item.id||""})):[];}
   async function applySeasonalCaseOpenResult(caseId,requestId,data,meta=seasonalCaseMeta(caseId),flowId=seasonalCaseOpeningFlowId){
     forgetSeasonalCaseRequest(caseId,requestId);if(Array.isArray(data?.seasonalCases))serverPass={...(serverPass||{}),seasonalCases:data.seasonalCases};renderSeasonalCases();notifyAccountChanged();
-    const rewards=seasonalCaseRewardSummary(data),resolvedMeta={...meta,title:String(data?.case?.title||meta?.title||"Сезонный кейс"),openImageUrl:String(data?.case?.imageUrl||meta?.openImageUrl||seasonalCaseOpenImageFallback(meta?.imageUrl)),imageUrl:String(meta?.imageUrl||REWARD_ASSETS.goldCase||"")};
+    const rewards=seasonalCaseRewardSummary(data),resolvedMeta={...meta,title:String(data?.case?.title||meta?.title||"Сезонный кейс"),openImageUrl:String(data?.case?.imageUrl||meta?.openImageUrl||seasonalCaseOpenImageFallback(meta?.imageUrl)),imageUrl:String(meta?.imageUrl||REWARD_ASSETS.goldCase||""),backgroundImageUrl:String(data?.case?.backgroundImageUrl||meta?.backgroundImageUrl||"")};
     if(flowId!==seasonalCaseOpeningFlowId)return;
     await runSeasonalCaseOpeningAnimation(resolvedMeta,flowId);
     if(flowId!==seasonalCaseOpeningFlowId)return;
