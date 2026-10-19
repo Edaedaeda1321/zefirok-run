@@ -14025,6 +14025,7 @@ html.flash-offer-open,body.flash-offer-open{overflow:hidden!important;overscroll
         if (reason === &quot;timeout&quot;) console.warn(&quot;Runner startup gate fail-open timeout reached; showing best available scene.&quot;);
         try { invalidateGameRenderCaches(); } catch (error) {}
         requestAnimationFrame(() =&gt; { try { draw(); } catch (error) {} });
+        window.setTimeout(() => void flushPendingRunLevelUp(), 180);
       }
 
       function armRunnerStartupGateFailOpen() {
@@ -20434,8 +20435,7 @@ function createTutorialDeck(layer, mount, options, words) {
                     window.setTimeout(() =&gt; {
                       // Settlement belongs to a confirmed run. Queue it if a new run has started.
                       // The item is strictly visual and never replays the server operation.
-                      pendingRunLevelUp = { ...confirmedLevelUp, eventKey };
-                      void flushPendingRunLevelUp();
+                      queueProfileLevelUp(confirmedLevelUp.beforeXp, confirmedLevelUp.afterXp, eventKey);
                     }, 400);
                   }
                 } else renderRunResultsSyncError(resultContext, error);
@@ -21982,7 +21982,7 @@ function createTutorialDeck(layer, mount, options, words) {
           return;
         }
         if (message.type === &quot;zefirok-telegram-profile-data&quot;) {
-          if (String(telegramProfile?.id || &quot;&quot;) !== String(message.payload?.id || &quot;&quot;)) {caseLevelOpeningResults.clear();caseFullStateLastSyncAt=0;}
+          if (String(telegramProfile?.id || &quot;&quot;) !== String(message.payload?.id || &quot;&quot;)) {caseLevelOpeningResults.clear();caseFullStateLastSyncAt=0;pendingRunLevelUp=null;}
           telegramProfile = message.payload &amp;&amp; typeof message.payload === &quot;object&quot;
             ? message.payload
             : { available: false };
@@ -22479,9 +22479,73 @@ function createTutorialDeck(layer, mount, options, words) {
         });
         return levelUpPresentationPromise;
       }
-      async function revealProfileLevelUp(beforeXp, afterXp, eventKey) {
+      // The same server XP can arrive via startup, the 10-second profile sync,
+      // a mail claim, a run receipt or Tasks. Only one presentation is allowed.
+      const LEVEL_UP_OBSERVED_XP_PREFIX = &#x27;zefirok-level-up-confirmed-xp-v1:&#x27;;
+      const levelUpServerXpByAccount = new Map();
+      const levelUpDisplayedXpByAccount = new Map();
+      let pendingRunLevelUp = null;
+      let levelUpFlushInFlight = false;
+      function profileLevelUpAccountId() {
+        const id = String(telegramProfile?.id || &#x27;&#x27;).trim();
+        return /^\d+$/.test(id) ? id : &#x27;&#x27;;
+      }
+      function readLastConfirmedProfileXp(accountId) {
+        if (levelUpServerXpByAccount.has(accountId)) return levelUpServerXpByAccount.get(accountId);
+        let previous = null;
+        try {
+          const saved = JSON.parse(localStorage.getItem(LEVEL_UP_OBSERVED_XP_PREFIX + accountId) || &#x27;null&#x27;);
+          if (saved?.v === 1 &amp;&amp; Number.isSafeInteger(saved.xp) &amp;&amp; saved.xp &gt;= 0) previous = saved.xp;
+        } catch (error) {}
+        levelUpServerXpByAccount.set(accountId, previous);
+        return previous;
+      }
+      function rememberConfirmedProfileXp(rawXp, options = {}) {
+        const accountId = profileLevelUpAccountId();
+        const numericXp = Number(rawXp);
+        if (!accountId || !Number.isSafeInteger(numericXp) || numericXp &lt; 0) return false;
+        const xp = sanitizeProgressNumber(numericXp);
+        const previous = readLastConfirmedProfileXp(accountId);
+        // Ignore older responses unless the server explicitly marks an XP reset.
+        if (previous !== null &amp;&amp; xp &lt; previous &amp;&amp; options.authoritative !== true) return false;
+        if (previous !== null &amp;&amp; xp === previous) return false;
+        if (previous !== null &amp;&amp; xp &lt; previous) {
+          // An explicit server reset permits the next earned level to celebrate again.
+          levelUpDisplayedXpByAccount.delete(accountId);
+          if (pendingRunLevelUp?.accountId === accountId) pendingRunLevelUp = null;
+        }
+        levelUpServerXpByAccount.set(accountId, xp);
+        try { localStorage.setItem(LEVEL_UP_OBSERVED_XP_PREFIX + accountId, JSON.stringify({ v: 1, xp })); } catch (error) {}
+        if (previous !== null &amp;&amp; xp &gt; previous &amp;&amp; options.announce !== false) {
+          queueProfileLevelUp(previous, xp, `server:${accountId}:${previous}:${xp}`, accountId);
+        }
+        return true;
+      }
+      function profileLevelPresentationBlocked() {
+        return state.running || document.visibilityState === &#x27;hidden&#x27;
+          || !runnerStartupGateReleased
+          || Boolean(playerMailLayerEl &amp;&amp; !playerMailLayerEl.hidden)
+          || Boolean(purchaseLayer &amp;&amp; !purchaseLayer.hidden);
+      }
+      function queueProfileLevelUp(beforeXp, afterXp, eventKey, accountId = profileLevelUpAccountId()) {
         const from = profileLevelState(beforeXp), to = profileLevelState(afterXp);
+        if (!accountId || from.level &gt;= to.level || to.totalXp &lt;= from.totalXp) return false;
+        if (Number(levelUpDisplayedXpByAccount.get(accountId) || 0) &gt;= to.totalXp) return false;
+        if (pendingRunLevelUp?.accountId === accountId) {
+          pendingRunLevelUp.beforeXp = Math.min(pendingRunLevelUp.beforeXp, from.totalXp);
+          pendingRunLevelUp.afterXp = Math.max(pendingRunLevelUp.afterXp, to.totalXp);
+          pendingRunLevelUp.eventKey = eventKey;
+        } else {
+          pendingRunLevelUp = { beforeXp: from.totalXp, afterXp: to.totalXp, eventKey, accountId };
+        }
+        window.setTimeout(() =&gt; void flushPendingRunLevelUp(), 220);
+        return true;
+      }
+      async function revealProfileLevelUp(beforeXp, afterXp, eventKey, accountId = profileLevelUpAccountId()) {
+        const from = profileLevelState(beforeXp), to = profileLevelState(afterXp);
+        if (!accountId || accountId !== profileLevelUpAccountId()) return false;
         if (to.level &lt;= from.level || to.totalXp &lt;= from.totalXp) return false;
+        if (Number(levelUpDisplayedXpByAccount.get(accountId) || 0) &gt;= to.totalXp) return false;
         const rewards = LEVEL_CASE_SCHEDULE.filter(entry =&gt; entry.level &gt; from.level &amp;&amp; entry.level &lt;= to.level);
         if (!rewards.length) return false;
         try {
@@ -22495,8 +22559,9 @@ function createTutorialDeck(layer, mount, options, words) {
             showProfileToast(&#x27;Уровень повышен! Кейс ждёт тебя в «Моих покупках».&#x27;, &#x27;success&#x27;, 5500);
             return false;
           }
-          if (state.running || document.visibilityState === &#x27;hidden&#x27;) return false;
-          return api.show({
+          if (accountId !== profileLevelUpAccountId() || profileLevelPresentationBlocked()) return false;
+          if (Number(levelUpDisplayedXpByAccount.get(accountId) || 0) &gt;= to.totalXp) return false;
+          const shown = api.show({
             fromLevel: from.level, toLevel: to.level, xpEarned: to.totalXp - from.totalXp,
             fromPercent: from.percent, toPercent: to.percent, currentXp: to.currentXp,
             needed: to.needed, isMax: to.isMax, rewards, eventKey,
@@ -22506,18 +22571,30 @@ function createTutorialDeck(layer, mount, options, words) {
               switchStockHubView(&#x27;cases&#x27;);
             }
           }) === true;
+          if (shown) levelUpDisplayedXpByAccount.set(accountId, to.totalXp);
+          return shown;
         } catch (error) {
           console.warn(&#x27;Level-up presentation unavailable&#x27;, String(error?.message || error));
           return false;
         }
       }
-      let pendingRunLevelUp = null;
       async function flushPendingRunLevelUp() {
-        if (!pendingRunLevelUp || state.running || document.visibilityState === &#x27;hidden&#x27;) return;
+        if (!pendingRunLevelUp || levelUpFlushInFlight || profileLevelPresentationBlocked()) return;
         const item = pendingRunLevelUp;
         pendingRunLevelUp = null;
-        const displayed = await revealProfileLevelUp(item.beforeXp, item.afterXp, item.eventKey);
-        if (!displayed &amp;&amp; (state.running || document.visibilityState === &#x27;hidden&#x27;)) pendingRunLevelUp = item;
+        if (item.accountId !== profileLevelUpAccountId()) return;
+        levelUpFlushInFlight = true;
+        let displayed = false;
+        try { displayed = await revealProfileLevelUp(item.beforeXp, item.afterXp, item.eventKey, item.accountId); }
+        finally { levelUpFlushInFlight = false; }
+        if (!displayed &amp;&amp; profileLevelPresentationBlocked() &amp;&amp; item.accountId === profileLevelUpAccountId()) {
+          // A new run, Telegram hiding or an opened letter can interrupt lazy loading.
+          if (pendingRunLevelUp?.accountId === item.accountId) {
+            pendingRunLevelUp.beforeXp = Math.min(item.beforeXp, pendingRunLevelUp.beforeXp);
+            pendingRunLevelUp.afterXp = Math.max(item.afterXp, pendingRunLevelUp.afterXp);
+          } else pendingRunLevelUp = item;
+        }
+        if (pendingRunLevelUp &amp;&amp; !profileLevelPresentationBlocked()) window.setTimeout(() =&gt; void flushPendingRunLevelUp(), 150);
       }
       window.addEventListener(&#x27;visibilitychange&#x27;, () =&gt; {
         if (document.visibilityState !== &#x27;hidden&#x27;) void flushPendingRunLevelUp();
@@ -22526,9 +22603,9 @@ function createTutorialDeck(layer, mount, options, words) {
       window.setTimeout(() =&gt; {
         if (profileLevelState(state.profileXp).level &lt; 50) void loadLevelUpPresentation();
       }, 2200);
-      // Game Tasks uses signed, server-returned profile snapshots; this is display-only.
+      // Tasks uses a signed server snapshot; it joins the same once-only presentation queue.
       window.zefirokLevelUpHost = Object.freeze({
-        fromTask: (oldXp, newXp) =&gt; void revealProfileLevelUp(oldXp, newXp, `tasks:${oldXp}:${newXp}`)
+        fromTask: (oldXp, newXp) =&gt; queueProfileLevelUp(oldXp, newXp, `tasks:${oldXp}:${newXp}`)
       });
 
       function profileTitleForLevel(levelValue) {
@@ -25836,6 +25913,7 @@ function createTutorialDeck(layer, mount, options, words) {
           unlockPlayerMailPageScroll();
           playerMailActiveLetter = null;
           if (playerMailContentEl) playerMailContentEl.innerHTML = &quot;&quot;;
+          window.setTimeout(() => void flushPendingRunLevelUp(), 60);
         };
         const reduced = Boolean(window.matchMedia?.(&quot;(prefers-reduced-motion: reduce)&quot;)?.matches);
         if (options?.immediate === true || reduced || !dialog) { finalize(); return; }
@@ -28297,7 +28375,7 @@ function createTutorialDeck(layer, mount, options, words) {
         }
       }
 
-      function applyServerProfilePayload(data) {
+      function applyServerProfilePayload(data, options = {}) {
         const profile = data?.profile || {};
         let changed = false;
         if (data?.runXpDaily) applyProfileRunXpDailyState(data.runXpDaily);
@@ -28319,6 +28397,14 @@ function createTutorialDeck(layer, mount, options, words) {
             saveProgress();
           }
         });
+        // Profile sync is the existing background/CC/mail path for authoritative XP.
+        // This does not award XP or cases: it only notices a confirmed level change.
+        if (Object.prototype.hasOwnProperty.call(profile, &quot;profileXp&quot;)) {
+          rememberConfirmedProfileXp(profile.profileXp, {
+            announce: options.suppressLevelCelebration !== true,
+            authoritative: profile.authoritativeFields?.profileXp === true
+          });
+        }
         return true;
       }
 
@@ -29390,6 +29476,9 @@ function createTutorialDeck(layer, mount, options, words) {
           renderActiveRunBooster();
           if (isScreenVisible(&quot;profile&quot;)) renderProfile();
         });
+        if (data?.profile && Object.prototype.hasOwnProperty.call(data.profile, &quot;profileXp&quot;)) {
+          rememberConfirmedProfileXp(data.profile.profileXp, { announce: false });
+        }
         return true;
       }
 
@@ -29935,8 +30024,9 @@ function createTutorialDeck(layer, mount, options, words) {
         const pendingLevelReveal = pendingPurchaseLevelReveal;
         pendingPurchaseLevelReveal = null;
         if (pendingLevelReveal &amp;&amp; !force) {
-          window.setTimeout(() => void revealProfileLevelUp(pendingLevelReveal.beforeXp, pendingLevelReveal.afterXp, pendingLevelReveal.eventKey), 200);
+          window.setTimeout(() => queueProfileLevelUp(pendingLevelReveal.beforeXp, pendingLevelReveal.afterXp, pendingLevelReveal.eventKey), 200);
         }
+        window.setTimeout(() => void flushPendingRunLevelUp(), 280);
         return true;
       }
 
@@ -30203,7 +30293,7 @@ function createTutorialDeck(layer, mount, options, words) {
 
         const previousProfileXp = state.profileXp;
         const previousLevel = profileLevelState(previousProfileXp).level;
-        if (reward.serverProfile) applyServerProfilePayload({ profile: reward.serverProfile });
+        if (reward.serverProfile) applyServerProfilePayload({ profile: reward.serverProfile }, { suppressLevelCelebration: true });
         antiCheatWithTrustedChange(&quot;purchase-server-confirmed&quot;, () =&gt; {
           const code = String(reward.code);
           const issuedAt = Number(reward.issuedAt || Date.now());
