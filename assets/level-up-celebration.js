@@ -56,7 +56,6 @@
     if (fromLevel < 1 || toLevel <= fromLevel || toLevel > 50 || !rewards.length) return false;
     const key = String(input.eventKey || '');
     if (key && seen.has(key)) return false;
-    if (key) seen.add(key);
     close();
     lastFocus = document.activeElement;
     onRewards = typeof input.onViewRewards === 'function' ? input.onViewRewards : null;
@@ -101,6 +100,13 @@
         <button type="button" class="zlu-later" data-zlu-close>Позже</button>
       </section>`;
     document.body.append(layer);
+    // CSS can be rejected independently by the game's srcdoc CSP. Do not
+    // acknowledge or de-duplicate an unstyled off-screen dialog.
+    if (window.getComputedStyle(layer).position !== 'fixed') {
+      close();
+      return false;
+    }
+    if (key) seen.add(key);
     layer.addEventListener('keydown', keyHandler);
     layer.querySelectorAll('[data-zlu-close]').forEach(button => button.addEventListener('click', close));
     layer.querySelector('[data-zlu-rewards]')?.addEventListener('click', () => {

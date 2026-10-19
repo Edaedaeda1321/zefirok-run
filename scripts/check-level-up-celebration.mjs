@@ -20,12 +20,13 @@ check('run callback guards stale run and ongoing gameplay',index.includes('Strin
 check('purchase reveals only after the 24h code dialog closes',index.includes('pendingPurchaseLevelReveal = {beforeXp: previousProfileXp')&&index.includes('if (pendingLevelReveal &amp;&amp; !force)')&&index.includes('suppressLevelCelebration: true'));
 check('task animation uses confirmed server data',tasks.includes('if(nextProfile.level>queuedXp.from.level)')&&tasks.includes('window.zefirokLevelUpHost?.fromTask?.(oldXp,newXp)'));
 check('reward button reuses existing inventory and case loading',index.includes('switchScreen(&#x27;warehouse&#x27;)')&&index.includes('switchStockHubView(&#x27;cases&#x27;)'));
-check('UI stylesheet and JS are lazy on celebration only',index.includes('let levelUpPresentationPromise = null;')&&index.includes('/assets/level-up-celebration.css?v=lu2')&&index.includes('/assets/level-up-celebration.js?v=lu2'));
+check('UI stylesheet and JS are lazy on celebration only',index.includes('let levelUpPresentationPromise = null;')&&index.includes('/assets/level-up-celebration.css?v=lu3')&&index.includes('/assets/level-up-celebration.js?v=lu3'));
 check('no eager level-up asset tags',!index.includes('&lt;script src=&quot;/assets/level-up-celebration.js'));
 check('all rarity images are existing project files', ['standart_closed.webp','Bronze_close.webp','gold_closed.webp','Mifik_case_closed.webp','legendary_closed.webp'].every(name=>existsSync(resolve(root,'assets/cases',name))));
 check('Zeffi original dog sprite is used',existsSync(resolve(root,'assets/skins/gameplay/default/stand.webp'))&&js.includes('/assets/skins/gameplay/default/stand.webp'));
 check('visual layer never sends API or modifies rewards',!/fetch\(|XMLHttpRequest|\/api\/|\.wallet\s*=|\.profileXp\s*=|openLevelCaseClient/.test(js));
 check('visual tier styles exist', ['small','sweet','gold','mythic','legendary'].every(name=>js.includes(`${name}: {`) )&&['.zlu-gold','.zlu-mythic','.zlu-legendary'].every(name=>css.includes(name)));
+check('visual event dedup records only a CSS-styled dialog', js.indexOf("window.getComputedStyle(layer).position !== 'fixed'")>0&&js.indexOf("window.getComputedStyle(layer).position !== 'fixed'")<js.indexOf('if (key) seen.add(key);'));
 check('milestone list includes level 50',js.includes('[10,20,30,40,45,50]'));
 check('multiple level rewards shown together',js.includes('const plural = rewards.length > 1;')&&js.includes('class="zlu-items"'));
 check('reduced motion, keyboard and focus safeguards',js.includes('prefers-reduced-motion: reduce')&&js.includes("event.key === 'Escape'")&&js.includes("event.key !== 'Tab'")&&css.includes('prefers-reduced-motion:reduce'));
@@ -33,9 +34,17 @@ check('safe area and bounded mobile dimensions',css.includes('env(safe-area-inse
 check('modal text never claims an automatic case grant',js.includes('Кейс доступен к открытию')&&!js.includes('Вам начислено'));
 check('gate runs celebration regression check',gate.includes("['player level-up celebration', 'node', ['scripts/check-level-up-celebration.mjs']]"));
 
+check('parent CSP allows same-origin level-up JS and CSS, inherited by srcdoc',
+  index.slice(0,index.indexOf('data-srcdoc=')).includes("script-src 'self' 'unsafe-inline'") &&
+  index.slice(0,index.indexOf('data-srcdoc=')).includes("style-src 'self' 'unsafe-inline'"));
+check('game frame CSP also allows same-origin CSS and scripts',
+  index.includes('style-src &#x27;self&#x27; &#x27;unsafe-inline&#x27; blob: data:') &&
+  index.includes('script-src &#x27;self&#x27; &#x27;unsafe-inline&#x27;'));
+check('unseen presentation is persisted until the window is truly styled',index.includes('LEVEL_UP_PENDING_PREFIX')&&index.includes('shownProfileLevelUpXp(accountId)')&&index.includes('window.getComputedStyle(node).position === &#x27;fixed&#x27;'));
+check('correct visibility event target wakes up queued modal',index.includes('document.addEventListener(&#x27;visibilitychange&#x27;')&&!index.includes('window.addEventListener(&#x27;visibilitychange&#x27;'));
 check('server receipt confirms level instead of mutable local XP',index.includes('function confirmedRunProfileLevelUp(previousXp, payload, currentXp)')&&index.includes('const awarded = Number(receipt.profileXpAwarded);')&&index.includes('if (awardedKnown &amp;&amp; awarded &lt;= 0) return null;')&&index.includes('const serverXp = Number(payload?.profile?.profileXp);'));
-check('missing CSS event cannot deadlock JS loader',index.includes('script.onload = () =&gt; finish(window.ZeffiLevelUp || null)')&&index.includes('const deadline = window.setTimeout')&&!index.includes('Promise.all([styleReady, scriptReady])'));
-check('failed script can retry and visible toast explains missing visual',index.includes('levelUpPresentationPromise = null;')&&index.includes('Level-up celebration assets unavailable after retry')&&index.includes('Кейс ждёт тебя'));
+check('loader requires stylesheet and JS but not link.onload',index.includes('if (window.ZeffiLevelUp?.show &amp;&amp; style.sheet)')&&index.includes('window.setTimeout(checkReady, 120)')&&!index.includes('Promise.all([styleReady, scriptReady])'));
+check('a blocked stylesheet keeps presentation retryable',index.includes('levelUpPresentationPromise = null;')&&index.includes('Level-up CSS was blocked or could not be loaded')&&index.includes('Level-up celebration assets unavailable after retry'));
 check('late settlement queued instead of blocking the next run',index.includes('queueProfileLevelUp(confirmedLevelUp.beforeXp, confirmedLevelUp.afterXp, eventKey)')&&index.includes('async function flushPendingRunLevelUp()'));
 
 // Behavioral regression: a fresh second account reaches level 2 after a signed run.
@@ -43,7 +52,7 @@ check('late settlement queued instead of blocking the next run',index.includes('
 const {runInNewContext} = await import('node:vm');
 const decode = raw => raw.replaceAll('&#x27;', "'").replaceAll('&quot;', '"').replaceAll('&amp;', '&').replaceAll('&gt;', '>').replaceAll('&lt;', '<');
 const receiptStart = index.indexOf('function confirmedRunProfileLevelUp(previousXp, payload, currentXp)');
-const receiptEnd = index.indexOf('\n      // Load once at idle', receiptStart);
+const receiptEnd = index.indexOf('\n      // Lazy-load the exact presentation assets.', receiptStart);
 check('receipt helper can be extracted from real runner',receiptStart>0&&receiptEnd>receiptStart);
 const receiptCode = decode(index.slice(receiptStart,receiptEnd));
 const profileLevelState = xp => {
@@ -64,23 +73,37 @@ check('ordinary XP gain not crossing a level does not popup',confirmed(0,19,19)=
 check('run without awarded XP cannot create a level-up',confirmed(0,40,0)===null);
 check('rejected server receipt does not popup',receipt(0,{runSettlement:{accepted:false,profileXpAwarded:30},profile:{profileXp:30}},30)===null);
 check('multi-level receipt uses only reached server XP',JSON.stringify(confirmed(0,65,65))==='{"beforeXp":0,"afterXp":65}');
-// Missing stylesheet.onload must not deadlock an otherwise loaded dialog script.
-const loaderStart = index.indexOf('function loadLevelUpPresentation()');
-const loaderEnd = index.indexOf('\n      async function revealProfileLevelUp',loaderStart);
+// Test the *real* asynchronous loader against both a blocked CSS file and a
+// Telegram WebView that never emits link.onload.
+const loaderStart = index.indexOf('const LEVEL_UP_CSS_URL =');
+const loaderEnd = index.indexOf('      // The same server XP can arrive',loaderStart);
 check('real async loader can be extracted',loaderStart>0&&loaderEnd>loaderStart);
 const loaderCode = decode(index.slice(loaderStart,loaderEnd));
-let appendCount=0;
-const mockWindow={ZeffiLevelUp:null,setTimeout:fn=>1,clearTimeout:()=>{}};
-const mockDocument={createElement:tag=>({tag}),head:{append:(style,script)=>{
-  appendCount++;
-  Promise.resolve().then(()=>{mockWindow.ZeffiLevelUp={show:()=>true};script.onload();});
-}}};
-const asyncLoader=runInNewContext('let levelUpPresentationPromise=null;'+loaderCode+'\nloadLevelUpPresentation;',{
-  window:mockWindow,document:mockDocument,Promise,console
-});
-const loaded=await asyncLoader();
-check('first-run JS resolves without any stylesheet load callback',loaded?.show&&appendCount===1);
-
+function loaderFixture(initiallyBlocked) {
+  let blockCSS=initiallyBlocked, cssAttempts=0, jsAttempts=0, cssNode=null;
+  const nodes=[];
+  const mockWindow={ZeffiLevelUp:null,setTimeout:fn=>{queueMicrotask(fn);return 1;},clearTimeout:()=>{}};
+  const mockDocument={
+    querySelector:selector=>nodes.find(node=>selector.includes(node.tag==='link'?'link[':'script['))||null,
+    createElement:tag=>({tag,dataset:{},sheet:null,remove(){const index=nodes.indexOf(this);if(index>=0)nodes.splice(index,1);}}),
+    head:{appendChild(node){
+      nodes.push(node);
+      if(node.tag==='link') {cssAttempts++; cssNode=node;
+        queueMicrotask(()=>{if(blockCSS)node.onerror?.();else node.sheet={cssRules:[]};});
+      } else { jsAttempts++;queueMicrotask(()=>{mockWindow.ZeffiLevelUp={show:()=>true};}); }
+    }}
+  };
+  const load=runInNewContext(loaderCode+'\nloadLevelUpPresentation;',{
+    window:mockWindow,document:mockDocument,Promise,console,Date
+  });
+  return {load,unblock:()=>{blockCSS=false;},calls:()=>({cssAttempts,jsAttempts}),cssNode:()=>cssNode};
+}
+const cssTest=loaderFixture(true);
+const blocked=await cssTest.load();
+check('blocked CSS cannot be treated as successfully loaded popup',blocked===null&&cssTest.calls().cssAttempts===1);
+cssTest.unblock();
+const unblocked=await cssTest.load();
+check('CSS retry resolves using sheet without link.onload',unblocked?.show&&cssTest.calls().cssAttempts===2&&cssTest.calls().jsAttempts===1);
 
 // Regression: direct CC grants, compensation mail and server read use the same
 // server-only baseline, unlike a signed run/Tasks/purchase with its own receipt.
@@ -96,7 +119,8 @@ check('new observer functions extracted from the active game runtime',observerSt
 const memories=new Map();
 const fakeLocalStorage={
   getItem:key=>memories.has(key)?memories.get(key):null,
-  setItem:(key,value)=>memories.set(key,String(value))
+  setItem:(key,value)=>memories.set(key,String(value)),
+  removeItem:key=>memories.delete(key)
 };
 const liveTelegram={id:'1001'};
 const fakeProfileLevel=xp=>{
@@ -148,14 +172,16 @@ const previewMail={hidden:true}, previewPurchase={hidden:true};
 const modalCalls=[];
 const modalApi={show:payload=>{modalCalls.push(payload);return true;}};
 const previewStore=new Map();
+let cssVisible=true;
+const previewStorage={getItem:key=>previewStore.get(key)||null,setItem:(key,value)=>previewStore.set(key,String(value)),removeItem:key=>previewStore.delete(key)};
 const present=runInNewContext(decode(index.slice(observerStart,managerEnd))+`
 ({rememberConfirmedProfileXp,queueProfileLevelUp,flushPendingRunLevelUp,pending:()=>pendingRunLevelUp});`,{
   Map,Number,Math,String,JSON,Object,Promise,console,
   telegramProfile:previewAccount,
-  localStorage:{getItem:key=>previewStore.get(key)||null,setItem:(key,value)=>previewStore.set(key,String(value))},
-  window:{setTimeout:()=>1,addEventListener:()=>{}},
+  localStorage:previewStorage,
+  window:{setTimeout:()=>1,addEventListener:()=>{},getComputedStyle:()=>({position:cssVisible?'fixed':'static',display:'grid'})},
   state:previewState,
-  document:{visibilityState:'visible'},
+  document:{visibilityState:'visible',addEventListener:()=>{},querySelector:()=>({})},
   runnerStartupGateReleased:true,
   playerMailLayerEl:previewMail,
   purchaseLayer:previewPurchase,
@@ -199,6 +225,59 @@ previewAccount.id='7777';
 check('server-declared reset permits another 1->2 event',present.rememberConfirmedProfileXp(0,{authoritative:true})===true&&present.rememberConfirmedProfileXp(20)===true);
 await present.flushPendingRunLevelUp();
 check('player can celebrate level 2 again after an actual XP reset',modalCalls.length===4&&modalCalls[3].toLevel===2);
+
+// The first broken release treated a level-2 update as seen even though CSP
+// prevented the visual. A signed profile read can now replay exactly that UI.
+previewAccount.id='10002';
+previewStorage.setItem('zefirok-level-up-confirmed-xp-v1:10002',JSON.stringify({v:1,xp:20}));
+check('legacy level-2 notice is queued after authenticated sync',present.rememberConfirmedProfileXp(20)===false&&present.pending()?.accountId==='10002');
+await present.flushPendingRunLevelUp();
+check('legacy missed 1->2 popup is recovered exactly once',modalCalls.length===5&&modalCalls[4].toLevel===2);
+await present.flushPendingRunLevelUp();
+check('legacy missed popup does not duplicate',modalCalls.length===5);
+
+// CSS can fail after the loader returned a JS API. A false success must not
+// consume the notification; the next server read must rehydrate it.
+previewAccount.id='20002';
+present.rememberConfirmedProfileXp(0);
+cssVisible=false;
+present.rememberConfirmedProfileXp(20);
+await present.flushPendingRunLevelUp();
+check('unstyled popup is not acknowledged and is persisted',present.pending()===null&&previewStore.has('zefirok-level-up-pending-v2:20002')&& !previewStore.has('zefirok-level-up-shown-v2:20002'));
+cssVisible=true;
+check('unchanged next server XP resumes pending delivery',present.rememberConfirmedProfileXp(20)===false&&present.pending()?.accountId==='20002');
+await present.flushPendingRunLevelUp();
+check('real styled popup clears durable notice and saves delivered XP',modalCalls.length===7&& !previewStore.has('zefirok-level-up-pending-v2:20002')&&JSON.parse(previewStore.get('zefirok-level-up-shown-v2:20002')).xp===20);
+check('same server reply cannot redisplay a delivered event',present.rememberConfirmedProfileXp(20)===false&&present.pending()===null);
+
+// The first verified server snapshot can contain an offline level-2 grant.
+previewAccount.id='30002';
+check('first authenticated level-2 snapshot is eligible for a once-only popup',present.rememberConfirmedProfileXp(25)===true&&present.pending()?.accountId==='30002');
+await present.flushPendingRunLevelUp();
+check('offline 1->2 presentation has no duplicate after a later sync',modalCalls.length===8&&present.rememberConfirmedProfileXp(25)===false&&present.pending()===null);
+
+// The actual visual module must not consume eventKey if CSS is missing.
+const simulatedLayer=[];
+let isStyled=false;
+const fakeDom={
+ activeElement:null,
+ body:{append:node=>simulatedLayer.push(node)},
+ createElement:()=>({
+   innerHTML:'',className:'',remove:()=>simulatedLayer.pop(),
+   addEventListener:()=>{},removeEventListener:()=>{},
+   querySelectorAll:()=>[],querySelector:()=>null
+ })
+};
+const fakeUiWindow={
+ setTimeout:()=>1,clearTimeout:()=>{},getComputedStyle:()=>({position:isStyled?'fixed':'static'}),
+ matchMedia:()=>({matches:true})
+};
+runInNewContext(js,{window:fakeUiWindow,document:fakeDom,console,Number,Math,String,Boolean,Array,Object,Set});
+const realUiEvent={fromLevel:1,toLevel:2,xpEarned:20,rewards:[{level:2,caseType:'small',count:1}],eventKey:'real-dom-recovery'};
+check('visual returns false if CSS is blocked, without consuming the event',fakeUiWindow.ZeffiLevelUp.show(realUiEvent)===false&&simulatedLayer.length===0);
+isStyled=true;
+check('same event can display after CSS is restored',fakeUiWindow.ZeffiLevelUp.show(realUiEvent)===true&&simulatedLayer.length===1);
+check('successful event still deduplicates',fakeUiWindow.ZeffiLevelUp.show(realUiEvent)===false&&simulatedLayer.length===1);
 
 const parse=spawnSync(process.execPath,['--check',resolve(root,'assets/level-up-celebration.js')],{encoding:'utf8'});
 check('level-up JS parses on Node',parse.status===0);
