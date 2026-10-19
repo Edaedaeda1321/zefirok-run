@@ -156,3 +156,11 @@ input,textarea,[contenteditable="true"]{-webkit-user-select:text;user-select:tex
 .story-event-row{display:grid;grid-template-columns:1fr auto;gap:7px;padding:12px;margin:9px 0;border:1px solid #efdae4;border-radius:16px;background:#fffcfa}
 .story-event-row strong{font-size:12px;color:#824a69}.story-event-row>span{font-size:10px;color:#a86f89}
 .story-event-row .mini-track,.story-event-row small{grid-column:1/-1}.story-event-row small{color:#a28191;font-size:10px}
+
+/* Shared-fund financial amounts: actual player currency icon, never a star. */
+.zeffi-real-points{display:inline-flex;align-items:center;justify-content:center;gap:3px;white-space:nowrap;vertical-align:middle;max-width:100%;font-variant-numeric:tabular-nums}
+.zeffi-real-points img{display:inline-block;width:18px;height:18px;object-fit:contain;flex:0 0 18px}
+.zeffi-real-points b{font:inherit;font-weight:850;color:inherit}
+.project-stats .zeffi-real-points{justify-content:flex-start}
+.story-panel .amounts button .zeffi-real-points{gap:3px}
+@media(max-width:420px){.zeffi-real-points img{width:15px;height:15px;flex-basis:15px}.story-panel .primary .zeffi-real-points img{width:16px;height:16px;flex-basis:16px}}

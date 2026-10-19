@@ -45,15 +45,15 @@ for(const file of ['world/index.html','world.html']){
  for(const name of ['iconScore.webp','iconCoffee.webp','zefir_currency.webp']){
   assert(html.includes(`../assets/mir_zeffi/${name}`),`${file}: wallet icon outside World Zeffi folder: ${name}`);
  }
- assert(html.includes('src="./premium-ui.css"')||html.includes('href="./premium-ui.css"'),`${file}: premium style not loaded`);
+ assert(/\b(?:src|href)="\.\/premium-ui\.css(?:\?v=[^"<>]+)?"/.test(html),`${file}: premium style not loaded`);
 }
 const app=readFileSync(path.join(root,'world/app.js'),'utf8');
 assert(app.includes('CATEGORY_IMAGES'), 'Category images are not connected');
 for(const name of ['icon_all_stroika.webp','icon_house.webp','icon_zavedenia.webp','icon_parks.webp','icon_ploshadki.webp','icon_landshaft.webp','icon_decor.webp']){
  assert(app.includes(name), `Category icon is not wired in world/app.js: ${name}`);
 }
-assert(app.includes('addPreviewCurrencyPrice'), 'Preview prices must contain real currency images');
-assert(app.includes("if(summaryPrice)addPreviewCurrencyPrice($('editSummary'),summaryPrice)"), 'Preview cost not applied to construction summary');
+assert(app.includes('appendWorldPrice') && app.includes('iconScore.webp') && app.includes('iconCoffee.webp') && app.includes('zefir_currency.webp'), 'Preview prices must contain canonical WebP currency images');
+assert(app.includes('setEditSummary(summary,summaryCost)'), 'Preview cost not applied to construction summary');
 assert(app.includes('const SERVER_MODE = window.ZeffiWorldServerRequired === true'), 'World client server authority was modified');
 const standalone=readFileSync(path.join(root,'world/build-standalone.py'),'utf8');
 for(const name of files)assert(standalone.includes(name),`Offline preview does not embed ${name}`);

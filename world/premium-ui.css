@@ -629,3 +629,39 @@ input,textarea,[contenteditable="true"]{-webkit-user-select:text;user-select:tex
 .world-bus-road-figure{background:linear-gradient(145deg,#eef9ff,#dcebf8)!important}
 .world-bus-road-figure span{font-size:27px!important;line-height:1}
 .world-bus-road-tool:focus-visible{outline:2px solid #5297c1;outline-offset:2px}
+
+/* Mir Zeffi currency art: genuine project WebP, not ★/☕/✨ substitutes. */
+.edit-summary #editSummary{display:flex;flex:1;align-items:center;flex-wrap:wrap;column-gap:6px;row-gap:3px;min-width:0;white-space:normal;overflow:visible;text-overflow:clip}
+.edit-summary #editSummary .world-price-caption{margin:0;width:auto;max-width:100%;color:inherit;text-align:left;line-height:1.3;white-space:normal;font-size:inherit}
+.world-inline-price{display:inline-flex;align-items:center;justify-content:flex-start;flex-wrap:wrap;vertical-align:middle;gap:4px 9px;max-width:100%;font-size:inherit}
+.world-inline-price__piece{display:inline-flex;align-items:center;gap:3px;min-width:0;white-space:nowrap;line-height:1.1}
+.world-inline-price__piece img{display:inline-block;width:18px;height:18px;object-fit:contain;flex:0 0 18px;vertical-align:middle}
+.world-inline-price__piece strong{font:inherit;font-weight:950;font-variant-numeric:tabular-nums;color:inherit}
+.world-inline-price__free{font-weight:950}
+.edit-summary #editSummary .world-inline-price,.edit-summary #editSummary .world-inline-price__piece,.edit-summary #editSummary .world-inline-price__free{margin:0;width:auto;text-align:left;line-height:1.1}
+.toast .world-inline-price{margin-left:5px;color:inherit}
+.toast .world-inline-price__piece img{width:17px;height:17px;flex-basis:17px}
+@media(max-width:380px){.world-inline-price__piece img{width:15px;height:15px;flex-basis:15px}.edit-summary #editSummary{column-gap:4px;row-gap:2px}}
+/* Keep the uploaded road illustration in the transportation shop card. */
+.world-bus-road-tool[data-bus-road-tool='bus-road'] .world-bus-road-figure{background:linear-gradient(145deg,#fff9f3,#ffebf4)!important}
+.world-bus-road-figure .world-bus-road-shop-art{position:absolute;inset:0;display:block;width:100%;height:100%;object-fit:contain;z-index:1;filter:drop-shadow(0 3px 5px rgba(137,73,104,.16));pointer-events:none}
+.world-bus-road-figure span[hidden]{display:none!important}
+
+/* ZEFFI_BUS_SHOP_HELP_FIX_V2 */
+/* These special transport tools contain long copy; never let it cover a neighboring card. */
+.catalog-card.world-bus-road-tool{overflow:hidden;min-width:0;justify-content:flex-start}
+.world-bus-road-tool .catalog-figure{height:38%;min-height:52px;flex:0 0 auto;max-width:100%}
+.world-bus-road-figure .world-bus-road-shop-art{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;display:block;z-index:2;pointer-events:none;filter:drop-shadow(0 3px 5px rgba(137,73,104,.14))}
+.world-bus-road-figure span[hidden]{display:none!important}
+.world-bus-road-tool .catalog-copy{align-self:stretch;min-width:0;max-width:100%;overflow:hidden;gap:3px;flex:1 1 auto}
+.world-bus-road-tool .catalog-copy strong{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden;overflow-wrap:anywhere;white-space:normal;line-height:1.16;max-width:100%}
+.world-bus-road-tool .catalog-copy small{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:3;overflow:hidden;overflow-wrap:anywhere;white-space:normal;line-height:1.25;max-width:100%}
+.world-bus-road-tool .catalog-copy .catalog-price{min-width:0;max-width:100%;flex:0 0 auto;white-space:normal;margin-top:auto;overflow:hidden}
+/* Help has a single central primary action, regardless of the legacy modal button rules. */
+#helpModal .modal-card>#helpClose{display:block;width:min(235px,100%);min-height:44px;margin:17px auto 12px;text-align:center}
+#helpModal .modal-card>#tutorialReplay{margin-left:auto;margin-right:auto}
+@media(max-width:380px){
+ .world-bus-road-tool .catalog-copy{gap:2px}
+ .world-bus-road-tool .catalog-figure{min-height:40px;height:31%}
+ .world-bus-road-tool .catalog-copy small{-webkit-line-clamp:2}
+}

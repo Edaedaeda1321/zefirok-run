@@ -160,8 +160,8 @@ test('signed story entry still precedes app load and home-to-personal navigation
  const page=readFileSync(file('../../story-world.html'),'utf8');
  const boot=readFileSync(file('../story/boot.js'),'utf8');
  const app=readFileSync(file('../story/app.js'),'utf8');
- assert.ok(page.includes('./story/boot.js?v=palace1'));
- assert.ok(boot.indexOf("payload?.access!=='tester'")<boot.indexOf("await import('./app.js?v=palace1')"));
+ assert.ok(page.includes('./story/boot.js?v=currency-icons1'));
+ assert.ok(boot.indexOf("payload?.access!=='tester'")<boot.indexOf("await import('./app.js?v=currency-icons1')"));
  assert.ok(boot.includes("fetch('/api/world/story-access'"));
  assert.ok(app.includes("window.parent.postMessage({type:'zefirok-world-switch',view:'personal'},location.origin)"));
  assert.ok(!app.includes('/api/world/mutate')); // Tutorials may persist UI-only progress; no city purchases.

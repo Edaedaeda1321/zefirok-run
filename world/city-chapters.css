@@ -1,16 +1,114 @@
-/* World add-on: compact story goals inside the existing collapsed metrics area. */
-.world-chapters{margin-top:12px;padding-top:11px;border-top:1px solid rgba(190,132,150,.25);font-size:12px}
-.world-chapters__heading{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:9px;color:#834a63}
-.world-chapters__heading strong{font-size:13px}.world-chapters__heading small{font-size:10px;opacity:.7}
-.world-chapter{background:linear-gradient(155deg,#fffdf9,#fff2f6);border:1px solid rgba(222,169,187,.55);border-radius:14px;padding:11px;margin-bottom:10px;box-shadow:0 3px 12px #b8789420}
-.world-chapter--claimed{opacity:.77}.world-chapter__name{display:flex;justify-content:space-between;align-items:start;gap:8px;color:#73405a}
-.world-chapter__name span{font-size:10px;color:#a3667d;text-align:right}.world-chapter p{font-size:11px;margin:5px 0 9px;color:#825568}
-.world-chapter__steps{display:grid;gap:5px}.world-chapter__step{display:flex;justify-content:space-between;gap:8px;font-size:11px}
-.world-chapter__step span{max-width:80%}.world-chapter__step b{white-space:nowrap;font-variant-numeric:tabular-nums}
-.world-chapter__reward{display:flex;justify-content:space-between;align-items:center;gap:9px;margin-top:11px;padding-top:8px;border-top:1px solid #eecdd9;font-weight:700;color:#a06178}
-.world-chapter__reward button{background:linear-gradient(130deg,#eac36e,#d8a952);border:0;border-radius:10px;padding:8px 11px;color:#573e2f;font-weight:800;cursor:pointer}
-.world-chapter__reward button:disabled{opacity:.5}.world-gift-item:disabled{opacity:.7;cursor:default}
-
-/* Reward cards keep the existing horizontal warehouse scroller usable on phones. */
+/* World Zeffi: Book of City Development V2.
+   Only approved /assets/mir_zeffi art and existing decor reward WebPs.
+   UI-only styles; there are no economy, save or D1 dependencies. */
+.world-chapters{
+ --chapter-ink:#7d405a;
+ --chapter-muted:#a17a8c;
+ --chapter-rose:#d879a3;
+ --chapter-border:#efd2df;
+ --chapter-gold:#c28f46;
+ display:flex;flex-direction:column;gap:13px;
+ color:var(--chapter-ink);width:100%;min-width:0;
+ font-family:system-ui,-apple-system,sans-serif;
+}
+.world-chapters[hidden]{display:none!important}
+.world-chapters__heading{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:0;min-width:0}
+.world-chapters__intro{min-width:0;display:flex;flex-direction:column;gap:3px}
+.world-chapters__eyebrow{font-size:10px;font-weight:900;letter-spacing:.14em;color:#c0809b}
+.world-chapters__title,.city-stats-sheet .world-chapters__title{font-size:19px;line-height:1.2;color:#7b3c57;font-weight:950;letter-spacing:-.025em}
+.world-chapters__caption,.city-stats-sheet .world-chapters__caption{font-size:11px;line-height:1.35;color:var(--chapter-muted)}
+.world-chapters__score{flex:none;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:0;min-width:80px;padding:9px 10px;border-radius:16px;background:linear-gradient(150deg,#fff8e8,#ffedf3);border:1px solid #f2d9d9}
+.world-chapters__score-number{font-size:18px;line-height:1.2;font-weight:950;color:#a75c7f;font-variant-numeric:tabular-nums}
+.world-chapters__score-copy{font-size:9px;font-weight:750;color:#a78496;white-space:nowrap}
+.world-chapters__progress{padding:0 1px 2px}
+.world-chapters__track{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:6px;height:9px}
+.world-chapters__segment{display:block;border-radius:20px;background:#f2e1e7;border:1px solid #e9d1db;min-width:0}
+.world-chapters__segment.is-current{background:linear-gradient(90deg,#ffb5cb,#d5759c);border-color:#d7779f;box-shadow:0 0 0 2px #fbe5ec}
+.world-chapters__segment.is-claimed{background:linear-gradient(90deg,#f7d990,#e0ac59);border-color:#dfbd75}
+.world-chapters__cards{display:flex;flex-direction:column;gap:10px;min-width:0}
+.world-chapter,.city-stats-sheet .world-chapter{position:relative;min-width:0;margin:0;padding:0;overflow:hidden;border:1px solid var(--chapter-border);border-radius:20px;background:linear-gradient(152deg,#fffefd 1%,#fff6f9 96%);box-shadow:0 5px 14px rgba(146,82,113,.09)}
+.world-chapter.is-open{border-color:#e6a9c0;background:linear-gradient(155deg,#fffcfd 0%,#fff4f7 100%);box-shadow:0 8px 23px rgba(164,89,122,.14)}
+.world-chapter--ready.is-open{border-color:#dfb268;background:linear-gradient(150deg,#fffdfa,#fff4e7 93%)}
+.world-chapter--claimed:not(.is-open){background:linear-gradient(160deg,#fffcf8,#fff8f5)}
+.world-chapter--locked:not(.is-open){background:#fcf8fa;border-color:#eddee4}
+.world-chapter__toggle{display:grid;grid-template-columns:52px minmax(0,1fr) auto;align-items:center;gap:10px;width:100%;min-height:80px;padding:12px;border:0;background:transparent;text-align:left;cursor:pointer;color:inherit;font:inherit}
+.world-chapter__toggle:focus-visible,.world-chapter__claim:focus-visible{outline:3px solid #b6507c;outline-offset:-4px}
+.world-chapter__art{display:block;width:52px;height:52px;object-fit:contain;filter:drop-shadow(0 3px 4px rgba(136,74,103,.15))}
+.world-chapter--locked .world-chapter__art{opacity:.66;filter:saturate(.65)}
+.world-chapter__info{min-width:0;display:flex;flex-direction:column;gap:5px}
+.world-chapter__label{font-size:10px;font-weight:900;letter-spacing:.08em;line-height:1.1;color:#c48aa1}
+.world-chapter__title{font-size:15px;font-weight:950;line-height:1.2;color:#7b405a;overflow-wrap:anywhere}
+.world-chapter__meta{display:flex;align-items:center;flex-wrap:wrap;gap:5px 8px}
+.world-chapter__state{font-size:10px;font-weight:850;line-height:1.3;color:#a5748a;white-space:nowrap}
+.world-chapter__state::before{content:'';display:inline-block;vertical-align:1px;width:7px;height:7px;margin-right:5px;border-radius:50%;background:#c6aaba}
+.world-chapter__state--active::before{background:#df84a8}
+.world-chapter__state--ready{color:#a47737}
+.world-chapter__state--ready::before,.world-chapter__state--claimed::before{background:#d7ac64}
+.world-chapter__state--locked::before{background:#c8bbc3}
+.world-chapter__completion{font-size:10px;line-height:1.25;color:#ae8798;font-variant-numeric:tabular-nums}
+.world-chapter__affordance{align-self:center;white-space:nowrap;font-size:10px;font-weight:850;color:#b56d8c;padding:7px 9px;border-radius:999px;background:#fff5f9;border:1px solid #f1d3df}
+.world-chapter--locked .world-chapter__affordance{color:#a18c96;background:#fdfafd}
+.world-chapter__detail{display:flex;flex-direction:column;gap:11px;padding:0 13px 14px;min-width:0;animation:zeffi-chapter-open .15s ease-out both}
+.world-chapter__description,.city-stats-sheet .world-chapter__description{font-size:12px;line-height:1.5;font-weight:550;color:#9a7183;margin:0 0 1px}
+.world-chapter__goals-header{display:flex;justify-content:space-between;align-items:center;gap:10px}
+.world-chapter__goals-name{font-size:12px;font-weight:900;color:#864961}
+.world-chapter__goals-count{font-size:11px;font-weight:900;color:#aa6b88;font-variant-numeric:tabular-nums}
+.world-chapter__overall,.world-chapter__step-track{overflow:hidden;width:100%;height:9px;border-radius:999px;background:#f3dfe7;box-shadow:inset 0 1px 2px rgba(135,91,109,.07)}
+.world-chapter__overall-fill,.world-chapter__step-fill{display:block;height:100%;border-radius:inherit;background:linear-gradient(90deg,#f1b0c5,#d16c96);transition:width .25s ease}
+.world-chapter--claimed .world-chapter__overall-fill,.world-chapter__step.is-done .world-chapter__step-fill{background:linear-gradient(90deg,#f4d9a0,#dba855)}
+.world-chapter__steps{display:flex;flex-direction:column;gap:8px;min-width:0}
+.world-chapter__step{display:flex;gap:11px;align-items:center;min-width:0;padding:11px 12px;border:1px solid #f1dce5;border-radius:15px;background:#fffdfc;box-shadow:0 2px 8px rgba(132,93,111,.045)}
+.world-chapter__step.is-done{border-color:#f1dfb8;background:linear-gradient(145deg,#fffefb,#fffaf1)}
+.world-chapter__step-icon{display:block;flex:none;width:38px;height:38px;object-fit:contain;filter:drop-shadow(0 2px 3px rgba(137,91,108,.1))}
+.world-chapter__step-content{display:flex;flex-direction:column;gap:8px;flex:1;min-width:0}
+.world-chapter__step-line{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:start;column-gap:12px;row-gap:4px;min-width:0}
+.world-chapter__step-title,.city-stats-sheet .world-chapter__step-title{font-size:12px;font-weight:750;line-height:1.4;color:#86536a;overflow-wrap:anywhere}
+.world-chapter__step-value,.city-stats-sheet .world-chapter__step-value{font-size:12px;line-height:1.4;font-weight:900;white-space:nowrap;color:#9d6180;font-variant-numeric:tabular-nums}
+.world-chapter__step.is-done .world-chapter__step-value{color:#a77d41}
+.world-chapter__step-track{height:6px}
+.world-chapter__history{font-size:11px;line-height:1.45;color:#a18b81;margin:0;padding:8px 10px;background:#fff6e6;border-radius:12px}
+.world-chapter__reward{display:flex;align-items:center;flex-wrap:wrap;gap:10px;margin-top:2px;padding:11px;border:1px solid #f2dcc2;border-radius:17px;background:linear-gradient(115deg,#fff8e9,#fffaf9)}
+.world-chapter__reward-art{display:block;flex:none;width:66px;height:66px;object-fit:contain;filter:drop-shadow(0 3px 5px rgba(141,108,71,.14))}
+.world-chapter__reward-info{display:flex;flex-direction:column;gap:4px;flex:1 1 116px;min-width:0}
+.world-chapter__reward-label{font-size:10px;font-weight:850;color:#bc9255}
+.world-chapter__reward-title{font-size:13px;line-height:1.25;color:#845071;overflow-wrap:anywhere}
+.world-chapter__reward-quantity{font-size:10px;color:#a6817e}
+.world-chapter__reward-action{display:flex;justify-content:flex-end;align-items:center;min-width:0;margin-left:auto}
+.world-chapter__reward-hint{font-size:10px;line-height:1.3;font-weight:750;color:#ac8e80;text-align:right}
+.world-chapter__claim{min-height:42px;min-width:96px;padding:10px 15px;border:0;border-radius:13px;color:#fff;font:900 13px/1.1 system-ui,-apple-system,sans-serif;background:linear-gradient(135deg,#e8ae57,#cb9037);box-shadow:0 4px 10px rgba(175,121,41,.18);cursor:pointer}
+.world-chapter__claim:disabled{opacity:.54;cursor:wait}
+.world-chapter__collapsed{display:flex;align-items:center;gap:9px;padding:0 14px 11px 74px;min-width:0}
+.world-chapter__collapsed-art{display:block;flex:none;width:30px;height:30px;object-fit:contain;opacity:.85}
+.world-chapter__collapsed-copy{font-size:11px;line-height:1.35;font-weight:650;color:#a18191;overflow-wrap:anywhere}
+.world-chapter--locked .world-chapter__collapsed-art{filter:grayscale(.3);opacity:.6}
+.world-gift-item:disabled{opacity:.7;cursor:default}
 .world-gift-item{background:linear-gradient(155deg,#fffbfe,#fff0f7);border-color:#e5bed1}
 .world-gift-item .catalog-copy em{background:#fff0c9;color:#8d6641}
+@keyframes zeffi-chapter-open{from{opacity:.55;transform:translateY(-3px)}to{opacity:1;transform:translateY(0)}}
+@media(max-width:440px){
+ .world-chapters__title,.city-stats-sheet .world-chapters__title{font-size:17px}
+ .world-chapters__score{min-width:69px;padding:8px}
+ .world-chapter__toggle{grid-template-columns:44px minmax(0,1fr) auto;gap:8px;padding:10px;min-height:72px}
+ .world-chapter__art{width:44px;height:44px}
+ .world-chapter__title{font-size:14px}
+ .world-chapter__affordance{font-size:9px;padding:6px}
+ .world-chapter__detail{padding:0 11px 12px}
+ .world-chapter__step{padding:10px;gap:8px}
+ .world-chapter__step-icon{width:33px;height:33px}
+ .world-chapter__step-title,.city-stats-sheet .world-chapter__step-title,.world-chapter__step-value,.city-stats-sheet .world-chapter__step-value{font-size:11px}
+ .world-chapter__collapsed{padding-left:62px}
+ .world-chapter__reward-art{width:55px;height:55px}
+ .world-chapter__reward-action{margin-left:0}
+}
+@media(max-width:365px){
+ .world-chapter__completion{display:none}
+ .world-chapter__toggle{grid-template-columns:39px minmax(0,1fr) auto}
+ .world-chapter__art{width:39px;height:39px}
+ .world-chapters__heading{gap:8px}
+ .world-chapters__score{min-width:58px}
+ .world-chapter__step-line{column-gap:7px}
+}
+@media(prefers-reduced-motion:reduce){
+ .world-chapter__detail{animation:none}
+ .world-chapter__overall-fill,.world-chapter__step-fill{transition:none}
+}

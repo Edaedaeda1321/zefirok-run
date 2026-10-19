@@ -57,11 +57,10 @@ const iconCodes = { house: 0x1F3E1, coffee: 0x2615, cake: 0x1F370, flower: 0x1F3
 const icon = kind => String.fromCodePoint(iconCodes[kind] || 0x2726);
 const SIZE = () => ({ width: canvas.getBoundingClientRect().width, height: canvas.getBoundingClientRect().height });
 const nameOf = kind => tr(CATALOG[kind]?.titleKey || kind);
-const PRICE_IMAGES = Object.freeze({
- points: '../assets/optimized/v0.79.5/iconScore.webp',
- coffee: '../assets/optimized/v0.79.5/iconCoffee.webp',
- treats: '../assets/season-pass/zefir_currency.webp'
-});
+// Use the same original World currency art in the wallet, shop and every quote.
+const PRICE_IMAGES = CITY_REWARD_IMAGES;
+const PRICE_NAMES = Object.freeze({points:'очков',coffee:'кофе',treats:'зефира'});
+const PRICE_FIELDS = Object.freeze(['points','coffee','treats']);
 const CATEGORY_SYMBOLS = Object.freeze({all:'▦', homes:'⌂', shops:'☕', transport:'🚌', parks:'♣', plazas:'◇', landscape:'❋', decor:'✿'});
 const CATEGORY_IMAGES = Object.freeze({
  all:'../assets/mir_zeffi/icon_all_stroika.webp',
@@ -111,11 +110,41 @@ function addCatalogPrice(container,cost){
  container.setAttribute('aria-label',priceLabel(cost));
 }
 function priceLabel(cost){
- const parts=[];
- if(cost.points) parts.push(`${cost.points.toLocaleString('ru-RU')} ★`);
- if(cost.coffee) parts.push(`${cost.coffee.toLocaleString('ru-RU')} ☕`);
- if(cost.treats) parts.push(`${cost.treats.toLocaleString('ru-RU')} ✨`);
- return parts.join(' + ') || tr('free');
+ // Native title/aria attributes cannot contain images: use spoken currency names, never stars.
+ return PRICE_FIELDS.filter(field=>Number(cost?.[field]||0)>0)
+  .map(field=>`${Number(cost[field]).toLocaleString('ru-RU')} ${PRICE_NAMES[field]}`)
+  .join(' + ') || tr('free');
+}
+function appendWorldPrice(host,cost){
+ const price=document.createElement('span');price.className='world-inline-price';
+ price.setAttribute('aria-label',priceLabel(cost));
+ let count=0;
+ for(const field of PRICE_FIELDS){
+  const amount=Number(cost?.[field]||0);
+  if(!(amount>0))continue;
+  const piece=document.createElement('span');piece.className='world-inline-price__piece';
+  piece.title=`${amount.toLocaleString('ru-RU')} ${PRICE_NAMES[field]}`;
+  const image=document.createElement('img');image.src=PRICE_IMAGES[field];image.alt='';
+  image.width=18;image.height=18;image.decoding='async';
+  const number=document.createElement('strong');number.textContent=amount.toLocaleString('ru-RU');
+  piece.append(image,number);price.append(piece);count++;
+ }
+ if(!count){const free=document.createElement('span');free.className='world-inline-price__free';free.textContent=tr('free');price.append(free);}
+ host.append(price);
+ return price;
+}
+function setEditSummary(label,cost=null){
+ const host=$('editSummary');
+ // The quote is updated while dragging a road; re-use the images instead of
+ // creating extra image requests on every pointermove.
+ let copy=host.querySelector('.world-price-caption');
+ if(!copy){host.replaceChildren();copy=document.createElement('span');copy.className='world-price-caption';host.append(copy);}
+ copy.textContent=label;
+ let price=host.querySelector('.world-inline-price');
+ if(!cost){price?.remove();return;}
+ const key=PRICE_FIELDS.map(field=>Number(cost[field]||0)).join('/');
+ if(price?.dataset.key===key)return;
+ price?.remove();price=appendWorldPrice(host,cost);price.dataset.key=key;
 }
 const errorLabels = {
  OUTSIDE_CITY: 'outside', BUILDING_COLLISION: 'collisionBuilding', ROAD_COLLISION: 'collisionRoad',
@@ -124,9 +153,10 @@ const errorLabels = {
  NOT_AVAILABLE: 'retiredPathUnavailable', INVALID_PRICE: 'unknownError',
  CITY_LEVEL_LOCKED:'cityLevelLocked', CITY_LEVEL_CLAIMED:'cityLevelClaimed', BUILDING_LEVEL_LOCKED:'shopLevelRequired'
 };
-function showToast(message, isError = false) {
+function showToast(message, isError = false, cost = null) {
  const el = $('toast');
  el.textContent = message || tr('unknownError');
+ if(cost)appendWorldPrice(el,cost);
  el.classList.toggle('error', isError);
  el.classList.add('visible');
  clearTimeout(state.toastTimer);
@@ -549,10 +579,11 @@ function updateActions(){
  const isExpand=state.mode==='expand';
  $('rotateButton').hidden=isRoad||isExpand||Boolean(state.draft && CATALOG[state.draft.kind]?.rotatable===false);
  let canCommit=true;
- let summary='',kind='preview',feedback='';
+ let summary='',kind='preview',feedback='',summaryCost=null;
  if(isExpand){
   const p=state.expansionDraft,price=expansionPrice(state.city);
-  summary=`+${PARCEL_SIZE} x ${PARCEL_SIZE} | ${tr('parcelPrice')}: ${price.points.toLocaleString('ru-RU')} ${tr('pointsShort')} + ${price.treats} ${tr('treatsShort')}`;
+  summary=`+${PARCEL_SIZE} × ${PARCEL_SIZE} | ${tr('parcelPrice')}:`;
+  summaryCost=price;
   const enough=canAfford(state.city.wallet,price);
   canCommit=!price.unavailable&&enough&&Boolean(p)&&expansionCandidates(state.city).some(row=>row.key===p.key);
   if(SERVER_MODE&&!state.serverPurchasesEnabled)canCommit=false;
@@ -565,7 +596,8 @@ function updateActions(){
   const isPurchase=d.type==='place'&&!d.gift;
   const price=isPurchase?objectPrice(CATALOG,d.kind):null;
   const enough=!isPurchase||canAfford(state.city.wallet,price);
-  summary=`${nameOf(d.kind)} ${w}x${h} | ${d.rotation*90}°${d.gift?' | 🎁 Подарочный декор':isPurchase?' | '+tr('price')+': '+priceLabel(price):''}`;
+  summary=`${nameOf(d.kind)} ${w}×${h} | ${d.rotation*90}°${d.gift?' | 🎁 Подарочный декор':isPurchase?' | '+tr('price')+':':''}`;
+  if(isPurchase)summaryCost=price;
   feedback=!check.ok?tr(errorLabels[check.code]||'unknownError'):!enough?tr('notEnoughCurrency'):`${d.x+1}:${d.y+1}`;
   kind=d.type==='move'?'previewMove':'preview';
   canCommit=check.ok && enough;
@@ -577,14 +609,15 @@ function updateActions(){
   const count=state.roadDraft.filter(p=>removing?known.has(keyOf(p.x,p.y)):!known.has(keyOf(p.x,p.y))).length;
   const cost=roadStrokePrice(state.city,state.roadDraft,{erasing:removing});
   const enough=canAfford(state.city.wallet,cost);
-  summary=`${isBusRoad?'Автобусная дорога':'Road'}: ${count} ${tr('size').toLowerCase()}${!removing?' | '+tr('price')+': '+priceLabel(cost):''}`;
+  summary=`${isBusRoad?'Автобусная дорога':'Обычная дорога'}: ${count} ${tr('cellsShort')}${!removing?' | '+tr('price')+':':''}`;
+  if(!removing)summaryCost=cost;
   canCommit=state.roadValid && count>0 && enough;
   if(SERVER_MODE&&!removing&&!state.serverPurchasesEnabled)canCommit=false;
   feedback=!state.roadValid?tr('invalidPlace'):!enough?tr('notEnoughCurrency'):(isBusRoad?'Полоса на карте: '+count:`${tr('roadSelected')} ${count}`);
   $('confirmEdit').textContent=isBusRoad?(removing?'Убрать автобусную разметку':'Проложить автобусную дорогу'):removing?tr('eraseRoad'):tr('buyRoad');
  }
  $('previewKind').textContent=tr(kind);
- $('editSummary').textContent=summary;
+ setEditSummary(summary,summaryCost);
  $('editFeedback').textContent=feedback;
  $('confirmEdit').disabled=!canCommit||state.preparingPlacementArt||(SERVER_MODE&&(!state.serverReady||state.serverBusy));
  $('editActions').classList.toggle('is-invalid',!canCommit);
@@ -921,12 +954,24 @@ function renderCatalog(){
    const button=document.createElement('button');button.type='button';button.className='catalog-card world-bus-road-tool';
    button.dataset.busRoadTool=mode;
    const figure=document.createElement('div');figure.className='catalog-figure world-bus-road-figure';
-   const symbol=document.createElement('span');symbol.textContent=mode==='bus-road'?'🚌':'↶';symbol.setAttribute('aria-hidden','true');figure.append(symbol);
+   const symbol=document.createElement('span');symbol.textContent=mode==='bus-road'?'\u{1F68C}':'\u21B6';symbol.setAttribute('aria-hidden','true');figure.append(symbol);
+   if(mode==='bus-road'){
+    // Keep the source WebP supplied for the transport shop. The icon is only a loading/error fallback.
+    const art=document.createElement('img');art.className='world-bus-road-shop-art';
+    art.src=new URL('../assets/mir_zeffi/icon_shop_road_bus.webp',import.meta.url).href;
+    art.alt='';art.width=1254;art.height=1254;
+    art.loading='eager';art.decoding='async';
+    art.addEventListener('load',()=>{symbol.hidden=true;},{once:true});
+    art.addEventListener('error',()=>{art.remove();},{once:true});
+    figure.append(art);
+   }
    const copy=document.createElement('div');copy.className='catalog-copy';
-   const label=document.createElement('strong');label.textContent=title;
+   const label=document.createElement('strong');label.textContent=mode==='bus-road'?title.replace(/^\S+\s+/, ''):title.replace(/\s+\S+(?=\s+\S+$)/,'');
    const info=document.createElement('small');info.textContent=description;
+   button.title=description;button.setAttribute('aria-label',`${label.textContent}. ${description}`);
    const cost=document.createElement('em');cost.className='catalog-price';
-   cost.textContent=mode==='bus-road'?'По стоимости Road':'Без списаний';
+   if(mode==='bus-road')addCatalogPrice(cost,ROAD_TILE_PRICE);
+   else cost.textContent=tr('free');
    copy.append(label,info,cost);button.append(figure,copy);
    button.addEventListener('click',()=>{
     if(SERVER_MODE&&!state.serverReady){showToast('Дождись подключения города.',true);return;}
@@ -1058,7 +1103,7 @@ function confirmLocalEdit(){
    const paid=d.type==='place'?objectPrice(CATALOG,d.kind):null;
    const changed=applyChange(next);stopDraft();state.mode='select';
    state.selectedUid=changed?(d.type==='place'?next.objects[next.objects.length-1]?.uid:d.uid):null;
-   updateUI();scheduleDraw();if(changed)showToast(tr(msg)+(paid?' '+tr('charged')+': '+priceLabel(paid):''));return;
+   updateUI();scheduleDraw();if(changed)showToast(tr(msg)+(paid?' '+tr('charged')+':':''),false,paid);return;
   }
   if(state.roadDraft.length){
    const erasing=state.mode==='erase'||state.mode==='erase-bus-road';
@@ -1066,7 +1111,7 @@ function confirmLocalEdit(){
    const paid=roadStrokePrice(state.city,state.roadDraft,{erasing});
    const next=bus?applyBusRoadStroke(state.city,CATALOG,state.roadDraft,{erasing}):applyRoadStroke(state.city,CATALOG,state.roadDraft,{erasing});
    const changed=applyChange(next);state.roadDraft=[];state.roadValid=true;
-   updateUI();scheduleDraw();if(changed)showToast((bus?(erasing?'Автобусная разметка убрана.':'Автобусная дорога готова!'):tr(erasing?'roadsErased':'roadsBuilt'))+(erasing?'':` ${tr('charged')}: ${priceLabel(paid)}`));
+   updateUI();scheduleDraw();if(changed)showToast((bus?(erasing?'Автобусная разметка убрана.':'Автобусная дорога готова!'):tr(erasing?'roadsErased':'roadsBuilt'))+(erasing?'':` ${tr('charged')}:`),false,erasing?null:paid);
   }
  }catch(error){showToast(statusError(error),true);updateUI();scheduleDraw();}
 }

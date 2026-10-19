@@ -36692,9 +36692,30 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
   // testers may request the existing World overlay; the Worker decides access.
   const ROOT_FRAME_SELECTOR='body > iframe[title="Сладкий Забег"]';
   let worldLayer=null;
+  let worldTelegramBack=null,worldTelegramBackWasVisible=false;
+  function closeWorldFromTelegramBack(){if(worldLayer)closeWorld();}
+  function bindWorldTelegramBack(){
+    try{
+      const back=window.Telegram?.WebApp?.BackButton||null;
+      if(!back||typeof back.onClick!=='function')return;
+      worldTelegramBack=back;worldTelegramBackWasVisible=Boolean(back.isVisible);
+      back.offClick?.(closeWorldFromTelegramBack);
+      back.onClick(closeWorldFromTelegramBack);
+      back.show?.();
+    }catch(error){console.warn('Zeffi native BackButton unavailable',error);worldTelegramBack=null;}
+  }
+  function unbindWorldTelegramBack(){
+    const back=worldTelegramBack;worldTelegramBack=null;
+    if(!back)return;
+    try{
+      back.offClick?.(closeWorldFromTelegramBack);
+      if(!worldTelegramBackWasVisible)back.hide?.();
+    }catch(error){console.warn('Zeffi native BackButton cleanup unavailable',error);}
+  }
   function closeWorld(){
     if(!worldLayer)return;
     const layer=worldLayer;worldLayer=null;layer.remove();
+    unbindWorldTelegramBack();
     window.dispatchEvent(new Event('resize'));
   }
   function openWorld(view='personal'){
@@ -36722,6 +36743,7 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
     layer.append(header,frame);
     document.body.append(layer);
     worldLayer=layer;
+    bindWorldTelegramBack();
   }
   // The button lives inside the existing runner iframe. Never trust a
   // window message from another origin or from the World overlay itself.

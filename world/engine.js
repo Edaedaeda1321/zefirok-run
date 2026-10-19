@@ -82,13 +82,14 @@ export function constructionSkipPrice(item, now = Date.now()) {
   const coffee = Math.max(MIN_SKIP_COFFEE, baseCoffee - elapsedMinutes * SKIP_DISCOUNT_COFFEE);
   return { free: false, points: 0, coffee, treats: 0, remaining, baseCoffee, elapsedMinutes };
 }
-export function skipConstruction(city, uid, now = Date.now()) {
+export function skipConstruction(city, uid, now = Date.now(), { tutorialFree = false } = {}) {
   const item = city.objects.find(row => row.uid === uid);
   if (!item || item.stored) throw new BuildError('NOT_OWNED');
   if (!Number.isSafeInteger(now) || now < 0) throw new BuildError('INVALID_TIME');
   if (!isConstructing(item, now)) throw new BuildError('NOT_CONSTRUCTING');
   if(item.kind==='palace-of-memories'||item.kind===MEETING_GARDEN_PASS_ID)throw new BuildError('SKIP_UNAVAILABLE'); // prestige landmark: no paid acceleration
-  const cost = constructionSkipPrice(item, now);
+  const normalCost = constructionSkipPrice(item, now);
+  const cost = tutorialFree ? {...normalCost,free:true,coffee:0} : normalCost;
   const next = cloneCity(city);
   chargeWallet(next, {points:cost.points,coffee:cost.coffee,treats:cost.treats});
   const target = next.objects.find(row => row.uid === uid);

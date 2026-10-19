@@ -1,0 +1,39 @@
+# СЛАДКИЙ ЗАБЕГ / МИР ЗЕФФИ: RC AUDIT FIX
+# Запускать в корне КЛОНИРОВАННОГО zefirok-run на Mac/Linux.
+# Архив предварительно скачать в ~/Downloads.
+# Если есть незакоммиченные изменения в перечисленных файлах - НЕ распаковывай поверх них.
+
+cd "$(git rev-parse --show-toplevel)"
+git status --short
+git pull --ff-only origin main
+
+unzip -o "$HOME/Downloads/zeffi_world_rc_audit_fix_20261017.zip" -d .
+
+# Проверка ВСЕХ World unit-тестов и 88-шагового production gate.
+node --no-warnings --test world/tests/*.test.mjs
+node scripts/check-production-gate.mjs --skip-d1
+node scripts/check-world-telegram-safe-area.mjs
+node scripts/check-world-rc-gate.mjs
+
+git diff --check
+git diff --stat
+
+git add world/assets/manifest.json \
+  world/tests/clean-assets.test.mjs \
+  world/tests/extra-pack.test.mjs \
+  world/tests/flower-style.test.mjs \
+  world/tests/roads-restored-v013.test.mjs \
+  world/tests/sprite-assets.test.mjs \
+  world/docs/RC_AUDIT_20261017_RU.md
+
+git diff --cached --check
+git diff --cached --stat
+git commit -m "Sync Zeffi World assets manifests and release QA tests"
+git push origin main
+
+# Продакшн-деплой только когда согласована выкладка:
+./update.sh
+
+# ВАЖНО:
+# Полный D1-интеграционный тест с Wrangler в данном аудите не проводился.
+# Не переключай World в режим all/percentage до проверки реальных данных и Telegram smoke.

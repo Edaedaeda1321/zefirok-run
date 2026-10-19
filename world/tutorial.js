@@ -1,6 +1,6 @@
 // Мир Зеффи — lightweight interactive guide shared by the personal and common cities.
 // Only UI progression is stored. Never mutate the city, wallet, fund or rewards here.
-export function createWorldTutorial({mode,steps,save,onFinish=()=>{},onStep=()=>{}}){
+export function createWorldTutorial({mode,steps,save,onFinish=()=>{},onStep=()=>{},mandatory=false}){
  if(!Array.isArray(steps)||!steps.length)throw new Error('World tutorial needs steps');
  const host=document.createElement('section');host.className='zeffi-tour';host.hidden=true;
  host.setAttribute('aria-label',mode==='story'?'Обучение общему городу':'Обучение личному городу');
@@ -24,6 +24,8 @@ export function createWorldTutorial({mode,steps,save,onFinish=()=>{},onStep=()=>
  function target(){const item=current();const selector=typeof item?.target==='function'?item.target():item?.target;return selector?document.querySelector(selector):null;}
  function layout(){
   scheduled=false;if(!active())return;
+  const item=current(),detail=typeof item?.text==='function'?item.text():item?.text;
+  if(detail!=null&&desc.textContent!==detail)desc.textContent=detail;
   const w=window.innerWidth,h=window.innerHeight,element=target();
   const b=element?.getBoundingClientRect();const visible=Boolean(b&&b.width>8&&b.height>8&&b.bottom>0&&b.top<h);
   const pad=visible?5:0;
@@ -75,10 +77,10 @@ export function createWorldTutorial({mode,steps,save,onFinish=()=>{},onStep=()=>
   const item=current();lastTarget=item.target;
   host.hidden=false;document.documentElement.classList.add('zeffi-tour-active');
   kicker.textContent=`ЗЕФФИ ПОМОГАЕТ · ${stepIndex+1} ИЗ ${steps.length}`;
-  heading.textContent=item.title;desc.textContent=item.text;
-  next.hidden=Boolean(item.trigger&&!item.optional);
+  heading.textContent=item.title;desc.textContent=typeof item.text==='function'?item.text():item.text;
+  next.hidden=Boolean(item.trigger&&!item.optional&&!replay);
   next.textContent=item.actionLabel||'Продолжить';
-  skip.textContent=replay?'Закрыть':'Пропустить';
+  skip.textContent=replay?'Закрыть':mandatory?'Вернуться позже':'Пропустить';
   item.enter?.();onStep(stepIndex);
   scrollHighlightedIntoView(item);
   queueLayout();
@@ -98,7 +100,7 @@ export function createWorldTutorial({mode,steps,save,onFinish=()=>{},onStep=()=>
  }
  function stop(completed=false){
   if(!active())return;
-  if(!completed)persist(steps.length);
+  if(!completed&&!mandatory)persist(steps.length);
   stepIndex=-1;host.hidden=true;document.documentElement.classList.remove('zeffi-tour-active');
   if(completed)onFinish();
  }
@@ -127,5 +129,5 @@ export function createWorldTutorial({mode,steps,save,onFinish=()=>{},onStep=()=>
  skip.addEventListener('click',()=>stop(false));next.addEventListener('click',()=>advance());
  window.addEventListener('resize',queueLayout,{passive:true});window.addEventListener('scroll',queueLayout,{passive:true,capture:true});
  document.addEventListener('focusin',queueLayout,{passive:true});
- return {start,restart,signal,active,currentStep:()=>stepIndex,stop,refresh:queueLayout};
+ return {start,restart,signal,active,currentStep:()=>stepIndex,isReplay:()=>replay,stop,refresh:queueLayout};
 }

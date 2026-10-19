@@ -13,12 +13,12 @@ ck('common story header exposes switch to personal city',story.includes('id="ope
 // Keep the safety contract: a signed Telegram session, read-only server gate,
 // and tester/contract checks MUST precede importing the playable city code.
 const storyBoot=read('world/story/boot.js');
-const bootTags=[...story.matchAll(/<script\b[^>]*\bsrc="\.\/story\/boot\.js\?v=(?:[1-9]\d*|rc-guide2|rc-story1|rc-community5|palace1)"[^>]*>\s*<\/script>/g)];
+const bootTags=[...story.matchAll(/<script\b[^>]*\bsrc="\.\/story\/boot\.js\?v=(?:[1-9]\d*|rc-guide2|rc-story1|rc-community5|palace1|currency-icons1)"[^>]*>\s*<\/script>/g)];
 const signedGate=storyBoot.indexOf("fetch('/api/world/story-access'");
 const testerValidation=storyBoot.indexOf("payload?.access!=='tester'");
 const modeValidation=storyBoot.indexOf("payload?.mode!=='server-story'");
 const versionValidation=storyBoot.indexOf("payload?.version!=='story-rc2'");
-const appImport=storyBoot.search(/await\s+import\(['"]\.\/app\.js\?v=(?:[1-9]\d*|rc-guide2|rc-story1|rc-community5|palace1)['"]\)/);
+const appImport=storyBoot.search(/await\s+import\(['"]\.\/app\.js\?v=(?:[1-9]\d*|rc-guide2|rc-story1|rc-community5|palace1|currency-icons1)['"]\)/);
 ck('auth flow still loads hosted story only after signed server access',
   bootTags.length===1 && bootTags[0][0].includes('type="module"') &&
   storyBoot.includes('if(!initData)') &&
@@ -32,8 +32,8 @@ ck('common city switch uses verified parent overlay when framed, and guarded dir
 ck('common story back returns to runner, not locked personal city',app.includes("{type:'zefirok-world-close'}"));
 ck('personal world exposes guarded common city switch',personal.includes('id="commonButton"')&&read('world/story/entry.js').includes("event.stopImmediatePropagation()")&&read('world/story/entry.js').includes("window.parent.postMessage({type:'zefirok-world-switch',view:'story'},location.origin)"));
 ck('personal entry accepts only server-authoritative D1 and no sandbox fallback',!personal.includes("request('/api/world/story-access')")&&personal.includes("request('/api/world/state')")&&personal.includes('candidateAccess?.server===true'));
-ck('personal nav is synchronously bound AFTER tester decision and BEFORE slow city modules',personal.includes('function enableCommonStoryNavigation(){')&&personal.includes('enableCommonStoryNavigation();')&&personal.includes("location.assign(new URL('../story-world.html',document.baseURI).href)")&&personal.includes("event.stopImmediatePropagation();")&&personal.indexOf('enableCommonStoryNavigation();')>personal.indexOf('function launchCity(')&&personal.indexOf('enableCommonStoryNavigation();')<personal.indexOf("script.src='./app.js?v=first-home1'"));
-ck('hosted personal city sets server mode BEFORE loading modules',personal.indexOf('window.ZeffiWorldServerRequired=access.server===true')<personal.indexOf("script.src='./app.js?v=first-home1'"));
+ck('personal nav is synchronously bound AFTER tester decision and BEFORE slow city modules',personal.includes('function enableCommonStoryNavigation(){')&&personal.includes('enableCommonStoryNavigation();')&&personal.includes("location.assign(new URL('../story-world.html',document.baseURI).href)")&&personal.includes("event.stopImmediatePropagation();")&&personal.indexOf('enableCommonStoryNavigation();')>personal.indexOf('function launchCity(')&&personal.indexOf('enableCommonStoryNavigation();')<personal.indexOf("script.src='./app.js?v=world-ui-fix2'"));
+ck('hosted personal city sets server mode BEFORE loading modules',personal.indexOf('window.ZeffiWorldServerRequired=access.server===true')<personal.indexOf("script.src='./app.js?v=world-ui-fix2'"));
 ck('local-only developer notice never authorizes hosted play',personal.includes('worldTesterLocalNotice')&&personal.includes('const enabled=local;'));
 ck('existing personal D1/purchase protection is untouched',service.includes('WORLD_ENABLED')&&service.includes('WORLD_PURCHASES_ENABLED')&&service.includes('assertTester(env,telegramId);'));
 ck('story park remains isolated from purchasable live catalog',read('world/story/map.js').includes('STORY_PARK_BELKINO_KIND')&&!read('world/catalog.js').includes('STORY_PARK_BELKINO_KIND'));

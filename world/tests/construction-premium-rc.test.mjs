@@ -49,6 +49,6 @@ test('style remains scoped to construction panels; nav and catalog stay intact',
  assert.match(css,/\.map-zone \.selection-panel\{/);
  assert.match(css,/\.skip-premium-card\{/);
  assert.match(css,/\.construction-progress__track/);
- assert.ok(html.includes('bus-roads1'));
+ assert.ok(html.includes('world-ui-fix2'));
  assert.ok(!app.includes('localStorage.setItem(\'zeffi-world-timer\''));
 });

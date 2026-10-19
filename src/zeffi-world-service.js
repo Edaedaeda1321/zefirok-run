@@ -10,6 +10,7 @@ import {publishedWorldEconomy} from './zeffi-world-balance.js';
 import {handleCommunityFund} from './zeffi-community-fund.js';
 import {handleZeffiStory} from './zeffi-story-progress.js';
 import {readWorldTutorial,writeWorldTutorial} from './zeffi-world-tutorial.js';
+import {readWorldOnboarding} from './zeffi-world-onboarding.js';
 import {worldAccessPolicy,recordWorldControlError,recordWorldControlRetry} from './zeffi-world-control.js';
 import {residentRequestState,residentMutationStatements,claimResidentRequest} from './zeffi-resident-requests.js';
 import {readWorldExtras,claimCityChapter,assertDecorSchema,worldRewardDecor,worldDecorGiftUsage} from './zeffi-world-decor.js';
@@ -95,7 +96,7 @@ function canonicalAction(body){
   }
   return result;
 }
-function operate(city,action,now,catalog=CATALOG){
+function operate(city,action,now,catalog=CATALOG,{tutorialFreeSkip=false}={}){
   switch(action.kind){
     case 'place':return addObject(city,catalog,action.objectKind,action.x,action.y,action.rotation,now);
     case 'place-gift':return addGiftDecor(city,catalog,action.objectKind,action.x,action.y,action.rotation,now);
@@ -108,7 +109,7 @@ function operate(city,action,now,catalog=CATALOG){
     case 'bus-road':return applyBusRoadStroke(city,catalog,action.positions);
     case 'erase-bus-road':return applyBusRoadStroke(city,catalog,action.positions,{erasing:true});
     case 'parcel':return buyParcel(city,action.cx,action.cy);
-    case 'skip':return skipConstruction(city,action.uid,now).city;
+    case 'skip':return skipConstruction(city,action.uid,now,{tutorialFree:tutorialFreeSkip}).city;
     case 'claim-level':return claimCityLevelReward(city,catalog,action.level,now);
     default:failure(400,'BAD_ACTION','Неизвестная операция.');
   }
@@ -139,7 +140,7 @@ async function ensureCity(db,telegramId,now){
   const city=makeInitialCity();
   const starter=persistedCity(city);
   await db.prepare('INSERT OR IGNORE INTO zeffi_world_cities(telegram_id,revision,state_json,last_request_id,created_at,updated_at) VALUES (?,0,?,\'\',?,?)').bind(telegramId,starter,now,now).run();
-  return db.prepare('SELECT revision,state_json,last_request_id FROM zeffi_world_cities WHERE telegram_id=?').bind(telegramId).first();
+  return db.prepare('SELECT revision,state_json,last_request_id,created_at FROM zeffi_world_cities WHERE telegram_id=?').bind(telegramId).first();
 }
 async function findReceipt(db,telegramId,requestId){
   return db.prepare('SELECT action_kind,city_revision,cost_points,cost_treats,cost_coffee FROM zeffi_world_operations WHERE telegram_id=? AND request_id=?').bind(telegramId,requestId).first();
@@ -158,7 +159,7 @@ async function handleMutation(db,env,telegramId,body,readProfile,operationGate,e
   if(prior){
     const [row,profile]=await Promise.all([ensureCity(db,telegramId,Date.now()),readProfile(telegramId,'world-retry')]);
     const city=cityFromRow(row,walletFromProfile(profile),catalog);
-    return buildView(city,Number(row.revision),paymentsEnabled(env),{repeated:true,operation:{id:requestId,kind:prior.action_kind,state:'completed',repeated:true},cost:{points:Number(prior.cost_points),treats:Number(prior.cost_treats),coffee:Number(prior.cost_coffee)},residentRequests:await residentEnvelope(db,env,telegramId,city,catalog)},economy);
+    return buildView(city,Number(row.revision),paymentsEnabled(env),{repeated:true,operation:{id:requestId,kind:prior.action_kind,state:'completed',repeated:true},cost:{points:Number(prior.cost_points),treats:Number(prior.cost_treats),coffee:Number(prior.cost_coffee)},residentRequests:await residentEnvelope(db,env,telegramId,city,catalog),onboarding:await readWorldOnboarding(db,telegramId,row)},economy);
   }
   const action=canonicalAction(body.action);
   if(action.kind==='place-pass-garden'){
@@ -176,11 +177,16 @@ async function handleMutation(db,env,telegramId,body,readProfile,operationGate,e
   if(!natural(profileRevision))failure(503,'WORLD_PROFILE_NOT_READY','Баланс игрока ещё недоступен.');
   const wallet=walletFromProfile(profile);
   const before=reconcileCityProgress(cityFromRow(row,wallet,catalog),catalog,now);
+  const onboarding=await readWorldOnboarding(db,telegramId,row);
+  const freeTutorialSkip=action.kind==='skip'&&onboarding.required&&!onboarding.freeSkipUsed&&
+    onboarding.homeUid===action.uid&&before.objects.some(item=>item.uid===action.uid&&item.kind==='cottage'&&!item.stored&&item.buildReadyAt>now);
   let next;
-  try {next=operate(before,action,now,catalog);}catch(e){if(e instanceof BuildError)failure(e.code==='INSUFFICIENT_BALANCE'?409:400,e.code,e.code);throw e;}
+  try {next=operate(before,action,now,catalog,{tutorialFreeSkip:freeTutorialSkip});}catch(e){if(e instanceof BuildError)failure(e.code==='INSUFFICIENT_BALANCE'?409:400,e.code,e.code);throw e;}
   next=reconcileCityProgress(next,catalog,now);
   const gift=action.kind==='place-gift';
   const passGarden=action.kind==='place-pass-garden';
+  const firstHomePurchase=action.kind==='place'&&action.objectKind==='cottage'&&onboarding.required&&!onboarding.homeUid;
+  const homeUid=firstHomePurchase?next.objects.at(-1)?.uid:'';
   const granting=action.kind==='claim-level';
   const reward=granting?(catalog.__cityLevels||CITY_LEVELS)[action.level-1].reward:ZERO;
   // The signed client quotes ZERO for grants. The Worker alone chooses the
@@ -212,6 +218,11 @@ async function handleMutation(db,env,telegramId,body,readProfile,operationGate,e
   // Thus a successful receipt implies both city state and wallet charge committed.
   const statements=[db.prepare(`UPDATE zeffi_world_cities SET state_json=?,revision=revision+1,last_request_id=?,updated_at=?
     WHERE telegram_id=? AND revision=?`).bind(nextCityJson,requestId,now,telegramId,currentRevision)];
+  // Keep the tutorial entitlement in the SAME D1 transaction as the city and wallet.
+  if(firstHomePurchase)statements.push(db.prepare("UPDATE zeffi_world_tutorial_v2 SET home_uid=?,updated_at=? WHERE telegram_id=? AND home_uid='' AND free_skip_used=0")
+    .bind(homeUid,nowSeconds,telegramId));
+  if(freeTutorialSkip)statements.push(db.prepare("UPDATE zeffi_world_tutorial_v2 SET free_skip_used=1,updated_at=? WHERE telegram_id=? AND home_uid=? AND free_skip_used=0")
+    .bind(nowSeconds,telegramId,action.uid));
   if(bill){statements.push(db.prepare(`UPDATE admin_profile_state SET wallet=wallet-?,treats=treats-?,coffee=coffee-?,revision=revision+1,updated_at=?,updated_by=?
     WHERE telegram_id=? AND revision=? AND wallet>=? AND treats>=? AND coffee>=?`).bind(
       cost.points,cost.treats,cost.coffee,nowSeconds,marker,telegramId,profileRevision,cost.points,cost.treats,cost.coffee));}
@@ -230,20 +241,23 @@ async function handleMutation(db,env,telegramId,body,readProfile,operationGate,e
   const balanceGuard=economy.schemaReady?' AND EXISTS (SELECT 1 FROM zeffi_world_balance_config WHERE id=1 AND published_revision=?)':'';
   const giftGuard=gift?' AND COALESCE((SELECT total FROM zeffi_world_decor_owned WHERE telegram_id=? AND decor_id=?),0)>=?':'';
   const gardenGuard=passGarden?" AND EXISTS(SELECT 1 FROM zeffi_world_pass_garden_ownership WHERE telegram_id=? AND garden_id='meeting-garden-pass' AND source_lane='premium')":'';
+  const tutorialGuard=firstHomePurchase?" AND EXISTS(SELECT 1 FROM zeffi_world_tutorial_v2 WHERE telegram_id=? AND home_uid=?)":
+    freeTutorialSkip?" AND EXISTS(SELECT 1 FROM zeffi_world_tutorial_v2 WHERE telegram_id=? AND home_uid=? AND free_skip_used=1)":'';
   statements.push(db.prepare(`INSERT INTO zeffi_world_operations
    (telegram_id,request_id,action_kind,city_revision,cost_points,cost_treats,cost_coffee,created_at,city_guard,profile_guard)
    VALUES (?,?,?,?,?,?,?,?,
      CASE WHEN EXISTS (SELECT 1 FROM zeffi_world_cities WHERE telegram_id=? AND revision=? AND last_request_id=?) THEN 1 ELSE 0 END,
-     CASE WHEN (?=0 OR EXISTS (SELECT 1 FROM admin_profile_state WHERE telegram_id=? AND revision=? AND updated_by=?))${balanceGuard}${giftGuard}${gardenGuard} THEN 1 ELSE 0 END)`)
+     CASE WHEN (?=0 OR EXISTS (SELECT 1 FROM admin_profile_state WHERE telegram_id=? AND revision=? AND updated_by=?))${balanceGuard}${giftGuard}${gardenGuard}${tutorialGuard} THEN 1 ELSE 0 END)`)
     .bind(telegramId,requestId,action.kind,nextRevision,cost.points,cost.treats,cost.coffee,nowSeconds,
       telegramId,nextRevision,requestId,profileTouched?1:0,telegramId,profileRevision+1,marker,
-      ...(economy.schemaReady?[economy.config.revision]:[]),...(gift?[telegramId,action.objectKind,giftUsed]:[]),...(passGarden?[telegramId]:[])));
+      ...(economy.schemaReady?[economy.config.revision]:[]),...(gift?[telegramId,action.objectKind,giftUsed]:[]),...(passGarden?[telegramId]:[]),
+      ...(firstHomePurchase?[telegramId,homeUid]:[]),...(freeTutorialSkip?[telegramId,action.uid]:[])));
   try{await db.batch(statements);}catch(error){
     const existing=await findReceipt(db,telegramId,requestId).catch(()=>null);
     if(existing){
       const [latest,p]=await Promise.all([ensureCity(db,telegramId,now),readProfile(telegramId,'world-race-retry')]);
       const city=cityFromRow(latest,walletFromProfile(p),catalog);
-      return buildView(city,Number(latest.revision),paymentsEnabled(env),{repeated:true,operation:{id:requestId,kind:existing.action_kind,state:'completed',repeated:true},residentRequests:await residentEnvelope(db,env,telegramId,city,catalog)},economy);
+      return buildView(city,Number(latest.revision),paymentsEnabled(env),{repeated:true,operation:{id:requestId,kind:existing.action_kind,state:'completed',repeated:true},onboarding:await readWorldOnboarding(db,telegramId,latest),residentRequests:await residentEnvelope(db,env,telegramId,city,catalog)},economy);
     }
     // A CAS change, concurrent wallet mutation or SQLite CHECK failure can
     // legitimately abort the transaction; do not retry with a new request ID.
@@ -253,7 +267,7 @@ async function handleMutation(db,env,telegramId,body,readProfile,operationGate,e
   const latestCity=cityFromRow(latest,walletFromProfile(p),catalog);
   return buildView(latestCity,Number(latest.revision),paymentsEnabled(env),{
     operation:{id:requestId,kind:action.kind,state:'completed',repeated:false},cost,
-    residentRequests:await residentEnvelope(db,env,telegramId,latestCity,catalog),
+    onboarding:await readWorldOnboarding(db,telegramId,latest),residentRequests:await residentEnvelope(db,env,telegramId,latestCity,catalog),
     ...(credit?{reward:{...reward}}:{})
   },economy);
 }
@@ -298,10 +312,11 @@ export async function handleZeffiWorldApi(request,env,dependencies){
     // Tutorial progress is private to the signed, allowlisted user; no wallet writes.
     if(new URL(request.url).pathname==='/api/world/tutorial'){
       if(!env.DB)failure(503,'WORLD_DB_UNAVAILABLE','База мира временно недоступна.');
-      if(body.op==='read')return reply({ok:true,tutorial:await readWorldTutorial(env.DB,telegramId)});
+      if(body.op==='read')return reply({ok:true,tutorial:await readWorldTutorial(env.DB,telegramId),onboarding:await readWorldOnboarding(env.DB,telegramId)});
       if(body.op==='progress'){
-        const tutorial=await writeWorldTutorial(env.DB,telegramId,body.mode,body.step);
-        return reply({ok:true,tutorial});
+        const onboarding=body.mode==='personal'?await readWorldOnboarding(env.DB,telegramId):null;
+        const tutorial=await writeWorldTutorial(env.DB,telegramId,body.mode,body.step,{onboarding});
+        return reply({ok:true,tutorial,onboarding});
       }
       failure(400,'WORLD_TUTORIAL_ACTION','Неизвестная операция обучения.');
     }
@@ -330,8 +345,9 @@ export async function handleZeffiWorldApi(request,env,dependencies){
       // One read in the existing world/state response; no separate onboarding startup call.
       // Missing optional tutorial migration must never prevent opening an existing city.
       const tutorial=await readWorldTutorial(env.DB,telegramId).catch(()=>null);
+      const onboarding=await readWorldOnboarding(env.DB,telegramId,row);
       const city=cityFromRow(row,walletFromProfile(profile),economy.catalog);
-      return reply(buildView(city,Number(row.revision),paymentsEnabled(env),{tutorial,residentRequests:await residentEnvelope(env.DB,env,telegramId,city,economy.catalog),...await readWorldExtras(env.DB,telegramId,city,economy.catalog)},economy));
+      return reply(buildView(city,Number(row.revision),paymentsEnabled(env),{tutorial,onboarding,residentRequests:await residentEnvelope(env.DB,env,telegramId,city,economy.catalog),...await readWorldExtras(env.DB,telegramId,city,economy.catalog)},economy));
     }
     if(pathname==='/api/world/resident/claim'){
       if(!residentsEnabled(env))failure(403,'RESIDENT_REQUESTS_DISABLED','Просьбы жителей временно недоступны.');

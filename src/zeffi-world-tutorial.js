@@ -1,13 +1,18 @@
-// World tutorial progress only. Strictly no economy, inventory, city or fund writes.
+// Tutorial progress only. No economy, inventory, city or fund writes.
+import {assertWorldOnboardingProgress} from './zeffi-world-onboarding.js';
 export const TUTORIAL_MAX_STEP=Object.freeze({personal:6,story:6});
 export const DEFAULT_WORLD_TUTORIAL=Object.freeze({personal:0,story:0});
 export async function readWorldTutorial(db,telegramId){
  const row=await db.prepare('SELECT personal_step,story_step FROM zeffi_world_tutorial WHERE telegram_id=?').bind(String(telegramId)).first();
  return {personal:Number(row?.personal_step||0),story:Number(row?.story_step||0)};
 }
-export async function writeWorldTutorial(db,telegramId,mode,step){
+export async function writeWorldTutorial(db,telegramId,mode,step,{onboarding=null}={}){
  if(!Object.hasOwn(TUTORIAL_MAX_STEP,mode)||!Number.isInteger(step)||step<0||step>TUTORIAL_MAX_STEP[mode]){
   const error=new Error('Некорректный этап обучения.');error.status=400;throw error;
+ }
+ if(mode==='personal'&&onboarding?.required){
+  const previous=await readWorldTutorial(db,telegramId);
+  await assertWorldOnboardingProgress(db,telegramId,step,onboarding,previous.personal);
  }
  const now=Math.floor(Date.now()/1000);
  // The server never trusts a client reset: steps can advance or stay the same.
