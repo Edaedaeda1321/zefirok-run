@@ -20373,6 +20373,7 @@ function createTutorialDeck(layer, mount, options, words) {
           state.running = false;
           cancelGameLoop();
           state.over = true;
+          if (pendingRunLevelUp) window.setTimeout(() =&gt; void flushPendingRunLevelUp(), 900);
           state.paused = false;
           state.runnerNpcActors = [];
           const earned = Math.floor(state.score);
@@ -20423,17 +20424,20 @@ function createTutorialDeck(layer, mount, options, words) {
               try {
                 if (payload?.runSettlement?.accepted) {
                   if (payload.runSettlement.newRecord) { window.setTimeout(() =&gt; hapticNotify(&quot;success&quot;), 80); playGameSound(&quot;newRecord&quot;, 80); }
-                  const reachedNewLevel = profileLevelState(state.profileXp).level &gt; previousLevel;
-                  if (reachedNewLevel) { playGameSound(&quot;levelUp&quot;, 430); void loadCaseState(true); }
+                  // The authoritative run receipt, not the mutable local profile, defines this level-up.
+                  // An account switch or an asynchronous profile read can overwrite the pre-run UI XP.
+                  const confirmedLevelUp = confirmedRunProfileLevelUp(previousProfileXp, payload, state.profileXp);
+                  if (confirmedLevelUp) { playGameSound(&quot;levelUp&quot;, 430); void loadCaseState(true); }
                   renderRunResultsSettled(payload, resultContext);
-                   if (reachedNewLevel) {
-                     const confirmedProfileXp = state.profileXp;
-                     window.setTimeout(() => {
-                       if (!state.running &amp;&amp; state.over &amp;&amp; String(resultContext.runId) === String(state.caseRunId)) {
-                         void revealProfileLevelUp(previousProfileXp, confirmedProfileXp, `run:${resultContext.runId}:${confirmedProfileXp}`);
-                       }
-                     }, 480);
-                   }
+                  if (confirmedLevelUp) {
+                    const eventKey = `run:${resultContext.runId}:${confirmedLevelUp.afterXp}`;
+                    window.setTimeout(() =&gt; {
+                      // Settlement belongs to a confirmed run. Queue it if a new run has started.
+                      // The item is strictly visual and never replays the server operation.
+                      pendingRunLevelUp = { ...confirmedLevelUp, eventKey };
+                      void flushPendingRunLevelUp();
+                    }, 400);
+                  }
                 } else renderRunResultsSyncError(resultContext, error);
               } catch (resultUiError) {
                 console.error(&quot;Run result settled UI failed&quot;, resultUiError);
@@ -22429,7 +22433,23 @@ function createTutorialDeck(layer, mount, options, words) {
       }
 
 
-      // Lazy visual celebration: neither D1 nor XP nor unopened case inventory changes here.
+      // Confirm a new profile level using the signed run receipt. No XP or cases are created here.
+      // Fast settlement and delayed profile reads can change state.profileXp before the callback.
+      function confirmedRunProfileLevelUp(previousXp, payload, currentXp) {
+        const receipt = payload?.runSettlement;
+        if (receipt?.accepted !== true) return null;
+        const serverXp = Number(payload?.profile?.profileXp);
+        const afterXp = Number.isSafeInteger(serverXp) &amp;&amp; serverXp &gt;= 0
+          ? serverXp : sanitizeGameNumber(currentXp);
+        const awarded = Number(receipt.profileXpAwarded);
+        const awardedKnown = receipt.profileXpAwarded != null &amp;&amp; Number.isSafeInteger(awarded);
+        if (awardedKnown &amp;&amp; awarded &lt;= 0) return null;
+        const beforeXp = awardedKnown
+          ? Math.max(0, afterXp - awarded) : sanitizeGameNumber(previousXp);
+        if (afterXp &lt;= beforeXp || profileLevelState(afterXp).level &lt;= profileLevelState(beforeXp).level) return null;
+        return { beforeXp, afterXp };
+      }
+      // Load once at idle so the first short run can celebrate immediately. Failed loads are retryable.
       let levelUpPresentationPromise = null;
       function loadLevelUpPresentation() {
         if (window.ZeffiLevelUp?.show) return Promise.resolve(window.ZeffiLevelUp);
@@ -22437,40 +22457,75 @@ function createTutorialDeck(layer, mount, options, words) {
         levelUpPresentationPromise = new Promise((resolve) =&gt; {
           const style = document.createElement(&#x27;link&#x27;);
           style.rel = &#x27;stylesheet&#x27;;
-          style.href = &#x27;/assets/level-up-celebration.css?v=lu1&#x27;;
+          style.href = &#x27;/assets/level-up-celebration.css?v=lu2&#x27;;
           const script = document.createElement(&#x27;script&#x27;);
-          script.src = &#x27;/assets/level-up-celebration.js?v=lu1&#x27;;
+          script.src = &#x27;/assets/level-up-celebration.js?v=lu2&#x27;;
           script.async = true;
-          const styleReady = new Promise(done =&gt; { style.onload = () =&gt; done(true); style.onerror = () =&gt; done(false); });
-          const scriptReady = new Promise(done =&gt; { script.onload = () =&gt; done(window.ZeffiLevelUp || null); script.onerror = () =&gt; done(null); });
+          let done = false;
+          const finish = (api) =&gt; {
+            if (done) return;
+            done = true;
+            window.clearTimeout(deadline);
+            if (!api?.show) levelUpPresentationPromise = null;
+            resolve(api?.show ? api : null);
+          };
+          const deadline = window.setTimeout(() =&gt; finish(window.ZeffiLevelUp || null), 7000);
+          // CSS may complete without firing link.onload in older Telegram WebViews.
+          // A missing CSS event must never block loading a working celebration script.
+          style.onerror = () =&gt; console.warn(&#x27;Level-up stylesheet failed to load&#x27;);
+          script.onload = () =&gt; finish(window.ZeffiLevelUp || null);
+          script.onerror = () =&gt; finish(null);
           document.head.append(style, script);
-          Promise.all([styleReady, scriptReady]).then(([ok, api]) =&gt; resolve(ok ? api : null));
         });
         return levelUpPresentationPromise;
       }
       async function revealProfileLevelUp(beforeXp, afterXp, eventKey) {
         const from = profileLevelState(beforeXp), to = profileLevelState(afterXp);
-        if (to.level &lt;= from.level || to.totalXp &lt;= from.totalXp) return;
+        if (to.level &lt;= from.level || to.totalXp &lt;= from.totalXp) return false;
         const rewards = LEVEL_CASE_SCHEDULE.filter(entry =&gt; entry.level &gt; from.level &amp;&amp; entry.level &lt;= to.level);
-        if (!rewards.length) return;
+        if (!rewards.length) return false;
         try {
-          const api = await loadLevelUpPresentation();
-          if (!api?.show) return;
-          api.show({
+          let api = await loadLevelUpPresentation();
+          if (!api?.show) {
+            await new Promise(done =&gt; window.setTimeout(done, 900));
+            api = await loadLevelUpPresentation();
+          }
+          if (!api?.show) {
+            console.warn(&#x27;Level-up celebration assets unavailable after retry&#x27;);
+            showProfileToast(&#x27;Уровень повышен! Кейс ждёт тебя в «Моих покупках».&#x27;, &#x27;success&#x27;, 5500);
+            return false;
+          }
+          if (state.running || document.visibilityState === &#x27;hidden&#x27;) return false;
+          return api.show({
             fromLevel: from.level, toLevel: to.level, xpEarned: to.totalXp - from.totalXp,
             fromPercent: from.percent, toPercent: to.percent, currentXp: to.currentXp,
             needed: to.needed, isMax: to.isMax, rewards, eventKey,
             onViewRewards: () =&gt; {
-              // Only dismiss the finished-run results layer, never an unrelated modal.
               if (overlay.classList.contains(&#x27;is-run-results-modal&#x27;)) overlay.style.display = &#x27;none&#x27;;
               switchScreen(&#x27;warehouse&#x27;);
               switchStockHubView(&#x27;cases&#x27;);
             }
-          });
+          }) === true;
         } catch (error) {
-          console.warn(&#x27;Optional level-up presentation unavailable&#x27;, String(error?.message || error));
+          console.warn(&#x27;Level-up presentation unavailable&#x27;, String(error?.message || error));
+          return false;
         }
       }
+      let pendingRunLevelUp = null;
+      async function flushPendingRunLevelUp() {
+        if (!pendingRunLevelUp || state.running || document.visibilityState === &#x27;hidden&#x27;) return;
+        const item = pendingRunLevelUp;
+        pendingRunLevelUp = null;
+        const displayed = await revealProfileLevelUp(item.beforeXp, item.afterXp, item.eventKey);
+        if (!displayed &amp;&amp; (state.running || document.visibilityState === &#x27;hidden&#x27;)) pendingRunLevelUp = item;
+      }
+      window.addEventListener(&#x27;visibilitychange&#x27;, () =&gt; {
+        if (document.visibilityState !== &#x27;hidden&#x27;) void flushPendingRunLevelUp();
+      });
+      // Avoid an extra first-use network round trip after a very short first run.
+      window.setTimeout(() =&gt; {
+        if (profileLevelState(state.profileXp).level &lt; 50) void loadLevelUpPresentation();
+      }, 2200);
       // Game Tasks uses signed, server-returned profile snapshots; this is display-only.
       window.zefirokLevelUpHost = Object.freeze({
         fromTask: (oldXp, newXp) =&gt; void revealProfileLevelUp(oldXp, newXp, `tasks:${oldXp}:${newXp}`)
