@@ -691,6 +691,12 @@
         if(canAnimateXp){
           profileRenderOverride=queuedXp.from;render();profileRenderOverride=null;
           scheduleProfileXpAnimation(queuedXp.from,nextProfile);
+          if(nextProfile.level>queuedXp.from.level){
+            const oldXp=queuedXp.from.xp,newXp=nextProfile.xp;
+            window.setTimeout(()=>{
+              if(!screen.hidden && document.visibilityState!=='hidden') window.zefirokLevelUpHost?.fromTask?.(oldXp,newXp);
+            },1400);
+          }
         }else render();
         void markVisibleCompletedRead();return data;
       }catch(error){

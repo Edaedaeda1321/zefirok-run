@@ -20383,7 +20383,8 @@ function createTutorialDeck(layer, mount, options, words) {
           const runSkinId = normalizeRunSkinId(state.runSkinId || currentDogSkin.id);
           const credited = skinRunRewards(earned, earnedTreats, earnedCoffee, state.time, runSkinId);
           const previousBest = Number(state.best || 0);
-          const previousLevel = profileLevelState(state.profileXp).level;
+          const previousProfileXp = state.profileXp;
+          const previousLevel = profileLevelState(previousProfileXp).level;
           const isNewRecord = state.score &gt; previousBest &amp;&amp; earned &gt; 0;
           const resultContext = { runId:String(state.caseRunId || &quot;&quot;), skinId:runSkinId, previousBest:Math.floor(previousBest), score:earned, treats:earnedTreats, coffee:earnedCoffee, durationMs:Math.max(0,Math.floor(Number(state.time || 0) * 1000)) };
           hapticImpact(&quot;heavy&quot;);
@@ -20425,6 +20426,14 @@ function createTutorialDeck(layer, mount, options, words) {
                   const reachedNewLevel = profileLevelState(state.profileXp).level &gt; previousLevel;
                   if (reachedNewLevel) { playGameSound(&quot;levelUp&quot;, 430); void loadCaseState(true); }
                   renderRunResultsSettled(payload, resultContext);
+                   if (reachedNewLevel) {
+                     const confirmedProfileXp = state.profileXp;
+                     window.setTimeout(() => {
+                       if (!state.running &amp;&amp; state.over &amp;&amp; String(resultContext.runId) === String(state.caseRunId)) {
+                         void revealProfileLevelUp(previousProfileXp, confirmedProfileXp, `run:${resultContext.runId}:${confirmedProfileXp}`);
+                       }
+                     }, 480);
+                   }
                 } else renderRunResultsSyncError(resultContext, error);
               } catch (resultUiError) {
                 console.error(&quot;Run result settled UI failed&quot;, resultUiError);
@@ -22418,6 +22427,54 @@ function createTutorialDeck(layer, mount, options, words) {
         const percent = isMax ? 100 : Math.max(0, Math.min(100, needed ? (currentXp / needed) * 100 : 0));
         return { totalXp, level, currentXp: isMax ? 0 : currentXp, needed, percent, isMax };
       }
+
+
+      // Lazy visual celebration: neither D1 nor XP nor unopened case inventory changes here.
+      let levelUpPresentationPromise = null;
+      function loadLevelUpPresentation() {
+        if (window.ZeffiLevelUp?.show) return Promise.resolve(window.ZeffiLevelUp);
+        if (levelUpPresentationPromise) return levelUpPresentationPromise;
+        levelUpPresentationPromise = new Promise((resolve) =&gt; {
+          const style = document.createElement(&#x27;link&#x27;);
+          style.rel = &#x27;stylesheet&#x27;;
+          style.href = &#x27;/assets/level-up-celebration.css?v=lu1&#x27;;
+          const script = document.createElement(&#x27;script&#x27;);
+          script.src = &#x27;/assets/level-up-celebration.js?v=lu1&#x27;;
+          script.async = true;
+          const styleReady = new Promise(done =&gt; { style.onload = () =&gt; done(true); style.onerror = () =&gt; done(false); });
+          const scriptReady = new Promise(done =&gt; { script.onload = () =&gt; done(window.ZeffiLevelUp || null); script.onerror = () =&gt; done(null); });
+          document.head.append(style, script);
+          Promise.all([styleReady, scriptReady]).then(([ok, api]) =&gt; resolve(ok ? api : null));
+        });
+        return levelUpPresentationPromise;
+      }
+      async function revealProfileLevelUp(beforeXp, afterXp, eventKey) {
+        const from = profileLevelState(beforeXp), to = profileLevelState(afterXp);
+        if (to.level &lt;= from.level || to.totalXp &lt;= from.totalXp) return;
+        const rewards = LEVEL_CASE_SCHEDULE.filter(entry =&gt; entry.level &gt; from.level &amp;&amp; entry.level &lt;= to.level);
+        if (!rewards.length) return;
+        try {
+          const api = await loadLevelUpPresentation();
+          if (!api?.show) return;
+          api.show({
+            fromLevel: from.level, toLevel: to.level, xpEarned: to.totalXp - from.totalXp,
+            fromPercent: from.percent, toPercent: to.percent, currentXp: to.currentXp,
+            needed: to.needed, isMax: to.isMax, rewards, eventKey,
+            onViewRewards: () =&gt; {
+              // Only dismiss the finished-run results layer, never an unrelated modal.
+              if (overlay.classList.contains(&#x27;is-run-results-modal&#x27;)) overlay.style.display = &#x27;none&#x27;;
+              switchScreen(&#x27;warehouse&#x27;);
+              switchStockHubView(&#x27;cases&#x27;);
+            }
+          });
+        } catch (error) {
+          console.warn(&#x27;Optional level-up presentation unavailable&#x27;, String(error?.message || error));
+        }
+      }
+      // Game Tasks uses signed, server-returned profile snapshots; this is display-only.
+      window.zefirokLevelUpHost = Object.freeze({
+        fromTask: (oldXp, newXp) =&gt; void revealProfileLevelUp(oldXp, newXp, `tasks:${oldXp}:${newXp}`)
+      });
 
       function profileTitleForLevel(levelValue) {
         const level = Math.max(1, Math.floor(Number(levelValue) || 1));
@@ -29799,6 +29856,7 @@ function createTutorialDeck(layer, mount, options, words) {
         });
       }
 
+      let pendingPurchaseLevelReveal = null;
       function closePurchaseLayer(options = {}) {
         if (!purchaseLayer || !purchaseContent) return false;
         const force = Boolean(options &amp;&amp; options.force);
@@ -29819,6 +29877,11 @@ function createTutorialDeck(layer, mount, options, words) {
           try { purchaseReturnFocus.focus({ preventScroll: true }); } catch { purchaseReturnFocus.focus(); }
         }
         purchaseReturnFocus = null;
+        const pendingLevelReveal = pendingPurchaseLevelReveal;
+        pendingPurchaseLevelReveal = null;
+        if (pendingLevelReveal &amp;&amp; !force) {
+          window.setTimeout(() => void revealProfileLevelUp(pendingLevelReveal.beforeXp, pendingLevelReveal.afterXp, pendingLevelReveal.eventKey), 200);
+        }
         return true;
       }
 
@@ -30083,7 +30146,8 @@ function createTutorialDeck(layer, mount, options, words) {
         }
         purchaseOperationBusy = false;
 
-        const previousLevel = profileLevelState(state.profileXp).level;
+        const previousProfileXp = state.profileXp;
+        const previousLevel = profileLevelState(previousProfileXp).level;
         if (reward.serverProfile) applyServerProfilePayload({ profile: reward.serverProfile });
         antiCheatWithTrustedChange(&quot;purchase-server-confirmed&quot;, () =&gt; {
           const code = String(reward.code);
@@ -30124,6 +30188,10 @@ function createTutorialDeck(layer, mount, options, words) {
           ? `${purchase.product.title}: проверяемый код выдан на 24 часа, +${purchaseXpEarned} XP профиля.`
           : `${purchase.product.title}: проверяемый код выдан на 24 часа.`;
         showPurchaseSuccess(purchase, String(reward.code), Number(reward.expiresAt || 0), purchaseXpEarned);
+        if (purchaseReachedNewLevel &amp;&amp; !reward.repeated) {
+          // Preserve the 24-hour QR/redeem code until the player closes its success dialog.
+          pendingPurchaseLevelReveal = {beforeXp: previousProfileXp, afterXp: state.profileXp, eventKey: `purchase:${Date.now()}:${state.profileXp}`};
+        }
         playGameSound(&quot;purchaseReward&quot;);
         hapticNotify(&quot;success&quot;);
         if (purchaseReachedNewLevel) playGameSound(&quot;levelUp&quot;, 360);
@@ -35206,6 +35274,12 @@ html &gt; body.zefirok-game-expanded{height:var(--zefirok-visible-height,100dvh)
         if(canAnimateXp){
           profileRenderOverride=queuedXp.from;render();profileRenderOverride=null;
           scheduleProfileXpAnimation(queuedXp.from,nextProfile);
+          if(nextProfile.level&gt;queuedXp.from.level){
+            const oldXp=queuedXp.from.xp,newXp=nextProfile.xp;
+            window.setTimeout(()=&gt;{
+              if(!screen.hidden &amp;&amp; document.visibilityState!==&#x27;hidden&#x27;) window.zefirokLevelUpHost?.fromTask?.(oldXp,newXp);
+            },1400);
+          }
         }else render();
         void markVisibleCompletedRead();return data;
       }catch(error){
