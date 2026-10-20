@@ -9,7 +9,7 @@ import {handleZeffiWorldApi} from '../../src/zeffi-world-service.js';
 function fixture(){
  const sql=new DatabaseSync(':memory:');
  sql.exec("CREATE TABLE admin_profile_state(telegram_id TEXT PRIMARY KEY,wallet INTEGER,treats INTEGER,coffee INTEGER,revision INTEGER)");
- for(const name of ['0114_zeffi_world.sql','0115_zeffi_community_fund.sql','0117_zeffi_world_tutorial.sql','0118_zeffi_story_progression.sql','0119_zeffi_world_resident_requests.sql','0120_zeffi_world_control_center_p0.sql'])
+ for(const name of ['0114_zeffi_world.sql','0115_zeffi_community_fund.sql','0117_zeffi_world_tutorial.sql','0118_zeffi_story_progression.sql','0119_zeffi_world_resident_requests.sql','0120_zeffi_world_control_center_p0.sql','0127_zeffi_garden_community_launch.sql'])
    sql.exec(readFileSync(new URL('../../migrations/'+name,import.meta.url),'utf8'));
  class Statement{
    constructor(source,args=[]){this.source=source;this.args=args;}

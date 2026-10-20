@@ -164,3 +164,18 @@ input,textarea,[contenteditable="true"]{-webkit-user-select:text;user-select:tex
 .project-stats .zeffi-real-points{justify-content:flex-start}
 .story-panel .amounts button .zeffi-real-points{gap:3px}
 @media(max-width:420px){.zeffi-real-points img{width:15px;height:15px;flex-basis:15px}.story-panel .primary .zeffi-real-points img{width:16px;height:16px;flex-basis:16px}}
+
+.story-panel .zeffi-garden-amounts{grid-template-columns:repeat(4,minmax(0,1fr));gap:6px}
+.story-panel .zeffi-garden-amounts button{min-width:0;padding:8px 3px}
+
+/* Community Garden first: show future projects as intentionally unavailable. */
+.story-panel .zeffi-coming-soon-row{background:#f7f0f2;border-color:#eadce1;color:#846d7b}
+.story-panel .zeffi-coming-soon-row>img{filter:grayscale(.55);opacity:.72;background:#ede5e7}
+.story-panel .zeffi-coming-soon-row .buildings-details strong{color:#806574}
+.story-panel .zeffi-coming-soon-row .buildings-details small{line-height:1.45}
+.story-panel .zeffi-coming-soon-row .buildings-percent{color:#a9959f}
+.story-panel .zeffi-coming-soon-note{padding:13px 14px;margin:12px 0 18px;border:1px solid #e7d7df;background:#f8f1f5;border-radius:15px;color:#8b647a;font-size:13px;font-weight:700;line-height:1.45}
+.story-panel .zeffi-coming-soon-note small{display:block;margin-top:6px;color:#a48b97;font-size:11px;font-weight:500}
+.story-panel .zeffi-daily-limit{padding:10px 12px;border-radius:13px;border:1px solid #ecd5df;background:#fcecf3;color:#9a6380;font-size:11px;line-height:1.55}
+.story-panel .zeffi-daily-limit .zeffi-real-points img{width:15px;height:15px;flex-basis:15px}
+@media(max-width:360px){.story-panel .zeffi-garden-amounts{gap:4px}.story-panel .zeffi-garden-amounts button{font-size:11px;padding:9px 1px}}

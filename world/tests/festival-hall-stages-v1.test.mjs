@@ -138,7 +138,7 @@ test('map-first story UI exposes both construction projects without restoring ob
  const app=readFileSync(file('../story/app.js'),'utf-8');
  assert.ok(html.includes('data-nav="buildings"')&&html.includes('data-nav="history"'));
  assert.ok(!html.includes('id="districtStrip"')&&!html.includes('id="miniMap"'));
- for(const token of ['data-action="festival-project"','data-action="festival-contribute"','data-action="festival-topup"','data-wr-stage=',"if(id==='festival'&&isPlaceOpen(place,worldState()))"])
+ for(const token of ['data-action="festival-project"','data-action="festival-contribute"','data-action="festival-topup"','data-wr-stage=',"if(id==='festival'&&(liveMode||isPlaceOpen(place,worldState())))"])
   assert.ok(app.includes(token),token);
  assert.ok(app.includes("else if(action==='open-rabbit')openPlace('rabbit')"));
  assert.ok(!app.includes("$('bannerArt')")&&!app.includes("$('districtStrip')"));
@@ -160,8 +160,8 @@ test('signed story entry still precedes app load and home-to-personal navigation
  const page=readFileSync(file('../../story-world.html'),'utf8');
  const boot=readFileSync(file('../story/boot.js'),'utf8');
  const app=readFileSync(file('../story/app.js'),'utf8');
- assert.ok(page.includes('./story/boot.js?v=currency-icons1'));
- assert.ok(boot.indexOf("payload?.access!=='tester'")<boot.indexOf("await import('./app.js?v=currency-icons1')"));
+ assert.ok(page.includes('./story/boot.js?v=garden60k1'));
+ assert.ok(boot.indexOf("payload?.access!=='tester'")<boot.indexOf("await import('./app.js?v=garden60k1')"));
  assert.ok(boot.includes("fetch('/api/world/story-access'"));
  assert.ok(app.includes("window.parent.postMessage({type:'zefirok-world-switch',view:'personal'},location.origin)"));
  assert.ok(!app.includes('/api/world/mutate')); // Tutorials may persist UI-only progress; no city purchases.

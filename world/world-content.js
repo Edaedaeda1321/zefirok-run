@@ -2,7 +2,7 @@
 // No map geometry, funding goals, milestones, story gates, wallet accounting or ownership is editable.
 const PROJECTS={
  garden:{enabled:true,announcement:'Сад встреч растёт благодаря вашим общим вкладам.'},
- festival:{enabled:true,announcement:'Вместе строим Дом фестивалей Зеффи.'}
+ festival:{enabled:false,announcement:'Зеффи ещё готовит чертежи. Скоро здесь начнётся новая история!'}
 };
 const EVENTS={
  'garden-seeds':['Первые ростки','В саду появились первые ростки. Жители начали готовить клумбы.','Садовники принесли семена'],

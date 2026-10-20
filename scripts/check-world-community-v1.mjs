@@ -7,7 +7,7 @@ const read=f=>fs.readFileSync(f,'utf8');let checks=0;
 const ok=(label,v)=>{assert.ok(v,label);checks++;console.log('PASS '+label);};
 const service=read('src/zeffi-world-service.js'),fund=read('src/zeffi-community-fund.js');
 const app=read('world/story/app.js'),boot=read('world/story/boot.js'),gate=read('scripts/check-production-gate.mjs');
-const sql=read('migrations/0115_zeffi_community_fund.sql');
+const sql=read('migrations/0115_zeffi_community_fund.sql'),launchSql=read('migrations/0127_zeffi_garden_community_launch.sql');
 const migration=JSON.parse(read('scripts/migration-history.lock.json'));
 ok('new additive 0115 migration is locked',migration.files['0115_zeffi_community_fund.sql']===createHash('sha256').update(sql).digest('hex'));
 // World P0 fund route guard v2: assert original fund handler and signed access.
@@ -42,7 +42,8 @@ ok('user identity comes from Worker, not client-supplied telegramId',service.inc
 ok('same player wallet debited only through D1 guarded batch',fund.includes('UPDATE admin_profile_state')&&fund.includes('await db.batch(statements)')&&fund.includes('wallet>=?')&&fund.includes('updated_by=?'));
 ok('fund project guard records the exact operation marker',fund.includes('last_request_id=?')&&fund.includes('AND last_request_id=?')&&sql.includes('last_request_id TEXT'));
 ok('durable receipt prevents accidental double debit',sql.includes('PRIMARY KEY (telegram_id,request_id)')&&fund.includes('readReceipt(db,telegramId,requestId)'));
-ok('only two known funded projects and fixed milestones',sql.includes("'festival',50000000")&&sql.includes("'garden',1000000")&&fund.includes('12_500_000,30_000_000,50_000_000'));
+ok('original 0115 schema untouched and small-garden 0127 preserved',sql.includes("'festival',50000000")&&sql.includes("'garden',1000000")&&launchSql.includes('goal_points = 60000')&&fund.includes('goal:60_000'));
+ok('festivals hard-locked with atomic per-account daily cap',fund.includes("if(projectId!=='garden')fail(403")&&fund.includes('created_at>=? AND created_at<?)+?<=?'));
 // Strip documentation comments, while keeping the SQL text in query strings.
 // The existing service intentionally contains a comment about avoiding DDL.
 const withoutJsComments = source => source

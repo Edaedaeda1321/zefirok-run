@@ -22,7 +22,7 @@ test('RC-5 thresholds are strictly presentation-only and match the authoritative
 });
 
 test('garden RC-5 events unlock at exactly 25/50/75/100%, not a pixel earlier',()=>{
- const marks=[250000,500000,750000,1000000];
+ const marks=[15000,30000,45000,60000];
  for(const [i,target] of marks.entries()){
   const below=communityChronicle(snapshot(target-1),'garden');
   const reached=communityChronicle(snapshot(target),'garden');
@@ -49,11 +49,11 @@ test('festival RC-5 tracks intermediate and actual D1 stage milestones separatel
 });
 
 test('invalid or forged non-authoritative snapshots are never shown as fulfilled',()=>{
- const good=snapshot(500000,30000000);
+ const good=snapshot(30000,30000000);
  for(const wrong of [null,{},[],{projects:{}},{projects:{garden:{...good.projects.garden,goal:1},festival:good.projects.festival}},
  {projects:{garden:{...good.projects.garden,stage:2},festival:good.projects.festival}},
  {projects:{garden:{...good.projects.garden,total:Number.MAX_SAFE_INTEGER},festival:good.projects.festival}},
- {projects:{garden:{...good.projects.garden,milestones:[500000]},festival:good.projects.festival}}]){
+ {projects:{garden:{...good.projects.garden,milestones:[30000]},festival:good.projects.festival}}]){
   assert.equal(communityChronicle(wrong,'garden'),null);
   assert.equal(communityEvent(wrong,'garden-flowers'),null);
  }
@@ -62,17 +62,17 @@ test('invalid or forged non-authoritative snapshots are never shown as fulfilled
 });
 
 test('no retroactive popups on initial signed read, and polling does not repeat milestones',()=>{
- const a=snapshot(249999,4999999),b=snapshot(500000,12500000);
+ const a=snapshot(14999,4999999),b=snapshot(30000,12500000);
  assert.deepEqual(newlyReachedCommunityEvents(null,b),[]);
  const events=newlyReachedCommunityEvents(a,b);
  assert.deepEqual(events.map(e=>e.id),['garden-seeds','garden-flowers','festival-supplies','festival-foundation']);
  assert.deepEqual(newlyReachedCommunityEvents(b,b),[]);
  assert.deepEqual(newlyReachedCommunityEvents(b,a),[]);
- assert.deepEqual(newlyReachedCommunityEvents(snapshot(500000,12500000),snapshot(500000,12500000)),[]);
+ assert.deepEqual(newlyReachedCommunityEvents(snapshot(30000,12500000),snapshot(30000,12500000)),[]);
 });
 
 test('Festival civic visual effects remain hidden until the signed story chapter unlocks',()=>{
- const state=snapshot(1000000,50000000);
+ const state=snapshot(60000,50000000);
  assert.deepEqual(communityVisualPlan(state,0).map(p=>p.id),['garden']);
  assert.deepEqual(communityVisualPlan(state,1).map(p=>p.id),['garden','festival']);
  assert.deepEqual(communityVisualPlan(snapshot(),1).map(p=>p.reached),[0,0]);
@@ -82,13 +82,13 @@ test('paint layer is a bounded, screen-culled draw; it never edits canvas/save d
  const calls=[];
  const ctx={save(){calls.push('save');},restore(){calls.push('restore');},setTransform(){},translate(){},scale(){},beginPath(){},ellipse(){},fill(){},moveTo(){},lineTo(){},quadraticCurveTo(){},roundRect(){},stroke(){},closePath(){},rotate(){},
  set fillStyle(v){},set strokeStyle(v){},set lineWidth(v){}};
- const canvas={getContext:()=>ctx},before=JSON.stringify(snapshot(750000,30000000));
- const model=snapshot(750000,30000000);
+ const canvas={getContext:()=>ctx},before=JSON.stringify(snapshot(45000,30000000));
+ const model=snapshot(45000,30000000);
  assert.equal(paintCommunityScene(canvas,{x:0,y:0,zoom:1},{width:350,height:600},null,0),0);
  assert.equal(paintCommunityScene(canvas,{x:50000,y:50000,zoom:1},{width:350,height:600},model,0,{chapter:1}),0);
  assert.equal(paintCommunityScene(canvas,{x:0,y:0,zoom:.25},{width:350,height:600},model,0,{chapter:1}),0);
  assert.ok(paintCommunityScene(canvas,{x:0,y:0,zoom:.8},{width:390,height:700},model,0,{chapter:1,animate:false})>=0);
- assert.deepEqual(model,snapshot(750000,30000000));
+ assert.deepEqual(model,snapshot(45000,30000000));
  assert.equal(before,JSON.stringify(model));
  assert.equal(calls.filter(s=>s==='save').length,calls.filter(s=>s==='restore').length);
 });
@@ -99,12 +99,12 @@ test('source wiring keeps authenticated requests, existing payment confirmation 
  assert.match(app,/newlyReachedCommunityEvents\(sharedSnapshot,next\)/);
  assert.match(app,/if\(liveMode&&sharedSnapshot\)paintCommunityScene/);
  assert.match(app,/chronicleMarkup\('garden'\)/);
- assert.match(app,/chronicleMarkup\('festival'\)/);
+ assert.doesNotMatch(app,/\$\{chronicleMarkup\('festival'\)\}/);
  assert.match(app,/sharedClient\.contribute\(pendingDonation\)/);
  assert.match(app,/pendingDonation=\{\.\.\.quote,requestId\}/);
  assert.match(app,/if\(liveMode&&\['contribute','festival-contribute','materials'/);
  assert.match(boot,/payload\?\.access!=='tester'/);
- assert.match(boot,/await import\('\.\/app\.js\?v=currency-icons1'\)/);
+ assert.match(boot,/await import\('\.\/app\.js\?v=garden60k1'\)/);
  assert.match(page,/\.\/story\/community-events\.css\?v=rc-community5/);
  assert.match(css,/prefers-reduced-motion/);
  assert.match(fund,/await db\.batch\(statements\)/);

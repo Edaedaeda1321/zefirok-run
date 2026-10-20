@@ -7,8 +7,8 @@ import { buildBusScene, sampleBusScene, preloadBusArt, busArtStatus } from '../t
 import { createDemoState, loadDemo, saveDemo, resetDemo, contribute, simulateCommunityHelp, addDemoMaterials, openProject, setDemoChapter, visitPlace, projectStatus, projectTotal, PROJECT_GOAL, FESTIVAL_GOAL, FESTIVAL_MILESTONES, FESTIVAL_AMOUNTS, festivalStage, festivalTotal, festivalNextGoal, contributeFestival, simulateFestivalHelp, addFestivalDemoPoints, setWhiteRabbitPreview } from './model.js';
 import { DISTRICTS, PLACES, placeById, isPlaceOpen, lockedDistricts, STORY_FESTIVAL_KINDS, STORY_PALACE_KINDS, STORY_MEETING_GARDEN_KINDS, buildStoryMap, validateStoryMap } from './map.js';
 import { icon, escapeText as esc, artUrl, requiredStorySpriteIds, centerCamera, worldAt, zoomCamera, clampCamera } from './view.js';
-import {createSharedFundClient, sharedFundQuote, mapStateWithFund} from './shared-fund.js';
-import {communityChronicle,communityEvent,newlyReachedCommunityEvents,paintCommunityScene} from './community-events-p2.js';
+import {createSharedFundClient, sharedFundQuote, mapStateWithFund} from './shared-fund.js?v=garden60k1';
+import {communityChronicle,communityEvent,newlyReachedCommunityEvents,paintCommunityScene} from './community-events-p2.js?v=garden60k1';
 import {createStoryProgressClient} from './progress-client.js?v=rc-story1';
 import {createWorldTutorial} from '../tutorial.js?v=rc-guide2';
 
@@ -17,6 +17,7 @@ const STATUS={funding:'Сбор материалов',building:'Строител
 const money=n=>Number(n).toLocaleString('ru-RU');
 // Only real shared-fund amounts use the shared player-wallet currency art.
 // Demo test credits remain explicitly labeled as test points instead.
+const COMING_SOON='Зеффи ещё готовит чертежи. Скоро здесь начнётся новая история!';
 const realPoints=n=>`<span class="zeffi-real-points" aria-label="${money(n)} очков"><img src="../assets/mir_zeffi/iconScore.webp" width="18" height="18" alt="" decoding="async"><b>${money(n)}</b></span>`;
 const clock=ms=>{const seconds=Math.ceil(Math.max(0,ms)/1000);return `${String(Math.floor(seconds/60)).padStart(2,'0')}:${String(seconds%60).padStart(2,'0')}`;};
 let booted=false;
@@ -57,7 +58,7 @@ export async function startStoryWorld({mode='standalone',initData=''}={}) {
  const storyClient=signedStoryClient;
  let storySnapshot=signedStoryProgress,storyBusy=false,storyVisits=Promise.resolve();
  let worldTutorial=null;
- let sharedSnapshot=null,sharedError='',sharedRefreshing=false,fundBusy=false,pendingDonation=null,selectedLiveGardenAmount=5_000,selectedLiveFestivalAmount=5_000,liveTimer=0;
+ let sharedSnapshot=null,sharedError='',sharedRefreshing=false,fundBusy=false,pendingDonation=null,selectedLiveGardenAmount=500,selectedLiveFestivalAmount=5_000,liveTimer=0;
  let selectedCommunityEvent='',communityCelebration=null;
  let raf=0,ticker=0,dirty=true,layoutDirty=true,lastFrame=0,toastTimer=0,disposed=false,focusId='square',tween=null;
  const drawTimes=[];const disposers=[];const markerElements=new Map();
@@ -83,11 +84,11 @@ export async function startStoryWorld({mode='standalone',initData=''}={}) {
    const percent=p?Math.round(p.total/p.goal*100):0;
    $('modeBadge').title='Инструменты разработки';
    $('bannerTitle').textContent=festivalSelected?'Дом фестивалей Зеффи':'Сад встреч';
-   $('bannerPercent').textContent=p?(p.finished?'Готов':`${percent}%`):'—';
-   $('bannerBar').style.width=`${percent}%`;
-   $('bannerStatus').textContent=p?`${money(p.total)} / ${money(p.goal)} очков · общий фонд`:'Не удалось загрузить серверный фонд';
+   $('bannerPercent').textContent=festivalSelected?'🔒':p?(p.finished?'Готов':`${percent}%`):'—';
+   $('bannerBar').style.width=festivalSelected?'0%':`${percent}%`;
+   $('bannerStatus').textContent=festivalSelected?COMING_SOON:p?`${money(p.total)} / ${money(p.goal)} очков · общий фонд`:'Не удалось загрузить серверный фонд';
    $('fundModeEyebrow').textContent='СТРОИМ ВМЕСТЕ';
-   $('projectBanner').setAttribute('aria-label',`Общий фонд. ${festivalSelected?'Дом фестивалей':'Сад встреч'}: ${percent}%`);
+   $('projectBanner').setAttribute('aria-label',festivalSelected?`Дом фестивалей. ${COMING_SOON}`:`Общий фонд. Сад встреч: ${percent}%`);
    $('pauseLife').innerHTML=icon(paused?'play':'pause');$('pauseLife').setAttribute('aria-pressed',String(paused));
    $('pauseLife').setAttribute('aria-label',paused?'Продолжить анимацию':'Приостановить анимацию');
    return;
@@ -210,12 +211,11 @@ export async function startStoryWorld({mode='standalone',initData=''}={}) {
   }catch(error){toast(error?.message||'Не удалось открыть следующую главу.');}
   finally{storyBusy=false;}
  }
- function cardArt(place,locked=false){return `<div class="panel-art${locked?' locked':''}"><img src="${artUrl(stageKind(place))}" alt="${esc(place.title)}" />${locked?'<span class="art-question">?</span>':''}</div>`;}
+ function cardArt(place,locked=false,lockedSymbol='?'){return `<div class="panel-art${locked?' locked':''}"><img src="${artUrl(stageKind(place))}" alt="${esc(place.title)}" />${locked?`<span class="art-question">${esc(lockedSymbol)}</span>`:''}</div>`;}
  function selectTab(tab){document.querySelectorAll('.bottom-nav [data-nav]').forEach(b=>{
   if(b.dataset.nav===tab)b.setAttribute('aria-current','page');else b.removeAttribute('aria-current');
  });}
  function openPanel(kind){if(liveMode&&['test','reset-confirm'].includes(kind))return;
-  if(liveMode&&kind==='festival-project'&&storySnapshot?.chapter<1)kind='place:festival';
   if(liveMode&&kind==='project')markStoryVisit('community-garden');
   if(liveMode&&kind==='festival-project')markStoryVisit('festival');
   selectedPanel=kind;renderPanel();if(kind==='community-event')panel.scrollTop=0;selectTab(kind==='buildings'||kind==='project'||kind==='festival-project'||kind==='palace-project'?'buildings':kind==='history'||kind.startsWith('place:')?'history':'map');if(!panel.open){if(worldTutorial?.active())panel.show();else panel.showModal();}haptic();worldTutorial?.refresh();}
@@ -223,7 +223,7 @@ export async function startStoryWorld({mode='standalone',initData=''}={}) {
  function openPlace(id){
   const place=placeById(id);if(!place)return;
   if(id==='community-garden'){openPanel('project');return;}
-  if(id==='festival'&&isPlaceOpen(place,worldState())){openPanel('festival-project');return;}
+  if(id==='festival'&&(liveMode||isPlaceOpen(place,worldState()))){openPanel('festival-project');return;}
   if(liveMode&&isPlaceOpen(place,worldState()))markStoryVisit(id);
   else if(!liveMode&&isPlaceOpen(place,worldState())&&!state.visited.includes(id))store(visitPlace(state,id));
   openPanel(`place:${id}`);
@@ -277,8 +277,9 @@ export async function startStoryWorld({mode='standalone',initData=''}={}) {
   // Palace has no payment endpoints. Display its state even if the unrelated
   // Garden/Festival fund has failed or is still loading.
   const palaceStage=state.palaceStage||1;
-  const palaceRow=`<button type="button" class="buildings-row" data-action="palace-project"><img src="${artUrl(STORY_PALACE_KINDS[palaceStage-1])}" alt=""><span class="buildings-details"><strong>Дворец воспоминаний</strong><small>${palaceStage===10?'Дворец открыт':`Стадия ${palaceStage} из 10`} · взносы отключены</small></span><span class="buildings-percent">›</span></button>`;
-  if(kind==='palace-project')return `<span class="eyebrow">ГОРОДСКАЯ ДОСТОПРИМЕЧАТЕЛЬНОСТЬ</span><h2 id="panelTitle">Дворец воспоминаний</h2>${cardArt(placeById('palace'))}<div class="demo-box">${palaceStage===10?'Дворец открыт':`Строительство: этап ${palaceStage} из 10`}. Взносы отключены сервером. Прогресс изменяется только владельцем в CC.</div><button class="secondary" data-go="palace">${icon('target')}Показать на карте</button>`;
+  const palaceRow=`<button type="button" class="buildings-row zeffi-coming-soon-row" data-action="palace-project"><img src="${artUrl(STORY_PALACE_KINDS[palaceStage-1])}" alt=""><span class="buildings-details"><strong>Дворец воспоминаний</strong><small>🔒 ${palaceStage===10?'Дворец уже открыт · новые взносы закрыты':COMING_SOON}</small></span><span class="buildings-percent">›</span></button>`;
+  if(kind==='palace-project')return `<span class="eyebrow">СКОРО В ГОРОДЕ · 🔒</span><h2 id="panelTitle">Дворец воспоминаний</h2>${cardArt(placeById('palace'),palaceStage!==10,'🔒')}<div class="zeffi-coming-soon-note">${palaceStage===10?'Дворец уже открыт, но новые взносы сейчас закрыты.':COMING_SOON}<small>Сейчас все вместе строим Сад встреч.</small></div><button class="secondary" data-go="palace">${icon('target')}Показать на карте</button>`;
+  if(kind==='festival-project')return `<span class="eyebrow">БУДУЩИЙ ПРОЕКТ · 🔒</span><h2 id="panelTitle">Дом фестивалей Зеффи</h2>${cardArt(placeById('festival'),true,'🔒')}<div class="zeffi-coming-soon-note">${COMING_SOON}<small>Пока открыты взносы только в Сад встреч.</small></div><button class="secondary" data-action="project">🌸 Помочь Саду встреч</button><button class="secondary" data-go="festival">${icon('target')}Показать на карте</button>`;
   if(!sharedSnapshot)return `<span class="eyebrow">СТРОИМ ВМЕСТЕ</span><h2 id="panelTitle">Городские стройки</h2>${notice||'<div class="demo-box">Загружаем общий прогресс с сервера…</div>'}${palaceRow}<button class="secondary" data-action="fund-refresh">Обновить фонд</button>`;
   if(kind==='community-event'){
    const event=communityEvent(sharedSnapshot,selectedCommunityEvent);
@@ -288,18 +289,21 @@ export async function startStoryWorld({mode='standalone',initData=''}={}) {
   }
   const row=(id)=>{
    const p=sharedSnapshot.projects[id],percent=Math.round(p.total/p.goal*100);
+   if(id==='festival')return `<button type="button" class="buildings-row zeffi-coming-soon-row" data-action="festival-project"><img src="${artUrl(STORY_FESTIVAL_KINDS[festivalStage(worldState())])}" alt=""><span class="buildings-details"><strong>${esc(p.title)}</strong><small>🔒 ${COMING_SOON}</small></span><span class="buildings-percent">›</span></button>`;
    const stage=id==='festival'?`Этап ${p.stage+1} из 4`:p.finished?'Готов':'Сбор очков';
    return `<button type="button" class="buildings-row" data-action="${id==='festival'?'festival-project':'project'}"><img src="${artUrl(id==='festival'?STORY_FESTIVAL_KINDS[festivalStage(worldState())]:stageKind(placeById('community-garden')))}" alt=""/><span class="buildings-details"><strong>${esc(p.title)}</strong><small>${stage} · ${realPoints(p.total)} / ${realPoints(p.goal)}</small><span class="mini-track"><span style="width:${percent}%"></span></span></span><span class="buildings-percent">${percent}% ›</span></button>`;
   };
-  if(kind==='buildings')return `<span class="eyebrow">СТРОИМ ВМЕСТЕ</span><h2 id="panelTitle">Городские стройки</h2><p>Участники видят общий прогресс. Очки списываются только после подтверждения.</p>${row('garden')}${row('festival')}${palaceRow}${chronicleMarkup('garden')}${chronicleMarkup('festival')}${notice}<button class="secondary" data-action="fund-refresh">Обновить прогресс</button>`;
+  if(kind==='buildings')return `<span class="eyebrow">СТРОИМ ВМЕСТЕ</span><h2 id="panelTitle">Городские стройки</h2><p>Участники видят общий прогресс. Очки списываются только после подтверждения.</p>${row('garden')}${row('festival')}${palaceRow}${chronicleMarkup('garden')}${notice}<button class="secondary" data-action="fund-refresh">Обновить прогресс</button>`;
   if(kind==='fund-confirm'){
    const p=pendingDonation,project=p&&sharedSnapshot.projects[p.projectId];
    if(!p||!project)return `<h2 id="panelTitle">Вклад не выбран</h2><button data-action="buildings">К стройкам</button>`;
    return `<span class="eyebrow">ПОДТВЕРЖДЕНИЕ ВКЛАДА</span><h2 id="panelTitle">Подтвердите реальный вклад</h2><div class="demo-box"><strong>${esc(project.title)}</strong><br/>Будет списано <strong>${realPoints(p.expectedDebitPoints)} настоящих очков</strong> с вашего игрового кошелька. Действие не возвращает очки автоматически.</div><div class="project-stats"><div class="stat-box"><small>Запрошено</small><strong>${realPoints(p.amountPoints)}</strong></div><div class="stat-box"><small>Списание до порога</small><strong>${realPoints(p.expectedDebitPoints)}</strong></div></div>${fundBusy?'<p>Сервер проверяет вклад…</p>':''}<button class="primary" data-action="fund-pay" ${fundBusy?'disabled':''}>${fundBusy?'Подождите…':'Подтвердить списание'}</button><button class="secondary" data-action="fund-cancel" ${fundBusy?'disabled':''}>Отмена</button>`;
   }
   if(!selection)return '';
-  const p=sharedSnapshot.projects[selection],percent=Math.round(p.total/p.goal*100),own=sharedSnapshot.contributedPoints[selection],amount=selection==='garden'?selectedLiveGardenAmount:selectedLiveFestivalAmount;
-  const quote=sharedFundQuote(p,amount),choices=selection==='garden'?[1_000,5_000,10_000,25_000,50_000,100_000]:[5_000,25_000,50_000,100_000,500_000,2_000_000];
+  const p=sharedSnapshot.projects[selection],percent=Math.round(p.total/p.goal*100),own=sharedSnapshot.contributedPoints[selection],amount=selectedLiveGardenAmount;
+  const quote=sharedFundQuote(p,amount),choices=[100,250,500,1_000];
+  const remainingToday=Math.max(0,sharedSnapshot.dailyLimitPoints-sharedSnapshot.contributedToday);
+  const canDonate=Boolean(quote&&remainingToday>=quote.expectedDebitPoints&&sharedSnapshot.walletPoints>=quote.expectedDebitPoints);
   let html=`<span class="eyebrow">ГОРОДСКОЙ ПРОЕКТ</span><h2 id="panelTitle">${esc(p.title)}</h2>${cardArt(placeById(selection==='garden'?'community-garden':'festival'))}<p>Вклады игроков суммируются на сервере. Стадия здания одинакова на всех устройствах.</p>${p.announcement?`<div class="demo-box">${esc(p.announcement)}</div>`:''}${p.contributionsEnabled===false?'<div class="demo-box">Новые взносы в этот проект временно приостановлены.</div>':''}`+
     `<div class="panel-progress"><div><span>${realPoints(p.total)} / ${realPoints(p.goal)}</span><strong>${percent}%</strong></div><span class="mini-track"><span style="width:${percent}%"></span></span></div>`+
     `<div class="project-stats"><div class="stat-box"><small>Ваш вклад</small><strong>${realPoints(own)}</strong></div><div class="stat-box"><small>Ваш баланс</small><strong>${realPoints(sharedSnapshot.walletPoints)}</strong></div></div>`;
@@ -307,9 +311,10 @@ export async function startStoryWorld({mode='standalone',initData=''}={}) {
   if(p.finished)html+='<div class="celebration">✦</div><p><strong>Совместное строительство завершено!</strong> Здание теперь видно у всех игроков в готовом состоянии.</p>';
   else{
    html+=`<p class="panel-footnote">До следующей строительной стадии: <strong>${realPoints(p.next-p.total)}</strong>. Вклад ограничивается ближайшим порогом.</p>`;
-   html+=`<div class="amounts" aria-label="Выберите количество очков">${choices.map(n=>`<button data-live-amount="${n}" aria-pressed="${n===amount}">${realPoints(n)}</button>`).join('')}</div>`;
+   html+=`<p class="zeffi-daily-limit">Сегодня внесено: <b>${realPoints(sharedSnapshot.contributedToday)}</b> из ${realPoints(sharedSnapshot.dailyLimitPoints)}. Новый день — в 00:00 UTC.</p>`;
+   html+=`<div class="amounts zeffi-garden-amounts" aria-label="Выберите количество очков">${choices.map(n=>`<button data-live-amount="${n}" aria-pressed="${n===amount}" ${Math.min(n,p.next-p.total)>remainingToday?'disabled':''}>${realPoints(n)}</button>`).join('')}</div>`;
    if(!sharedSnapshot.writesEnabled)html+='<div class="demo-box">Просмотр общего прогресса включён. Реальные пожертвования пока закрыты сервером.</div>';
-   else html+=`<button class="primary" data-action="fund-confirm" ${(fundBusy||!!sharedError||!quote||sharedSnapshot.walletPoints<quote.expectedDebitPoints)?'disabled':''}>${icon('heart')}Перейти к подтверждению вклада ${realPoints(quote?.expectedDebitPoints||0)}</button>`;
+   else html+=`<button class="primary" data-action="fund-confirm" ${(fundBusy||!!sharedError||!canDonate)?'disabled':''}>${icon('heart')}Перейти к подтверждению вклада ${realPoints(quote?.expectedDebitPoints||0)}</button>`;
   }
   html+=chronicleMarkup(selection);
   html+=notice+`<div class="demo-box">Вклады списываются из игрового баланса только после подтверждения.</div><button class="secondary" data-action="fund-refresh">Обновить прогресс</button><button class="secondary" data-go="${selection==='garden'?'community-garden':'festival'}">${icon('target')}Показать на карте</button>`;
@@ -318,9 +323,11 @@ export async function startStoryWorld({mode='standalone',initData=''}={}) {
  function beginDonation(){
   if(!liveMode||!sharedSnapshot||sharedError||fundBusy||!sharedSnapshot.writesEnabled)return toast('Настоящие вклады сейчас недоступны.');
   if(pendingDonation){openPanel('fund-confirm');return;}
-  const id=selectedPanel==='project'?'garden':'festival',p=sharedSnapshot.projects[id];
-  const amount=id==='garden'?selectedLiveGardenAmount:selectedLiveFestivalAmount,quote=sharedFundQuote(p,amount);
+  if(selectedPanel!=='project')return toast('Пока взносы принимаются только для Сада встреч.');
+  const id='garden',p=sharedSnapshot.projects[id];
+  const amount=selectedLiveGardenAmount,quote=sharedFundQuote(p,amount);
   if(!quote||sharedSnapshot.walletPoints<quote.expectedDebitPoints)return toast('Не хватает очков или стройка уже завершена.');
+  if(quote.expectedDebitPoints>sharedSnapshot.dailyLimitPoints-sharedSnapshot.contributedToday)return toast('Дневной лимит 2 000 очков уже исчерпан или выбран слишком большой вклад.');
   // WebCrypto getRandomValues also works in older Telegram/iOS WebViews.
   // Never use Math.random for financial idempotency keys.
   if(typeof crypto==='undefined'||typeof crypto.getRandomValues!=='function')return toast('Безопасный идентификатор взноса недоступен.');
@@ -340,9 +347,9 @@ export async function startStoryWorld({mode='standalone',initData=''}={}) {
    rebuild();void syncStoryProgress({quiet:true});openPanel(result.receipt?.projectId==='garden'?'project':'festival-project');
   }catch(error){
    const code=error?.code||'';
-   if(code==='COMMUNITY_REVISION_CONFLICT'||code==='COMMUNITY_QUOTE_CHANGED'||code==='COMMUNITY_CONFLICT'||code==='COMMUNITY_INSUFFICIENT_POINTS'||code==='COMMUNITY_PROJECT_COMPLETE'||code==='COMMUNITY_REQUEST_REUSED'){
+   if(code==='COMMUNITY_REVISION_CONFLICT'||code==='COMMUNITY_QUOTE_CHANGED'||code==='COMMUNITY_CONFLICT'||code==='COMMUNITY_INSUFFICIENT_POINTS'||code==='COMMUNITY_PROJECT_COMPLETE'||code==='COMMUNITY_REQUEST_REUSED'||code==='COMMUNITY_DAILY_LIMIT'||code==='COMMUNITY_PROJECT_PAUSED'){
     pendingDonation=null;await syncSharedFund({quiet:true});
-    toast('Фонд или баланс изменился. Проверьте новую сумму перед повтором.');openPanel('buildings');
+    toast(code==='COMMUNITY_DAILY_LIMIT'?'Достигнут дневной лимит 2 000 очков.':'Фонд или баланс изменился. Проверьте новую сумму перед повтором.');openPanel('buildings');
    }else{
     // Network timeout is ambiguous: keep requestId and expected debit for safe retry.
     toast('Не удалось подтвердить ответ. Нажмите ещё раз: повтор использует тот же ID и не спишет очки дважды.');
@@ -495,7 +502,7 @@ export async function startStoryWorld({mode='standalone',initData=''}={}) {
   if(b.dataset.communityEvent&&communityEvent(sharedSnapshot,b.dataset.communityEvent)){selectedCommunityEvent=b.dataset.communityEvent;openPanel('community-event');}
   if(b.dataset.amount){selectedAmount=Number(b.dataset.amount);renderPanel();}
   if(b.dataset.festivalAmount){selectedFestivalAmount=Number(b.dataset.festivalAmount);renderPanel();}
-  if(b.dataset.liveAmount){if(selectedPanel==='project')selectedLiveGardenAmount=Number(b.dataset.liveAmount);else selectedLiveFestivalAmount=Number(b.dataset.liveAmount);renderPanel();}
+  if(b.dataset.liveAmount){if(selectedPanel==='project')selectedLiveGardenAmount=Number(b.dataset.liveAmount);renderPanel();}
   if(b.dataset.wrStage&&!liveMode){store(setWhiteRabbitPreview(state,Number(b.dataset.wrStage)));rebuild();renderPanel();focusPlace('cafe');toast('Тестовый строительный кадр White Rabbit изменён.');}
   if(b.dataset.chapter&&!liveMode){store(setDemoChapter(state,Number(b.dataset.chapter)));rebuild();renderPanel();toast('Тестовый сценарий карты изменён. Сюжет игрока не затронут.');}
   if(b.dataset.go){closePanel();focusPlace(b.dataset.go);}

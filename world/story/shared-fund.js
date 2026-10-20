@@ -18,13 +18,16 @@ function normalized(payload){
  }
  const points=payload.viewer?.walletPoints;
  if(!safe(points))throw new Error('Не удалось подтвердить реальный баланс очков.');
+ const contributedToday=payload.viewer?.contributedToday??0;
+ const dailyLimitPoints=payload.viewer?.dailyLimitPoints??2_000;
+ if(!safe(contributedToday)||dailyLimitPoints!==2_000)throw new Error('Не удалось проверить дневной лимит взносов.');
  const contributedPoints={};
  for(const id of projectIds){
   const n=payload.viewer?.contributedPoints?.[id];
   if(!safe(n))throw new Error('Не удалось загрузить историю вкладов.');
   contributedPoints[id]=n;
  }
- return {projects,walletPoints:points,contributedPoints,writesEnabled:payload.walletWrites===true,readAt:Date.now(),
+ return {projects,walletPoints:points,contributedPoints,contributedToday,dailyLimitPoints,writesEnabled:payload.walletWrites===true,readAt:Date.now(),
   receipt:payload.receipt?{...payload.receipt}:null,repeated:payload.repeated===true,
   content:payload.content&&typeof payload.content==='object'?payload.content:null};
 }
@@ -45,8 +48,8 @@ export function createSharedFundClient(initData,{fetchFn=fetch}={}){
  return Object.freeze({load:()=>request('state'),contribute:payload=>request('contribute',payload)});
 }
 export const sharedFundQuote=(project,requested)=>{
- if(!project||project.finished||project.contributionsEnabled===false||!safe(project.total)||!safe(project.next)||!safe(project.revision)||
-    !safe(requested)||requested<1||requested>2_000_000)return null;
+ if(!project||project.id!=='garden'||project.finished||project.contributionsEnabled===false||!safe(project.total)||!safe(project.next)||!safe(project.revision)||
+    !safe(requested)||requested<1||requested>1_000)return null;
  const accepted=Math.min(requested,project.next-project.total);
  return accepted>0?{projectId:project.id,amountPoints:requested,expectedDebitPoints:accepted,expectedRevision:project.revision}:null;
 };

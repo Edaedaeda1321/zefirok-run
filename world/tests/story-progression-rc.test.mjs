@@ -14,6 +14,7 @@ function fixture(){
  db.exec('INSERT INTO admin_profile_state VALUES (\'12345\',70000000,500,1000,0),(\'67890\',70000000,500,1000,0)');
  for(const file of ['0115_zeffi_community_fund.sql','0118_zeffi_story_progression.sql','0124_zeffi_palace_memories.sql'])
   db.exec(readFileSync(new URL(`../../migrations/${file}`,import.meta.url),'utf8'));
+ db.exec(readFileSync(new URL('../../migrations/0127_zeffi_garden_community_launch.sql',import.meta.url),'utf8'));
  const adapter={prepare(sql){return{first:async()=>db.prepare(sql).get()??null,all:async()=>({results:db.prepare(sql).all()}),bind(...args){const stmt=db.prepare(sql);return{
   first:async()=>stmt.get(...args)??null,
   all:async()=>({results:stmt.all(...args)}),
@@ -30,7 +31,7 @@ function fixture(){
   return {status:response.status,body:await response.json()};
  }
  function fund(projectId,total){
-  const milestone=projectId==='garden'?(total>=1000000?1:0):total>=50000000?3:total>=30000000?2:total>=12500000?1:0;
+  const milestone=projectId==='garden'?(total>=60000?1:0):total>=50000000?3:total>=30000000?2:total>=12500000?1:0;
   db.prepare('UPDATE zeffi_community_projects SET total_points=?,stage=?,revision=revision+1 WHERE project_id=?').run(total,milestone,projectId);
  }
  const wallets=()=>db.prepare('SELECT * FROM admin_profile_state ORDER BY telegram_id').all();
@@ -79,7 +80,7 @@ test('shared garden completion is required for chapter 2; festival project only 
  for(const place of ['friends','station','community-garden'])await visit(f,place);
  assert.equal((await state(f)).body.canAdvance,false);
  assert.equal((await advance(f,1,1)).status,409);
- f.fund('garden',1_000_000);
+ f.fund('garden',60_000);
  const gate=await state(f);assert.equal(gate.body.canAdvance,true);assert.equal(gate.body.events.garden.status,'completed');
  const step=await advance(f,1,1);assert.equal(step.body.chapter,2);assert.ok(step.body.unlockedDistricts.includes('rabbit'));
  for(const place of ['festival','rabbit'])await visit(f,place);
@@ -94,14 +95,14 @@ test('shared garden completion is required for chapter 2; festival project only 
 test('paused story event cannot advance even after shared funding completes',async()=>{
  const f=fixture();for(const x of ['square','cafe','belkino'])await visit(f,x);
  await advance(f,0,0);for(const x of ['friends','station','community-garden'])await visit(f,x);
- f.fund('garden',1_000_000);f.db.prepare("UPDATE zeffi_story_events SET enabled=0 WHERE event_id='garden'").run();
+ f.fund('garden',60_000);f.db.prepare("UPDATE zeffi_story_events SET enabled=0 WHERE event_id='garden'").run();
  assert.equal((await state(f)).body.events.garden.status,'paused');
  assert.equal((await advance(f,1,1)).body.code,'STORY_GOALS_INCOMPLETE');
  f.db.prepare("UPDATE zeffi_story_events SET enabled=1 WHERE event_id='garden'").run();
  assert.equal((await advance(f,1,1)).status,200);f.db.close();
 });
 test('separate Telegram players see shared events but independent visits and chapters',async()=>{
- const f=fixture();await visit(f,'square');f.fund('garden',1_000_000);
+ const f=fixture();await visit(f,'square');f.fund('garden',60_000);
  const another=await f.call({op:'state',asUser:'67890'});assert.equal(another.status,200);
  assert.deepEqual(another.body.visited,[]);assert.equal(another.body.chapter,0);
  assert.equal(another.body.events.garden.finished,true);

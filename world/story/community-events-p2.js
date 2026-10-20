@@ -1,8 +1,8 @@
 // P2 optional editorial overrides of RC-5 milestones from a signed fund snapshot.
 // Thresholds, stage counts and award logic are ALWAYS those of the original module.
 import {communityChronicle as baseChronicle,communityEvent as baseEvent,
- newlyReachedCommunityEvents as baseReached,communityVisualPlan as baseVisual} from './community-events.js';
-export {COMMUNITY_EVENT_DEFINITIONS,paintCommunityScene} from './community-events.js';
+ newlyReachedCommunityEvents as baseReached,communityVisualPlan as baseVisual} from './community-events.js?v=garden60k1';
+export {COMMUNITY_EVENT_DEFINITIONS,paintCommunityScene} from './community-events.js?v=garden60k1';
 function decorate(snapshot,event){
  const e=snapshot?.content?.events?.[event.id];
  if(!e)return event;

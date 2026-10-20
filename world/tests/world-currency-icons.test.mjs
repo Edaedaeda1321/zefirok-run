@@ -97,7 +97,7 @@ test('shared city fund amounts show the same score artwork, while test credits s
 test('hosted personal and common World load the new UI without stale asset versions',()=>{
  assert.match(personalHtml,/premium-ui\.css\?v=world-ui-fix2/);
  assert.match(personalHtml,/app\.js\?v=world-ui-fix2/);
- assert.match(storyHtml,/story\/style\.css\?v=currency-icons1/);
- assert.match(storyHtml,/story\/boot\.js\?v=currency-icons1/);
- assert.match(file('../story/boot.js'),/await import\('\.\/app\.js\?v=currency-icons1'\)/);
+ assert.match(storyHtml,/story\/style\.css\?v=garden60k1/);
+ assert.match(storyHtml,/story\/boot\.js\?v=garden60k1/);
+ assert.match(file('../story/boot.js'),/await import\('\.\/app\.js\?v=garden60k1'\)/);
 });

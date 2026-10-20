@@ -20,6 +20,7 @@ function setup({legacy=false}={}){
  if(legacy)sqlite.prepare('INSERT INTO zeffi_world_resident_requests(telegram_id,request_id,template_id,assigned_at,status,progress) VALUES (?,?,?,?,?,?)').run('12345','resident-park','park',1,'ready',1);
  sqlite.exec(sql('0122_zeffi_world_content_p2.sql'));
  sqlite.exec(sql('0124_zeffi_palace_memories.sql'));
+ sqlite.exec(sql('0127_zeffi_garden_community_launch.sql'));
  const adapter={prepare(query){const stmt=sqlite.prepare(query);return{
    bind(...args){return {first:async()=>stmt.get(...args)??null,all:async()=>({results:stmt.all(...args)}),run:async()=>{const r=stmt.run(...args);return {meta:{changes:Number(r.changes)}};}};},
    first:async()=>stmt.get()??null,all:async()=>({results:stmt.all()})
@@ -89,10 +90,10 @@ test('paused project rejects NEW payments but preserves old receipts and never d
 });
 test('RC-5 P2 editorial text/visibility never changes real milestones or triggers retroactive popups',()=>{
  const f=fresh();f.events['garden-seeds']={...f.events['garden-seeds'],visible:false};f.events['garden-flowers'].title='Новое оформление сада';
- const snap=total=>({projects:{garden:{id:'garden',total,goal:1_000_000,revision:total,stage:total===1_000_000?1:0,milestones:[1_000_000]},festival:{id:'festival',total:0,goal:50_000_000,revision:0,stage:0,milestones:[12_500_000,30_000_000,50_000_000]}},content:{events:f.events}});
- const one=communityChronicle(snap(500_000),'garden');assert.equal(one.events.length,3);assert.equal(one.events[0].title,'Новое оформление сада');assert.equal(one.events[0].threshold,500_000);assert.equal(one.achieved,1);
- assert.deepEqual(newlyReachedCommunityEvents(null,snap(500_000)),[]);
- assert.deepEqual(newlyReachedCommunityEvents(snap(249_999),snap(500_000)).map(x=>x.id),['garden-flowers']);
+ const snap=total=>({projects:{garden:{id:'garden',total,goal:60_000,revision:total,stage:total===60_000?1:0,milestones:[60_000]},festival:{id:'festival',total:0,goal:50_000_000,revision:0,stage:0,milestones:[12_500_000,30_000_000,50_000_000]}},content:{events:f.events}});
+ const one=communityChronicle(snap(30_000),'garden');assert.equal(one.events.length,3);assert.equal(one.events[0].title,'Новое оформление сада');assert.equal(one.events[0].threshold,30_000);assert.equal(one.achieved,1);
+ assert.deepEqual(newlyReachedCommunityEvents(null,snap(30_000)),[]);
+ assert.deepEqual(newlyReachedCommunityEvents(snap(14_999),snap(30_000)).map(x=>x.id),['garden-flowers']);
 });
 test('published story text appears in signed story read, unchanged milestones and chapter gates',async()=>{
  const f=setup();let spec=fresh();spec.chapters.welcome.title='Новый сюжет о Зеффи';await f.change(spec);
